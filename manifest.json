@@ -1,0 +1,11 @@
+{
+  "name": "Assets and Resources",
+  "id": "1205803482754362456",
+  "api": "1.0.0",
+  "editorType": [
+    "figma"
+  ],
+  "ui": "dist/ui.html",
+  "main": "dist/code.js"
+
+}

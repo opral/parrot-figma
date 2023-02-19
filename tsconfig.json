@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "strict": true,
+    "jsx": "react",
+    "noImplicitThis": false,
+    "allowSyntheticDefaultImports": true,
+    "moduleResolution": "node",
+    "typeRoots": [
+      "./node_modules/@types",
+      "./node_modules/@figma"
+    ]
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "legacy/Actions.ts", "src/ui/keycontext/TranslatedKeysContext.jsx", "src/ui/keycontext/KeysContext.jsx"]
+}

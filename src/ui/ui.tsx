@@ -4,7 +4,7 @@ import * as ReactDOM from "react-dom";
 
 import ConfigView from "./views/config/ConfigView";
 import { LocalizedLabel } from "../lib/base/LocalizedLabel";
-import TranslationStateListView from "./views/translationstatelist/TranslationStateListView"
+import LocalizedLabelsListView from "./views/localizedlabelslist/LocalizedLabelsListView"
 import { FigmaUtil } from "../shared/FigmaUtil"
 import { AsyncFunctionProxy } from "../lib/rpc/AsyncFunctionProxy";
 import "./ui.css";
@@ -14,6 +14,7 @@ import { WindowManagerUi } from "../lib/windowManager/WindowManagerUI";
 import { WindowMode } from "../lib/windowManager/WindowManagerSandbox";
 import { TranslationKeys } from "../lib/base/TranslationKey";
 import TranslationKeyListView from "./views/translationkeys/TranslationKeyListView";
+import { Language } from "../lib/base/Language";
 
 
 WindowManagerUi.init(
@@ -34,15 +35,6 @@ asyncFunctionProxy.proxyAsyncMethods(figmaRemote)
 let figmaHelperRemote = new FigmaHelper(undefined);
 asyncFunctionProxy.proxyAsyncMethods(figmaHelperRemote)
 
-let availableLanguages = [
-    {
-      language: 'de',
-      flag: '🇩🇪'
-    },{
-      language: 'en',
-      flag: '🇬🇧'
-  }]
-
 
 const defaultLinkStyleStorageKey = 'defaultLinkStyle';
 
@@ -56,7 +48,7 @@ function App() {
 
     let [selectedKeys, setSelectedKeys] = useState([] as LocalizedLabel[])
     let [translatedLeys, setTranslatedKeys] = useState({} as TranslationKeys)
-    let [languages, setLanguages] = useState(availableLanguages)
+    let [languages, setLanguages] = useState([] as Language[])
     
     
     let [defaultLinkStyle, setDefaultLinkStyle] = useState('' as string)
@@ -76,6 +68,7 @@ function App() {
             
             await refreshSelection()
             await refreshTranslatedKeys();
+            await refreshLanguages();
            
         })()
     }, [])
@@ -88,6 +81,11 @@ function App() {
             }
         } 
     } 
+
+    async function refreshLanguages() {
+        let languages = await figmaHelperRemote.getLanguages();
+        setLanguages(languages);
+    }
 
     async function refreshSelection() {
         let selectedKeys = await figmaHelperRemote.getSelection();    
@@ -124,7 +122,7 @@ function App() {
                     setLinkStyle={setLinkStyle}
                 />
     } else {
-        view = <TranslationStateListView 
+        view = <LocalizedLabelsListView 
         figmaHelper={figmaHelperRemote}
         figmaRemote={figmaRemote}
         keys={selectedKeys} 

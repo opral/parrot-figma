@@ -233,6 +233,11 @@ select.select-menu {
     background-image: url('../../assets/flags/de.svg');
   }
 
+
+  .flag-bg {
+    background-image: url('../../assets/flags/bg.svg');
+  }
+
   .flag-se {
     background-image: url('../../assets/flags/se.svg');
   }

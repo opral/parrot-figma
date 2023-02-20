@@ -8,7 +8,7 @@ import FigmaHelper from "../../../shared/FigmaHelper";
 import { FigmaUtil } from "../../../shared/FigmaUtil";
 import Select, { SelectOption } from '../../compontents/select/icon-select'
 
-type TranslattaionStateItemProps = {
+type LocalizedLabelListItemProps = {
     translationState: LocalizedLabel,
     
     refreshKeys: Function
@@ -16,7 +16,7 @@ type TranslattaionStateItemProps = {
     figmaRemote: FigmaUtil
 }
 
-export default function TranslationStateItem(props: TranslattaionStateItemProps) {
+export default function LocalizedLabelListItem(props: LocalizedLabelListItemProps) {
     let translationState = props.translationState;
 
     // enrich the translation state object
@@ -27,15 +27,12 @@ export default function TranslationStateItem(props: TranslattaionStateItemProps)
     
     let translations = translationState.translataions
 
-    console.log('TranslationStateItem');
-    console.log(translations)
-    
     let keyExists = translationState.keyExists
     let localizedValueExists = translations && translations[translationState.pluralId] && translations[translationState.pluralId].translation !== undefined && translations[translationState.pluralId].translation !== ''
 
     let valuesDiffer = translationState.useSampleValues ? 
-        translationState.figmaText !== translationState?.translataions?.[translationState.pluralId]?.translationFilled : 
-        translationState.figmaText !== translationState?.translataions?.[translationState.pluralId]?.translation;
+        translationState.text !== translationState?.translataions?.[translationState.pluralId]?.translationFilled : 
+        translationState.text !== translationState?.translataions?.[translationState.pluralId]?.translation;
 
     let showPull = valuesDiffer && keyExists && localizedValueExists
     let showCreateKey = !keyExists
@@ -88,8 +85,8 @@ export default function TranslationStateItem(props: TranslattaionStateItemProps)
             figmaTemplate = translationState?.translataions?.[translationState.pluralId].translation;
         }
     } else {
-        if (translationState.figmaText != translationState.figmaTextFilled) {
-            figmaTemplate = translationState.figmaText;
+        if (translationState.text != translationState.figmaTextFilled) {
+            figmaTemplate = translationState.text;
         }  
     }
 
@@ -175,7 +172,7 @@ export default function TranslationStateItem(props: TranslattaionStateItemProps)
                                         {showPush && (
                                             <div className="circular-button" onClick={e => {
                                                 e.preventDefault(); 
-                                                onSaveFigmaVersionClick(translationState.key, translationState.rootFrameLanguage, translationState.pluralId, translationState.figmaText!)
+                                                onSaveFigmaVersionClick(translationState.key, translationState.rootFrameLanguage, translationState.pluralId, translationState.text!)
                                             
                                              }}>
                                                 <div className="upload-svg"></div>
@@ -185,7 +182,7 @@ export default function TranslationStateItem(props: TranslattaionStateItemProps)
                                         {showCreateKey && (
                                             <div className="circular-button" onClick={e => {
                                                 e.preventDefault(); 
-                                                onCreateFromFigmaVersionClick(translationState.key, translationState.rootFrameLanguage, translationState.pluralId, translationState.figmaText!)
+                                                onCreateFromFigmaVersionClick(translationState.key, translationState.rootFrameLanguage, translationState.pluralId, translationState.text!)
                                             
                                             }}>
                                             <div className="create-svg"></div></div>
@@ -194,7 +191,7 @@ export default function TranslationStateItem(props: TranslattaionStateItemProps)
                                         <Select
                                             placeholder="Select item"
                                             onChange={value => { 
-                                                onSaveFigmaVersionClick(translationState.key, translationState.rootFrameLanguage, value.value as string, translationState.figmaText!)
+                                                onSaveFigmaVersionClick(translationState.key, translationState.rootFrameLanguage, value.value as string, translationState.text!)
                                              }}
                                             // defaultValue={rootFrameLanguage?.value}
                                             unSelectedIcon='language'

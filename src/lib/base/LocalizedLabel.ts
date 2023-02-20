@@ -18,7 +18,7 @@ export interface LocalizedLabel {
     keyExists: boolean;
 
     key: string;
-    figmaText: string;
+    text: string;
     figmaTextFilled?: string;
     
     useSampleValues: boolean;

@@ -35,6 +35,10 @@ export default class FigmaHelper {
         
     }
 
+    async getLanguages() {
+        return this.localisationState.getLanguages()
+    }
+
     async getLocalitzationStates() {
         return await this.localisationState.getStatesByKey();
     }

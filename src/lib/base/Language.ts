@@ -1,5 +1,6 @@
 export enum Language {
     De = "de",
-    En = "en"
+    En = "en",
+    Bg = "bg"
   }
   

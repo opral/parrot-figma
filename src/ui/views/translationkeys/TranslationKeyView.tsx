@@ -10,6 +10,7 @@ import Select, { SelectOption } from '../../compontents/select/icon-select'
 import TranslationKeyEditor from "./TranslationKeyEditor";
 
 type TranslationKeyViewProps = {
+    languages: Language[],
     translationKey: TranslationKey,
     
     refreshKeys: Function
@@ -47,6 +48,8 @@ export default function TranslationKeyView(props: TranslationKeyViewProps) {
         
     }
 */
+console.log('props.languages')
+console.log(props.languages)
 
     return (
     <>
@@ -59,7 +62,7 @@ export default function TranslationKeyView(props: TranslationKeyViewProps) {
             <div className="column localized-text column-2">
               <table className="translations">
               <tbody>
-              {Object.keys(translationKey.translations).map((language) => { return (
+              {props.languages.map((language) => { return (
                 <tr key={language}>
                   <td className="language">
                     <span>{language}</span>                   
@@ -68,7 +71,7 @@ export default function TranslationKeyView(props: TranslationKeyViewProps) {
                     
                      <table className="translations">
                         <tbody>
-                        {Object.keys(translationKey.translations[language as Language]!).map(pluralKey => {
+                        {translationKey.translations[language as Language] && Object.keys(translationKey.translations[language as Language]!).map(pluralKey => {
                             return (
                                 <tr key={pluralKey}>
                                         
@@ -95,6 +98,33 @@ export default function TranslationKeyView(props: TranslationKeyViewProps) {
                             )
                             
                         })}
+                        {translationKey.translations[language as Language] === undefined && 
+                            (
+                                <tr key={Plural.Other}>
+                                        
+                                    <td className="language">
+                                    <span>{Plural.Other}</span>                   
+                                    </td>
+                                    <td className="translation">
+                                    <div className="translation-container translation">
+                                        
+                                        <TranslationKeyEditor
+                                            keyName={translationKey.keyName}
+                                            plural={Plural.Other}
+                                            language={language}
+                                            text={undefined}
+                                            figmaHelper={props.figmaHelper}
+                                            refreshKeys={props.refreshKeys}
+                                        />
+                                        
+                                    </div>
+                                    
+                                    
+                                    </td>
+                                </tr>
+                            )
+                            
+                        }
                      </tbody>
                         
                     </table>

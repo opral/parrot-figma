@@ -6,7 +6,7 @@ import { LocalizedLabel } from "../base/LocalizedLabel";
 import { BaseTranslationKeyStore } from "./BaseKeyStore"
 import { TranslationKey, TranslationKeys } from "../base/TranslationKey";
 
-const sharedPluginDataNS = 'assetsAndResources'
+const sharedPluginDataNS = 'assetsAndResourcestmp'
 const localiszationKeysKey = 'localiszationKeys'
 
 
@@ -163,7 +163,7 @@ export class FigmaFileKeyStore extends BaseTranslationKeyStore {
             }
 
             if (key.keyName.indexOf(FigmaLocaliziationHelper.samplesPrefix) === 0) {
-                sampleValuesStateByKey[this.removeSamplePrefix(key.key_name)] = {
+                sampleValuesStateByKey[this.removeSamplePrefix(key.keyName)] = {
                     keyName: key.keyName,
                     translations: key.translations
                 }

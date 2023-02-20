@@ -101,7 +101,7 @@ export class FigmaLocaliziationHelper {
       keyExists: false,
       plurals: [pluralId],
       pluralId: pluralId,
-      figmaText: this.toTokenizedText(node),
+      text: this.toTokenizedText(node),
     }
 
   }

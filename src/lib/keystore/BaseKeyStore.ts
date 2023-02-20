@@ -15,42 +15,19 @@ export class BaseTranslationKeyStore {
         return key.split(FigmaLocaliziationHelper.samplesPrefix + FigmaLocaliziationHelper.separator).join('');
     }
 
-    getTranslations(key: string, language: Language) {
-
-        if (!this.stateByKey[key]) {
-            return undefined
-        }
-
-        return this.stateByKey[key].translations[language];
-        
-    }
-
-    getPlurals(key: string) {
-        this.stateByKey[key]
-    }
-
-    getKeyId(key: string) {
-        if (!this.stateByKey[key]) {
-            return undefined
-        }
-        return this.stateByKey[key].keyName
-    }
-
     private fillPlaceholdersWithSampleData(text: string, language: Language, plural: Plural) {
        
         const placeholders = new RegExp(`\\[%(s|n|i):(\\w+)\\]`, "g");
         return text.replace(placeholders, (substring, type, key) => {
-            console.log('substring: ' + substring);
-           
-
+          
             // exact match
-            if (this.sampleValuesStateByKey[type + ':' + key]?.translations[language]) {
-                return this.sampleValuesStateByKey[type + ':' + key]?.translations[language][plural];
+            if (this.sampleValuesStateByKey[type + ':' + key]?.translations[language]?.[plural]?.text) {
+                return this.sampleValuesStateByKey[type + ':' + key]?.translations[language][plural].text;
             }
             
             // name match
-            if (this.sampleValuesStateByKey[key]?.translations[language]) {
-                return this.sampleValuesStateByKey[key]?.translations[language][plural];
+            if (this.sampleValuesStateByKey[key]?.translations[language]?.[plural]?.text) {
+                return this.sampleValuesStateByKey[key]?.translations[language][plural].text;
             }
 
             // not found
@@ -61,8 +38,8 @@ export class BaseTranslationKeyStore {
 
     enrichLocalizationState(state: LocalizedLabel, language: Language) {
 
-        if (state.figmaText) {
-            state.figmaTextFilled = this.fillPlaceholdersWithSampleData(state.figmaText, language, state.pluralId as Plural);
+        if (state.text) {
+            state.figmaTextFilled = this.fillPlaceholdersWithSampleData(state.text, language, state.pluralId as Plural);
         }
 
         if (!this.stateByKey[state.key]) {
@@ -74,7 +51,9 @@ export class BaseTranslationKeyStore {
 
         state.translataions = {};
         console.log('enrivch')
+        console.log(this.stateByKey[state.key])
         console.log(this.stateByKey[state.key].plurals);
+        console.log(pluralForms);
 
         for (let plural of this.stateByKey[state.key].plurals) {
             state.translataions[plural] = {};
@@ -93,7 +72,7 @@ export class BaseTranslationKeyStore {
     }
 
     async getLanguages() {
-        return [Language.De, Language.En]
+        return [Language.De, Language.En, Language.Bg]
     }
 
     async getStatesByKey() {

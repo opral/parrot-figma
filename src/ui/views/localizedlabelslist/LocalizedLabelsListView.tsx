@@ -1,15 +1,16 @@
 import * as React from "react";
 import { useState } from "react";
 import * as ReactDOM from "react-dom";
+import { Language } from "../../../lib/base/Language";
 import { LocalizedLabel } from "../../../lib/base/LocalizedLabel";
 import FigmaHelper from "../../../shared/FigmaHelper";
 import { FigmaUtil } from "../../../shared/FigmaUtil";
 import LocalizedFrameGroup from "./LocalizedFrameGroup";
-import "./TranslationStateListView.css"
+import "./LocalizedLabelsListView.css"
 
-type TranslationStatesListViewProps = {
+type LocalizedLabelsListViewProps = {
     keys: LocalizedLabel[],
-    languages: any[]
+    languages: Language[]
 
     figmaHelper: FigmaHelper
     figmaRemote: FigmaUtil
@@ -17,7 +18,7 @@ type TranslationStatesListViewProps = {
   }
   
 
-export default function TranslationStateListView(props: TranslationStatesListViewProps) {
+export default function LocalizedLabelsListView(props: LocalizedLabelsListViewProps) {
 
     let mainFrameToTranslationStates = {} as any;
     for (let translationKey of props.keys) {

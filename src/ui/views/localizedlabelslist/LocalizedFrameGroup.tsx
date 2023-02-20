@@ -2,7 +2,7 @@ import * as React from "react";
 import { useState } from "react";
 import * as ReactDOM from "react-dom";
 import { LocalizedLabel } from "../../../lib/base/LocalizedLabel";
-import TranslationStateItem from "./TranslationStateItem";
+import LocalizedLabelListItem from "./LocalizedLabelListItem";
 import Select, { SelectOption } from '../../compontents/select/icon-select'
 import FigmaHelper from "../../../shared/FigmaHelper";
 import { FigmaUtil } from "../../../shared/FigmaUtil";
@@ -29,12 +29,12 @@ export default function LocalizedFrameGroup(props: LocalizedFrameGroupProps) {
     let rootFrameLanguage: SelectOption | undefined;
     let languageOptiones = [] as SelectOption[];
 
-    for (let languageOption of props.languages) {
+    for (let language of props.languages) {
         const currentLanguageOption = {
-            value: languageOption.language, label: languageOption.language, icon: 'flag-'+languageOption.language
+            value: language, label: language, icon: 'flag-'+language
         }
         
-        if (languageOption.language == firstTranslationState.rootFrameLanguage) {
+        if (language == firstTranslationState.rootFrameLanguage) {
             rootFrameLanguage = currentLanguageOption
         }
         languageOptiones.push(currentLanguageOption)
@@ -104,7 +104,7 @@ export default function LocalizedFrameGroup(props: LocalizedFrameGroupProps) {
           </div>
            
             {rootFrameLanguage?.value && props.translationStates.map((translationState) => 
-                <TranslationStateItem 
+                <LocalizedLabelListItem 
                     key={translationState.nodeId} 
                     translationState={translationState} 
                     refreshKeys= {props.refreshKeys}

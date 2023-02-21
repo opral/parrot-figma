@@ -16,6 +16,9 @@ import { TranslationKeys } from "../lib/base/TranslationKey";
 import TranslationKeyListView from "./views/translationkeys/TranslationKeyListView";
 import { Language } from "../lib/base/Language";
 
+import { MemoryTranslationKeyStore } from "../lib/keystore/MemoryTranslationKeyStore";
+import { FigmaFileTranslationKeyStore } from "../lib/keystore/FigmaFileTranslationKeyStore";
+
 
 WindowManagerUi.init(
     document.getElementById('sizing-wrapper')!, 
@@ -32,8 +35,15 @@ let asyncFunctionProxy = new AsyncFunctionProxy('UIAsyncFunctionProxy', (data: a
 let figmaRemote = new FigmaUtil()
 asyncFunctionProxy.proxyAsyncMethods(figmaRemote)
 
-let figmaHelperRemote = new FigmaHelper(undefined);
+let figmaHelperRemote = new FigmaHelper(undefined, undefined);
 asyncFunctionProxy.proxyAsyncMethods(figmaHelperRemote)
+
+let figmaFileTranslationKeyStore = new FigmaFileTranslationKeyStore()
+asyncFunctionProxy.proxyAsyncMethods(figmaFileTranslationKeyStore);
+
+let memoryTranslationKeyStore = new MemoryTranslationKeyStore(figmaFileTranslationKeyStore)
+
+
 
 
 const defaultLinkStyleStorageKey = 'defaultLinkStyle';
@@ -61,7 +71,7 @@ function App() {
         // asynchronous fetch the state from figma helper
         (async ()=>{
             
-            await figmaHelperRemote.refreshLocalizationState()
+            await memoryTranslationKeyStore.load()
             
             let defaultLinkStyle = await figmaHelperRemote.getLinkStyle();
             setDefaultLinkStyle(defaultLinkStyle);
@@ -83,8 +93,8 @@ function App() {
     } 
 
     async function refreshLanguages() {
-        let languages = await figmaHelperRemote.getLanguages();
-        setLanguages(languages);
+        // let languages = await figmaHelperRemote.getLanguages();
+        setLanguages([Language.De, Language.En, Language.Bg]);
     }
 
     async function refreshSelection() {
@@ -103,7 +113,7 @@ function App() {
     }
 
     async function refreshTranslatedKeys() {
-        let translatedKeys = await figmaHelperRemote.getTranslatedKeys();
+        let translatedKeys = memoryTranslationKeyStore.translationKeys;
         setTranslatedKeys(translatedKeys);
     }
 
@@ -112,6 +122,7 @@ function App() {
         view = <TranslationKeyListView 
                     figmaHelper={figmaHelperRemote}
                     figmaRemote={figmaRemote}
+                    translationKeyStore={memoryTranslationKeyStore}
                     keys={translatedLeys} 
                     languages={languages} 
                     refreshKeys={refreshTranslatedKeys}
@@ -124,6 +135,7 @@ function App() {
     } else {
         view = <LocalizedLabelsListView 
         figmaHelper={figmaHelperRemote}
+        translationKeyStore={memoryTranslationKeyStore}
         figmaRemote={figmaRemote}
         keys={selectedKeys} 
         languages={languages} 

@@ -12,7 +12,7 @@ let widht = 800;
 
 
 import { AsyncFunctionProxy } from "../lib/rpc/AsyncFunctionProxy";
-import { FigmaFileKeyStore } from "../lib/keystore/FigmaFileTranslationKeyStore"
+import { FigmaFileTranslationKeyStore } from "../lib/keystore/FigmaFileTranslationKeyStore";
 import { FigmaUtil } from "../shared/FigmaUtil"
 import FigmaHelper from "../shared/FigmaHelper";
 import { WindowManagerSandbox, WindowMode } from "../lib/windowManager/WindowManagerSandbox";
@@ -28,15 +28,12 @@ let asyncFunctionProxy = new AsyncFunctionProxy('SandboxAsyncFunctionProxy', (da
 
 asyncFunctionProxy.registerInstance(figmaRemote);
 
-const figmaHelper = new FigmaHelper(figma);
+
+let localizationState = new FigmaFileTranslationKeyStore()
+asyncFunctionProxy.registerInstance(localizationState);
+
+const figmaHelper = new FigmaHelper(figma, localizationState);
 asyncFunctionProxy.registerInstance(figmaHelper);
-
-let localizationState = new FigmaFileKeyStore()
-
-export interface TranslatableTextNodeWrapper {
-  key: string,
-  node: TextNode
-}
 
 figma.on("selectionchange", () => {
   figma.ui.postMessage(

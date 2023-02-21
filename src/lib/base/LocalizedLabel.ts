@@ -1,3 +1,5 @@
+import { Language } from "./Language";
+import { Plural } from "./Plural";
 
 
 export interface LocalizedLabel {
@@ -6,8 +8,10 @@ export interface LocalizedLabel {
 
     rootFrameId: string;
     rootFrameName: string;
-    rootFrameLanguage: string;
+    rootFrameLanguage: Language;
+    rootFrameUseSampleValues: boolean;
     
+    name: string;
     nodeId: string;
     
     x: number,
@@ -19,12 +23,13 @@ export interface LocalizedLabel {
 
     key: string;
     text: string;
+    
     figmaTextFilled?: string;
     
     useSampleValues: boolean;
-    pluralId: string;
+    pluralId: Plural;
     // contains all plural forms 
-    plurals: string[];
+    plurals: Plural[];
     translataions?: { 
         [pluralId: string]: {
             translation?: string,

@@ -21,8 +21,8 @@ export default function SearchKeyList(props: SearchKeyListProps) {
 
     useEffect(() => {
         (async ()=>{
-            let states = await props.figmaHelper.getLocalitzationStates();
-            setKeys(states);
+            /*let states = await props.figmaHelper.getLocalitzationStates();
+            setKeys(states);*/
         })()
     }, [])
 

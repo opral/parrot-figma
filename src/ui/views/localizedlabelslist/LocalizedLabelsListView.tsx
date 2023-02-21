@@ -3,6 +3,7 @@ import { useState } from "react";
 import * as ReactDOM from "react-dom";
 import { Language } from "../../../lib/base/Language";
 import { LocalizedLabel } from "../../../lib/base/LocalizedLabel";
+import { MemoryTranslationKeyStore } from "../../../lib/keystore/MemoryTranslationKeyStore";
 import FigmaHelper from "../../../shared/FigmaHelper";
 import { FigmaUtil } from "../../../shared/FigmaUtil";
 import LocalizedFrameGroup from "./LocalizedFrameGroup";
@@ -11,7 +12,7 @@ import "./LocalizedLabelsListView.css"
 type LocalizedLabelsListViewProps = {
     keys: LocalizedLabel[],
     languages: Language[]
-
+    translationKeyStore: MemoryTranslationKeyStore
     figmaHelper: FigmaHelper
     figmaRemote: FigmaUtil
     refreshKeys: Function
@@ -38,6 +39,7 @@ export default function LocalizedLabelsListView(props: LocalizedLabelsListViewPr
                     <LocalizedFrameGroup 
                         translationStates={mainFrameToTranslationStates[mainFrameId]} 
                         languages={props.languages} 
+                        translationKeyStore={props.translationKeyStore}
                         refreshKeys={props.refreshKeys}
                         figmaHelper={props.figmaHelper}
                         figmaRemote={props.figmaRemote}

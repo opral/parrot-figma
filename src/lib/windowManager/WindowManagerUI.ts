@@ -65,19 +65,16 @@ export class WindowManagerUi {
     }
 
     onResizeHandlePointerUp(e: any) {
-        console.log('onpointerup triggered')
         e.target.onpointermove = null;
         e.target.releasePointerCapture(e.pointerId);
     };
     
     onResizeHandlePointerDown(e: any) {
-        console.log('onpointerdown triggered')
         e.target.onpointermove = this.onResizeHandleDrag;
         e.target.setPointerCapture(e.pointerId);
     };
 
     setWindowMode(mode: WindowMode) {
-        console.log(mode)
         parent.postMessage( { pluginMessage: { target: 'WindowManager', windowMode: mode }}, '*');
     }
 }

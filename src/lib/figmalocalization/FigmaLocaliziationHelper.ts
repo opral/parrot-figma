@@ -1,5 +1,6 @@
 import { Plural } from "../base/Plural";
 import { LocalizedLabel as LocalizedLabel } from "../base/LocalizedLabel";
+import { Language } from "../base/Language";
 
 export class FigmaLocaliziationHelper {
 
@@ -89,9 +90,11 @@ export class FigmaLocaliziationHelper {
       pageName: page.name,
       rootFrameId: rootFrame.id,
       rootFrameName: rootFrame.name,
-      rootFrameLanguage: rootFrame.getPluginData(this.languageDataKey) === '' ? 'none' : rootFrame.getPluginData(this.languageDataKey),
-      useSampleValues: rootFrame.getPluginData(this.sampleValuesDataKey) === '' ? false : true,
+      rootFrameLanguage: rootFrame.getPluginData(this.languageDataKey) === '' ? Language.De : rootFrame.getPluginData(this.languageDataKey) as Language,
+      rootFrameUseSampleValues: rootFrame.getPluginData(this.sampleValuesDataKey) === '' ? false : true,
+      useSampleValues: node.getPluginData(this.sampleValuesDataKey) === '' ? false : true,
       nodeId: node.id,
+      name: node.name,
       height: node.height,
       width: node.width,
       x: x,

@@ -1,5 +1,5 @@
 
-import { FigmaFileKeyStore } from "../lib/keystore/FigmaFileTranslationKeyStore";
+import { TranslationKeyStore } from "../lib/keystore/MemoryTranslationKeyStore";
 
 import { FigmaLocaliziationHelper } from "../lib/figmalocalization/FigmaLocaliziationHelper";
 
@@ -14,10 +14,11 @@ const defaultLinkStyleKey = 'defaultLinkStyle'
 export default class FigmaHelper {
 
     figma: PluginAPI | undefined
-    localisationState = new FigmaFileKeyStore()
+    translationKeyStore: TranslationKeyStore | undefined
 
-    constructor(figma?: PluginAPI) {
+    constructor(figma?: PluginAPI, keyStore?: TranslationKeyStore) {
         this.figma = figma;
+        this.translationKeyStore = keyStore
     }
 
     async setLinkStyle(linkStyle: string) {        
@@ -35,14 +36,6 @@ export default class FigmaHelper {
         
     }
 
-    async getLanguages() {
-        return this.localisationState.getLanguages()
-    }
-
-    async getLocalitzationStates() {
-        return await this.localisationState.getStatesByKey();
-    }
-
     async updateLanguage(frameNodeId: string, language: string) {
 
         let frame = figma.getNodeById(frameNodeId)
@@ -58,6 +51,8 @@ export default class FigmaHelper {
     
     }
       
+
+    
     async toggleSampleValues(frameNodeId: string) {
 
         let frame = figma.getNodeById(frameNodeId)
@@ -265,7 +260,7 @@ export default class FigmaHelper {
                 break;
             }
 
-            this.localisationState?.enrichLocalizationState(nodeWithKey, language as Language);
+            this.translationKeyStore!.enrichLocalizationState(nodeWithKey, language as Language);
             let textNodeId = nodeWithKey.nodeId;
 
             if (language == 'keys') {
@@ -290,43 +285,18 @@ export default class FigmaHelper {
     }
 
     
-
-    async refreshLocalizationState() {
-        await this.localisationState?.refreshState()
-    }
-
     async getSelection() {
         
         let selectedTextNodes = FigmaLocaliziationHelper.extractKeys(figma.root, figma.currentPage, figma.currentPage.selection)
 
-
         for (let currentNode of selectedTextNodes) {
-            if (currentNode.rootFrameLanguage != 'none') {
-                this.localisationState?.enrichLocalizationState(currentNode, currentNode.rootFrameLanguage as Language);
-            }
+            this.translationKeyStore?.enrichLocalizationState(currentNode, currentNode.rootFrameLanguage as Language);
         }
 
         console.log(selectedTextNodes);
         return selectedTextNodes
 
     }    
-
-    async getTranslatedKeys() {
-        console.log(this.localisationState.stateByKey)
-        return this.localisationState.stateByKey
-    }
-
-    async createKey(key: string, language: string, plural: string, translation: string) {
-        await this.localisationState?.createKey(key, language, plural, translation)
-    }
-
-    async updateKey(key: string, language: string, plural: string, translation: string) {
-        await this.localisationState?.updateKey(key, language, plural, translation)
-    }
-
-    async onCopyFrommExisting(fromKey: string, toKey: string) {
-        await this.localisationState?.onCopyFromExisting(fromKey, toKey)
-    }
 
     async updateTextNode(nodeId: string, text: string, pluralId?: string, fontsLoaded = false) {
         let textNode = figma.getNodeById(nodeId)! as TextNode;

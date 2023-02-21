@@ -67,7 +67,7 @@ export class AsyncFunctionProxy {
 
                 let proxy = this;
                 instancePrototype[memberName] = async function () {
-                    // console.log(proxy.name + ' request invocation of: ' + instanceClassName + '.' + memberName);
+                    console.log(proxy.name + ' request invocation of: ' + instanceClassName + '.' + memberName);
                     return proxy.invoke(instanceClassName + '.' + memberName, Array.prototype.slice.call(arguments))
                 }
             }

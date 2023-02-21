@@ -7,36 +7,42 @@ import { LocalizedLabel } from "../../../lib/base/LocalizedLabel";
 import FigmaHelper from "../../../shared/FigmaHelper";
 import { FigmaUtil } from "../../../shared/FigmaUtil";
 import Select, { SelectOption } from '../../compontents/select/icon-select'
+import { MemoryTranslationKeyStore } from "../../../lib/keystore/MemoryTranslationKeyStore";
+import { Language } from "../../../lib/base/Language";
+import TranslationEditor from "../../compontents/translationEditor/TranslationEditor";
 
 type LocalizedLabelListItemProps = {
-    translationState: LocalizedLabel,
+
+    localizedLabel: LocalizedLabel,
     
     refreshKeys: Function
     figmaHelper: FigmaHelper,
     figmaRemote: FigmaUtil
+
+    translationKeyStore: MemoryTranslationKeyStore,
 }
 
 export default function LocalizedLabelListItem(props: LocalizedLabelListItemProps) {
-    let translationState = props.translationState;
-
-    // enrich the translation state object
-    let selectedState = translationState.selected ? 'selected' : '';
+    let localizedLabel = props.localizedLabel;
+    let translatedKey = props.translationKeyStore.getKey(localizedLabel.key);
 
     let [showLocalizedText, setShowLocalizedText] = useState(false)
     const rowRef = React.useRef<HTMLDivElement>(null);
     
-    let translations = translationState.translataions
+    
+    let keyExists = translatedKey !== undefined;
+    let translations = translatedKey?.translations[localizedLabel.rootFrameLanguage]
+    let localizedText = translations?.[localizedLabel.pluralId]?.text
+    
+    let localizedTextToApply = localizedText
 
-    let keyExists = translationState.keyExists
-    let localizedValueExists = translations && translations[translationState.pluralId] && translations[translationState.pluralId].translation !== undefined && translations[translationState.pluralId].translation !== ''
+    if (localizedText !== undefined && localizedLabel.useSampleValues) {
+        localizedTextToApply = props.translationKeyStore.fillPlaceholdersWithSampleData(localizedTextToApply!, localizedLabel.rootFrameLanguage, localizedLabel.pluralId);
+    }
 
-    let valuesDiffer = translationState.useSampleValues ? 
-        translationState.text !== translationState?.translataions?.[translationState.pluralId]?.translationFilled : 
-        translationState.text !== translationState?.translataions?.[translationState.pluralId]?.translation;
-
-    let showPull = valuesDiffer && keyExists && localizedValueExists
+    let showPull = keyExists && localizedTextToApply && localizedLabel.text != localizedTextToApply
     let showCreateKey = !keyExists
-    let showPush = valuesDiffer && !showCreateKey && !translationState.useSampleValues
+    let showPush = keyExists && (!localizedLabel.useSampleValues || localizedLabel.rootFrameUseSampleValues) && localizedLabel.text != localizedText
 
     let figmaTemplate = undefined as string | undefined
 
@@ -53,12 +59,12 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
     }
 
     async function onSaveFigmaVersionClick(key: string, language: string, plural: string, figmaText: string) {
-        await props.figmaHelper.updateKey(key, language, plural, figmaText);
+        await props.translationKeyStore.updateKey(key, [{ language: language as Language, plural: plural as Plural, text: figmaText}]);
         await props.refreshKeys()
     }
 
     async function onCreateFromFigmaVersionClick(key: string, language: string, plural: string, figmaText: string) {
-        await props.figmaHelper.createKey(key, language, plural, figmaText);
+        await props.translationKeyStore.createKey(key, [{ language: language as Language, plural: plural as Plural, text: figmaText}]);
         await props.refreshKeys()
     }
 
@@ -73,107 +79,99 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
             value: plural, label: plural
         }
         
-        if (translationState.plurals.indexOf(plural) === -1) {
+        if (localizedLabel.plurals.indexOf(plural) === -1) {
             newPluralOptions.push(pluralOption)
         }
         
     }
     
     // TODO comment or refactor
-    if (translationState.useSampleValues) {
-        if (translationState?.translataions?.[translationState.pluralId].translation != translationState?.translataions?.[translationState.pluralId].translationFilled) {
-            figmaTemplate = translationState?.translataions?.[translationState.pluralId].translation;
+    if (localizedLabel.useSampleValues) {
+        if (localizedLabel?.translataions?.[localizedLabel.pluralId].translation != localizedLabel?.translataions?.[localizedLabel.pluralId].translationFilled) {
+            figmaTemplate = localizedLabel?.translataions?.[localizedLabel.pluralId].translation;
         }
     } else {
-        if (translationState.text != translationState.figmaTextFilled) {
-            figmaTemplate = translationState.text;
+        if (localizedLabel.text != localizedLabel.figmaTextFilled) {
+            figmaTemplate = localizedLabel.text;
         }  
     }
 
     React.useEffect(() => {
-        if (selectedState && rowRef.current) {
+        if (localizedLabel.selected && rowRef.current) {
           // tslint:disable-next-line
           (rowRef.current as any).scrollIntoViewIfNeeded(true);
         }
-      }, [selectedState]);
+      }, [localizedLabel.selected]);
 
     return (
     <>
-    <div ref={rowRef} className={"row " + (selectedState ? 'selected' :'')} onClick={(e) => {onNodeSelect(translationState.nodeId)}}>
+    <div ref={rowRef} className={"row " + (localizedLabel.selected ? 'selected' :'')} onClick={(e) => {onNodeSelect(localizedLabel.nodeId)}}>
             
             <div className="column key column-1">
-                
-              <div className="key-label">{translationState.key}</div>
+              <div className="label-name">{localizedLabel.name}</div>
+              <div className="key-label">{localizedLabel.key}</div>
             </div>
             <div className="column localized-text column-2">
               <table className="translations">
               <tbody>
                 <tr>
                   <td className="language">
-                    <span>{translationState.rootFrameLanguage}</span>                   
+                    <span>{localizedLabel.rootFrameLanguage}</span>                   
                   </td>
                   <td className="translation">
                     
                      <table className="translations">
                         <tbody>
-                        {translationState.plurals!.map(pluralKey => {
+                        {localizedLabel.plurals!.map(plural => {
                             return (
-                                <tr key={pluralKey}>
-                                        
+                                <tr key={plural}>
                                     <td className="language">
-                                    <span>{pluralKey}</span>                   
+                                        <span>{plural}</span>                   
                                     </td>
                                     <td className="translation">
+                                    { plural === localizedLabel.pluralId && (
+                                    <>
                                     <div className="translation-container translation">
-                                        { pluralKey !== translationState.pluralId && 
-                                        <div>
-                                            <div>{translationState?.translataions?.[pluralKey]?.translationFilled}</div>
-                                            <div style={{visibility: 
-                                                translationState.translataions?.[pluralKey].translation == translationState.translataions?.[pluralKey].translationFilled ? 'hidden': 'visible'}}>{translationState.translataions?.[pluralKey].translation}</div>
-                                        </div>
-                                        }
-                                        { pluralKey === translationState.pluralId && 
-                                        <>
-                                        <div>
-                                            <div className="translation" style={{visibility: showLocalizedText ? 'hidden': 'visible'}}>{translationState.figmaTextFilled}</div>
-                                            <div className="translation" style={{visibility: showLocalizedText ? 'hidden': 'visible'}}>{figmaTemplate}</div>
-                                            
-                                        </div>
-                                        <div>
-                                            <div className="translation" style={{visibility: !showLocalizedText ? 'hidden': 'visible'}}>{translationState.translataions?.[pluralKey].translationFilled}</div>
-                                            <div className="translation" style={{visibility: !showLocalizedText || translationState.translataions?.[pluralKey].translationFilled == translationState.translataions?.[pluralKey].translation ? 'hidden': 'visible'}}>{translationState.translataions?.[pluralKey].translation}</div>
-                                        </div>
-                                        </>
-                                        }
+                                        <TranslationEditor
+                                            onSave={async function(text: any) {
+                                                if (!keyExists) {
+                                                    await props.translationKeyStore.createKey(localizedLabel.key, [{ language: localizedLabel.rootFrameLanguage, plural: plural, text: text}]);
+                                                } else {
+                                                    await props.translationKeyStore.updateKey(localizedLabel.key, [{ language: localizedLabel.rootFrameLanguage, plural: plural, text: text}]);
+                                                }
+                                                
+                                                await props.figmaHelper.updateTextNode(localizedLabel.nodeId, text);
+                                                await props.refreshKeys()
+                                            }}
+                                            text={localizedText}
+                                            designText={localizedLabel.text}
+
+                                        />
                                     </div>
                                     <div className="actions">
-                                        {pluralKey !== translationState.pluralId && 
-                                            <div className="circular-button"><div className="eye-svg"></div></div>
-                                        }
-                                        {pluralKey != translationState.pluralId && translationState.translataions?.[pluralKey].translationFilled && translationState.translataions?.[pluralKey].translation && 
-                                            <div className="circular-button" onClick={(e) => onPluralSelect(translationState.rootFrameId, translationState.nodeId, pluralKey, translationState.useSampleValues ? translationState.translataions![pluralKey].translationFilled! : translationState.translataions![pluralKey].translation!)}>
-                                            <div className="eye-closed-svg"></div>
-                                            </div>
-                                        }
+                                        
+                                        <div className="circular-button">
+                                            <div className="eye-svg"></div>
+                                        </div>
+                                        
                                         {showPull && (
                                             <div className="circular-button" onClick={e => {
                                                     e.preventDefault(); 
-                                                    onUseLocalizedVersionClick(translationState.rootFrameId, translationState.nodeId, translationState.translataions![pluralKey].translation!)
+                                                    onUseLocalizedVersionClick(localizedLabel.rootFrameId, localizedLabel.nodeId, localizedLabel.translataions![plural].translation!)
                                                 }}
                                                 onMouseOut={e=>{
                                                     setShowLocalizedText(false)
                                                 }}
                                                 onMouseOver={e=>{
                                                     setShowLocalizedText(true)
-                                                }}>
+                                             }}>
                                                 <div className="download-svg"></div>
                                             </div>
                                         )}
                                         {showPush && (
                                             <div className="circular-button" onClick={e => {
                                                 e.preventDefault(); 
-                                                onSaveFigmaVersionClick(translationState.key, translationState.rootFrameLanguage, translationState.pluralId, translationState.text!)
-                                            
+                                                onSaveFigmaVersionClick(localizedLabel.key, localizedLabel.rootFrameLanguage, localizedLabel.pluralId, localizedLabel.text!)
                                              }}>
                                                 <div className="upload-svg"></div>
                                             </div>
@@ -182,24 +180,83 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                                         {showCreateKey && (
                                             <div className="circular-button" onClick={e => {
                                                 e.preventDefault(); 
-                                                onCreateFromFigmaVersionClick(translationState.key, translationState.rootFrameLanguage, translationState.pluralId, translationState.text!)
-                                            
-                                            }}>
-                                            <div className="create-svg"></div></div>
+                                                onCreateFromFigmaVersionClick(localizedLabel.key, localizedLabel.rootFrameLanguage, localizedLabel.pluralId, localizedLabel.text!)                                            
+                                             }}>
+                                                <div className="create-svg"></div>
+                                            </div>
                                         )}
-                                        {!showCreateKey && (
+                                        {!false && (
                                         <Select
                                             placeholder="Select item"
                                             onChange={value => { 
-                                                onSaveFigmaVersionClick(translationState.key, translationState.rootFrameLanguage, value.value as string, translationState.text!)
+                                                onSaveFigmaVersionClick(localizedLabel.key, localizedLabel.rootFrameLanguage, value.value as string, localizedLabel.text!)
                                              }}
                                             // defaultValue={rootFrameLanguage?.value}
                                             unSelectedIcon='language'
                                             options={newPluralOptions}
-                                        />
+                                         />
                                         )}
                                     </div>
                                     
+                                    </>
+                                    )}
+
+                                    { plural !== localizedLabel.pluralId && (
+                                    <>
+                                    <div className="translation-container translation">
+                                        <div>
+                                            <div>{translations?.[plural]?.text ? translations![plural]!.text! : 'Unset'}</div>
+                                        </div>
+                                        <div>
+                                            <div className="translation" style={{visibility: showLocalizedText ? 'hidden': 'visible'}}>{localizedLabel.text}</div>
+                                        </div>
+                                    </div>
+                                    <div className="actions">
+                                        
+                                        <div className="circular-button">
+                                            <div className="eye-svg"></div>
+                                        </div>
+                                        
+                                        {showPull && (
+                                            <div className="circular-button" onClick={e => {
+                                                    e.preventDefault(); 
+                                                    onUseLocalizedVersionClick(localizedLabel.rootFrameId, localizedLabel.nodeId, localizedLabel.translataions![plural].translation!)
+                                                }}>
+                                                <div className="download-svg"></div>
+                                            </div>
+                                        )}
+                                        {showPush && (
+                                            <div className="circular-button" onClick={e => {
+                                                e.preventDefault(); 
+                                                onSaveFigmaVersionClick(localizedLabel.key, localizedLabel.rootFrameLanguage, localizedLabel.pluralId, localizedLabel.text!)
+                                             }}>
+                                                <div className="upload-svg"></div>
+                                            </div>
+                                            
+                                        )}
+                                        {showCreateKey && (
+                                            <div className="circular-button" onClick={e => {
+                                                e.preventDefault(); 
+                                                onCreateFromFigmaVersionClick(localizedLabel.key, localizedLabel.rootFrameLanguage, localizedLabel.pluralId, localizedLabel.text!)                                            
+                                             }}>
+                                                <div className="create-svg"></div>
+                                            </div>
+                                        )}
+                                        {!false && (
+                                        <Select
+                                            placeholder="Select item"
+                                            onChange={value => { 
+                                                onSaveFigmaVersionClick(localizedLabel.key, localizedLabel.rootFrameLanguage, value.value as string, localizedLabel.text!)
+                                             }}
+                                            // defaultValue={rootFrameLanguage?.value}
+                                            unSelectedIcon='language'
+                                            options={newPluralOptions}
+                                         />
+                                        )}
+                                    </div>
+                                    
+                                    </>
+                                    )}
                                     </td>
                                 </tr>
                             )

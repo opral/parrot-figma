@@ -6,11 +6,12 @@ import LocalizedLabelListItem from "./LocalizedLabelListItem";
 import Select, { SelectOption } from '../../compontents/select/icon-select'
 import FigmaHelper from "../../../shared/FigmaHelper";
 import { FigmaUtil } from "../../../shared/FigmaUtil";
+import { MemoryTranslationKeyStore } from "../../../lib/keystore/MemoryTranslationKeyStore";
 
 type LocalizedFrameGroupProps = {
     translationStates: LocalizedLabel[],
     languages: any[],
-
+    translationKeyStore: MemoryTranslationKeyStore
     refreshKeys: Function
     figmaHelper: FigmaHelper,
     figmaRemote: FigmaUtil
@@ -106,7 +107,8 @@ export default function LocalizedFrameGroup(props: LocalizedFrameGroupProps) {
             {rootFrameLanguage?.value && props.translationStates.map((translationState) => 
                 <LocalizedLabelListItem 
                     key={translationState.nodeId} 
-                    translationState={translationState} 
+                    translationKeyStore={props.translationKeyStore}
+                    localizedLabel={translationState} 
                     refreshKeys= {props.refreshKeys}
                     figmaHelper={props.figmaHelper}
                     figmaRemote={props.figmaRemote}

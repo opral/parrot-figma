@@ -1,6 +1,9 @@
 
 import * as React from "react";
 import { useEffect, useRef, useState } from "react";
+import { Language } from "../../../lib/base/Language";
+import { Plural } from "../../../lib/base/Plural";
+import { MemoryTranslationKeyStore } from "../../../lib/keystore/MemoryTranslationKeyStore";
 import FigmaHelper from "../../../shared/FigmaHelper";
 
 type TranslationKeyEditorProps = {
@@ -8,6 +11,7 @@ type TranslationKeyEditorProps = {
     plural: string,
     language: string,
     text?: string,
+    translationKeyStore: MemoryTranslationKeyStore,
     figmaHelper: FigmaHelper,
     refreshKeys: Function
 }
@@ -42,7 +46,7 @@ export default function TranslationKeyEditor(props: TranslationKeyEditorProps) {
                     disabled={translationText == props.text}
                     onClick={e => {
                         setEditingState(!editingState)
-                        props.figmaHelper.updateKey(props.keyName, props.language, props.plural, translationText!)
+                        props.translationKeyStore.updateKey(props.keyName, [{language: props.language as Language, plural: props.plural as Plural, text: translationText!}])
                     }} />
                 <input type="button" value="Cancel" 
                     onClick={e => {

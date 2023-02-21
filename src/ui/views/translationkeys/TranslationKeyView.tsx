@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Language } from "../../../lib/base/Language";
 import { Plural } from "../../../lib/base/Plural";
 import { TranslationKey } from "../../../lib/base/TranslationKey";
+import { MemoryTranslationKeyStore } from "../../../lib/keystore/MemoryTranslationKeyStore";
 
 import FigmaHelper from "../../../shared/FigmaHelper";
 import { FigmaUtil } from "../../../shared/FigmaUtil";
@@ -13,9 +14,10 @@ type TranslationKeyViewProps = {
     languages: Language[],
     translationKey: TranslationKey,
     
-    refreshKeys: Function
+    refreshKeys: Function,
     figmaHelper: FigmaHelper,
-    figmaRemote: FigmaUtil
+    figmaRemote: FigmaUtil,
+    translationKeyStore: MemoryTranslationKeyStore
 }
 
 export default function TranslationKeyView(props: TranslationKeyViewProps) {
@@ -83,6 +85,7 @@ console.log(props.languages)
                                         
                                         <TranslationKeyEditor
                                             keyName={translationKey.keyName}
+                                            translationKeyStore={props.translationKeyStore}
                                             plural={pluralKey}
                                             language={language}
                                             text={translationKey.translations[language as Language]![pluralKey as Plural]!.text}
@@ -110,6 +113,7 @@ console.log(props.languages)
                                         
                                         <TranslationKeyEditor
                                             keyName={translationKey.keyName}
+                                            translationKeyStore={props.translationKeyStore}
                                             plural={Plural.Other}
                                             language={language}
                                             text={undefined}

@@ -65,13 +65,6 @@
     padding-left: 24px;
 }
 
-.svg-container {
-    color: var(--color-icon, #333333);
-    fill: var(--color-icon, #ffffff);
-    stroke: var(--color-icon, #333333);
-    padding-top: 10px;
-}
-
 .language-select {
     filter: grayscale(100%) opacity(0.4);
 }
@@ -285,6 +278,11 @@
     
     height: calc(100% - 32px);
   }
+
+  .element-symbol {
+    width: 16px;
+    height: 32px;
+  }
   
   .circular-button:hover {
     background-color: var(--neutral10)
@@ -331,6 +329,15 @@
     mask-image: url(./assets/upload.svg);
   }
   
+  .number-sign-svg {
+    -webkit-mask-image: url(./assets/number_sign.svg);
+    mask-image: url(./assets/number_sign.svg);
+  }
+  
+  .text-sign-svg {
+    -webkit-mask-image: url(./assets/text_sign.svg);
+    mask-image: url(./assets/text_sign.svg);
+  }
   
   .refresh-svg {
     -webkit-mask-image: url(./assets/refresh.svg);

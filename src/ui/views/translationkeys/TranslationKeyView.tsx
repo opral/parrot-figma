@@ -14,8 +14,6 @@ type TranslationKeyViewProps = {
     languages: Language[],
     translationKey: TranslationKey,
     
-    refreshKeys: Function,
-    figmaHelper: FigmaHelper,
     figmaRemote: FigmaUtil,
     translationKeyStore: MemoryTranslationKeyStore
 }
@@ -89,8 +87,7 @@ console.log(props.languages)
                                             plural={pluralKey}
                                             language={language}
                                             text={translationKey.translations[language as Language]![pluralKey as Plural]!.text}
-                                            figmaHelper={props.figmaHelper}
-                                            refreshKeys={props.refreshKeys}
+                                            
                                         />
                                         
                                     </div>
@@ -117,8 +114,6 @@ console.log(props.languages)
                                             plural={Plural.Other}
                                             language={language}
                                             text={undefined}
-                                            figmaHelper={props.figmaHelper}
-                                            refreshKeys={props.refreshKeys}
                                         />
                                         
                                     </div>

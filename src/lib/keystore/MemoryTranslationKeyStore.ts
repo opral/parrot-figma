@@ -1,6 +1,6 @@
 import { Language } from "../base/Language";
 import { Plural } from "../base/Plural";
-import { FigmaLocaliziationHelper } from "../figmalocalization/FigmaLocaliziationHelper"
+
 import { LocalizedLabel } from "../base/LocalizedLabel";
 import { TranslationKey, TranslationKeys } from "../base/TranslationKey";
 import { BaseTranslationKeyStore } from "./BaseTranslationKeyStore";

@@ -23,6 +23,7 @@ export interface LocalizedLabel {
 
     key: string;
     text: string;
+    selected: boolean;
     
     figmaTextFilled?: string;
     
@@ -37,5 +38,4 @@ export interface LocalizedLabel {
         } 
     };
     
-    selected: boolean;
 }

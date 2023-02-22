@@ -11,9 +11,7 @@ type TranslationKeyEditorProps = {
     plural: string,
     language: string,
     text?: string,
-    translationKeyStore: MemoryTranslationKeyStore,
-    figmaHelper: FigmaHelper,
-    refreshKeys: Function
+    translationKeyStore: MemoryTranslationKeyStore
 }
 
 export default function TranslationKeyEditor(props: TranslationKeyEditorProps) {

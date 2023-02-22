@@ -1,7 +1,6 @@
 
 import { TranslationKeyStore } from "../lib/keystore/MemoryTranslationKeyStore";
 
-import { FigmaLocaliziationHelper } from "../lib/figmalocalization/FigmaLocaliziationHelper";
 
 
 import { figmaRGBToHex, hexToFigmaRGB } from "@figma-plugin/helpers";
@@ -21,60 +20,11 @@ export default class FigmaHelper {
         this.translationKeyStore = keyStore
     }
 
-    async setLinkStyle(linkStyle: string) {        
-        await (new FigmaUtil()).setFileData(defaultLinkStyleKey, linkStyle)
-    }
 
-    async getLinkStyle() {
-        let linkStyleRaw = await (new FigmaUtil()).getFileData(defaultLinkStyleKey);
-        try {
-            let _parsable = JSON.parse(linkStyleRaw);
-            return linkStyleRaw
-        } catch (e) {
-            return ''
-        }
-        
-    }
 
-    async updateLanguage(frameNodeId: string, language: string) {
 
-        let frame = figma.getNodeById(frameNodeId)
-        if (!frame) {
-          return
-        }
-      
-        frame.setPluginData(FigmaLocaliziationHelper.languageDataKey, language);
-        
-        await this.updateFrame(frame);
-
-        console.log((new Date()).getTime()+'execution finished - puting result into message');
-    
-    }
-      
 
     
-    async toggleSampleValues(frameNodeId: string) {
-
-        let frame = figma.getNodeById(frameNodeId)
-        if (!frame) {
-            return
-        }
-
-        let showSampleValues = frame.getPluginData(FigmaLocaliziationHelper.sampleValuesDataKey) == '' ? false : true;
-
-        console.log('[' + frame.getPluginData(FigmaLocaliziationHelper.sampleValuesDataKey) + ']');
-        if (showSampleValues) {
-            console.log("showSamleValues true - setting it to none");
-            frame.setPluginData(FigmaLocaliziationHelper.sampleValuesDataKey, '');
-        } else {
-            console.log("showSamleValues false - setting it to true");
-            frame.setPluginData(FigmaLocaliziationHelper.sampleValuesDataKey, 'true');
-        }
-
-        await this.updateFrame(frame)
-        
-    }
-
 
     async toggleKeyFrame(frameNodeId: string) {
 
@@ -100,7 +50,7 @@ export default class FigmaHelper {
     }
 
     async drawKeyFrame(frame: BaseNode) {
-
+ /*
         const MARGIN = 50;
         
         let nodesWithKeys = FigmaLocaliziationHelper.extractAllKeysFromChildMixin(frame as ChildrenMixin, [])
@@ -240,11 +190,11 @@ export default class FigmaHelper {
         rectBottom.resize(frameFrame.width, maxBottom - frameFrame.height + MARGIN)
         rectBottom.fills = fills;
         keyFrame.insertChild(0, rectBottom);
-
+*/
     }
 
     async updateFrame(frame: BaseNode) {
-
+/*
         console.log('updateFrame extractAllKeysFromChildMixin')
         let nodesWithKeys = FigmaLocaliziationHelper.extractAllKeysFromChildMixin(frame as ChildrenMixin, [])
         let language = frame.getPluginData(FigmaLocaliziationHelper.languageDataKey) == '' ? 'none' : frame.getPluginData(FigmaLocaliziationHelper.languageDataKey);
@@ -282,53 +232,9 @@ export default class FigmaHelper {
             }
         }
         console.log((new Date()).getTime()+' updateFrame done')
+        */
     }
 
     
-    async getSelection() {
-        
-        let selectedTextNodes = FigmaLocaliziationHelper.extractKeys(figma.root, figma.currentPage, figma.currentPage.selection)
-
-        for (let currentNode of selectedTextNodes) {
-            this.translationKeyStore?.enrichLocalizationState(currentNode, currentNode.rootFrameLanguage as Language);
-        }
-
-        console.log(selectedTextNodes);
-        return selectedTextNodes
-
-    }    
-
-    async updateTextNode(nodeId: string, text: string, pluralId?: string, fontsLoaded = false) {
-        let textNode = figma.getNodeById(nodeId)! as TextNode;
-        let linkStyle = await this.getLinkStyle();
-        
-        if (!fontsLoaded) {
-            await (new FigmaUtil()).loadFontsForNodesWithId([nodeId])
-        }
-
-        let textWithDecorators = FigmaLocaliziationHelper.toTextRangeObject(text);
-        
-        textNode.characters = textWithDecorators.text;
-
-        for (let rangeStyle of textWithDecorators.textDecorations) {
-            if (rangeStyle.type = 'href') {
-                console.log(rangeStyle.url);
-                textNode.setRangeHyperlink(rangeStyle.from, rangeStyle.to, { type: 'URL', value: rangeStyle.url });
-                if (linkStyle) {
-                    textNode.setRangeFills(rangeStyle.from, rangeStyle.to, [
-                        JSON.parse(linkStyle)
-                    ])
-                }
-                
-            }
-        }
-
-        if (pluralId) {
-            textNode.setPluginData('pluralId', pluralId);
-        } else {
-            textNode.setPluginData('pluralId', '');
-        }
-
-    }
 
 }

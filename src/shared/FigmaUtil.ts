@@ -5,20 +5,15 @@
  */
 export class FigmaUtil {
 
-    async setClientStorage(key: string, value: any): Promise<void> {
-        await figma.clientStorage.setAsync(key, value);
-    }
-
-    async getClientStorage(key: string): Promise<any | undefined> {
-        return await figma.clientStorage.getAsync(key);
-    }
-
-    async setFileData(key: string, value: string): Promise<void> {
-        await figma.root.setPluginData(key, value);
-    }
-
-    async getFileData(key: string): Promise<string> {
-        return figma.root.getPluginData(key);
+    async getSelection() {
+        let selections = [];
+        for (let node of figma.currentPage.selection) {
+            let rootFrame = this.getRootFrame(node);
+            if (rootFrame) {
+                selections.push({rootFrameId: rootFrame.id, selectedNodeId: node.id});
+            }
+        }
+        return selections
     }
 
     async scrollIntoViewIfNeeded(nodeId: string) {
@@ -59,9 +54,34 @@ export class FigmaUtil {
         await this.loadFontForTextNodes(textNodeIds.map(textNodeId => figma.getNodeById(textNodeId)! as TextNode))
     }
 
-    private async loadFontForTextNodes(textNodes: TextNode[]) {
-        
+    /**
+     * Walks up the tree and returns the frame closest to the root node
+     * 
+     * @param node the node to extract the root frame from 
+     * @returns the root frame (The last parent of type frame)
+     */
+    public getRootFrame(node: any): FrameNode | undefined {
+        let parent = node.parent;
 
+        let rootFrame: FrameNode | undefined
+
+        if (node.type === "FRAME") {
+            rootFrame = node
+        }
+
+        while (parent) {
+
+        if (parent.type == "FRAME") {
+            rootFrame = parent as FrameNode
+        }
+
+        parent = parent.parent;
+        }
+
+        return rootFrame
+    }
+
+    private async loadFontForTextNodes(textNodes: TextNode[]) {
         let fontsToLoad = [] as FontName[];
         for (let textNode of textNodes) {
             this.getFonts(textNode, fontsToLoad);

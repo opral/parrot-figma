@@ -19,6 +19,8 @@ import { Language } from "../lib/base/Language";
 import { MemoryTranslationKeyStore } from "../lib/keystore/MemoryTranslationKeyStore";
 import { FigmaFileTranslationKeyStore } from "../lib/keystore/FigmaFileTranslationKeyStore";
 
+import { LocalizedLabelManager } from "../lib/localizedlabels/LocalizedLabelManager";
+import { LocalizedLabelManagerUI } from "../lib/localizedlabels/LocalizedLabelManagerUI";
 
 WindowManagerUi.init(
     document.getElementById('sizing-wrapper')!, 
@@ -30,13 +32,15 @@ let asyncFunctionProxy = new AsyncFunctionProxy('UIAsyncFunctionProxy', (data: a
     parent.postMessage( {
         pluginMessage: data
     }, '*')
-}, window)
+}, window);
+
+let remoteLocalizedLabelManager = new LocalizedLabelManager(undefined);
+asyncFunctionProxy.proxyAsyncMethods(remoteLocalizedLabelManager)
+
+let localizedLabelManager = new LocalizedLabelManagerUI(remoteLocalizedLabelManager);
 
 let figmaRemote = new FigmaUtil()
 asyncFunctionProxy.proxyAsyncMethods(figmaRemote)
-
-let figmaHelperRemote = new FigmaHelper(undefined, undefined);
-asyncFunctionProxy.proxyAsyncMethods(figmaHelperRemote)
 
 let figmaFileTranslationKeyStore = new FigmaFileTranslationKeyStore()
 asyncFunctionProxy.proxyAsyncMethods(figmaFileTranslationKeyStore);
@@ -56,60 +60,52 @@ function App() {
     // initial app screen is startup until we initialy loaded the data
     let [appScreen, setAppScreen] = useState('design')
 
-    let [selectedKeys, setSelectedKeys] = useState([] as LocalizedLabel[])
     let [translatedLeys, setTranslatedKeys] = useState({} as TranslationKeys)
     let [languages, setLanguages] = useState([] as Language[])
-    
+
+    let [initialLoadingCompleted, setIinitialLoadingCompleted] = useState(false)
     
     let [defaultLinkStyle, setDefaultLinkStyle] = useState('' as string)
     
     useEffect(() => {
         
-        // connect figmas plugin message to the apps onMessage handler 
-        onmessage = messageHandler;
-
         // asynchronous fetch the state from figma helper
         (async ()=>{
             
+            console.time(' initial load ');
+
+            console.time(' memoryTranslationKeyStore.load()');
             await memoryTranslationKeyStore.load()
+            console.timeEnd(' memoryTranslationKeyStore.load()');
+
+            console.time('await localizedLabelManager.loadAll();');
+            await localizedLabelManager.loadAll();
+            console.timeEnd('await localizedLabelManager.loadAll();');
+
+
             
-            let defaultLinkStyle = await figmaHelperRemote.getLinkStyle();
+            let defaultLinkStyle = await remoteLocalizedLabelManager.getLinkStyle();
             setDefaultLinkStyle(defaultLinkStyle);
             
-            await refreshSelection()
             await refreshTranslatedKeys();
             await refreshLanguages();
+
+            setIinitialLoadingCompleted(true);
+            
            
         })()
     }, [])
 
-    function messageHandler(event: any) {
-        if(event.data.pluginMessage.type === 'event') {
-            if(event.data.pluginMessage.name === 'selectionchange') {
-                refreshSelection()
-                return;
-            }
-        } 
-    } 
+    
 
     async function refreshLanguages() {
         // let languages = await figmaHelperRemote.getLanguages();
         setLanguages([Language.De, Language.En, Language.Bg]);
     }
 
-    async function refreshSelection() {
-        let selectedKeys = await figmaHelperRemote.getSelection();    
-        setSelectedKeys(selectedKeys)
-    }
-
     async function setLinkStyle(linkStyle: string) {
-        figmaHelperRemote.setLinkStyle(linkStyle);
+        remoteLocalizedLabelManager.setLinkStyle(linkStyle);
         setDefaultLinkStyle(linkStyle);
-    }
-
-    async function refreshKeys() {
-        let selectedKeys = await figmaHelperRemote.getSelection();
-        setSelectedKeys(selectedKeys)
     }
 
     async function refreshTranslatedKeys() {
@@ -117,10 +113,13 @@ function App() {
         setTranslatedKeys(translatedKeys);
     }
 
+    if (!initialLoadingCompleted) {
+        return <>{'Not ready'}</>
+    }
+
     let view;
     if(appScreen=='keys') {
         view = <TranslationKeyListView 
-                    figmaHelper={figmaHelperRemote}
                     figmaRemote={figmaRemote}
                     translationKeyStore={memoryTranslationKeyStore}
                     keys={translatedLeys} 
@@ -134,13 +133,11 @@ function App() {
                 />
     } else {
         view = <LocalizedLabelsListView 
-        figmaHelper={figmaHelperRemote}
-        translationKeyStore={memoryTranslationKeyStore}
-        figmaRemote={figmaRemote}
-        keys={selectedKeys} 
-        languages={languages} 
-        refreshKeys={refreshKeys}
-    />
+                    translationKeyStore={memoryTranslationKeyStore}
+                    localisedLabelManager={localizedLabelManager}
+                    figmaRemote={figmaRemote}
+                    languages={languages} 
+                />
     }
 
     return (

@@ -16,7 +16,7 @@ type TranslationKeyListViewProps = {
     languages: Language[]
 
     translationKeyStore: MemoryTranslationKeyStore
-    figmaHelper: FigmaHelper
+    
     figmaRemote: FigmaUtil
     refreshKeys: Function
   }
@@ -37,8 +37,7 @@ export default function TranslationKeyListView(props: TranslationKeyListViewProp
                     languages={props.languages}
                     translationKeyStore={props.translationKeyStore}
                     translationKey={props.keys[key]}
-                    refreshKeys= {props.refreshKeys}
-                    figmaHelper={props.figmaHelper}
+                    
                     figmaRemote={props.figmaRemote}
                     />
             )}

@@ -10,16 +10,16 @@ import Select, { SelectOption } from '../../compontents/select/icon-select'
 import { MemoryTranslationKeyStore } from "../../../lib/keystore/MemoryTranslationKeyStore";
 import { Language } from "../../../lib/base/Language";
 import TranslationEditor from "../../compontents/translationEditor/TranslationEditor";
+import { LocalizedLabelManagerUI } from "../../../lib/localizedlabels/LocalizedLabelManagerUI";
 
 type LocalizedLabelListItemProps = {
 
     localizedLabel: LocalizedLabel,
-    
-    refreshKeys: Function
-    figmaHelper: FigmaHelper,
-    figmaRemote: FigmaUtil
+    figmaRemote: FigmaUtil,
+    localisedLabelManager: LocalizedLabelManagerUI,
 
     translationKeyStore: MemoryTranslationKeyStore,
+    selected: boolean
 }
 
 export default function LocalizedLabelListItem(props: LocalizedLabelListItemProps) {
@@ -48,24 +48,25 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
 
     let newPluralOptions = [] as SelectOption[];
 
-    async function onPluralSelect(frameNode: string, nodeId: string, pluralId: string, translation: string) {
-        await props.figmaHelper.updateTextNode(nodeId, translation, pluralId);
-        await props.refreshKeys()
-    }
-
     async function onUseLocalizedVersionClick(frameNode: string, nodeId: string, lokalizedText: string) {
-        await props.figmaHelper.updateTextNode(nodeId, lokalizedText);
-        await props.refreshKeys()
+        await props.localisedLabelManager.updateLocalisedLabelProperties(nodeId, {
+            plural: localizedLabel.pluralId,
+            showSampleValues: localizedLabel.useSampleValues,
+            showSampleValuesInherited: localizedLabel.rootFrameUseSampleValues,
+            text: lokalizedText
+        });
+        console.warn('onUseLocalizedVersionClick back prob not implemented')
+        
     }
 
     async function onSaveFigmaVersionClick(key: string, language: string, plural: string, figmaText: string) {
         await props.translationKeyStore.updateKey(key, [{ language: language as Language, plural: plural as Plural, text: figmaText}]);
-        await props.refreshKeys()
+        console.warn('onSaveFigmaVersionClick back prob not implemented')
     }
 
     async function onCreateFromFigmaVersionClick(key: string, language: string, plural: string, figmaText: string) {
         await props.translationKeyStore.createKey(key, [{ language: language as Language, plural: plural as Plural, text: figmaText}]);
-        await props.refreshKeys()
+        console.warn('onCreateFromFigmaVersionClick back prob not implemented')
     }
 
     async function onNodeSelect(nodeId: string) {
@@ -97,11 +98,11 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
     }
 
     React.useEffect(() => {
-        if (localizedLabel.selected && rowRef.current) {
+        if (props.selected && rowRef.current) {
           // tslint:disable-next-line
           (rowRef.current as any).scrollIntoViewIfNeeded(true);
         }
-      }, [localizedLabel.selected]);
+      }, [props.selected]);
 
     return (
     <>
@@ -139,9 +140,18 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                                                 } else {
                                                     await props.translationKeyStore.updateKey(localizedLabel.key, [{ language: localizedLabel.rootFrameLanguage, plural: plural, text: text}]);
                                                 }
+
+                                                let textToApplyToDesign = localizedLabel.useSampleValues || localizedLabel.rootFrameUseSampleValues ?
+                                                    props.translationKeyStore.fillPlaceholdersWithSampleData(text, localizedLabel.rootFrameLanguage, localizedLabel.pluralId) :
+                                                    text;
                                                 
-                                                await props.figmaHelper.updateTextNode(localizedLabel.nodeId, text);
-                                                await props.refreshKeys()
+                                                await props.localisedLabelManager.updateLocalisedLabelProperties(localizedLabel.nodeId, {
+                                                    plural: localizedLabel.pluralId,
+                                                    showSampleValues: localizedLabel.useSampleValues,
+                                                    showSampleValuesInherited: localizedLabel.rootFrameUseSampleValues,
+                                                    text: textToApplyToDesign
+                                                });
+                                                console.warn('onSave back prob not implemented')
                                             }}
                                             text={localizedText}
                                             designText={localizedLabel.text}
@@ -157,7 +167,7 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                                         {showPull && (
                                             <div className="circular-button" onClick={e => {
                                                     e.preventDefault(); 
-                                                    onUseLocalizedVersionClick(localizedLabel.rootFrameId, localizedLabel.nodeId, localizedLabel.translataions![plural].translation!)
+                                                    onUseLocalizedVersionClick(localizedLabel.rootFrameId, localizedLabel.nodeId, localizedTextToApply!)
                                                 }}
                                                 onMouseOut={e=>{
                                                     setShowLocalizedText(false)
@@ -217,31 +227,7 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                                             <div className="eye-svg"></div>
                                         </div>
                                         
-                                        {showPull && (
-                                            <div className="circular-button" onClick={e => {
-                                                    e.preventDefault(); 
-                                                    onUseLocalizedVersionClick(localizedLabel.rootFrameId, localizedLabel.nodeId, localizedLabel.translataions![plural].translation!)
-                                                }}>
-                                                <div className="download-svg"></div>
-                                            </div>
-                                        )}
-                                        {showPush && (
-                                            <div className="circular-button" onClick={e => {
-                                                e.preventDefault(); 
-                                                onSaveFigmaVersionClick(localizedLabel.key, localizedLabel.rootFrameLanguage, localizedLabel.pluralId, localizedLabel.text!)
-                                             }}>
-                                                <div className="upload-svg"></div>
-                                            </div>
-                                            
-                                        )}
-                                        {showCreateKey && (
-                                            <div className="circular-button" onClick={e => {
-                                                e.preventDefault(); 
-                                                onCreateFromFigmaVersionClick(localizedLabel.key, localizedLabel.rootFrameLanguage, localizedLabel.pluralId, localizedLabel.text!)                                            
-                                             }}>
-                                                <div className="create-svg"></div>
-                                            </div>
-                                        )}
+                                        
                                         {!false && (
                                         <Select
                                             placeholder="Select item"

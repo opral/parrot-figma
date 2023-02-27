@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, createRef } from "react";
 import OutsideClickHandler from "react-outside-click-handler";
-import "./icon-select.css"
+import "./select.css"
 
 export interface SelectOption {
     divider?: string | boolean;
@@ -34,17 +34,25 @@ const Select: React.FunctionComponent<SelectProps> = ({
 }) => {
 
   const menuRef = useRef<HTMLUListElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
+  
   const [isExpanded, onExpandedStateChange] = useState(false);
   const [selectedOption, onSelectOption] = useState(
     options.find(({ value }) => defaultValue === value)
   );
+
+  let menuPositionIndex = options.findIndex(selectOption => selectedOption != undefined && selectOption.value === selectedOption?.value);
+
   useEffect(() => {
     onExpand && onExpand(isExpanded);
+
+    console.log('isExpanded1')
   }, [isExpanded]);
 
   useEffect(() => {
     onChange && selectedOption && onSelectOption(selectedOption);
+    console.log('selectedOption')
   }, [selectedOption]);
   
   useEffect(() => {
@@ -52,34 +60,51 @@ const Select: React.FunctionComponent<SelectProps> = ({
       ({ value }) => defaultValue === value
     );
     onSelectOption(newSelectedOption);
+    console.log('defaultValue')
   }, [defaultValue]);
+
 
 
   useEffect(() => {
     // Handler to call on window resize
     function handleResize() {
-      var rect= menuRef.current!.getBoundingClientRect();
-      let widowWidth = window.innerWidth;
-      const curStyle = menuRef.current!.style;
-      if (rect.right+rect.width > widowWidth) {
-        curStyle.right = '20px';
-      }
+      
+      console.log('updating position')
+      var rect = buttonRef.current!.getBoundingClientRect();
+      menuRef.current!.style.left = rect.left + 'px';
+      menuRef.current!.style.top = rect.top + ((menuPositionIndex * -24) - 8) + 'px';
+
+      console.log('calc position');
+      console.log(rect.top);
+
+      console.log('((menuPositionIndex * -24) - 8)')
+      console.log(((menuPositionIndex * -24) - 8))
+      
       
     }
     // Add event listener
     window.addEventListener("resize", handleResize);
     // Call handler right away so state gets updated with initial window size
     handleResize();
+
+    console.log('isExpanded2')
     // Remove event listener on cleanup
     return () => window.removeEventListener("resize", handleResize);
   }, [isExpanded]); // Empty array ensures that effect is only run on mount
 
 
-  const handleExpandClick = () => onExpandedStateChange(!isExpanded);
+  const handleExpandClick = () => { 
+    console.log('handleExpandClick'); 
+    onExpandedStateChange(!isExpanded)
+  };
 
-  const handleOutsideClick = () => onExpandedStateChange(false);
+  const handleOutsideClick = () => { 
+    console.log('clihandleOutsideClickck');
+     onExpandedStateChange(false)
+  };
 
   const handleSelectClick = (value: any) => {
+    console.log('handle select click')
     const newOption = options.find(({ value: v }) => v === value);
     onExpandedStateChange(false);
     onSelectOption(newOption);
@@ -98,10 +123,22 @@ const Select: React.FunctionComponent<SelectProps> = ({
       disabled={!isExpanded}
     >
       <div className={`select-menu ${className}`}>
-        <div className="circular-button-background" onClick={handleExpandClick} ><div className={(selectedOption?.icon ? selectedOption?.icon : unSelectedIcon)}></div></div>
+        <button
+          ref={buttonRef}
+          className={`select-menu__button ${expandButtonClass} ${disabledColorClass}`}
+          onClick={handleExpandClick}
+          disabled={isDisabled}
+          title={selectedOption?.title}
+          type="button"
+        >
+          <span className="select-menu__label">
+            {(selectedOption && selectedOption.label) || placeholder}
+          </span>
+          <span className="select-menu__caret" />
+        </button>
         <ul ref={menuRef} 
           className={`select-menu__menu ${expanListClass} ${disabledColorClass}`}
-          style={{ top: "-24px" }}
+          
         >
           {options &&
             options.map(({ value, label, divider, title, icon }, i) =>
@@ -124,11 +161,19 @@ const Select: React.FunctionComponent<SelectProps> = ({
                       ? "select-menu__item--selected"
                       : ""
                   }`}
-                  onClick={() => handleSelectClick(value)}
+                  onMouseUp={() => handleSelectClick(value)}
                   key={`select-option--${i}`}
                   title={title}
                 >
-                  <span className={"select-menu__item-icon " + icon}></span>
+                 
+                  <div className="select-menu__item-check">
+                    { selectedOption && selectedOption.value === value && (
+                    <div className={'svg-container checkmark-svg'} />
+                    )}
+                  </div>
+                  <div className={'select-menu__item-icon'}>
+                        <div className={'svg-container ' + icon} />
+                  </div>
                   <span className="select-menu__item-label">{label}</span>
                 </li>
               )

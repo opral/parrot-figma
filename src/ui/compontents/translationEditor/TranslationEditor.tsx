@@ -6,14 +6,15 @@ import { LocalizedLabel } from "../../../lib/base/LocalizedLabel";
 
 import FigmaHelper from "../../../shared/FigmaHelper";
 import { FigmaUtil } from "../../../shared/FigmaUtil";
-import Select, { SelectOption } from '../select/icon-select'
+import Select, { SelectOption } from '../select/selsect'
 import { MemoryTranslationKeyStore } from "../../../lib/keystore/MemoryTranslationKeyStore";
 import { Language } from "../../../lib/base/Language";
+import "./TranslationEditor.css"
 
 type TranslationEditorProps = {
 
     text?: string
-    designText?: string,
+    designText: string,
     onSave: Function
     
 }
@@ -22,28 +23,79 @@ export default function TranslationEditor(props: TranslationEditorProps) {
    
     let [translationText, setTranslationText] = useState(props.text)
     let [editingState, setEditingState] = useState(false)
+    let [textAreaHeight, setTextAreaHeigth] = useState(0);
+    let [textAreaWidth, setTextAreaWidth] = useState(0);
+
 
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
+    const textDivRef = useRef<HTMLDivElement>(null);
     
-    useAutosizeTextArea(textAreaRef.current, translationText ? translationText : '')
+    // useAutosizeTextArea(textAreaRef.current, translationText ? translationText : '')
 
     const handleChange = (evt: React.ChangeEvent<HTMLTextAreaElement>) => {
         const val = evt.target?.value;
     
         setTranslationText(val);
     };
+
+
+    useEffect(() => {
+        if (editingState) {
+
+            console.log('translation click');
+            console.log(textAreaRef.current);
+            textAreaRef.current?.focus();
+            textAreaRef.current?.select();
+        }
+      }, [editingState]);
+
+    useEffect(() => {
+        const observer = new ResizeObserver((entries) => {
+          const rect = entries[0].contentRect;
+          setTextAreaWidth(rect.width);
+          setTextAreaHeigth(rect.height);
+        });
+
+        if (textDivRef.current) {
+            observer.observe(textDivRef.current);
+        }
+        return () => {
+          observer.disconnect();
+        };
+      }, [textDivRef]);
     
     return (
-        <div>
-            { editingState && 
-            <div>
-                <textarea
-                    style={{width: '100%'}}
-                    value={translationText}
-                    ref={textAreaRef}
-                    onChange={handleChange}
-                    ></textarea>
+        <div className={'translation-editor' + (editingState ? ' editing' :'')}>
+            <div ref={textDivRef} className={"translation-editor-text" + (editingState ? ' editing' :'')}>
+            
                 
+                 <textarea
+                    ref={textAreaRef}
+                    style={{
+                        height: textAreaHeight,
+                        width: textAreaWidth,
+                        visibility: (editingState ? 'visible' :'hidden')
+                    }}
+                    value={props.designText}
+                    onChange={handleChange} />
+                
+            
+            
+                <p  className={'translation' + (editingState ? ' editing' :'')}  onClick={e=> {
+                        if (!editingState) {
+                            setEditingState(!editingState);
+
+                        }
+                        
+                    }}>
+                    {props.designText}
+                    
+                </p>
+            
+            </div>
+            { editingState && (
+            <>
+
                 <input type="button" value="Save" 
                     disabled={translationText == props.text}
                     onClick={e => {
@@ -54,31 +106,18 @@ export default function TranslationEditor(props: TranslationEditorProps) {
                     onClick={e => {
                         setEditingState(!editingState)
                     }} />
-                { props.designText !== undefined && props.designText !== translationText && 
-                
-                    <div onClick={e => {
-                        setTranslationText(props.designText!)
-                    }} 
-                    >
+                { props.designText !== undefined && props.designText !== translationText &&  (
+                    
+                        <div onClick={e => {
+                            setTranslationText(props.designText!)
+                        }} 
+                        >
                         <div>Figma: </div>
                         { props.designText! }
                     </div>
-                }
-            </div>
-            }
-            { !editingState && 
-            <div className="translation" onClick={e=> {
-                    console.log('clickE');
-                    setEditingState(!editingState)
-                }}>
-                {props.text != undefined &&
-                    <>{props.text}</>
-                }
-                {props.text == undefined &&
-                    <>UNSET</>
-                }
-                </div>
-            }   
+                )}
+                </>
+            )}
         </div>
     )
 }

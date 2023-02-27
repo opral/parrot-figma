@@ -3,7 +3,7 @@ import { useState } from "react";
 import * as ReactDOM from "react-dom";
 import { LocalizedLabel } from "../../../lib/base/LocalizedLabel";
 import LocalizedLabelListItem from "./LocalizedLabelListItem";
-import Select, { SelectOption } from '../../compontents/select/icon-select'
+import Select, { SelectOption } from '../../compontents/select/selsect'
 import FigmaHelper from "../../../shared/FigmaHelper";
 import { FigmaUtil } from "../../../shared/FigmaUtil";
 import { MemoryTranslationKeyStore } from "../../../lib/keystore/MemoryTranslationKeyStore";
@@ -57,12 +57,6 @@ export default function LocalizedFrameGroup(props: LocalizedFrameGroupProps) {
       */
     }
 
-    async function onCreateKeyFrameClick(frameNode: string) {
-      console.warn('onCreateKeyFrameClick not implemented')
-      // await props.figmaHelper.toggleKeyFrame(frameNode);
-      
-    }
-
     async function onSampleValuesClick(firstLocalizedLabelInFrame: LocalizedLabel) {
       props.localisedLabelManager.localisedLabelMangerSandbox.updateFrameProperties(firstLocalizedLabelInFrame.rootFrameId, {
         language: firstLocalizedLabelInFrame.rootFrameLanguage,
@@ -76,43 +70,34 @@ export default function LocalizedFrameGroup(props: LocalizedFrameGroupProps) {
     
   
     return (
-    <section>
+    <>
         
         <div className="header">
-            <div className="frame-info">
+            <div className="column-1">
+              <div className="spacer"></div>
               <div className="element-symbol">
                 <div className="svg-container number-sign-svg"></div>
               </div>
-              <div  className="font-body-24-bold">{rootFrameName}</div>
-              
-              <div className="frame-actions">
-                <div className="circular-button" onClick={e=>{
-                        e.preventDefault();
-                        onCreateKeyFrameClick(firstTranslationState.rootFrameId)
-                    }}>
-                  <div className="key-svg"></div>
-                </div>
-                <div className="circular-button" onClick={e=>{
-                        e.preventDefault();
-                        onSampleValuesClick(firstTranslationState)
-                    }}>
-                  <div className={"variable-svg "+ sampleValues +' ' + (sampleValues == true ? 'active' : '')} ></div>
-                </div>
-                <Select
-                    placeholder="Select item"
-                    onChange={value => { onLanguageSelectionClick(firstTranslationState, value.value as Language) }}
-                    defaultValue={rootFrameLanguage?.value}
-                    unSelectedIcon='language'
-                    options={languageOptiones}
-                />
+              <div  className="element-name font-body-24-bold">{rootFrameName}</div>
               </div>
-              
-            </div>
-            <div className="header-column font-body-11-bold">
-              <div className="column column-1">Key</div>
-              <div className="column column-2">Text</div>
-              <div className="column column-3"> </div>
-            </div>
+              <div className="column-2">
+              <div className="frame-actions">
+                <Select
+                      placeholder="Select item"
+                      onChange={value => { onLanguageSelectionClick(firstTranslationState, value.value as Language) }}
+                      defaultValue={rootFrameLanguage?.value}
+                      unSelectedIcon='language'
+                      options={languageOptiones}
+                  />
+                <div className="frame-icon" onClick={e=>{
+                          e.preventDefault();
+                          onSampleValuesClick(firstTranslationState)
+                      }}>
+                  <div className={'svg-container ' + (sampleValues == true ? 'placeholder-svg' : 'placeholder-filled-svg')} ></div>
+                </div>
+                
+              </div>
+              </div>
           </div>
            
             {rootFrameLanguage?.value && props.localizedLabels.map((translationState) => 
@@ -130,6 +115,6 @@ export default function LocalizedFrameGroup(props: LocalizedFrameGroupProps) {
               <div>choose curent design language</div>
             }
         
-    </section>
+    </>
     )
 }

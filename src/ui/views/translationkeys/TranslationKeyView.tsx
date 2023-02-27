@@ -7,7 +7,7 @@ import { MemoryTranslationKeyStore } from "../../../lib/keystore/MemoryTranslati
 
 import FigmaHelper from "../../../shared/FigmaHelper";
 import { FigmaUtil } from "../../../shared/FigmaUtil";
-import Select, { SelectOption } from '../../compontents/select/icon-select'
+import Select, { SelectOption } from '../../compontents/select/selsect'
 import TranslationKeyEditor from "./TranslationKeyEditor";
 
 type TranslationKeyViewProps = {

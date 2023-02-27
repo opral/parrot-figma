@@ -22,6 +22,10 @@ import { FigmaFileTranslationKeyStore } from "../lib/keystore/FigmaFileTranslati
 import { LocalizedLabelManager } from "../lib/localizedlabels/LocalizedLabelManager";
 import { LocalizedLabelManagerUI } from "../lib/localizedlabels/LocalizedLabelManagerUI";
 
+import "./tabbar.css"
+import "./assets/icons.css"
+import SegmentedControl from "./compontents/segmentedControl/SegmentedControl";
+
 WindowManagerUi.init(
     document.getElementById('sizing-wrapper')!, 
     document.getElementById('react-page')!, 
@@ -91,7 +95,6 @@ function App() {
             await refreshLanguages();
 
             setIinitialLoadingCompleted(true);
-            
            
         })()
     }, [])
@@ -149,19 +152,21 @@ function App() {
                     <div className={"tab " + (appScreen == 'keys' ? 'active' : '')} onClick={e=> setAppScreen('keys')}>Keys</div>
                     <div className={"tab " + (appScreen == 'settings' ? 'active' : '')} onClick={e=> setAppScreen('settings')}>Settings</div>
                 </div>
-                <div className="frame-actions">
-                    
-                     <div className="circular-button" onClick={e=> { WindowManagerUi.instance?.setWindowMode(WindowMode.Window) }}>
-                        <div className="window-mode-window" />
-                    </div>
-                    <div className="circular-button" onClick={e=> { WindowManagerUi.instance?.setWindowMode(WindowMode.Fullscreen) }}>
-                        <div className="window-mode-fullscreen" />
-                    </div>
-                    <div className="circular-button" onClick={e=> { WindowManagerUi.instance?.setWindowMode(WindowMode.BottomSheet) }}>
-                        <div className="window-mode-bottom-attached" />
-                    </div>
-                    
+                <div className="window-control">
+                    <SegmentedControl<WindowMode>
+                        segments={[{
+                            iconName: 'window-mode-window-svg',
+                            value: WindowMode.Window
+                        }, {
+                            iconName: 'window-mode-fullscreen-svg',
+                            value:  WindowMode.Fullscreen
+                        }, {
+                            iconName: 'window-mode-bottom-attached-svg',
+                            value: WindowMode.BottomSheet
+                        }]} selectedSegment={WindowMode.Window} onChoose={(windowMode: WindowMode) => { WindowManagerUi.instance?.setWindowMode(windowMode) }}/>
+                
                 </div>
+                
             </div>
             
             <div className="view">

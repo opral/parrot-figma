@@ -2,7 +2,7 @@ import * as React from "react";
 import { useEffect, useRef, useState } from "react";
 import * as ReactDOM from "react-dom";
 import { Plural } from "../../../lib/base/Plural";
-import { LocalizedLabel } from "../../../lib/base/LocalizedLabel";
+import { LocalizedLabel } from "../../../lib/localizedlabels/LocalizedLabel";
 
 import FigmaHelper from "../../../shared/FigmaHelper";
 import { FigmaUtil } from "../../../shared/FigmaUtil";

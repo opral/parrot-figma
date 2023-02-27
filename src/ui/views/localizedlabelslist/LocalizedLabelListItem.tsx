@@ -2,7 +2,7 @@ import * as React from "react";
 import { useState } from "react";
 import * as ReactDOM from "react-dom";
 import { Plural } from "../../../lib/base/Plural";
-import { LocalizedLabel } from "../../../lib/base/LocalizedLabel";
+import { LocalizedLabel } from "../../../lib/localizedlabels/LocalizedLabel";
 
 import FigmaHelper from "../../../shared/FigmaHelper";
 import { FigmaUtil } from "../../../shared/FigmaUtil";
@@ -42,7 +42,7 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
     if (localizedText !== undefined && localizedLabel.useSampleValues) {
         localizedTextToApply = props.translationKeyStore.fillPlaceholdersWithSampleData(localizedTextToApply!, localizedLabel.rootFrameLanguage, localizedLabel.pluralId);
     }
-    
+
     let pluralsAvailable = [] as SelectOption[];
 
     async function onSaveFigmaVersionClick(key: string, language: string, plural: string, figmaText: string) {

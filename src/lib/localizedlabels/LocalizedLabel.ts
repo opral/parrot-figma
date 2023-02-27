@@ -1,5 +1,5 @@
-import { Language } from "./Language";
-import { Plural } from "./Plural";
+import { Language } from "../base/Language";
+import { Plural } from "../base/Plural";
 
 
 export interface LocalizedLabel {

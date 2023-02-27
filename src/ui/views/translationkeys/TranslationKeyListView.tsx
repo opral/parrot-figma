@@ -2,7 +2,7 @@ import * as React from "react";
 import { useState } from "react";
 import * as ReactDOM from "react-dom";
 import { Language } from "../../../lib/base/Language";
-import { LocalizedLabel } from "../../../lib/base/LocalizedLabel";
+import { LocalizedLabel } from "../../../lib/localizedlabels/LocalizedLabel";
 import { TranslationKeys } from "../../../lib/base/TranslationKey";
 import { MemoryTranslationKeyStore, TranslationKeyStore } from "../../../lib/keystore/MemoryTranslationKeyStore";
 import FigmaHelper from "../../../shared/FigmaHelper";

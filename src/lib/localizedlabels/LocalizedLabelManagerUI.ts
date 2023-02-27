@@ -1,4 +1,4 @@
-import { LocalizedLabel } from "../base/LocalizedLabel";
+import { LocalizedLabel } from "./LocalizedLabel";
 import { Plural } from "../base/Plural";
 import { LocalizedLabelManager } from "./LocalizedLabelManager";
 

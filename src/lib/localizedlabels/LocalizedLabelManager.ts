@@ -2,7 +2,7 @@ import { formDataToBlob } from "formdata-polyfill/esm.min";
 import { text } from "stream/consumers";
 import { FigmaUtil } from "../../shared/FigmaUtil";
 import { Language } from "../base/Language";
-import { LocalizedLabel } from "../base/LocalizedLabel";
+import { LocalizedLabel } from "./LocalizedLabel";
 import { Plural } from "../base/Plural";
 import { BaseTranslationKeyStore } from "../keystore/BaseTranslationKeyStore";
 

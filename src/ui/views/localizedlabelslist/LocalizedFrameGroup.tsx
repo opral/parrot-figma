@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useState } from "react";
 import * as ReactDOM from "react-dom";
-import { LocalizedLabel } from "../../../lib/base/LocalizedLabel";
+import { LocalizedLabel } from "../../../lib/localizedlabels/LocalizedLabel";
 import LocalizedLabelListItem from "./LocalizedLabelListItem";
 import Select, { SelectOption } from '../../compontents/select/selsect'
 import FigmaHelper from "../../../shared/FigmaHelper";

@@ -1,6 +1,6 @@
 import { Language } from "../base/Language";
 import { Plural } from "../base/Plural";
-import { LocalizedLabel } from "../base/LocalizedLabel";
+import { LocalizedLabel } from "../localizedlabels/LocalizedLabel";
 import { TranslationKey, TranslationKeys } from "../base/TranslationKey";
 import { TranslationKeyStore } from "./MemoryTranslationKeyStore";
 

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import * as ReactDOM from "react-dom";
 
 import ConfigView from "./views/config/ConfigView";
-import { LocalizedLabel } from "../lib/base/LocalizedLabel";
+import { LocalizedLabel } from "../lib/localizedlabels/LocalizedLabel";
 import LocalizedLabelsListView from "./views/localizedlabelslist/LocalizedLabelsListView"
 import { FigmaUtil } from "../shared/FigmaUtil"
 import { AsyncFunctionProxy } from "../lib/rpc/AsyncFunctionProxy";

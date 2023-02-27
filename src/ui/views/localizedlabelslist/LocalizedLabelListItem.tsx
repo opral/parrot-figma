@@ -42,8 +42,7 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
     if (localizedText !== undefined && localizedLabel.useSampleValues) {
         localizedTextToApply = props.translationKeyStore.fillPlaceholdersWithSampleData(localizedTextToApply!, localizedLabel.rootFrameLanguage, localizedLabel.pluralId);
     }
-    let figmaTemplate = undefined as string | undefined
-
+    
     let pluralsAvailable = [] as SelectOption[];
 
     async function onSaveFigmaVersionClick(key: string, language: string, plural: string, figmaText: string) {
@@ -72,18 +71,7 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
             value: Plural.Other, label: Plural.Other
         })
     }
-        
     
-    // TODO comment or refactor
-    if (localizedLabel.useSampleValues) {
-        if (localizedLabel?.translataions?.[localizedLabel.pluralId].translation != localizedLabel?.translataions?.[localizedLabel.pluralId].translationFilled) {
-            figmaTemplate = localizedLabel?.translataions?.[localizedLabel.pluralId].translation;
-        }
-    } else {
-        if (localizedLabel.text != localizedLabel.figmaTextFilled) {
-            figmaTemplate = localizedLabel.text;
-        }  
-    }
 
     React.useEffect(() => {
         if (props.selected && rowRef.current) {

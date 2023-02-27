@@ -12,7 +12,6 @@ export interface TranslationKeyStore {
     updateKey(keyName: string, translations: {language: Language, plural: Plural, text: string}[]) : Promise<TranslationKey>
     deleteKey(keyName: string) : Promise<void>
     load(): Promise<TranslationKeys>
-    enrichLocalizationState(state: LocalizedLabel, language: Language): void
     fillPlaceholdersWithSampleData(text: string, language: Language, plural: Plural): string
 }
 

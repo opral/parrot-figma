@@ -11,7 +11,7 @@ export class LocalizedLabelManager {
 
   translationKeyStore?: BaseTranslationKeyStore
 
-  constructor(translationKeyStore: BaseTranslationKeyStore | undefined) {
+  constructor(translationKeyStore: BaseTranslationKeyStore | undefined) {
     this.translationKeyStore = translationKeyStore
 
     if (translationKeyStore === undefined) {
@@ -20,71 +20,70 @@ export class LocalizedLabelManager {
 
 
 
-  figma.on("documentchange", (event) => {
+    figma.on("documentchange", (event) => {
 
-    let figmaUtil = new FigmaUtil();
+      let figmaUtil = new FigmaUtil();
 
-    let changedNodesById = [] as string[]
-    let rootFrameIdsToReload = [] as string[]
-    let deletedNodeIds = [] as string[]
-    let changedLabels = [] as LocalizedLabel[]
-    console.log(JSON.stringify(event))
-    for (const change of event.documentChanges) {
-      switch (change.type) {
-        case "CREATE":
-          let rootFrame = figmaUtil.getRootFrame(figma.getNodeById(change.id));
-          if (rootFrame && rootFrameIdsToReload.indexOf(rootFrame?.id) === -1) {
-            rootFrameIdsToReload.push(rootFrame.id);
-          }
-          break;
-    
-        case "DELETE":
-          console.log('deletion detected')
-          // ask to remove node from cache - no whole invalidation needed since node order within frame is not affected
-          if (deletedNodeIds.indexOf(change.id) === -1) {
-            deletedNodeIds.push(change.id);
-          }
-          break;
-    
-        case "PROPERTY_CHANGE":
-
-          let changedNode = figma.getNodeById(change.id);
-          
-          if (change.properties.indexOf('parent') !== -1) {
-            // ask to invalidate current and new frame
-            let rootFrame = figmaUtil.getRootFrame(figma.getNodeById(change.id)); 
+      let changedNodesById = [] as string[]
+      let rootFrameIdsToReload = [] as string[]
+      let deletedNodeIds = [] as string[]
+      let changedLabels = [] as LocalizedLabel[]
+      console.log(JSON.stringify(event))
+      for (const change of event.documentChanges) {
+        switch (change.type) {
+          case "CREATE":
+            let rootFrame = figmaUtil.getRootFrame(figma.getNodeById(change.id));
             if (rootFrame && rootFrameIdsToReload.indexOf(rootFrame?.id) === -1) {
               rootFrameIdsToReload.push(rootFrame.id);
             }
-          } else {
-            // refresh single node
-            // check if change did appear on a localized label
-            // TODO what about a localized label that turns into a normal label again? is this possible?
-            if (changedNode?.type == 'TEXT') {
-              let localizedLabel = this.toLocalizedLabelOrUndefined(changedNode as TextNode)
-              if (localizedLabel) {
-                changedLabels.push(localizedLabel.localizedLabel)
+            break;
+
+          case "DELETE":
+            console.log('deletion detected')
+            if (deletedNodeIds.indexOf(change.id) === -1) {
+              deletedNodeIds.push(change.id);
+            }
+            break;
+
+          case "PROPERTY_CHANGE":
+
+            let changedNode = figma.getNodeById(change.id);
+
+            if (change.properties.indexOf('parent') !== -1) {
+              // ask to invalidate current and new frame
+              let rootFrame = figmaUtil.getRootFrame(figma.getNodeById(change.id));
+              if (rootFrame && rootFrameIdsToReload.indexOf(rootFrame?.id) === -1) {
+                rootFrameIdsToReload.push(rootFrame.id);
               }
             } else {
-              if (changedNodesById.indexOf(change.id) === -1) {
-                changedNodesById.push(change.id);
+              // refresh single node
+              // check if change did appear on a localized label
+              // TODO what about a localized label that turns into a normal label again? is this possible?
+              if (changedNode?.type == 'TEXT') {
+                let localizedLabel = this.toLocalizedLabelOrUndefined(changedNode as TextNode)
+                if (localizedLabel) {
+                  changedLabels.push(localizedLabel.localizedLabel)
+                }
+              } else {
+                if (changedNodesById.indexOf(change.id) === -1) {
+                  changedNodesById.push(change.id);
+                }
               }
-            }
 
-          }
-          break;
-    
-        case "STYLE_CREATE":
-        case "STYLE_DELETE":
-        case "STYLE_PROPERTY_CHANGE":
-           break;
+            }
+            break;
+
+          case "STYLE_CREATE":
+          case "STYLE_DELETE":
+          case "STYLE_PROPERTY_CHANGE":
+            break;
         }
       }
 
 
-      figma.ui.postMessage({ 
-        target: 'LocalizedLabelManager', 
-        type: 'cacheUpdate', 
+      figma.ui.postMessage({
+        target: 'LocalizedLabelManager',
+        type: 'cacheUpdate',
         changedNodesById: changedNodesById,
         rootFrameIdsToReload: rootFrameIdsToReload,
         deletedNodeIds: deletedNodeIds,
@@ -103,8 +102,8 @@ export class LocalizedLabelManager {
 
   async getFrameById(frameId: string): Promise<{
     id: string,
-    name: string, 
-    localizedLabelsInFrame: LocalizedLabel[], 
+    name: string,
+    localizedLabelsInFrame: LocalizedLabel[],
     refreshTriggerIds: Set<string>
   }> {
     let frame = figma.getNodeById(frameId) as FrameNode
@@ -112,46 +111,43 @@ export class LocalizedLabelManager {
   }
 
   async getFrame(frame: FrameNode): Promise<{
-      id: string,
-      name: string, 
-      localizedLabelsInFrame: LocalizedLabel[], 
-      refreshTriggerIds: Set<string>
-    }> {
-
-      
-      let skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
-      figma.skipInvisibleInstanceChildren = true;
-  
-      
+    id: string,
+    name: string,
+    localizedLabelsInFrame: LocalizedLabel[],
+    refreshTriggerIds: Set<string>
+  }> {
 
 
-      let frameData = {
-        id: frame.id,
-        name: frame.name,
-        refreshTriggerIds: new Set<string>(),
-        localizedLabelsInFrame: [] as LocalizedLabel[]
-      } 
+    let skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
+    figma.skipInvisibleInstanceChildren = true
 
-      let textNodes = frame.findAllWithCriteria({ types: ['TEXT'] });
-      
-      const start = Date.now();
-      for (let textNode of textNodes) {
-        let lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode);
-        if (lokalizedLabel) {
-          frameData.localizedLabelsInFrame.push(lokalizedLabel.localizedLabel)
-          lokalizedLabel.parentIds.forEach(parentId => frameData.refreshTriggerIds.add(parentId));
-        }
+    let frameData = {
+      id: frame.id,
+      name: frame.name,
+      refreshTriggerIds: new Set<string>(),
+      localizedLabelsInFrame: [] as LocalizedLabel[]
+    }
+
+    let textNodes = frame.findAllWithCriteria({ types: ['TEXT'] });
+
+    const start = Date.now();
+    for (let textNode of textNodes) {
+      let lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode);
+      if (lokalizedLabel) {
+        frameData.localizedLabelsInFrame.push(lokalizedLabel.localizedLabel)
+        lokalizedLabel.parentIds.forEach(parentId => frameData.refreshTriggerIds.add(parentId));
       }
-      const end = Date.now();
-      console.log(`findAllWithCriteria - Execution time: ${end - start} ms`);
+    }
+    const end = Date.now();
+    console.log(`findAllWithCriteria - Execution time: ${end - start} ms`);
 
-      figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
+    figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
 
-      return frameData
+    return frameData
   }
 
-  async setLinkStyle(linkStyle: string) {        
-     figma.root.setPluginData(this.linkStilyDataKey, linkStyle);
+  async setLinkStyle(linkStyle: string) {
+    figma.root.setPluginData(this.linkStilyDataKey, linkStyle);
   }
 
   async getLinkStyle() {
@@ -164,28 +160,28 @@ export class LocalizedLabelManager {
     }
   }
 
-  async updateFrameProperties(frameNodeId: string, properties: {language: Language, sampleValues: boolean}) {
+  async updateFrameProperties(frameNodeId: string, properties: { language: Language, sampleValues: boolean }) {
 
-      let frame = figma.getNodeById(frameNodeId) as FrameNode
-      if (!frame) {
-        return
-      }
-    
-      frame.setPluginData(this.languageDataKey, properties.language);
+    let frame = figma.getNodeById(frameNodeId) as FrameNode
+    if (!frame) {
+      return
+    }
 
-      if(properties.sampleValues) {
-        frame.setPluginData(this.sampleValuesDataKey, true+'')
-      } else {
-        frame.setPluginData(this.sampleValuesDataKey, '')
-      }
-      
-      await this.updateFrame(frame);
+    frame.setPluginData(this.languageDataKey, properties.language);
 
-      console.log((new Date()).getTime()+'execution finished - puting result into message');
+    if (properties.sampleValues) {
+      frame.setPluginData(this.sampleValuesDataKey, true + '')
+    } else {
+      frame.setPluginData(this.sampleValuesDataKey, '')
+    }
+
+    await this.updateFrame(frame);
+
+    console.log((new Date()).getTime() + 'execution finished - puting result into message');
   }
 
   private getFrameLanguage(frame: FrameNode) {
-    let language = frame.getPluginData(this.languageDataKey) 
+    let language = frame.getPluginData(this.languageDataKey)
     if (language === undefined || language !== '') {
       return Language.De // TODO return baselanguage instead
     }
@@ -194,7 +190,7 @@ export class LocalizedLabelManager {
   }
 
   private getUseSampleValues(node: FrameNode | TextNode) {
-    let useSampleValues = node.getPluginData(this.sampleValuesDataKey) 
+    let useSampleValues = node.getPluginData(this.sampleValuesDataKey)
     if (useSampleValues === undefined || useSampleValues !== '') {
       return false
     }
@@ -204,7 +200,7 @@ export class LocalizedLabelManager {
 
 
   async updateFrame(frame: FrameNode) {
-    
+
     console.log('updateFrame extractAllKeysFromChildMixin')
 
     let lokalisedLabels = (await this.getFrame(frame)).localizedLabelsInFrame;
@@ -215,29 +211,29 @@ export class LocalizedLabelManager {
     let language = this.getFrameLanguage(frame);
 
     for (let localisedLabel of lokalisedLabels) {
-        let textNodeId = localisedLabel.nodeId;
+      let textNodeId = localisedLabel.nodeId;
 
-        let localizedText = this.translationKeyStore!.getKey(localisedLabel.key)?.translations[localisedLabel.rootFrameLanguage]?.[localisedLabel.pluralId]?.text
+      let localizedText = this.translationKeyStore!.getKey(localisedLabel.key)?.translations[localisedLabel.rootFrameLanguage]?.[localisedLabel.pluralId]?.text
 
-        if (localizedText !== undefined && localisedLabel.rootFrameUseSampleValues || localisedLabel.useSampleValues) {
-          localizedText = this.translationKeyStore!.fillPlaceholdersWithSampleData(localizedText!, localisedLabel.rootFrameLanguage, localisedLabel.pluralId)
-        }
+      if (localizedText !== undefined && localisedLabel.rootFrameUseSampleValues || localisedLabel.useSampleValues) {
+        localizedText = this.translationKeyStore!.fillPlaceholdersWithSampleData(localizedText!, localisedLabel.rootFrameLanguage, localisedLabel.pluralId)
+      }
 
-        if (localizedText === undefined) {
-          localizedText = localisedLabel.text
-        }
-        
-        
-        this.updateLocalisedLabelProperties(localisedLabel.nodeId, {
-          plural: localisedLabel.pluralId,
-          text: localizedText,
-          showSampleValues: localisedLabel.useSampleValues
-        })
+      if (localizedText === undefined) {
+        localizedText = localisedLabel.text
+      }
+
+
+      this.updateLocalisedLabelProperties(localisedLabel.nodeId, {
+        plural: localisedLabel.pluralId,
+        text: localizedText,
+        showSampleValues: localisedLabel.useSampleValues
+      })
 
     }
-    console.log((new Date()).getTime()+' updateFrame done')
+    console.log((new Date()).getTime() + ' updateFrame done')
   }
-      
+
   async updateLocalisedLabelProperties(nodeId: string, changedProperties: { plural: Plural, text: string, showSampleValues: boolean }) {
     let textNode = figma.getNodeById(nodeId)! as TextNode;
     let linkStyle = await this.getLinkStyle();
@@ -394,7 +390,6 @@ export class LocalizedLabelManager {
 
   private toLocalizedLabelOrUndefined(node: TextNode): { parentIds: Set<string>, localizedLabel: LocalizedLabel } | undefined {
 
-    console.log('toLocalizedLabelOrUndefined');
     // we only take nodes with id into account
     if (node.autoRename) {
       return
@@ -482,16 +477,13 @@ export class LocalizedLabelManager {
         x: x,
         y: y,
         key: namePrefix,
-        selected: false,
-        keyExists: false,
-        plurals: [pluralId as Plural],
         pluralId: pluralId as Plural,
         text: text,
       }
-      
+
     }
 
   }
 
-  
+
 }

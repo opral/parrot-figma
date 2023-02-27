@@ -115,37 +115,4 @@ export abstract class BaseTranslationKeyStore implements TranslationKeyStore {
         });
     }
 
-    enrichLocalizationState(state: LocalizedLabel, language: Language) {
-        
-        if (state.text) {
-            state.figmaTextFilled = this.fillPlaceholdersWithSampleData(state.text, language, state.pluralId as Plural);
-        }
-
-        let translationKey = this.getKey(state.key);
-
-        if (!translationKey) {
-            return;
-        }
-
-        state.keyExists = true;
-        let pluralForms = translationKey.translations[language];
-
-        state.translataions = {};
-        console.log('enrivch');
-        console.log(pluralForms);
-
-        for (let plural of translationKey.plurals) {
-            state.translataions[plural] = {};
-
-            console.log(pluralForms?.[plural]?.text);
-            console.log(pluralForms);
-            if (pluralForms && pluralForms[plural] && pluralForms[plural]!.text) {
-                state.translataions[plural].translation = pluralForms[plural]!.text;
-                state.translataions[plural].translationFilled = this.fillPlaceholdersWithSampleData(pluralForms[plural]!.text!, language, state.pluralId as Plural);
-            }
-        }
-
-        state.plurals = translationKey.plurals;
-
-    }
 }

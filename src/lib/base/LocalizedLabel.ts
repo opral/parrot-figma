@@ -3,6 +3,7 @@ import { Plural } from "./Plural";
 
 
 export interface LocalizedLabel {
+    
     pageId: string;
     pageName: string;
 
@@ -10,32 +11,19 @@ export interface LocalizedLabel {
     rootFrameName: string;
     rootFrameLanguage: Language;
     rootFrameUseSampleValues: boolean;
-    
+
     name: string;
     nodeId: string;
-    
+    useSampleValues: boolean;
+
     x: number,
     y: number,
     width: number,
-    height: number, 
-    
-    keyExists: boolean;
+    height: number,
 
     key: string;
     text: string;
-    selected: boolean;
-    
-    figmaTextFilled?: string;
-    
-    useSampleValues: boolean;
+
     pluralId: Plural;
-    // contains all plural forms 
-    plurals: Plural[];
-    translataions?: { 
-        [pluralId: string]: {
-            translation?: string,
-            translationFilled?: string
-        } 
-    };
-    
+
 }

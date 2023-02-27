@@ -12,7 +12,7 @@ import FigmaHelper from "../shared/FigmaHelper";
 import SearchKeyList from "./views/searchkeys/SearchKeys";
 import { WindowManagerUi } from "../lib/windowManager/WindowManagerUI";
 import { WindowMode } from "../lib/windowManager/WindowManagerSandbox";
-import { TranslationKeys } from "../lib/base/TranslationKey";
+import { TranslationKeys } from "../lib/keystore/TranslationKey";
 import TranslationKeyListView from "./views/translationkeys/TranslationKeyListView";
 import { Language } from "../lib/base/Language";
 

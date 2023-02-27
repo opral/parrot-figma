@@ -1,6 +1,6 @@
 import { Language } from "../base/Language";
 import { Plural } from "../base/Plural";
-import { TranslationKey, TranslationKeys } from "../base/TranslationKey";
+import { TranslationKey, TranslationKeys } from "./TranslationKey";
 import { BaseTranslationKeyStore } from "./BaseTranslationKeyStore";
 
 

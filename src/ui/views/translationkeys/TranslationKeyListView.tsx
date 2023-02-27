@@ -3,7 +3,7 @@ import { useState } from "react";
 import * as ReactDOM from "react-dom";
 import { Language } from "../../../lib/base/Language";
 import { LocalizedLabel } from "../../../lib/localizedlabels/LocalizedLabel";
-import { TranslationKeys } from "../../../lib/base/TranslationKey";
+import { TranslationKeys } from "../../../lib/keystore/TranslationKey";
 import { MemoryTranslationKeyStore, TranslationKeyStore } from "../../../lib/keystore/MemoryTranslationKeyStore";
 import FigmaHelper from "../../../shared/FigmaHelper";
 import { FigmaUtil } from "../../../shared/FigmaUtil";

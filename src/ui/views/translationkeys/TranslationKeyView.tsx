@@ -2,7 +2,7 @@ import * as React from "react";
 import { useState } from "react";
 import { Language } from "../../../lib/base/Language";
 import { Plural } from "../../../lib/base/Plural";
-import { TranslationKey } from "../../../lib/base/TranslationKey";
+import { TranslationKey } from "../../../lib/keystore/TranslationKey";
 import { MemoryTranslationKeyStore } from "../../../lib/keystore/MemoryTranslationKeyStore";
 
 import FigmaHelper from "../../../shared/FigmaHelper";

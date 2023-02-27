@@ -1,7 +1,7 @@
 import { Language } from "../base/Language";
 import { Plural } from "../base/Plural";
 import { LocalizedLabel } from "../localizedlabels/LocalizedLabel";
-import { TranslationKey, TranslationKeys } from "../base/TranslationKey";
+import { TranslationKey, TranslationKeys } from "./TranslationKey";
 import { TranslationKeyStore } from "./MemoryTranslationKeyStore";
 
 export abstract class BaseTranslationKeyStore implements TranslationKeyStore {

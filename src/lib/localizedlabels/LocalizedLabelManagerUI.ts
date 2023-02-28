@@ -69,7 +69,13 @@ export class LocalizedLabelManagerUI extends EventTarget {
       this.dispatchEvent(event);
     }
 
-    async updateLocalisedLabelProperties(nodeId: string, changedProperties: { plural: Plural, text: string, showSampleValues: boolean, showSampleValuesInherited: boolean }) {
+    async updateLocalisedLabelProperties(nodeId: string, changedProperties: { 
+      labelName?: string, 
+      plural?: Plural, 
+      text?: string, 
+      showSampleValues?: boolean, 
+      showSampleValuesInherited?: boolean 
+    }) {
       let localisedLabel = await this.localisedLabelMangerSandbox.updateLocalisedLabelProperties(nodeId, changedProperties);
       this.cachedLokalisedLabels[nodeId] = localisedLabel;
     }

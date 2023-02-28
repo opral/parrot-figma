@@ -242,39 +242,50 @@ export class LocalizedLabelManager {
     console.log((new Date()).getTime() + ' updateFrame done')
   }
 
-  async updateLocalisedLabelProperties(nodeId: string, changedProperties: { plural: Plural, text: string, showSampleValues: boolean }) {
+  async updateLocalisedLabelProperties(nodeId: string, changedProperties: 
+    { 
+      labelName?: string, 
+      plural?: Plural,
+      text?: string, 
+      showSampleValues?: boolean
+     }) {
     let textNode = figma.getNodeById(nodeId)! as TextNode;
-    let linkStyle = await this.getLinkStyle();
 
-    await this.loadFontsForTextNodes([textNode]);
+    if (changedProperties.labelName !== undefined) {
+      textNode.name = changedProperties.labelName;
+      textNode.autoRename = false;
+    }
+    
+    if (changedProperties.text !== undefined) {
+      let linkStyle = await this.getLinkStyle();
 
-    let textWithDecorators = this.toTextRangeObject(changedProperties.text);
-
-    textNode.characters = textWithDecorators.text;
-
-    for (let rangeStyle of textWithDecorators.textDecorations) {
-      if (rangeStyle.type = 'href') {
-        console.log(rangeStyle.url);
-        textNode.setRangeHyperlink(rangeStyle.from, rangeStyle.to, { type: 'URL', value: rangeStyle.url });
-        if (linkStyle) {
-          textNode.setRangeFills(rangeStyle.from, rangeStyle.to, [
-            JSON.parse(linkStyle)
-          ])
+      await this.loadFontsForTextNodes([textNode]);
+  
+      let textWithDecorators = this.toTextRangeObject(changedProperties.text);
+  
+      textNode.characters = textWithDecorators.text;
+  
+      for (let rangeStyle of textWithDecorators.textDecorations) {
+        if (rangeStyle.type = 'href') {
+          console.log(rangeStyle.url);
+          textNode.setRangeHyperlink(rangeStyle.from, rangeStyle.to, { type: 'URL', value: rangeStyle.url });
+          if (linkStyle) {
+            textNode.setRangeFills(rangeStyle.from, rangeStyle.to, [
+              JSON.parse(linkStyle)
+            ])
+          }
+  
         }
-
       }
     }
+    
 
-    if (changedProperties.plural) {
-      textNode.setPluginData('plural', changedProperties.plural);
-    } else {
-      textNode.setPluginData('plural', '');
-    }
+    if (changedProperties.plural !== undefined) {
+      textNode.setPluginData('plural', changedProperties.plural ? changedProperties.plural : '');
+    } 
 
-    if (changedProperties.showSampleValues) {
-      textNode.setPluginData('showSampleValues', changedProperties.showSampleValues + '');
-    } else {
-      textNode.setPluginData('showSampleValues', '');
+    if (changedProperties.showSampleValues !== undefined) {
+      textNode.setPluginData('showSampleValues', changedProperties.showSampleValues ? true +'' : '');
     }
 
     return this.toLocalizedLabelOrUndefined(textNode)!.localizedLabel

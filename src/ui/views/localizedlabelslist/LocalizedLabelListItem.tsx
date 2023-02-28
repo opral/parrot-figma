@@ -138,7 +138,17 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                     </div>
                     <TextField 
                         editingTrigger={editingTrigger}
-                        onSave={(e: any) => console.log}
+                        onSave={async function(labelName: string) {
+                            
+                            await props.localisedLabelManager.updateLocalisedLabelProperties(localizedLabel.nodeId, {
+                                labelName: labelName,
+                                plural: localizedLabel.pluralId,
+                                showSampleValues: localizedLabel.useSampleValues,
+                                showSampleValuesInherited: localizedLabel.rootFrameUseSampleValues,
+                                
+                            });
+                            console.warn('onSave back prob not implemented')
+                        }}
                         text={localizedLabel.name}
                         />
                     

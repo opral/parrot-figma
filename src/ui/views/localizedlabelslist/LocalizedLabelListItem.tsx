@@ -11,6 +11,7 @@ import { MemoryTranslationKeyStore } from "../../../lib/keystore/MemoryTranslati
 import { Language } from "../../../lib/base/Language";
 import TranslationEditor from "../../compontents/translationEditor/TranslationEditor";
 import { LocalizedLabelManagerUI } from "../../../lib/localizedlabels/LocalizedLabelManagerUI";
+import TextField from "../../compontents/textfield/TextField";
 
 type LocalizedLabelListItemProps = {
 
@@ -23,15 +24,12 @@ type LocalizedLabelListItemProps = {
 }
 
 export default function LocalizedLabelListItem(props: LocalizedLabelListItemProps) {
+
     let localizedLabel = props.localizedLabel;
+    let translatedKey = localizedLabel.keyType !== 'unset' ? props.translationKeyStore.getKey(localizedLabel.key!) : undefined;
 
-    console.log('localizedLabel');
-    console.log(localizedLabel)
-    let translatedKey = props.translationKeyStore.getKey(localizedLabel.key);
-
-    let [showLocalizedText, setShowLocalizedText] = useState(false)
+    let [editingTrigger, setEditingTrigger] = useState(0)
     const rowRef = React.useRef<HTMLDivElement>(null);
-    
     
     let keyExists = translatedKey !== undefined;
     let translations = translatedKey?.translations[localizedLabel.rootFrameLanguage]
@@ -42,6 +40,56 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
     if (localizedText !== undefined && localizedLabel.useSampleValues) {
         localizedTextToApply = props.translationKeyStore.fillPlaceholdersWithSampleData(localizedTextToApply!, localizedLabel.rootFrameLanguage, localizedLabel.pluralId);
     }
+
+    let keyOptions = [
+        {
+            value: 'select-for-link',
+            label: 'Select existing Translation key',
+            icon: 'key-svg'
+        },
+        {
+            value: 'set-id-for-derivation',
+            label: 'Set label id for derivation',
+            icon: 'key-svg'
+        },
+        {
+            value: "",
+            label: 'jo',
+            divider: 'test'
+        },
+    ];
+
+    if (localizedLabel.key !== undefined || localizedLabel.derivedKey !== undefined) {
+        if (localizedLabel.key !== undefined) {
+            keyOptions.push({
+                value: 'linked',
+                label: localizedLabel.key + ' - linked',
+                icon: 'key-svg'
+            })
+        }
+
+        if (localizedLabel.derivedKey !== undefined) {
+            keyOptions.push( {
+                value: 'derived',
+                label: localizedLabel.derivedKey + ' - derived',
+                icon: 'key-svg'
+            });
+        }
+
+        keyOptions.push(
+        {
+            value: "",
+            label: 'jo',
+            divider: 'test'
+        });
+    }
+
+    keyOptions.push(
+        {
+            value: 'ephemeral',
+            label: 'No key',
+            icon: 'key-svg'
+        });
 
     let pluralsAvailable = [] as SelectOption[];
 
@@ -58,13 +106,10 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
     if (translations) {
     
         for (let plural of Object.keys(translations)) {
-            
             const pluralOption = {
                 value: plural, label: plural
             }
-            
             pluralsAvailable.push(pluralOption)
-            
         }
     } else {
         pluralsAvailable.push({
@@ -91,7 +136,12 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                     <div className="element-symbol">
                         <div className="svg-container text-sign-svg"></div>
                     </div>
-                    <div  className="element-name">{localizedLabel.name}</div>
+                    <TextField 
+                        editingTrigger={editingTrigger}
+                        onSave={(e: any) => console.log}
+                        text={localizedLabel.name}
+                        />
+                    
                 </div>
                 
             </div>
@@ -100,31 +150,42 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                 <div className="translation-container">
                     <div className="localized-label-details">
                         <div className="key-panel">
-                            <div className="key-panel-icon">
-                                <div className="svg-container key-svg"></div>
-                            </div>
-                            <div className="translation-key">
-                                <div className="key-label">{localizedLabel.key}</div>
-                            </div>
-                            
+                            <Select
+                                                    placeholder="Select key"
+                                                    onChange={selectOption => { 
+                                                        console.log('selectOption---------------------------------->')
+                                                        console.log(selectOption)
+                                                        console.log('selectOption----------------------------------<')
+                                                        if (selectOption.value === 'set-id-for-derivation') {
+                                                            setEditingTrigger((trigger) => trigger + 1);
+                                                        }
+                                                        // onSaveFigmaVersionClick(localizedLabel.key!, localizedLabel.rootFrameLanguage, value.value as string, localizedLabel.text!)
+                                                        
+                                                    }}
+                                                    defaultValue={localizedLabel.keyType}
+                                                    options={keyOptions}
+                                                    unSelectedIcon='language'
+                                                    
+                                                />
+                            {localizedLabel.key && (
                               <Select
                                                     placeholder="Select item"
                                                     onChange={value => { 
-                                                        onSaveFigmaVersionClick(localizedLabel.key, localizedLabel.rootFrameLanguage, value.value as string, localizedLabel.text!)
+                                                        onSaveFigmaVersionClick(localizedLabel.key!, localizedLabel.rootFrameLanguage, value.value as string, localizedLabel.text!)
                                                     }}
                                                     defaultValue={localizedLabel.pluralId}
                                                     unSelectedIcon='language'
                                                     options={pluralsAvailable}
                                                 />
-                            
+                                                )}
                         </div>
                     </div>
                     <TranslationEditor
                         onSave={async function(text: any) {
-                            if (!keyExists) {
-                                await props.translationKeyStore.createKey(localizedLabel.key, [{ language: localizedLabel.rootFrameLanguage, plural: localizedLabel.pluralId, text: text}]);
+                            if (keyExists === true) {
+                                await props.translationKeyStore.updateKey(localizedLabel.key!, [{ language: localizedLabel.rootFrameLanguage, plural: localizedLabel.pluralId, text: text}]);
                             } else {
-                                await props.translationKeyStore.updateKey(localizedLabel.key, [{ language: localizedLabel.rootFrameLanguage, plural: localizedLabel.pluralId, text: text}]);
+                               // TODO  await props.translationKeyStore.createKey(localizedLabel.key, [{ language: localizedLabel.rootFrameLanguage, plural: localizedLabel.pluralId, text: text}]);
                             }
 
                             let textToApplyToDesign = localizedLabel.useSampleValues || localizedLabel.rootFrameUseSampleValues ?

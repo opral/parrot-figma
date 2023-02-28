@@ -18,8 +18,6 @@ export class LocalizedLabelManager {
       return
     }
 
-
-
     figma.on("documentchange", (event) => {
 
       let figmaUtil = new FigmaUtil();
@@ -95,10 +93,16 @@ export class LocalizedLabelManager {
 
 
   public samplesPrefix = 'sample_values'
-  public separator = '__'
-  public sampleValuesDataKey = 'sampleValues'
-  public languageDataKey = 'lang';
   public linkStilyDataKey = 'linkstyle'
+  public separator = '__'
+
+  public sampleValuesDataKey = 'sv'
+  public languageDataKey = 'l';
+  public keyTypeDataKey = 'kt';
+
+  public keyDataKey = 'key';
+
+  public labelIdDataKey = 'olid'; // we store the orginal label id (the id of the node when the plugin changed properties the first time) to detect a copy 
 
   async getFrameById(frameId: string): Promise<{
     id: string,
@@ -211,9 +215,13 @@ export class LocalizedLabelManager {
     let language = this.getFrameLanguage(frame);
 
     for (let localisedLabel of lokalisedLabels) {
+      if (localisedLabel.keyType === 'ephemeral') {
+        continue;
+      }
+
       let textNodeId = localisedLabel.nodeId;
 
-      let localizedText = this.translationKeyStore!.getKey(localisedLabel.key)?.translations[localisedLabel.rootFrameLanguage]?.[localisedLabel.pluralId]?.text
+      let localizedText = this.translationKeyStore!.getKey(localisedLabel.key!)?.translations[localisedLabel.rootFrameLanguage]?.[localisedLabel.pluralId]?.text
 
       if (localizedText !== undefined && localisedLabel.rootFrameUseSampleValues || localisedLabel.useSampleValues) {
         localizedText = this.translationKeyStore!.fillPlaceholdersWithSampleData(localizedText!, localisedLabel.rootFrameLanguage, localisedLabel.pluralId)
@@ -306,7 +314,7 @@ export class LocalizedLabelManager {
     // regex extracts the first word starting with at least three characters
     let nameParts = name.match(/[a-zA-Z]{3}[a-zA-Z0-9\-_]*/);
     if (nameParts) {
-      return nameParts[0].toLocaleLowerCase();
+      return nameParts[0].toLowerCase();
     }
     return '';
   }
@@ -390,9 +398,11 @@ export class LocalizedLabelManager {
 
   private toLocalizedLabelOrUndefined(node: TextNode): { parentIds: Set<string>, localizedLabel: LocalizedLabel } | undefined {
 
-    // we only take nodes with id into account
+    let derivable = true;
+
+    // we only take labels with "autoRename" active into account 
     if (node.autoRename) {
-      return
+      derivable = false;
     }
 
     // we skip nodes that are not visible
@@ -400,10 +410,10 @@ export class LocalizedLabelManager {
       return
     }
 
-    let namePrefix = this.extractKeyName(node.name);
+    let derivedName = this.extractKeyName(node.name);
 
-    if (namePrefix == '') {
-      return;
+    if (derivable && derivedName == '') {
+      derivable = false;
     }
 
     let page: PageNode | null = null
@@ -442,24 +452,17 @@ export class LocalizedLabelManager {
       return
     }
 
-    // if the node name starts with a $ the node references a key directly (used to show mapped values in samples)
-    if (node.name.indexOf('$') === 0) {
-      if (node.name.match(/\$[a-zA-Z]{3,}/g)) {
-        // nothing to do we just use the exact name to resolve the key
-        namePrefix = namePrefix;
-      } else {
-        namePrefix = this.samplesPrefix + this.separator + node.name.slice(1);
-      }
-
-    } else if (rootFrame.name === this.samplesPrefix) {
-      namePrefix = this.samplesPrefix + this.separator + node.name
-    } else {
-      namePrefix = this.extractKeyName(rootFrame.name) + this.separator + namePrefix
-    }
-
+    derivedName = this.extractKeyName(rootFrame.name) + this.separator + derivedName
+  
     let text = this.toTokenizedText(node)
 
+    // if no plural id is specified than we fall back to "other" - the default plural
     let pluralId = node.getPluginData('pluralId') === '' ? Plural.Other : node.getPluginData('pluralId');
+
+
+    let keyType = node.getPluginData(this.keyTypeDataKey) as 'ephemeral' | 'derived' | 'unset' | 'linked' |  undefined
+    let key = node.getPluginData(this.keyDataKey);
+
     return {
       parentIds: parentIds,
       localizedLabel: {
@@ -476,7 +479,9 @@ export class LocalizedLabelManager {
         width: node.width,
         x: x,
         y: y,
-        key: namePrefix,
+        keyType: keyType ? keyType : 'unset',
+        key: key ? key : undefined,
+        derivedKey: derivable ? derivedName : undefined,
         pluralId: pluralId as Plural,
         text: text,
       }
@@ -484,6 +489,5 @@ export class LocalizedLabelManager {
     }
 
   }
-
 
 }

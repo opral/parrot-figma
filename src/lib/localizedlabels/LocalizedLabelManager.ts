@@ -19,77 +19,7 @@ export class LocalizedLabelManager {
       return
     }
 
-    figma.on("documentchange", (event) => {
-
-      let figmaUtil = new FigmaUtil();
-
-      let changedNodesById = [] as string[]
-      let rootFrameIdsToReload = [] as string[]
-      let deletedNodeIds = [] as string[]
-      let changedLabels = [] as LocalizedLabel[]
-      console.log(JSON.stringify(event))
-      for (const change of event.documentChanges) {
-        switch (change.type) {
-          case "CREATE":
-            let rootFrame = figmaUtil.getRootFrame(figma.getNodeById(change.id));
-            if (rootFrame && rootFrameIdsToReload.indexOf(rootFrame?.id) === -1) {
-              rootFrameIdsToReload.push(rootFrame.id);
-            }
-            break;
-
-          case "DELETE":
-            if (deletedNodeIds.indexOf(change.id) === -1) {
-              deletedNodeIds.push(change.id);
-            }
-            break;
-
-          case "PROPERTY_CHANGE":
-
-            let changedNode = figma.getNodeById(change.id);
-
-            if (change.properties.indexOf('parent') !== -1) {
-              // ask to invalidate current and new frame
-              let rootFrame = figmaUtil.getRootFrame(figma.getNodeById(change.id));
-              if (rootFrame && rootFrameIdsToReload.indexOf(rootFrame?.id) === -1) {
-                rootFrameIdsToReload.push(rootFrame.id);
-              }
-            } else {
-              // refresh single node
-              // check if change did appear on a localized label
-              // TODO what about a localized label that turns into a normal label again? is this possible?
-              if (changedNode?.type == 'TEXT') {
-                let localizedLabel = this.toLocalizedLabelOrUndefined(changedNode as TextNode)
-                if (localizedLabel) {
-                  console.log('changed node:')
-                  console.log(localizedLabel)
-                  changedLabels.push(localizedLabel.localizedLabel)
-                }
-              } else {
-                if (changedNodesById.indexOf(change.id) === -1) {
-                  changedNodesById.push(change.id);
-                }
-              }
-
-            }
-            break;
-
-          case "STYLE_CREATE":
-          case "STYLE_DELETE":
-          case "STYLE_PROPERTY_CHANGE":
-            break;
-        }
-      }
-
-
-      figma.ui.postMessage({
-        target: 'LocalizedLabelManager',
-        type: 'cacheUpdate',
-        changedNodesById: changedNodesById,
-        rootFrameIdsToReload: rootFrameIdsToReload,
-        deletedNodeIds: deletedNodeIds,
-        changedLabels: changedLabels
-      })
-    });
+    figma.on("documentchange", this.forwardDocumentChanges);
 
   }
 
@@ -105,6 +35,75 @@ export class LocalizedLabelManager {
   public keyDataKey = 'key';
 
   public labelIdDataKey = 'olid'; // we store the orginal label id (the id of the node when the plugin changed properties the first time) to detect a copy 
+
+  forwardDocumentChanges(event: any) {
+
+    let figmaUtil = new FigmaUtil();
+
+    let changedNodesById = [] as string[]
+    let rootFrameIdsToReload = [] as string[]
+    let deletedNodeIds = [] as string[]
+    let changedLabels = [] as LocalizedLabel[]
+    for (const change of event.documentChanges) {
+      switch (change.type) {
+        case "CREATE":
+          let rootFrame = figmaUtil.getRootFrame(figma.getNodeById(change.id));
+          if (rootFrame && rootFrameIdsToReload.indexOf(rootFrame?.id) === -1) {
+            rootFrameIdsToReload.push(rootFrame.id);
+          }
+          break;
+
+        case "DELETE":
+          if (deletedNodeIds.indexOf(change.id) === -1) {
+            deletedNodeIds.push(change.id);
+          }
+          break;
+
+        case "PROPERTY_CHANGE":
+
+          let changedNode = figma.getNodeById(change.id);
+
+          if (change.properties.indexOf('parent') !== -1) {
+            // ask to invalidate current and new frame
+            let rootFrame = figmaUtil.getRootFrame(figma.getNodeById(change.id));
+            if (rootFrame && rootFrameIdsToReload.indexOf(rootFrame?.id) === -1) {
+              rootFrameIdsToReload.push(rootFrame.id);
+            }
+          } else {
+            // refresh single node
+            // check if change did appear on a localized label
+            // TODO what about a localized label that turns into a normal label again? is this possible?
+            if (changedNode?.type == 'TEXT') {
+              let localizedLabel = this.toLocalizedLabelOrUndefined(changedNode as TextNode)
+              if (localizedLabel) {
+                changedLabels.push(localizedLabel.localizedLabel)
+              }
+            } else {
+              if (changedNodesById.indexOf(change.id) === -1) {
+                changedNodesById.push(change.id);
+              }
+            }
+
+          }
+          break;
+
+        case "STYLE_CREATE":
+        case "STYLE_DELETE":
+        case "STYLE_PROPERTY_CHANGE":
+          break;
+      }
+    }
+
+
+    figma.ui.postMessage({
+      target: 'LocalizedLabelManager',
+      type: 'cacheUpdate',
+      changedNodesById: changedNodesById,
+      rootFrameIdsToReload: rootFrameIdsToReload,
+      deletedNodeIds: deletedNodeIds,
+      changedLabels: changedLabels
+    })
+  }
 
   async getFrameById(frameId: string): Promise<{
     id: string,
@@ -238,15 +237,15 @@ export class LocalizedLabelManager {
     }
   }
 
-  async updateLocalisedLabelProperties(nodeId: string, changedProperties: 
-    { 
-      labelName?: string, 
+  async updateLocalisedLabelProperties(nodeId: string, changedProperties:
+    {
+      labelName?: string,
       keyType?: KeyState,
       key?: string,
       plural?: Plural,
-      text?: string, 
+      text?: string,
       showSampleValues?: boolean
-     }) {
+    }) {
     let textNode = figma.getNodeById(nodeId)! as TextNode;
 
     if (changedProperties.labelName !== undefined) {
@@ -257,21 +256,21 @@ export class LocalizedLabelManager {
 
     if (changedProperties.key !== undefined) {
       textNode.setPluginData(this.keyDataKey, changedProperties.key);
-    } 
+    }
 
     if (changedProperties.keyType !== undefined) {
       textNode.setPluginData(this.keyTypeDataKey, changedProperties.keyType);
-    } 
-    
+    }
+
     if (changedProperties.text !== undefined) {
       let linkStyle = await this.getLinkStyle();
 
       await this.loadFontsForTextNodes([textNode]);
-  
+
       let textWithDecorators = this.toTextRangeObject(changedProperties.text);
-  
+
       textNode.characters = textWithDecorators.text;
-  
+
       for (let rangeStyle of textWithDecorators.textDecorations) {
         if (rangeStyle.type = 'href') {
           console.log(rangeStyle.url);
@@ -281,18 +280,18 @@ export class LocalizedLabelManager {
               JSON.parse(linkStyle)
             ])
           }
-  
+
         }
       }
     }
-    
+
 
     if (changedProperties.plural !== undefined) {
       textNode.setPluginData('plural', changedProperties.plural ? changedProperties.plural : '');
-    } 
+    }
 
     if (changedProperties.showSampleValues !== undefined) {
-      textNode.setPluginData('showSampleValues', changedProperties.showSampleValues ? true +'' : '');
+      textNode.setPluginData('showSampleValues', changedProperties.showSampleValues ? true + '' : '');
     }
 
     return this.toLocalizedLabelOrUndefined(textNode)!.localizedLabel
@@ -377,10 +376,10 @@ export class LocalizedLabelManager {
 
   private toTokenizedText(node: TextNode) {
 
-    console.log('toTokenizedText '  + node.name + ' ' + node.characters); 
+    console.log('toTokenizedText ' + node.name + ' ' + node.characters);
 
     let textnode = node as TextNode
-    
+
     if (textnode.characters.length == 0) {
       return "";
     }
@@ -476,14 +475,14 @@ export class LocalizedLabelManager {
     }
 
     derivedName = this.extractKeyName(rootFrame.name) + this.separator + derivedName
-  
+
     let text = this.toTokenizedText(node)
 
     // if no plural id is specified than we fall back to "other" - the default plural
     let pluralId = node.getPluginData('pluralId') === '' ? Plural.Other : node.getPluginData('pluralId');
 
 
-    let keyType = node.getPluginData(this.keyTypeDataKey) as KeyState |  undefined
+    let keyType = node.getPluginData(this.keyTypeDataKey) as KeyState | undefined
     let key = node.getPluginData(this.keyDataKey);
 
     return {

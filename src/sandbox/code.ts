@@ -27,6 +27,7 @@ let asyncFunctionProxy = new AsyncFunctionProxy('SandboxAsyncFunctionProxy', (da
   figma.ui.postMessage( data )
 }, figma.ui);
 
+
 asyncFunctionProxy.registerInstance(figmaRemote);
 
 let localizationState = new FigmaFileTranslationKeyStore()

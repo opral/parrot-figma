@@ -65,19 +65,28 @@ const Select: React.FunctionComponent<SelectProps> = ({
         threshol.push(i); 
     }
 
-    const observer = new IntersectionObserver((entries: IntersectionObserverEntry[]) => {    
-      console.log('setting hight to:' + entries[0].intersectionRect.height)  
+    const intersectionObserver = new IntersectionObserver((entries: IntersectionObserverEntry[]) => {    
       setViewPortHeight(entries[0].intersectionRect.height);
+
     }, {
       root: null,   // default is the viewport
       threshold: threshol // percentage of target's visible area. Triggers "onIntersection"
     });
 
+    const resizeObserver = new ResizeObserver((entries) => {
+      // reobserve the intersection to get the correct sizing
+      intersectionObserver.disconnect();
+      intersectionObserver.observe(window.document.body);
+    })
+
     if (window) {
-        observer.observe(window.document.body);
+      intersectionObserver.observe(window.document.body);
+      resizeObserver.observe(window.document.body, {box: 'border-box'});
     }
+
     return () => {
-      observer.disconnect();
+      intersectionObserver.disconnect();
+      resizeObserver.disconnect();
     };
   }, []);
 
@@ -98,23 +107,19 @@ const Select: React.FunctionComponent<SelectProps> = ({
       
       let spaceNeededOnTop = menuPositionIndex * menuEntryHeight + menuPadding;
       spaceNeededOnTop = selectedDiv?.offsetTop;
-      console.log('selectedDiv.offsetTop')
-      console.log(menuWrapperRef.current!.childNodes)
-      console.log(selectedDiv?.offsetTop)
-      console.log(spaceNeededOnTop);
+      
       let spaceNeededOnBottom = (options.length - menuPositionIndex -1) * menuEntryHeight + menuPadding;
 
-      
       const height = Math.min(maxSpaceToTop, spaceNeededOnTop) + menuEntryHeight + Math.min(maxSpaceToBottom, spaceNeededOnBottom);
       const top = Math.max(0, maxSpaceToTop - spaceNeededOnTop);
       
       let scroll = Math.max(0, spaceNeededOnTop - maxSpaceToTop);
       
-      console.log('setting top:' + top)
       setContainerBox({
         top: top, 
         height: height
       })
+      
       setWrapperMaxHeigth(maxSpaceToTop + menuEntryHeight + maxSpaceToBottom);
       setWrapperScrollTop({scrollTop: scroll})
 

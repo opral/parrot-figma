@@ -1,5 +1,6 @@
 import * as React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import useState from 'react-usestateref'
 import OutsideClickHandler from "react-outside-click-handler";
 import "./TextField.css"
 
@@ -11,7 +12,7 @@ type TextFieldProps = {
 
 export default function TextField(props: TextFieldProps) {
    
-    let [text, setText] = useState(props.text)
+    let [text, setText, textRef] = useState(props.text)
     let [isEditing, setEditingState] = useState(false)
 
     const inputFieldRef = useRef<HTMLInputElement>(null);
@@ -24,7 +25,7 @@ export default function TextField(props: TextFieldProps) {
 
     const onSave = () => {
         setEditingState(false);
-        props.onSave();
+        props.onSave(textRef.current);
     }
 
     const onCancel = () => {
@@ -64,6 +65,10 @@ export default function TextField(props: TextFieldProps) {
             setEditingState(true);
         }
     }, [props.editingTrigger]);
+
+    useEffect(() => {
+        setText(props.text)
+    }, [props.text]);
 
     
     return (

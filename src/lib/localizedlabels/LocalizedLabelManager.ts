@@ -2,9 +2,10 @@ import { formDataToBlob } from "formdata-polyfill/esm.min";
 import { text } from "stream/consumers";
 import { FigmaUtil } from "../../shared/FigmaUtil";
 import { Language } from "../base/Language";
-import { LocalizedLabel } from "./LocalizedLabel";
+import { KeyState, LocalizedLabel } from "./LocalizedLabel";
 import { Plural } from "../base/Plural";
 import { BaseTranslationKeyStore } from "../keystore/BaseTranslationKeyStore";
+import { Key } from "react";
 
 
 export class LocalizedLabelManager {
@@ -37,7 +38,6 @@ export class LocalizedLabelManager {
             break;
 
           case "DELETE":
-            console.log('deletion detected')
             if (deletedNodeIds.indexOf(change.id) === -1) {
               deletedNodeIds.push(change.id);
             }
@@ -60,6 +60,8 @@ export class LocalizedLabelManager {
               if (changedNode?.type == 'TEXT') {
                 let localizedLabel = this.toLocalizedLabelOrUndefined(changedNode as TextNode)
                 if (localizedLabel) {
+                  console.log('changed node:')
+                  console.log(localizedLabel)
                   changedLabels.push(localizedLabel.localizedLabel)
                 }
               } else {
@@ -121,7 +123,6 @@ export class LocalizedLabelManager {
     refreshTriggerIds: Set<string>
   }> {
 
-
     let skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
     figma.skipInvisibleInstanceChildren = true
 
@@ -134,7 +135,6 @@ export class LocalizedLabelManager {
 
     let textNodes = frame.findAllWithCriteria({ types: ['TEXT'] });
 
-    const start = Date.now();
     for (let textNode of textNodes) {
       let lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode);
       if (lokalizedLabel) {
@@ -142,11 +142,10 @@ export class LocalizedLabelManager {
         lokalizedLabel.parentIds.forEach(parentId => frameData.refreshTriggerIds.add(parentId));
       }
     }
-    const end = Date.now();
-    console.log(`findAllWithCriteria - Execution time: ${end - start} ms`);
 
     figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
 
+    console.log(frameData);
     return frameData
   }
 
@@ -205,8 +204,6 @@ export class LocalizedLabelManager {
 
   async updateFrame(frame: FrameNode) {
 
-    console.log('updateFrame extractAllKeysFromChildMixin')
-
     let lokalisedLabels = (await this.getFrame(frame)).localizedLabelsInFrame;
     // todo trigger update since the properties of the container frame changes the state of the localized labels
 
@@ -239,12 +236,13 @@ export class LocalizedLabelManager {
       })
 
     }
-    console.log((new Date()).getTime() + ' updateFrame done')
   }
 
   async updateLocalisedLabelProperties(nodeId: string, changedProperties: 
     { 
       labelName?: string, 
+      keyType?: KeyState,
+      key?: string,
       plural?: Plural,
       text?: string, 
       showSampleValues?: boolean
@@ -252,9 +250,18 @@ export class LocalizedLabelManager {
     let textNode = figma.getNodeById(nodeId)! as TextNode;
 
     if (changedProperties.labelName !== undefined) {
+      console.log('setting name');
       textNode.name = changedProperties.labelName;
       textNode.autoRename = false;
     }
+
+    if (changedProperties.key !== undefined) {
+      textNode.setPluginData(this.keyDataKey, changedProperties.key);
+    } 
+
+    if (changedProperties.keyType !== undefined) {
+      textNode.setPluginData(this.keyTypeDataKey, changedProperties.keyType);
+    } 
     
     if (changedProperties.text !== undefined) {
       let linkStyle = await this.getLinkStyle();
@@ -370,8 +377,13 @@ export class LocalizedLabelManager {
 
   private toTokenizedText(node: TextNode) {
 
+    console.log('toTokenizedText '  + node.name + ' ' + node.characters); 
 
     let textnode = node as TextNode
+    
+    if (textnode.characters.length == 0) {
+      return "";
+    }
 
     let hyperLinks = textnode.getStyledTextSegments(['hyperlink'], 0, textnode.characters.length);
 
@@ -471,7 +483,7 @@ export class LocalizedLabelManager {
     let pluralId = node.getPluginData('pluralId') === '' ? Plural.Other : node.getPluginData('pluralId');
 
 
-    let keyType = node.getPluginData(this.keyTypeDataKey) as 'ephemeral' | 'derived' | 'unset' | 'linked' |  undefined
+    let keyType = node.getPluginData(this.keyTypeDataKey) as KeyState |  undefined
     let key = node.getPluginData(this.keyDataKey);
 
     return {
@@ -490,7 +502,7 @@ export class LocalizedLabelManager {
         width: node.width,
         x: x,
         y: y,
-        keyType: keyType ? keyType : 'unset',
+        keyType: keyType ? keyType : KeyState.Unset,
         key: key ? key : undefined,
         derivedKey: derivable ? derivedName : undefined,
         pluralId: pluralId as Plural,

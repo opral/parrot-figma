@@ -19,12 +19,11 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
     }
 
     async persistKey(translationKey: TranslationKey): Promise<TranslationKey> {
-        console.log('File - persistKey called')
+        
         figma.root.setPluginData(this.keyPrefix + translationKey.keyName, JSON.stringify(translationKey));
 
         let keyRaw = figma.root.getPluginData(this.keyPrefix + translationKey.keyName);
 
-        console.log('File - persistKey called set to:' + keyRaw)
         return translationKey;
     }
 

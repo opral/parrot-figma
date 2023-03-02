@@ -6,7 +6,7 @@ import { LocalizedLabel } from "../../../lib/localizedlabels/LocalizedLabel";
 
 import FigmaHelper from "../../../shared/FigmaHelper";
 import { FigmaUtil } from "../../../shared/FigmaUtil";
-import Select, { SelectOption } from '../select/selsect'
+import Select, { SelectOption } from '../select/select'
 import { MemoryTranslationKeyStore } from "../../../lib/keystore/MemoryTranslationKeyStore";
 import { Language } from "../../../lib/base/Language";
 import "./SegmentedControl.css"

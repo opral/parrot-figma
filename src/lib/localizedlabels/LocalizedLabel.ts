@@ -1,7 +1,13 @@
 import { Language } from "../base/Language";
 import { Plural } from "../base/Plural";
 
-
+export enum KeyState {
+    Unset = 'unset', // state when the label has not been translated by the plugin yet
+    Ephemeral = 'ephemeral', // a key was generated for a node that didn't fullfill the requirement to be derived 
+    Derived = 'derived', // a key was derived by the document derivation method
+    Linked = 'linked',   // key was set to a fixed key 
+  }
+  
 
 export interface LocalizedLabel {
     
@@ -22,11 +28,7 @@ export interface LocalizedLabel {
     width: number;
     height: number;
 
-    keyType: 'unset' | // state when the label has not been translated by the plugin yet
-             'ephemeral' | // a key was generated for a node that didn't fullfill the requirement to be derived 
-             'derived' | // a key was derived by the document derivation method
-             'linked';   // key was set to a fixed key 
-
+    keyType: KeyState
     key?: string;
     derivedKey?: string;
     text: string;

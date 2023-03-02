@@ -55,6 +55,7 @@ export default function LocalizedLabelsListView(props: LocalizedLabelsListViewPr
     } 
 
     async function refreshSelection() {
+        console.log('refreshSelection!!!!refreshSelection!!!!refreshSelection!!!!refreshSelection!!!!');
         
         let selectedNodes = await props.figmaRemote.getSelection();  
         
@@ -64,11 +65,13 @@ export default function LocalizedLabelsListView(props: LocalizedLabelsListViewPr
 
         let selectedLabels = [] as LocalizedLabel[]
 
+        
         for (let selectedNode of selectedNodes) {
 
             if (!selectedByFrame[selectedNode.rootFrameId]) {
+                console.log('getting labels from manager')
                 let selectedLabelsByFrame = await props.localisedLabelManager.getLocalizedLabelsByFrame(selectedNode.rootFrameId);
-
+                console.log(selectedLabelsByFrame)
                 if (selectedLabelsByFrame) {
                     selectedLabels = selectedLabels.concat(selectedLabelsByFrame.lokalizedLabels);
                 }

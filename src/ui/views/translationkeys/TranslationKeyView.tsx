@@ -7,7 +7,7 @@ import { MemoryTranslationKeyStore } from "../../../lib/keystore/MemoryTranslati
 
 import FigmaHelper from "../../../shared/FigmaHelper";
 import { FigmaUtil } from "../../../shared/FigmaUtil";
-import Select, { SelectOption } from '../../compontents/select/selsect'
+import Select, { SelectOption } from '../../compontents/select/select'
 import TranslationKeyEditor from "./TranslationKeyEditor";
 
 type TranslationKeyViewProps = {
@@ -48,8 +48,6 @@ export default function TranslationKeyView(props: TranslationKeyViewProps) {
         
     }
 */
-console.log('props.languages')
-console.log(props.languages)
 
     return (
     <>

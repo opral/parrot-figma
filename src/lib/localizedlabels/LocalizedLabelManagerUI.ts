@@ -1,4 +1,4 @@
-import { LocalizedLabel } from "./LocalizedLabel";
+import { KeyState, LocalizedLabel } from "./LocalizedLabel";
 import { Plural } from "../base/Plural";
 import { LocalizedLabelManager } from "./LocalizedLabelManager";
 
@@ -33,7 +33,7 @@ export class LocalizedLabelManagerUI extends EventTarget {
     }
 
     processCacheUpdate(cacheUpdateMessage: any) {
-      
+      console.log('processCacheUpdate')
       for (let frameIdToInvalidate of cacheUpdateMessage.rootFrameIdsToReload) {
         console.log('invalidating frame ' + frameIdToInvalidate);
         delete this.cachedFrames[frameIdToInvalidate]
@@ -60,9 +60,29 @@ export class LocalizedLabelManagerUI extends EventTarget {
       }
 
       for (let changedLabel of cacheUpdateMessage.changedLabels) {
+        console.log('invalidating node' + changedLabel.nodeId)
+        console.log(changedLabel);
         this.invalidateCacheIfNeeded(changedLabel);
-        console.log('label updated '+ changedLabel.nodeId);
         this.cachedLokalisedLabels[changedLabel.nodeId] = changedLabel;
+        
+        if ( this.cachedFrames[changedLabel.rootFrameId]) {
+          console.log('updating cached')
+          let updatedLabels = this.cachedFrames[changedLabel.rootFrameId].lokalizedLabels.map( localizedlabel => {
+            if (localizedlabel.nodeId == changedLabel.nodeId) {
+              console.log('replacing')
+              console.log(localizedlabel)
+              console.log(changedLabel)
+              return changedLabel
+            } else {
+              return localizedlabel
+            }
+          })
+  
+          this.cachedFrames[changedLabel.rootFrameId].lokalizedLabels = updatedLabels
+        } else {
+          console.log('no cache found for frame: ' +changedLabel.rootFrameId)
+        }
+        
       } 
 
       const event = new CustomEvent('updated', { });
@@ -71,6 +91,8 @@ export class LocalizedLabelManagerUI extends EventTarget {
 
     async updateLocalisedLabelProperties(nodeId: string, changedProperties: { 
       labelName?: string, 
+      keyType?: KeyState,
+      key?: string,
       plural?: Plural, 
       text?: string, 
       showSampleValues?: boolean, 
@@ -85,7 +107,10 @@ export class LocalizedLabelManagerUI extends EventTarget {
           return this.cachedFrames[frameId];
         }
 
+        console.log('refreshing frame with id ' + frameId)
+
         let frameData = await this.localisedLabelMangerSandbox.getFrameById(frameId);
+        console.log(frameData);
 
         this.cachedFrames[frameId] = {
           frameId: frameId,

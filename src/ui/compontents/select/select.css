@@ -193,7 +193,7 @@ select.select-menu {
 
 .select-menu__menu {
   display: none;
-  position: fixed;
+  
   /* position will be calculated by the component
    
   top: 0;
@@ -204,7 +204,7 @@ select.select-menu {
   padding: var(--size-xxsmall) 0 var(--size-xxsmall) 0;
   border-radius: var(--border-radius-small);
   margin: 0;
-  z-index: 1000;
+  
   overflow-x: overlay;
   overflow-y: auto;
 }
@@ -310,8 +310,79 @@ select.select-menu {
 }
 
 .select-menu__divider {
-  background-color: var(--figma-color-bg-menu-pressed);
+  background-color: var(--figma-color-bg-menu-secondary);
   display: block;
   height: 1px;
   margin: 8px 0 7px 0;
+}
+
+.select-menu__menu_container {
+  height: 30px;
+  position: fixed;
+  /*
+  gets calculated
+  width: 100px;
+  height: 100px;
+  top: 10px;
+  left: 20px;
+  */
+  z-index: 1000000;
+}
+
+.select-menu__menu_wrapper::-webkit-scrollbar {
+  display: none;
+}
+
+.select-menu__menu_wrapper {
+  height: 100%;
+  width: 100%;
+  overflow: scroll;
+  
+  /*
+  gets calculated
+  width: 100px;
+  height: 100px;
+  top: 10px;
+  left: 20px;
+  */
+  z-index: 1000000;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+}
+
+.select-menu__menu-scroll-up {
+  background-color: var(--figma-color-bg-menu-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  height: 16px;
+  width: 100%;
+}
+
+.select-menu .select-menu__menu-scroll-up > .svg-container {
+  background-color: var(--color-text-menu);
+  width: 8px;
+  height: 8px;
+}
+
+.select-menu__menu-scroll-down {
+  background-color: var(--figma-color-bg-menu-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  bottom: 0px;
+  left: 0px;
+  height: 16px;
+  width: 100%;
+}
+
+.select-menu .select-menu__menu-scroll-down > .svg-container {
+  background-color: var(--color-text-menu);
+  width: 8px;
+  height: 8px;
 }

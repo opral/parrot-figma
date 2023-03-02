@@ -3,7 +3,7 @@ import { useState } from "react";
 import * as ReactDOM from "react-dom";
 import { LocalizedLabel } from "../../../lib/localizedlabels/LocalizedLabel";
 import LocalizedLabelListItem from "./LocalizedLabelListItem";
-import Select, { SelectOption } from '../../compontents/select/selsect'
+import Select, { SelectOption } from '../../compontents/select/select'
 import FigmaHelper from "../../../shared/FigmaHelper";
 import { FigmaUtil } from "../../../shared/FigmaUtil";
 import { MemoryTranslationKeyStore } from "../../../lib/keystore/MemoryTranslationKeyStore";

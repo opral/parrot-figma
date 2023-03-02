@@ -2,11 +2,11 @@ import * as React from "react";
 import { useState } from "react";
 import * as ReactDOM from "react-dom";
 import { Plural } from "../../../lib/base/Plural";
-import { LocalizedLabel } from "../../../lib/localizedlabels/LocalizedLabel";
+import { KeyState, LocalizedLabel } from "../../../lib/localizedlabels/LocalizedLabel";
 
 import FigmaHelper from "../../../shared/FigmaHelper";
 import { FigmaUtil } from "../../../shared/FigmaUtil";
-import Select, { SelectOption } from '../../compontents/select/selsect'
+import Select, { SelectOption } from '../../compontents/select/select'
 import { MemoryTranslationKeyStore } from "../../../lib/keystore/MemoryTranslationKeyStore";
 import { Language } from "../../../lib/base/Language";
 import TranslationEditor from "../../compontents/translationEditor/TranslationEditor";
@@ -24,6 +24,49 @@ type LocalizedLabelListItemProps = {
 }
 
 export default function LocalizedLabelListItem(props: LocalizedLabelListItemProps) {
+    /* 
+    option1: Labels key is unset
+        -- provide option to choose 
+            - from existing keys -> search -> use/create -> fixed
+            - derived (derived or rename label name)
+
+        - derivedKey === undefined   
+
+        - derived key exists in keystore
+            - language does not extist in key store
+            - selected plural (other than 'other' - because other is always created with the language) does not exist
+            - design text differs from the translation
+            - design and translation are equal
+
+        - derived does not exist in keystore
+
+    option 3: Labels key is ephemeral
+
+    option 4: Labels key is derived
+        - derived key differs from key (component was moved in hirachy or renamed)
+            Resolution
+            - change key to linked and use existing or chosse different
+            - use derived key
+
+    option 5: Labels key is linked 
+        - key exists in keystore
+            - language does not extist in key store
+            - selected plural (other than 'other' - because other is always created with the language) does not exist
+            - design text differs from the translation
+            - design and translation are equal
+        
+        - key does not exist in keystore
+
+
+    option4: 
+            
+
+    Open questions how does copy behave?
+        - when the labels key is fixed 
+            - keep config
+        - when the labeles key is derived 
+            - keep config but use derived key until first save?
+    */
 
     let localizedLabel = props.localizedLabel;
     let translatedKey = localizedLabel.keyType !== 'unset' ? props.translationKeyStore.getKey(localizedLabel.key!) : undefined;
@@ -55,7 +98,7 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
         {
             value: "",
             label: 'jo',
-            divider: 'test'
+            divider: true
         },
     ];
 
@@ -79,8 +122,8 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
         keyOptions.push(
         {
             value: "",
-            label: 'jo',
-            divider: 'test'
+            label: '',
+            divider: true
         });
     }
 
@@ -90,6 +133,8 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
             label: 'No key',
             icon: 'key-svg'
         });
+
+    
 
     let pluralsAvailable = [] as SelectOption[];
 
@@ -104,7 +149,6 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
     }
 
     if (translations) {
-    
         for (let plural of Object.keys(translations)) {
             const pluralOption = {
                 value: plural, label: plural
@@ -125,6 +169,7 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
         }
       }, [props.selected]);
 
+
     return (
         
     <>
@@ -139,15 +184,9 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                     <TextField 
                         editingTrigger={editingTrigger}
                         onSave={async function(labelName: string) {
-                            
                             await props.localisedLabelManager.updateLocalisedLabelProperties(localizedLabel.nodeId, {
-                                labelName: labelName,
-                                plural: localizedLabel.pluralId,
-                                showSampleValues: localizedLabel.useSampleValues,
-                                showSampleValuesInherited: localizedLabel.rootFrameUseSampleValues,
-                                
+                                labelName: labelName
                             });
-                            console.warn('onSave back prob not implemented')
                         }}
                         text={localizedLabel.name}
                         />
@@ -161,33 +200,41 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                     <div className="localized-label-details">
                         <div className="key-panel">
                             <Select
-                                                    placeholder="Select key"
-                                                    onChange={selectOption => { 
-                                                        console.log('selectOption---------------------------------->')
-                                                        console.log(selectOption)
-                                                        console.log('selectOption----------------------------------<')
-                                                        if (selectOption.value === 'set-id-for-derivation') {
-                                                            setEditingTrigger((trigger) => trigger + 1);
-                                                        }
-                                                        // onSaveFigmaVersionClick(localizedLabel.key!, localizedLabel.rootFrameLanguage, value.value as string, localizedLabel.text!)
-                                                        
-                                                    }}
-                                                    defaultValue={localizedLabel.keyType}
-                                                    options={keyOptions}
-                                                    unSelectedIcon='language'
-                                                    
-                                                />
+                                    placeholder="Select key"
+                                    onChange={async function(selectOption) { 
+                                        if (selectOption.value === 'set-id-for-derivation') {
+                                            setEditingTrigger((trigger) => trigger + 1);
+                                        } else if (selectOption.value === 'select-for-link') {
+
+                                        } else if (selectOption.value === 'linked') {
+                                            await props.localisedLabelManager.updateLocalisedLabelProperties(localizedLabel.nodeId, {
+                                                keyType: KeyState.Linked
+                                            });
+                                        } if (selectOption.value === 'derived') {
+                                            await props.localisedLabelManager.updateLocalisedLabelProperties(localizedLabel.nodeId, {
+                                                keyType: KeyState.Derived,
+                                                key: localizedLabel.derivedKey
+                                            });
+                                        }
+                                        // onSaveFigmaVersionClick(localizedLabel.key!, localizedLabel.rootFrameLanguage, value.value as string, localizedLabel.text!)
+                                        
+                                    }}
+                                    defaultValue={localizedLabel.keyType}
+                                    options={keyOptions}
+                                    unSelectedIcon='language'
+                                    
+                                />
                             {localizedLabel.key && (
                               <Select
-                                                    placeholder="Select item"
-                                                    onChange={value => { 
-                                                        onSaveFigmaVersionClick(localizedLabel.key!, localizedLabel.rootFrameLanguage, value.value as string, localizedLabel.text!)
-                                                    }}
-                                                    defaultValue={localizedLabel.pluralId}
-                                                    unSelectedIcon='language'
-                                                    options={pluralsAvailable}
-                                                />
-                                                )}
+                                    placeholder="Select item"
+                                    onChange={value => { 
+                                        onSaveFigmaVersionClick(localizedLabel.key!, localizedLabel.rootFrameLanguage, value.value as string, localizedLabel.text!)
+                                    }}
+                                    defaultValue={localizedLabel.pluralId}
+                                    unSelectedIcon='language'
+                                    options={pluralsAvailable}
+                                />
+                                )}
                         </div>
                     </div>
                     <TranslationEditor

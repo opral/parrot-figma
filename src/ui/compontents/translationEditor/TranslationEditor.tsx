@@ -1,14 +1,5 @@
 import * as React from "react";
 import { useEffect, useRef, useState } from "react";
-import * as ReactDOM from "react-dom";
-import { Plural } from "../../../lib/base/Plural";
-import { LocalizedLabel } from "../../../lib/localizedlabels/LocalizedLabel";
-
-import FigmaHelper from "../../../shared/FigmaHelper";
-import { FigmaUtil } from "../../../shared/FigmaUtil";
-import Select, { SelectOption } from '../select/selsect'
-import { MemoryTranslationKeyStore } from "../../../lib/keystore/MemoryTranslationKeyStore";
-import { Language } from "../../../lib/base/Language";
 import "./TranslationEditor.css"
 
 type TranslationEditorProps = {
@@ -21,7 +12,7 @@ type TranslationEditorProps = {
 
 export default function TranslationEditor(props: TranslationEditorProps) {
    
-    let [translationText, setTranslationText] = useState(props.text)
+    let [designText, setDesignText] = useState(props.designText)
     let [editingState, setEditingState] = useState(false)
     let [textAreaHeight, setTextAreaHeigth] = useState(0);
     let [textAreaWidth, setTextAreaWidth] = useState(0);
@@ -35,15 +26,11 @@ export default function TranslationEditor(props: TranslationEditorProps) {
     const handleChange = (evt: React.ChangeEvent<HTMLTextAreaElement>) => {
         const val = evt.target?.value;
     
-        setTranslationText(val);
+        setDesignText(val);
     };
-
 
     useEffect(() => {
         if (editingState) {
-
-            console.log('translation click');
-            console.log(textAreaRef.current);
             textAreaRef.current?.focus();
             textAreaRef.current?.select();
         }
@@ -76,7 +63,7 @@ export default function TranslationEditor(props: TranslationEditorProps) {
                         width: textAreaWidth,
                         visibility: (editingState ? 'visible' :'hidden')
                     }}
-                    value={props.designText}
+                    value={designText}
                     onChange={handleChange} />
                 
             
@@ -84,11 +71,10 @@ export default function TranslationEditor(props: TranslationEditorProps) {
                 <p  className={'translation' + (editingState ? ' editing' :'')}  onClick={e=> {
                         if (!editingState) {
                             setEditingState(!editingState);
-
                         }
                         
                     }}>
-                    {props.designText}
+                    {designText.charAt(designText.length - 1) === '\n' ? designText + '\n' : designText}
                     
                 </p>
             
@@ -97,19 +83,19 @@ export default function TranslationEditor(props: TranslationEditorProps) {
             <>
 
                 <input type="button" value="Save" 
-                    disabled={translationText == props.text}
+                    disabled={designText == props.text}
                     onClick={e => {
                         setEditingState(!editingState)
-                        props.onSave(translationText);
+                        props.onSave(designText);
                     }} />
                 <input type="button" value="Cancel" 
                     onClick={e => {
                         setEditingState(!editingState)
                     }} />
-                { props.designText !== undefined && props.designText !== translationText &&  (
+                { props.designText !== undefined && props.designText !== designText &&  (
                     
                         <div onClick={e => {
-                            setTranslationText(props.designText!)
+                            setDesignText(props.designText!)
                         }} 
                         >
                         <div>Figma: </div>

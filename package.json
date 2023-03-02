@@ -35,6 +35,7 @@
     "react-dom": "^17.0.2",
     "react-figma-plugin-ds": "^2.3.0",
     "react-outside-click-handler": "^1.3.0",
+    "react-usestateref": "^1.0.8",
     "svg-url-loader": "^8.0.0"
   }
 }

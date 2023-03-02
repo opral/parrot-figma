@@ -123,6 +123,17 @@
   }
 
 
+  .arrow-up-svg {
+    -webkit-mask-image: url(./arrow_up.svg);
+    mask-image: url(./arrow_up.svg);
+  }
+
+  .arrow-down-svg {
+    -webkit-mask-image: url(./arrow_down.svg);
+    mask-image: url(./arrow_down.svg);
+  }
+
+
   .placeholder-filled-svg {
     -webkit-mask-image: url(./placeholder-filled.svg);
     mask-image: url(./placeholder-filled.svg);

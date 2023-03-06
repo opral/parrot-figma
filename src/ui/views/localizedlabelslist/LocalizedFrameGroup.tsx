@@ -46,15 +46,33 @@ export default function LocalizedFrameGroup(props: LocalizedFrameGroupProps) {
     }
 
     async function onLanguageSelectionClick(firstLocalizedLabelInFrame: LocalizedLabel, language: Language) {
-      props.localisedLabelManager.localisedLabelMangerSandbox.updateFrameProperties(firstLocalizedLabelInFrame.rootFrameId, {
-        language: language,
-        sampleValues: firstLocalizedLabelInFrame.rootFrameUseSampleValues
-      })
-      console.warn('onLanguageSelectionClick back prop not implemented') 
-      /*
-      await props.localisedLabelManager.localisedLabelMangerSandbox.updateFrameProperties
-      await props.refreshKeys();
-      */
+      const deepLTranslationProvider = async function(text: String, language: string) {
+        console.log('tranalating: ' +text + ' with deepl');
+        let result = await fetch('http://localhost:3333/api/v1/translate', {
+          method: 'POST',
+          /*headers: {
+            'Authorization': 'DeepL-Auth-Key 391733de-67e0-be65-a8b7-4298511dd564:fx'
+          },*/ 
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }, 
+          body: JSON.stringify(
+            {
+              text: [text],
+              target_lang: language
+            }
+          ) 
+        })
+        let translationResults = await result.json();
+        
+        return translationResults.translations[0].text
+      }
+
+      
+
+      props.localisedLabelManager.setLanguageToFrame(firstLocalizedLabelInFrame.rootFrameId, language, deepLTranslationProvider)
+      
     }
 
     async function onSampleValuesClick(firstLocalizedLabelInFrame: LocalizedLabel) {

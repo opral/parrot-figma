@@ -25,6 +25,32 @@
 }
 
 
+.flag-cs {
+    width: 16px;
+    height: 16px;
+    background-image: url(./flags/cz.svg);
+  }
+  .flag-nil {
+      width: 16px;
+      height: 16px;
+      background-image: url(./flags/nl.svg);
+    }
+
+
+  .flag-it {
+    width: 16px;
+    height: 16px;
+    background-image: url(./flags/it.svg);
+  }
+
+
+.flag-fr {
+    width: 16px;
+    height: 16px;
+    background-image: url(./flags/fr.svg);
+  }
+
+
 .flag-de {
     width: 16px;
     height: 16px;

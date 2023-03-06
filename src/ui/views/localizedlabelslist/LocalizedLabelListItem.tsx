@@ -25,6 +25,12 @@ type LocalizedLabelListItemProps = {
 
 export default function LocalizedLabelListItem(props: LocalizedLabelListItemProps) {
     /* 
+
+    initial state of a frame - never got translated initial action 
+     - all keys are unset 
+
+
+
     option1: Labels key is unset
         -- provide option to choose 
             - from existing keys -> search -> use/create -> fixed
@@ -84,56 +90,8 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
         localizedTextToApply = props.translationKeyStore.fillPlaceholdersWithSampleData(localizedTextToApply!, localizedLabel.rootFrameLanguage, localizedLabel.pluralId);
     }
 
-    let keyOptions = [
-        {
-            value: 'select-for-link',
-            label: 'Select existing Translation key',
-            icon: 'key-svg'
-        },
-        {
-            value: 'set-id-for-derivation',
-            label: 'Set label id for derivation',
-            icon: 'key-svg'
-        },
-        {
-            value: "",
-            label: 'jo',
-            divider: true
-        },
-    ];
-
-    if (localizedLabel.key !== undefined || localizedLabel.derivedKey !== undefined) {
-        if (localizedLabel.key !== undefined) {
-            keyOptions.push({
-                value: 'linked',
-                label: localizedLabel.key + ' - linked',
-                icon: 'key-svg'
-            })
-        }
-
-        if (localizedLabel.derivedKey !== undefined) {
-            keyOptions.push( {
-                value: 'derived',
-                label: localizedLabel.derivedKey + ' - derived',
-                icon: 'key-svg'
-            });
-        }
-
-        keyOptions.push(
-        {
-            value: "",
-            label: '',
-            divider: true
-        });
-    }
-
-    keyOptions.push(
-        {
-            value: 'ephemeral',
-            label: 'No key',
-            icon: 'key-svg'
-        });
-
+    // start with the unset state
+    let keyOptions = getKeyOptions(localizedLabel);
     
 
     let pluralsAvailable = [] as SelectOption[];
@@ -266,4 +224,172 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
             
           </div>
     </>)              
+}
+
+function getKeyOptions(localizedLabel: LocalizedLabel) {
+    let keyOptions = [ ] as SelectOption[];
+
+    // we don't have a key so far
+    if (localizedLabel.keyType === KeyState.Unset) {
+        keyOptions = [
+            {
+                value: 'select-for-link',
+                label: 'Link to existing Translation key',
+                icon: 'key-svg'
+            }
+        ];
+
+        if (localizedLabel.derivedKey === undefined) {
+            keyOptions.push({
+                value: 'set-id-for-derivation',
+                label: 'Set label id for derivation',
+                icon: 'key-svg'
+            })
+        } else {
+            keyOptions.push({
+                value: 'derived',
+                label: localizedLabel.derivedKey + ' - derived',
+                icon: 'key-svg'
+            });
+        }
+        
+        keyOptions.push({
+                value: "",
+                label: 'jo',
+                divider: true
+            })
+
+
+        keyOptions.push(
+            {
+                value: 'ephemeral',
+                label: 'No key',
+                icon: 'key-svg'
+            });
+            
+        return keyOptions;
+    } else 
+
+    // a key was generated - we have translations but not a "real" translation key
+    if (localizedLabel.keyType === KeyState.Ephemeral) {
+        keyOptions = [
+            {
+                value: 'select-for-link',
+                label: 'Link to existing Translation key',
+                icon: 'key-svg'
+            }
+        ];
+
+        if (localizedLabel.derivedKey === undefined) {
+            keyOptions.push({
+                value: 'set-id-for-derivation',
+                label: 'Set label id for derivation',
+                icon: 'key-svg'
+            })
+        } else {
+            keyOptions.push({
+                value: 'derived',
+                label: 'Use - '  + localizedLabel.derivedKey + ' - (derived)',
+                icon: 'key-svg'
+            });
+            keyOptions.push({
+                value: 'linked',
+                label: 'Use - '  + localizedLabel.derivedKey + ' - (linked)',
+                icon: 'key-svg'
+            });
+        }
+        
+        keyOptions.push({
+                value: "",
+                label: 'jo',
+                divider: true
+            })
+        
+
+        keyOptions.push({
+            value: 'ephemeral',
+            label: 'No key',
+            icon: 'key-svg'
+        });
+
+        return keyOptions;
+    } else 
+
+
+    if (localizedLabel.keyType === KeyState.Derived) {
+        keyOptions = [
+            {
+                value: 'select-for-link',
+                label: 'Link to existing Translation key',
+                icon: 'key-svg'
+            }
+        ];
+
+        keyOptions.push({
+            value: 'derived',
+            label: 'Use - '  + localizedLabel.derivedKey + ' - (derived)',
+            icon: 'key-svg'
+        });
+
+        keyOptions.push({
+            value: 'linked',
+            label: 'Use - '  + localizedLabel.derivedKey + ' - (linked)',
+            icon: 'key-svg'
+        });
+        
+        keyOptions.push({
+                value: "",
+                label: 'jo',
+                divider: true
+            })
+        
+
+        keyOptions.push({
+            value: 'ephemeral',
+            label: 'No key',
+            icon: 'key-svg'
+        });
+
+        return keyOptions;
+    } else {
+
+    
+    // if (localizedLabel.keyType === KeyState.Linked) {
+        keyOptions = [
+            {
+                value: 'select-for-link',
+                label: 'Link to existing Translation key',
+                icon: 'key-svg'
+            }
+        ];
+
+        keyOptions.push({
+            value: 'derived',
+            label: 'Use - '  + localizedLabel.derivedKey + ' - (derived)',
+            icon: 'key-svg'
+        });
+
+        keyOptions.push({
+            value: 'linked',
+            label: 'Use - '  + localizedLabel.derivedKey + ' - (linked)',
+            icon: 'key-svg'
+        });
+        
+        keyOptions.push({
+                value: "",
+                label: 'jo',
+                divider: true
+            })
+        
+
+        keyOptions.push({
+            value: 'ephemeral',
+            label: 'No key',
+            icon: 'key-svg'
+        });
+
+        return keyOptions;
+    }
+    
+
 }

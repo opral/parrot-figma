@@ -66,8 +66,8 @@ const Select: React.FunctionComponent<SelectProps> = ({
     }
 
     const intersectionObserver = new IntersectionObserver((entries: IntersectionObserverEntry[]) => {    
+      
       setViewPortHeight(entries[0].intersectionRect.height);
-
     }, {
       root: null,   // default is the viewport
       threshold: threshol // percentage of target's visible area. Triggers "onIntersection"
@@ -92,7 +92,8 @@ const Select: React.FunctionComponent<SelectProps> = ({
 
   useEffect(() => {
     onExpand && onExpand(isExpanded);
-    if(isExpanded) {
+    if(isExpanded && menuWrapperRef.current !== undefined) {
+
       
       // on expand calculate starting position
       var rect = buttonRef.current!.getBoundingClientRect();
@@ -105,11 +106,10 @@ const Select: React.FunctionComponent<SelectProps> = ({
 
       let selectedDiv = menuWrapperRef.current!.childNodes[0].childNodes[menuPositionIndex] as HTMLDivElement
       
-      let spaceNeededOnTop = menuPositionIndex * menuEntryHeight + menuPadding;
-      spaceNeededOnTop = selectedDiv?.offsetTop;
+      let spaceNeededOnTop = selectedDiv ? selectedDiv?.offsetTop : 0;
       
       let spaceNeededOnBottom = (options.length - menuPositionIndex -1) * menuEntryHeight + menuPadding;
-
+      
       const height = Math.min(maxSpaceToTop, spaceNeededOnTop) + menuEntryHeight + Math.min(maxSpaceToBottom, spaceNeededOnBottom);
       const top = Math.max(0, maxSpaceToTop - spaceNeededOnTop);
       
@@ -124,7 +124,7 @@ const Select: React.FunctionComponent<SelectProps> = ({
       setWrapperScrollTop({scrollTop: scroll})
 
     }
-  }, [isExpanded, viewPortHeight]);
+  }, [isExpanded, viewPortHeight, menuWrapperRef]);
 
   useEffect(() => {
     if (menuWrapperRef.current !== undefined) {
@@ -275,7 +275,6 @@ const Select: React.FunctionComponent<SelectProps> = ({
 
     const startScrollUp = (e: any) => {
       timeInterval = setInterval(() => {
-        console.log('scrolling up');
         menuWrapperRef.current!.scrollTop  = menuWrapperRef.current!.scrollTop - 4        
       }, 20);
     };
@@ -300,8 +299,7 @@ const Select: React.FunctionComponent<SelectProps> = ({
     let timeInterval = undefined as any
 
     const startScrollDown = (e: any) => {
-      timeInterval = setInterval(() => {
-        console.log('scrolling down');
+      timeInterval = setInterval(() => { 
         menuWrapperRef.current!.scrollTop  = menuWrapperRef.current!.scrollTop + 4
       }, 20);
     };
@@ -322,17 +320,14 @@ const Select: React.FunctionComponent<SelectProps> = ({
   }, [scrollDownRef])
 
   const handleExpandClick = () => { 
-    console.log('handleExpandClick'); 
     onExpandedStateChange(!isExpanded)
   };
 
   const handleOutsideClick = () => { 
-    console.log('clihandleOutsideClickck');
      onExpandedStateChange(false)
   };
 
   const handleSelectClick = (value: any) => {
-    console.log('handle select click')
     const newOption = options.find(({ value: v }) => v === value);
     onExpandedStateChange(false);
     onSelectOption(newOption);

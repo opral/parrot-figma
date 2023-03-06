@@ -39,9 +39,7 @@ let asyncFunctionProxy = new AsyncFunctionProxy('UIAsyncFunctionProxy', (data: a
 }, window);
 
 let remoteLocalizedLabelManager = new LocalizedLabelManager(undefined);
-asyncFunctionProxy.proxyAsyncMethods(remoteLocalizedLabelManager)
-
-let localizedLabelManager = new LocalizedLabelManagerUI(remoteLocalizedLabelManager);
+asyncFunctionProxy.proxyAsyncMethods(remoteLocalizedLabelManager);
 
 let figmaRemote = new FigmaUtil()
 asyncFunctionProxy.proxyAsyncMethods(figmaRemote)
@@ -51,6 +49,7 @@ asyncFunctionProxy.proxyAsyncMethods(figmaFileTranslationKeyStore);
 
 let memoryTranslationKeyStore = new MemoryTranslationKeyStore(figmaFileTranslationKeyStore)
 
+let localizedLabelManager = new LocalizedLabelManagerUI(remoteLocalizedLabelManager, memoryTranslationKeyStore);
 
 
 
@@ -75,19 +74,9 @@ function App() {
         
         // asynchronous fetch the state from figma helper
         (async ()=>{
-            
-            console.time(' initial load ');
-
-            console.time(' memoryTranslationKeyStore.load()');
             await memoryTranslationKeyStore.load()
-            console.timeEnd(' memoryTranslationKeyStore.load()');
-
-            console.time('await localizedLabelManager.loadAll();');
             await localizedLabelManager.loadAll();
-            console.timeEnd('await localizedLabelManager.loadAll();');
 
-
-            
             let defaultLinkStyle = await remoteLocalizedLabelManager.getLinkStyle();
             setDefaultLinkStyle(defaultLinkStyle);
             
@@ -103,7 +92,7 @@ function App() {
 
     async function refreshLanguages() {
         // let languages = await figmaHelperRemote.getLanguages();
-        setLanguages([Language.De, Language.En, Language.Bg]);
+        setLanguages([Language.De, Language.En, Language.Bg, Language.Fr, Language.Cs, Language.It]);
     }
 
     async function setLinkStyle(linkStyle: string) {

@@ -1,6 +1,8 @@
 import { KeyState, LocalizedLabel } from "./LocalizedLabel";
 import { Plural } from "../base/Plural";
 import { LocalizedLabelManager } from "./LocalizedLabelManager";
+import { Language } from "../base/Language";
+import { MemoryTranslationKeyStore } from "../keystore/MemoryTranslationKeyStore";
 
 
 export class LocalizedLabelManagerUI extends EventTarget {
@@ -18,10 +20,12 @@ export class LocalizedLabelManagerUI extends EventTarget {
     }}
 
     localisedLabelMangerSandbox: LocalizedLabelManager
+    keyStore: MemoryTranslationKeyStore
 
-    constructor(localisedLabelMangerSandbox: LocalizedLabelManager) {
+    constructor(localisedLabelMangerSandbox: LocalizedLabelManager, keyStore: MemoryTranslationKeyStore) {
       super()
       this.localisedLabelMangerSandbox = localisedLabelMangerSandbox
+      this.keyStore = keyStore;
 
       window.addEventListener('message', (event : MessageEvent) => {
         if (event.data.pluginMessage.target === 'LocalizedLabelManager') {
@@ -61,7 +65,6 @@ export class LocalizedLabelManagerUI extends EventTarget {
 
       for (let changedLabel of cacheUpdateMessage.changedLabels) {
         console.log('invalidating node' + changedLabel.nodeId)
-        console.log(changedLabel);
         this.invalidateCacheIfNeeded(changedLabel);
         this.cachedLokalisedLabels[changedLabel.nodeId] = changedLabel;
         
@@ -70,8 +73,6 @@ export class LocalizedLabelManagerUI extends EventTarget {
           let updatedLabels = this.cachedFrames[changedLabel.rootFrameId].lokalizedLabels.map( localizedlabel => {
             if (localizedlabel.nodeId == changedLabel.nodeId) {
               console.log('replacing')
-              console.log(localizedlabel)
-              console.log(changedLabel)
               return changedLabel
             } else {
               return localizedlabel
@@ -87,6 +88,90 @@ export class LocalizedLabelManagerUI extends EventTarget {
 
       const event = new CustomEvent('updated', { });
       this.dispatchEvent(event);
+    }
+
+    async setLanguageToFrame(frameId: string, targetLanguage: Language, missingTranslationProvider: (input: string, language: string) => Promise<string | undefined>) {
+      for (let localizedLabel of this.cachedFrames[frameId].lokalizedLabels) {
+        this.setLanguage(localizedLabel, targetLanguage, missingTranslationProvider);
+      }
+
+      this.localisedLabelMangerSandbox.updateFrameProperties(frameId, {
+        language: targetLanguage,
+      })
+    }
+
+    async setLanguage(cachedLabel: LocalizedLabel, targetLanguage: Language, 
+                        missingTranslationProvider: (input: string, language: string) => Promise<string | undefined>) {
+      
+
+      // preset the translation key with a ephemeral key
+      let translationKeyName = cachedLabel.pageId + '-' + cachedLabel.rootFrameId + '-' + cachedLabel.nodeId + '-' + 'TODO-RANDOM';
+      let keyState = KeyState.Ephemeral;
+
+      // the label has not yet a connected key
+      if (cachedLabel.keyType === KeyState.Unset) {
+        // derivation possible
+        if (cachedLabel.derivedKey !== undefined) {
+          translationKeyName = cachedLabel.derivedKey
+          keyState = KeyState.Derived;
+        } 
+      } else {
+        translationKeyName = cachedLabel.key!
+        keyState = cachedLabel.keyType
+      }
+
+      let translationKey = this.keyStore.getKey(translationKeyName); 
+      // check if key exists  
+      if (translationKey === undefined) {
+
+        let translation = await missingTranslationProvider(cachedLabel.text, targetLanguage);
+
+        // ok we have a fresh key to create - no translation to expect
+        this.keyStore.createKey(translationKeyName, [{
+          language: cachedLabel.rootFrameLanguage,
+          plural: cachedLabel.pluralId,
+          text: cachedLabel.text
+        },{
+          language: targetLanguage,
+          plural: cachedLabel.pluralId,
+          text: translation
+        }]);
+
+        this.updateLocalisedLabelProperties(cachedLabel.nodeId, {
+          key: translationKeyName,
+          keyType: keyState, 
+          text: translation
+        })
+
+      } else {
+        if (translationKey.translations[targetLanguage]?.[cachedLabel.pluralId]?.text === undefined) {
+          // TODO check if baselanguage exists and if figmas text differs -> how to handle this?
+          // TODO how do we handle labels with useSampleValue == true?
+          // translation missing - generate it and update the translation key
+          let translation = await missingTranslationProvider(cachedLabel.text, targetLanguage);
+          this.keyStore.updateKey(translationKeyName, [ {
+            language: targetLanguage, 
+            plural: cachedLabel.pluralId,
+            text: translation
+          }])
+
+          this.updateLocalisedLabelProperties(cachedLabel.nodeId, {
+            key: translationKeyName,
+            keyType: keyState, 
+            text: translation
+          });
+        } else {
+          // we have a translation - nothing to do - the text will get applied directly as soon as the parent frames language changed
+
+
+          this.updateLocalisedLabelProperties(cachedLabel.nodeId, {
+            key: translationKeyName,
+            keyType: keyState, 
+            text: translationKey.translations[targetLanguage]?.[cachedLabel.pluralId]?.text!
+          });
+        }
+      }
+
     }
 
     async updateLocalisedLabelProperties(nodeId: string, changedProperties: { 
@@ -110,8 +195,7 @@ export class LocalizedLabelManagerUI extends EventTarget {
         console.log('refreshing frame with id ' + frameId)
 
         let frameData = await this.localisedLabelMangerSandbox.getFrameById(frameId);
-        console.log(frameData);
-
+        
         this.cachedFrames[frameId] = {
           frameId: frameId,
           frameName: frameData.name,

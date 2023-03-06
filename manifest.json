@@ -6,5 +6,8 @@
     "figma"
   ],
   "ui": "dist/ui.html",
-  "main": "dist/code.js"
+  "main": "dist/code.js",
+
+  "permissions": ["currentuser"]
+
 }

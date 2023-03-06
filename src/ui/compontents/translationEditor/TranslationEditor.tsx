@@ -29,6 +29,12 @@ export default function TranslationEditor(props: TranslationEditorProps) {
         setDesignText(val);
     };
 
+
+    useEffect(() => {
+        setDesignText(props.designText)
+      }, [props.designText]);
+
+
     useEffect(() => {
         if (editingState) {
             textAreaRef.current?.focus();

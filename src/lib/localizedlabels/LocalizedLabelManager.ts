@@ -19,7 +19,7 @@ export class LocalizedLabelManager {
       return
     }
 
-    figma.on("documentchange", this.forwardDocumentChanges);
+    figma.on("documentchange", this.forwardDocumentChanges.bind(this));
 
   }
 
@@ -33,6 +33,7 @@ export class LocalizedLabelManager {
   public keyTypeDataKey = 'kt';
 
   public keyDataKey = 'key';
+  
 
   public labelIdDataKey = 'olid'; // we store the orginal label id (the id of the node when the plugin changed properties the first time) to detect a copy 
 
@@ -144,8 +145,16 @@ export class LocalizedLabelManager {
 
     figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
 
-    console.log(frameData);
     return frameData
+  }
+
+
+  async setBaseLanguage(baseLanguage: Language) {
+    figma.root.setPluginData(this.languageDataKey, baseLanguage);
+  }
+
+  async getBaseLanguage() {
+    return figma.root.getPluginData(this.languageDataKey) == '' ? Language.En : figma.root.getPluginData(this.languageDataKey) as Language;
   }
 
   async setLinkStyle(linkStyle: string) {
@@ -162,24 +171,28 @@ export class LocalizedLabelManager {
     }
   }
 
-  async updateFrameProperties(frameNodeId: string, properties: { language: Language, sampleValues: boolean }) {
+  async updateFrameProperties(frameNodeId: string, properties: { language?: Language, sampleValues?: boolean }) {
 
     let frame = figma.getNodeById(frameNodeId) as FrameNode
     if (!frame) {
       return
     }
 
-    frame.setPluginData(this.languageDataKey, properties.language);
+    if (properties.language !== undefined) {
+      frame.setPluginData(this.languageDataKey, properties.language);
+    }
 
-    if (properties.sampleValues) {
-      frame.setPluginData(this.sampleValuesDataKey, true + '')
-    } else {
-      frame.setPluginData(this.sampleValuesDataKey, '')
+    if (properties.sampleValues !== undefined) {
+      if (properties.sampleValues) {
+        frame.setPluginData(this.sampleValuesDataKey, true + '')
+      } else {
+        frame.setPluginData(this.sampleValuesDataKey, '')
+      }
     }
 
     await this.updateFrame(frame);
 
-    console.log((new Date()).getTime() + 'execution finished - puting result into message');
+    // console.log((new Date()).getTime() + 'execution finished - puting result into message');
   }
 
   private getFrameLanguage(frame: FrameNode) {
@@ -211,7 +224,7 @@ export class LocalizedLabelManager {
     let language = this.getFrameLanguage(frame);
 
     for (let localisedLabel of lokalisedLabels) {
-      if (localisedLabel.keyType === 'ephemeral') {
+      if (localisedLabel.keyType === KeyState.Unset) {
         continue;
       }
 
@@ -273,7 +286,6 @@ export class LocalizedLabelManager {
 
       for (let rangeStyle of textWithDecorators.textDecorations) {
         if (rangeStyle.type = 'href') {
-          console.log(rangeStyle.url);
           textNode.setRangeHyperlink(rangeStyle.from, rangeStyle.to, { type: 'URL', value: rangeStyle.url });
           if (linkStyle) {
             textNode.setRangeFills(rangeStyle.from, rangeStyle.to, [
@@ -375,8 +387,6 @@ export class LocalizedLabelManager {
   }
 
   private toTokenizedText(node: TextNode) {
-
-    console.log('toTokenizedText ' + node.name + ' ' + node.characters);
 
     let textnode = node as TextNode
 
@@ -484,6 +494,7 @@ export class LocalizedLabelManager {
 
     let keyType = node.getPluginData(this.keyTypeDataKey) as KeyState | undefined
     let key = node.getPluginData(this.keyDataKey);
+
 
     return {
       parentIds: parentIds,

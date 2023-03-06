@@ -7,9 +7,9 @@ import { BaseTranslationKeyStore } from "./BaseTranslationKeyStore";
 
 
 export interface TranslationKeyStore {
-    createKey(keyName: string, translations: {language: Language, plural: Plural, text: string}[]) : Promise<TranslationKey>
+    createKey(keyName: string, translations: {language: Language, plural: Plural, text: string | undefined}[]) : Promise<TranslationKey>
     getKey(keyName: string) : TranslationKey | undefined
-    updateKey(keyName: string, translations: {language: Language, plural: Plural, text: string}[]) : Promise<TranslationKey>
+    updateKey(keyName: string, translations: {language: Language, plural: Plural, text: string | undefined}[]) : Promise<TranslationKey>
     deleteKey(keyName: string) : Promise<void>
     load(): Promise<TranslationKeys>
     fillPlaceholdersWithSampleData(text: string, language: Language, plural: Plural): string
@@ -30,13 +30,13 @@ export class MemoryTranslationKeyStore extends BaseTranslationKeyStore {
         return this.translationKeys[keyName]
     }
 
-    async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string; }[]): Promise<TranslationKey> {
+    async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; }[]): Promise<TranslationKey> {
         console.log('calling MemoryTranslationKeyStore createKey' )
         let createdKey = await this.parentKeyStore.createKey(keyName, translations);
         return await this.persistKey(createdKey)
     }
 
-    async updateKey(keyName: string, translations: {language: Language, plural: Plural, text: string}[]) {
+    async updateKey(keyName: string, translations: {language: Language, plural: Plural, text: string | undefined}[]) {
        let updatedKey = await this.parentKeyStore.updateKey(keyName, translations);
        return await this.persistKey(updatedKey)
     }

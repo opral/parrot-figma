@@ -50,13 +50,18 @@ export abstract class BaseTranslationKeyStore implements TranslationKeyStore {
 
         for (let translation of translations) {
             if (!keyToUpdate.translations[translation.language]) {
-                keyToUpdate.translations[translation.language] = { 'other': {} };
+                keyToUpdate.translations[translation.language] = { 'other': {
+                    version: -1
+                } };
             }
 
             if (!keyToUpdate.translations[translation.language]![translation.plural]) {
-                keyToUpdate.translations[translation.language]![translation.plural] = {};
+                keyToUpdate.translations[translation.language]![translation.plural] = {
+                    version: keyToUpdate.translations[translation.language]!['other']!.version
+                };
             }
 
+            keyToUpdate.translations[translation.language]![translation.plural]!.version = keyToUpdate.translations[translation.language]![translation.plural]!.version + 1;
             keyToUpdate.translations[translation.language]![translation.plural]!.text = translation.text;
 
             if (keyToUpdate.plurals.indexOf(translation.plural as Plural) === -1) {

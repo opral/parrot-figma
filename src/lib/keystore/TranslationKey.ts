@@ -12,7 +12,7 @@ export interface TranslationKey {
     translations: {
         [language in Language]? : {
             [plural in Plural]? : {
-                //version: number,
+                version: number,
                 text?: string
             } 
         }

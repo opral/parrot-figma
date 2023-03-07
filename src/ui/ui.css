@@ -26,6 +26,13 @@ body {
   margin-right: 10px;
 }
 
+.window-control:hover {
+  align-self: center;
+  justify-self: flex-end;
+  margin-left: auto;
+  margin-right: 10px;
+}
+
 .key-frame {
     display: inline-block;
     right: 120px;
@@ -134,8 +141,6 @@ body {
   
   .toolbar {
     border-bottom: 1px solid rgba(237, 237, 237, 0.6);
-    
-    height: 32px;
     flex-direction: row;
     display: flex;
   }
@@ -205,4 +210,22 @@ body {
   mask-position: 50% 50%;
   mask-repeat: no-repeat;
   mask-size: cover;
+}
+
+.emptyState {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  justify-content: center;
+}
+
+
+.emptyStateTitle {
+  font-size: 14px;
+}
+
+.emptyStateSubtitle {
+  margin-top: 18px;
+  color: var(--figma-color-text-secondary, #b3b3b3);
 }

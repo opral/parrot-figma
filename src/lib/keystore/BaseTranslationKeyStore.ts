@@ -32,6 +32,7 @@ export abstract class BaseTranslationKeyStore implements TranslationKeyStore {
         }
 
         let createdKey = {
+            latestVersion: 0,
             keyName: keyName,
             tags: [],
             plurals: plurals,
@@ -70,6 +71,8 @@ export abstract class BaseTranslationKeyStore implements TranslationKeyStore {
         }
         return await this.persistKey(keyToUpdate);
     }
+
+    abstract getHistory(translationKeyName: string, language: Language, plural: Plural) : Promise<{text?: string}[]>;
 
     abstract getKey(keyName: string): TranslationKey | undefined;
 

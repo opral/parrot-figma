@@ -30,7 +30,7 @@ export default function TranslationKeyEditor(props: TranslationKeyEditorProps) {
     };
     
     return (
-        <div>
+        <>
             { editingState && 
             <div>
                 <textarea
@@ -65,7 +65,7 @@ export default function TranslationKeyEditor(props: TranslationKeyEditorProps) {
                 }
                 </div>
             }   
-        </div>
+        </>
     )
 }
 

@@ -16,19 +16,41 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
         if (keyRaw === '' || !keyRaw) {
             return undefined;
         }
-    
+
         console.log('---------------------------- keyName ---------------------');
         console.log(keyName)
         console.log(figma.root.getPluginData(this.keyPrefix + keyName));
         console.log(figma.root.getPluginData(this.keyHistoryPrefix + keyName));
 
+    
         return JSON.parse(keyRaw) as TranslationKey;
+    }
+
+    async getHistory(translationKeyName: string, language: Language, plural: Plural) : Promise<{text?: string}[]> {
+        let keyHistoryRaw = figma.root.getPluginData(this.keyHistoryPrefix + translationKeyName);
+        let keyHistory = (keyHistoryRaw !== undefined && keyHistoryRaw !== '' ? JSON.parse(keyHistoryRaw) : []) as { [language in Language]? : {
+            [plural in Plural]? : {
+                text?: string
+            }
+        }}[];
+
+        let specificHistory = [];
+        
+        let historyIndex = 0; 
+
+        // filter relevant history changes for the given key
+        for (let keyHistoryEntry of keyHistory) {
+            if (keyHistoryEntry[language]?.[plural] !== undefined) {
+                specificHistory.push(keyHistoryEntry[language]![plural]!);
+            }
+        }
+
+        return specificHistory;
     }
 
     async persistKey(translationKey: TranslationKey): Promise<TranslationKey> {
         let keyHistoryRaw = figma.root.getPluginData(this.keyHistoryPrefix + translationKey.keyName);
         let keyHistory = (keyHistoryRaw !== undefined && keyHistoryRaw !== '' ? JSON.parse(keyHistoryRaw) : []);
-
 
         let keyCurrentVersionRaw = figma.root.getPluginData(this.keyPrefix + translationKey.keyName);
         let keyCurrentVersion = (keyCurrentVersionRaw !== undefined && keyCurrentVersionRaw !== '' ? JSON.parse(keyCurrentVersionRaw) : {
@@ -45,8 +67,6 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
 
         let currentHistoryIndex = keyHistory.length;
 
-        console.log('finding differences');
-        console.log(translationKey);
         // find differences 
         for (let language of Object.keys(translationKey.translations)) {
             let currentLanguage = language as Language
@@ -79,6 +99,8 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
             // no differences found!
             return translationKey;
         }
+
+        translationKey.latestVersion = currentHistoryIndex;
 
         keyHistory.push(differences);
         

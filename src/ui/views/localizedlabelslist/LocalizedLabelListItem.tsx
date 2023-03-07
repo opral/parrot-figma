@@ -193,12 +193,14 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                                     options={pluralsAvailable}
                                 />
                                 )}
+                           {localizedLabel.keyVersion} 
                         </div>
                     </div>
                     <TranslationEditor
                         onSave={async function(text: any) {
+                            let translationKey;
                             if (keyExists === true) {
-                                await props.translationKeyStore.updateKey(localizedLabel.key!, [{ language: localizedLabel.rootFrameLanguage, plural: localizedLabel.pluralId, text: text}]);
+                                translationKey = await props.translationKeyStore.updateKey(localizedLabel.key!, [{ language: localizedLabel.rootFrameLanguage, plural: localizedLabel.pluralId, text: text}]);
                             } else {
                                // TODO  await props.translationKeyStore.createKey(localizedLabel.key, [{ language: localizedLabel.rootFrameLanguage, plural: localizedLabel.pluralId, text: text}]);
                             }
@@ -211,7 +213,8 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                                 plural: localizedLabel.pluralId,
                                 showSampleValues: localizedLabel.useSampleValues,
                                 showSampleValuesInherited: localizedLabel.rootFrameUseSampleValues,
-                                text: textToApplyToDesign
+                                text: textToApplyToDesign,
+                                keyVersion: translationKey?.latestVersion
                             });
                             console.warn('onSave back prob not implemented')
                         }}

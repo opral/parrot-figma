@@ -89,7 +89,17 @@ export default function LocalizedLabelsListView(props: LocalizedLabelsListViewPr
     }
 
     if (localizedLabels.length == 0) {
-        return <b>Keinen Frame mit keys ausgewählt</b>
+        return (
+        <div className="emptyState">
+            <div className="emptyStateTitle">No Frames selected</div>
+            <div className="emptyStateSubtitle">
+                <div>
+                Labels for localization<br/>
+                will show up here when selected.
+                </div>
+            </div>
+        </div>
+        )
     }
 
     return (

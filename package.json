@@ -24,8 +24,10 @@
   },
   "dependencies": {
     "@figma-plugin/helpers": "^0.15.2",
+    "@types/diff": "^5.0.2",
     "@types/react": "^17.0.19",
     "@types/react-dom": "^17.0.9",
+    "diff": "^5.1.0",
     "figma-plugin-ds": "^1.0.1",
     "install": "^0.13.0",
     "node-fetch": "^3.3.0",

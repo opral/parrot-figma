@@ -11,11 +11,15 @@ export interface TranslationKeyStore {
     getKey(keyName: string) : TranslationKey | undefined
     updateKey(keyName: string, translations: {language: Language, plural: Plural, text: string | undefined}[]) : Promise<TranslationKey>
     deleteKey(keyName: string) : Promise<void>
+    getHistory(translationKeyName: string, language: Language, plural: Plural) : Promise<{text?: string}[]>
     load(): Promise<TranslationKeys>
     fillPlaceholdersWithSampleData(text: string, language: Language, plural: Plural): string
 }
 
 export class MemoryTranslationKeyStore extends BaseTranslationKeyStore {
+    async getHistory(translationKeyName: string, language: Language, plural: Plural): Promise<{ text?: string | undefined; }[]> {
+        return await this.parentKeyStore.getHistory(translationKeyName, language, plural)
+    }
 
     parentKeyStore: TranslationKeyStore
 

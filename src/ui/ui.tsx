@@ -3,13 +3,10 @@ import { useEffect, useState } from "react";
 import * as ReactDOM from "react-dom";
 
 import ConfigView from "./views/config/ConfigView";
-import { LocalizedLabel } from "../lib/localizedlabels/LocalizedLabel";
 import LocalizedLabelsListView from "./views/localizedlabelslist/LocalizedLabelsListView"
 import { FigmaUtil } from "../shared/FigmaUtil"
 import { AsyncFunctionProxy } from "../lib/rpc/AsyncFunctionProxy";
 import "./ui.css";
-import FigmaHelper from "../shared/FigmaHelper";
-import SearchKeyList from "./views/searchkeys/SearchKeys";
 import { WindowManagerUi } from "../lib/windowManager/WindowManagerUI";
 import { WindowMode } from "../lib/windowManager/WindowManagerSandbox";
 import { TranslationKeys } from "../lib/keystore/TranslationKey";
@@ -92,7 +89,7 @@ function App() {
 
     async function refreshLanguages() {
         // let languages = await figmaHelperRemote.getLanguages();
-        setLanguages([Language.De, Language.En, Language.Bg, Language.Fr, Language.Cs, Language.It]);
+        setLanguages([Language.De, Language.En, Language.Bg, Language.Fr, Language.Cs, Language.It, Language.Nl]);
     }
 
     async function setLinkStyle(linkStyle: string) {

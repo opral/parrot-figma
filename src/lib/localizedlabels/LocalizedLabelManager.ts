@@ -30,7 +30,10 @@ export class LocalizedLabelManager {
 
   public sampleValuesDataKey = 'sv'
   public languageDataKey = 'l';
+  
   public keyTypeDataKey = 'kt';
+  public keyVersionDataKey = 'kv'
+  public keyPluralDataKey = 'kp';
 
   public keyDataKey = 'key';
   
@@ -256,6 +259,7 @@ export class LocalizedLabelManager {
       keyType?: KeyState,
       key?: string,
       plural?: Plural,
+      keyVersion?: number,
       text?: string,
       showSampleValues?: boolean
     }) {
@@ -273,6 +277,11 @@ export class LocalizedLabelManager {
 
     if (changedProperties.keyType !== undefined) {
       textNode.setPluginData(this.keyTypeDataKey, changedProperties.keyType);
+    }
+
+
+    if (changedProperties.keyVersion !== undefined) {
+      textNode.setPluginData(this.keyVersionDataKey, changedProperties.keyVersion +'' );
     }
 
     if (changedProperties.text !== undefined) {
@@ -299,7 +308,7 @@ export class LocalizedLabelManager {
 
 
     if (changedProperties.plural !== undefined) {
-      textNode.setPluginData('plural', changedProperties.plural ? changedProperties.plural : '');
+      textNode.setPluginData(this.keyPluralDataKey, changedProperties.plural ? changedProperties.plural : '');
     }
 
     if (changedProperties.showSampleValues !== undefined) {
@@ -489,8 +498,8 @@ export class LocalizedLabelManager {
     let text = this.toTokenizedText(node)
 
     // if no plural id is specified than we fall back to "other" - the default plural
-    let pluralId = node.getPluginData('pluralId') === '' ? Plural.Other : node.getPluginData('pluralId');
-
+    let pluralId = node.getPluginData(this.keyPluralDataKey) === '' ? Plural.Other : node.getPluginData(this.keyPluralDataKey);
+    let keyVersion = node.getPluginData(this.keyVersionDataKey) === '' ? -1 : parseInt(node.getPluginData(this.keyVersionDataKey));
 
     let keyType = node.getPluginData(this.keyTypeDataKey) as KeyState | undefined
     let key = node.getPluginData(this.keyDataKey);
@@ -514,6 +523,7 @@ export class LocalizedLabelManager {
         y: y,
         keyType: keyType ? keyType : KeyState.Unset,
         key: key ? key : undefined,
+        keyVersion: keyVersion,
         derivedKey: derivable ? derivedName : undefined,
         pluralId: pluralId as Plural,
         text: text,

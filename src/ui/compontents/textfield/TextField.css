@@ -1,6 +1,6 @@
 
 .text-field {
-  width: 100%;
+  min-width: 100px;
   margin-top: 4px;
   margin-bottom: 4px;
 }
@@ -9,6 +9,7 @@
   flex-grow: 1;
   position: relative;
   border: 1px solid transparent;
+  border-radius: var(--border-radius-small);
   
 }
 
@@ -20,10 +21,11 @@
   border-color: var(--figma-color-border);
 }
 
-.translation {
-  padding-left: 8px;
+.text-field-text p {
+  padding-left: 5px;
   padding-top: 5px;
   padding-bottom: 5px;
+  padding-right: 5px;
   display: inherit;
   margin-block-start: inherit;
   margin-block-end: inherit;
@@ -31,10 +33,9 @@
   margin-inline-end: inherit;
 }
 
-
 .text-field-text input {
   position:absolute;
-  padding-left: 8px;
+  padding-left: 5px;
   padding-top: 5px;
   padding-bottom: 5px;
   
@@ -49,9 +50,61 @@
   background-color: var(--figma-color-bg);
   font-family: "Inter", sans-serif;
   font-style: normal;
-    font-weight: 400;
-    font-size: 11px;
-    line-height: 14px;
-    letter-spacing: 0.01em;
-  
+  font-weight: 400;
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.01em;
+}
+
+.text-field-text.icon-right:hover input {
+  padding-right: 26px;
+}
+.text-field-text.icon-right:hover p {
+  padding-right: 26px;
+}
+
+
+.text-field-text.icon-right.editing input {
+  padding-right: 26px;
+}
+.text-field-text.icon-right.editing p {
+  padding-right: 26px;
+}
+
+
+
+.text-field-text.editing .svg-container.right {
+  visibility: visible;
+}
+
+
+.text-field-text.icon-left input {
+  padding-left: 26px;
+}
+.text-field-text.icon-left p {
+  padding-left: 26px;
+}
+
+
+.text-field-text .svg-container {
+  position: absolute;
+  left: 5px;
+  top: 7px;
+  width: 12px;
+  height: 12px;
+}
+
+
+.text-field-text .svg-container.right {
+  position: absolute;
+  visibility: hidden;
+  right: 5px;
+  left: unset;
+  top: 7px;
+  width: 12px;
+  height: 12px;
+}
+
+.text-field-text:hover .svg-container.right {
+  visibility: visible;
 }

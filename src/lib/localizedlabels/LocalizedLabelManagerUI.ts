@@ -7,13 +7,17 @@ import { MemoryTranslationKeyStore } from "../keystore/MemoryTranslationKeyStore
 
 export class LocalizedLabelManagerUI extends EventTarget {
 
-    cachedLokalisedLabels = {} as { [labelId: string]: 
+    private cachedLokalisedLabels = {} as { [labelId: string]: 
       LocalizedLabel
     }
 
-    cacheInvalidationIds = {} as { [nodeId: string]: Set<string> } 
+    private cachedKeysToLabels = {} as {
+      [keyId: string]: Set<string>
+    }
 
-    cachedFrames = {} as { [rootFrameId: string]: {
+    private cacheInvalidationIds = {} as { [nodeId: string]: Set<string> } 
+
+    private cachedFrames = {} as { [rootFrameId: string]: {
       frameId: string,
       frameName: string, 
       lokalizedLabels: LocalizedLabel[] 
@@ -36,11 +40,21 @@ export class LocalizedLabelManagerUI extends EventTarget {
       });
     }
 
+    invalidateFrame(frameId: string) {
+      console.log('invalidating frame');
+      if(this.cachedFrames[frameId] !== undefined) {
+        this.cachedFrames[frameId].lokalizedLabels.forEach(label=> {
+          this.invalidateCacheIfNeeded(label, true);
+        });
+        delete this.cachedFrames[frameId];
+      } 
+    }
+
     processCacheUpdate(cacheUpdateMessage: any) {
       console.log('processCacheUpdate')
       for (let frameIdToInvalidate of cacheUpdateMessage.rootFrameIdsToReload) {
         console.log('invalidating frame ' + frameIdToInvalidate);
-        delete this.cachedFrames[frameIdToInvalidate]
+        this.invalidateFrame(frameIdToInvalidate);
       }
 
       for (let changedNodeById of cacheUpdateMessage.changedNodesById) {
@@ -48,18 +62,24 @@ export class LocalizedLabelManagerUI extends EventTarget {
         if (frameIdsToInvalidate) {
           for (let frameIdToInvalidate of frameIdsToInvalidate) {
             console.log('invalidating frame ' + frameIdToInvalidate + ' - changed child');
-            delete this.cachedFrames[frameIdToInvalidate]
+            this.invalidateFrame(frameIdToInvalidate);
           }
         }
       }
 
       for (let deletedNodeId of cacheUpdateMessage.deletedNodeIds) {
+        
         let frameIdsToInvalidate = this.cacheInvalidationIds[deletedNodeId]
         if (frameIdsToInvalidate) {
           for (let frameIdToInvalidate of frameIdsToInvalidate) {
             console.log('invalidating frame ' + frameIdToInvalidate + ' - deleted child');
-            delete this.cachedFrames[frameIdToInvalidate]
+            this.invalidateFrame(frameIdToInvalidate);
           }
+        }
+
+        if ( this.cachedLokalisedLabels[deletedNodeId] !== undefined) {
+          console.log('removing the cache');
+          this.invalidateCacheIfNeeded(this.cachedLokalisedLabels[deletedNodeId], true);
         }
       }
 
@@ -67,6 +87,12 @@ export class LocalizedLabelManagerUI extends EventTarget {
         console.log('invalidating node' + changedLabel.nodeId)
         this.invalidateCacheIfNeeded(changedLabel);
         this.cachedLokalisedLabels[changedLabel.nodeId] = changedLabel;
+        if (changedLabel.key !== undefined) {
+          if (this.cachedKeysToLabels[changedLabel.key] === undefined) {
+            this.cachedKeysToLabels[changedLabel.key] = new Set<string>();
+          }
+          this.cachedKeysToLabels[changedLabel.key].add(changedLabel.nodeId);
+        }
         
         if ( this.cachedFrames[changedLabel.rootFrameId]) {
           console.log('updating cached')
@@ -88,6 +114,19 @@ export class LocalizedLabelManagerUI extends EventTarget {
 
       const event = new CustomEvent('updated', { });
       this.dispatchEvent(event);
+    }
+
+    getLabelsWithKey(key: string) {
+      let referencingLabels = [] as LocalizedLabel[]; 
+      let labelIds = this.cachedKeysToLabels[key];
+      if (labelIds == undefined) {
+        return referencingLabels;
+      }
+      for(let labelId of labelIds) {
+        referencingLabels.push(this.cachedLokalisedLabels[labelId]);
+      }
+
+      return referencingLabels;
     }
 
     async setLanguageToFrame(frameId: string, targetLanguage: Language, missingTranslationProvider: (input: string, language: string) => Promise<string | undefined>) {
@@ -206,17 +245,28 @@ export class LocalizedLabelManagerUI extends EventTarget {
         for (let freshLocalizedLabel of frameData.localizedLabelsInFrame) {
           this.invalidateCacheIfNeeded(freshLocalizedLabel);          
           this.cachedLokalisedLabels[freshLocalizedLabel.nodeId] = freshLocalizedLabel
+          if (freshLocalizedLabel.key !== undefined) {
+            if (this.cachedKeysToLabels[freshLocalizedLabel.key] === undefined) {
+              this.cachedKeysToLabels[freshLocalizedLabel.key] = new Set<string>();
+            }
+            this.cachedKeysToLabels[freshLocalizedLabel.key].add(freshLocalizedLabel.nodeId);
+          }
         }
 
         return this.cachedFrames[frameId];
     }
 
-    invalidateCacheIfNeeded(updatedLocalizedLabel: LocalizedLabel) {
+    invalidateCacheIfNeeded(updatedLocalizedLabel: LocalizedLabel, force: boolean = false) {
       let cachedLabel = this.cachedLokalisedLabels[updatedLocalizedLabel.nodeId];
 
-      if (cachedLabel && cachedLabel.rootFrameId != updatedLocalizedLabel.rootFrameId) {
+      if (cachedLabel && (cachedLabel.rootFrameId != updatedLocalizedLabel.rootFrameId || force)) {
         delete this.cachedFrames[cachedLabel.rootFrameId];
       }
+
+      if (cachedLabel && cachedLabel.key != undefined && (cachedLabel.key != updatedLocalizedLabel.key || force)) {
+        this.cachedKeysToLabels[cachedLabel.key].delete(cachedLabel.nodeId);
+      }
+      
     }
 
     async loadAll() {

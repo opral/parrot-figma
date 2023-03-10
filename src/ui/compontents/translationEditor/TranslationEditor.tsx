@@ -1,18 +1,18 @@
+import { match } from "assert";
 import * as React from "react";
 import { useEffect, useRef, useState } from "react";
+import MatchView from "../matchview/MatchView";
 import "./TranslationEditor.css"
 
 type TranslationEditorProps = {
-
-    text?: string
-    designText: string,
+    text?: string,
     onSave: Function
-    
+    match: {start: number, length: number } | undefined
 }
 
 export default function TranslationEditor(props: TranslationEditorProps) {
    
-    let [designText, setDesignText] = useState(props.designText)
+    let [text, setText] = useState(props.text)
     let [editingState, setEditingState] = useState(false)
     let [textAreaHeight, setTextAreaHeigth] = useState(0);
     let [textAreaWidth, setTextAreaWidth] = useState(0);
@@ -26,13 +26,13 @@ export default function TranslationEditor(props: TranslationEditorProps) {
     const handleChange = (evt: React.ChangeEvent<HTMLTextAreaElement>) => {
         const val = evt.target?.value;
     
-        setDesignText(val);
+        setText(val);
     };
 
 
     useEffect(() => {
-        setDesignText(props.designText)
-      }, [props.designText]);
+        setText(props.text)
+      }, [props.text]);
 
 
     useEffect(() => {
@@ -57,6 +57,8 @@ export default function TranslationEditor(props: TranslationEditorProps) {
         };
       }, [textDivRef]);
     
+      let textToUse = text === undefined ? 'unset' : (text.charAt(text.length - 1) === '\n' ? text + '\n' : text); 
+
     return (
         <div className={'translation-editor' + (editingState ? ' editing' :'')}>
             <div ref={textDivRef} className={"translation-editor-text" + (editingState ? ' editing' :'')}>
@@ -69,7 +71,7 @@ export default function TranslationEditor(props: TranslationEditorProps) {
                         width: textAreaWidth,
                         visibility: (editingState ? 'visible' :'hidden')
                     }}
-                    value={designText}
+                    value={text}
                     onChange={handleChange} />
                 
             
@@ -80,7 +82,9 @@ export default function TranslationEditor(props: TranslationEditorProps) {
                         }
                         
                     }}>
-                    {designText.charAt(designText.length - 1) === '\n' ? designText + '\n' : designText}
+                    <MatchView 
+                    match={props.match}
+                    text={textToUse}/>
                     
                 </p>
             
@@ -89,23 +93,23 @@ export default function TranslationEditor(props: TranslationEditorProps) {
             <>
 
                 <input type="button" value="Save" 
-                    disabled={designText == props.text}
+                    disabled={text == props.text}
                     onClick={e => {
                         setEditingState(!editingState)
-                        props.onSave(designText);
+                        props.onSave(text);
                     }} />
                 <input type="button" value="Cancel" 
                     onClick={e => {
                         setEditingState(!editingState)
                     }} />
-                { props.designText !== undefined && props.designText !== designText &&  (
+                { props.text !== undefined && props.text !== text &&  (
                     
                         <div onClick={e => {
-                            setDesignText(props.designText!)
+                            setText(props.text!)
                         }} 
                         >
                         <div>Figma: </div>
-                        { props.designText! }
+                        { props.text! }
                     </div>
                 )}
                 </>

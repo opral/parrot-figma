@@ -9,6 +9,8 @@ export enum WindowMode {
 
 export class WindowManagerSandbox {
 
+    public proxClassName = 'LocalizedLabelManager'
+
     windowMode: WindowMode;
 
     size: any;

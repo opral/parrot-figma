@@ -77,7 +77,8 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
     let localizedLabel = props.localizedLabel;
     let translatedKey = localizedLabel.keyType !== 'unset' ? props.translationKeyStore.getKey(localizedLabel.key!) : undefined;
 
-    let [editingTrigger, setEditingTrigger] = useState(0)
+    let [editingLabelNameTrigger, setEditingNameTrigger] = useState(0)
+    let [editingLabelKeyTrigger, setEditingKeyTrigger] = useState(0)
     const rowRef = React.useRef<HTMLDivElement>(null);
     
     let keyExists = translatedKey !== undefined;
@@ -106,6 +107,38 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
         await props.figmaRemote.selectNode(nodeId);
     }
 
+    async function linkKey(keyToLinkTo: string) {
+        let translationKey = props.translationKeyStore.getKey(keyToLinkTo)
+                                    
+        if (translationKey != undefined) {
+            await props.localisedLabelManager.updateLocalisedLabelProperties(localizedLabel.nodeId, {
+                key: keyToLinkTo,
+                keyType: KeyState.Linked,
+                keyVersion: translationKey.latestVersion
+            });
+
+            // TODO check if design is sync with translation - if not offer update with prompt
+        } else {
+            translationKey = await props.translationKeyStore.createKey(keyToLinkTo, [{ language: localizedLabel.rootFrameLanguage, plural: localizedLabel.pluralId, text: localizedLabel.text}])
+            await props.localisedLabelManager.updateLocalisedLabelProperties(localizedLabel.nodeId, {
+                key: keyToLinkTo,
+                keyType: KeyState.Linked,
+                keyVersion: translationKey.latestVersion
+            });
+        }
+        await props.localisedLabelManager.updateLocalisedLabelProperties(localizedLabel.nodeId, {
+            keyType: KeyState.Linked,
+            keyVersion: translationKey.latestVersion
+        });
+    }
+
+    async function unlinkKey(keyName?: string) {
+        await props.localisedLabelManager.updateLocalisedLabelProperties(localizedLabel.nodeId, {
+            key: keyName,
+            keyType: KeyState.Unset
+        });
+    }
+
     if (translations) {
         for (let plural of Object.keys(translations)) {
             const pluralOption = {
@@ -131,7 +164,7 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
     return (
         
     <>
-    <div ref={rowRef} className={"row " + (props.selected ? 'selected' :'')} onClick={(e) => {onNodeSelect(localizedLabel.nodeId)}}>
+    <div ref={rowRef} className={"row" + (props.selected ? ' selected ' :'') + (localizedLabel.keyType === KeyState.Unset ? ' key-unset ' : ' key-set ')} onClick={(e) => {onNodeSelect(localizedLabel.nodeId)}}>
             <div className="column-1">
                 <div className="localized-label">
                     <div className="spacer"></div>
@@ -140,7 +173,7 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                         <div className="svg-container text-sign-svg"></div>
                     </div>
                     <TextField 
-                        editingTrigger={editingTrigger}
+                        singleClick={false}
                         onSave={async function(labelName: string) {
                             await props.localisedLabelManager.updateLocalisedLabelProperties(localizedLabel.nodeId, {
                                 labelName: labelName
@@ -157,32 +190,43 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                 <div className="translation-container">
                     <div className="localized-label-details">
                         <div className="key-panel">
-                            <Select
-                                    placeholder="Select key"
-                                    onChange={async function(selectOption) { 
-                                        if (selectOption.value === 'set-id-for-derivation') {
-                                            setEditingTrigger((trigger) => trigger + 1);
-                                        } else if (selectOption.value === 'select-for-link') {
+                            <TextField 
+                                icon="key-svg"
+                                singleClick={true}
+                                onSave={async function(key: string) {
+                                
 
-                                        } else if (selectOption.value === 'linked') {
-                                            await props.localisedLabelManager.updateLocalisedLabelProperties(localizedLabel.nodeId, {
-                                                keyType: KeyState.Linked
-                                            });
-                                        } if (selectOption.value === 'derived') {
-                                            await props.localisedLabelManager.updateLocalisedLabelProperties(localizedLabel.nodeId, {
-                                                keyType: KeyState.Derived,
-                                                key: localizedLabel.derivedKey
-                                            });
-                                        }
-                                        // onSaveFigmaVersionClick(localizedLabel.key!, localizedLabel.rootFrameLanguage, value.value as string, localizedLabel.text!)
-                                        
-                                    }}
-                                    defaultValue={localizedLabel.keyType}
-                                    options={keyOptions}
-                                    unSelectedIcon='language'
+                                    if (key === '') {
+                                        unlinkKey(undefined);
+                                    } else {
+                                        linkKey(key);
+                                    }
                                     
+                                }}
+                                text={localizedLabel.key !== undefined ? localizedLabel.key : localizedLabel.derivedKey }
+                                placeholder="Keyname..."
+                                onSearchClick={()=>{ }}
                                 />
-                            {localizedLabel.key && (
+                            <span className="layerIcon iconWrapper button" onClick={async () => {  
+
+                                let keyToSet = localizedLabel.key !== undefined ? localizedLabel.key : localizedLabel.derivedKey;
+
+                                if (keyToSet !== undefined) {
+                                    if (localizedLabel.keyType === KeyState.Unset) {
+                                        await linkKey(keyToSet);
+                                    } else {
+                                        await unlinkKey(localizedLabel.key);
+                                    }
+                                } else {
+                                    // TODO focus key input since we have no key we can use for link 
+                                    console.warn(' TOOD focus key input! ');
+                                }
+                                   
+                            }}>
+                                <span className={"svg-container " + (localizedLabel.keyType === KeyState.Unset ? 'unlinked-svg' : 'linked-svg')}/>
+                            </span>
+                            
+                            {localizedLabel.keyType !== KeyState.Unset && (
                               <Select
                                     placeholder="Select item"
                                     onChange={value => { 
@@ -193,7 +237,7 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                                     options={pluralsAvailable}
                                 />
                                 )}
-                           {localizedLabel.keyVersion} 
+                           
                         </div>
                     </div>
                     <TranslationEditor
@@ -218,9 +262,8 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                             });
                             console.warn('onSave back prob not implemented')
                         }}
-                        text={localizedText}
-                        designText={localizedLabel.text}
-
+                        text={localizedLabel.text}
+                        match={undefined}
                     />
                 </div>   
             </div>

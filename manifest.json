@@ -8,6 +8,6 @@
   "ui": "dist/ui.html",
   "main": "dist/code.js",
 
-  "permissions": ["currentuser"]
+  "permissions": ["currentuser", "payments"]
 
 }

@@ -5,6 +5,7 @@ import { TranslationKey, TranslationKeys } from "./TranslationKey";
 import { TranslationKeyStore } from "./MemoryTranslationKeyStore";
 
 export abstract class BaseTranslationKeyStore implements TranslationKeyStore {
+   
 
     async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string; }[]): Promise<TranslationKey> {
         let existingKey = this.getKey(keyName);
@@ -81,6 +82,8 @@ export abstract class BaseTranslationKeyStore implements TranslationKeyStore {
     abstract load(): Promise<TranslationKeys>;
 
     abstract persistKey(translationKey: TranslationKey): Promise<TranslationKey>;
+
+    abstract importFromLocalise(): Promise<void> 
 
     fillPlaceholdersWithSampleData(text: string, language: Language, plural: Plural) {
 

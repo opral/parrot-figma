@@ -1,12 +1,14 @@
 
   import * as React from "react";
   import { useEffect, useState } from "react";
+import { MemoryTranslationKeyStore } from "../../../lib/keystore/MemoryTranslationKeyStore";
   
   
   type ConfigViewProps = {
     
     linkStyle: string,
     setLinkStyle: Function
+    translationKeyStore: MemoryTranslationKeyStore
     // selectLanguage: Function,
   }
   
@@ -27,6 +29,7 @@
             style={{visibility: 'hidden'}}>reset plugin State</span>
 
             <div>
+            <p onClick={() => {props.translationKeyStore.importFromLocalise()}}>import from lokalise</p>
             Link Style:<br/>
             <textarea
                 style={{width:"445px", height:"185px"}}

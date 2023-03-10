@@ -161,12 +161,15 @@
     justify-content: center;
 }
 
-.key-svg {
-    width: 11px;
-    height: 11px;
-}
-
 .text-sign-svg {
     width: 10px;
     height: 10px;
+}
+
+.key-unset .text-field-text input {
+    color: var(--color-text-disabled, #b3b3b3);
+}
+
+.key-unset .text-field-text p {
+    color: var(--color-text-disabled, #b3b3b3);
 }

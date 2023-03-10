@@ -60,7 +60,7 @@ function App() {
     // initial app screen is startup until we initialy loaded the data
     let [appScreen, setAppScreen] = useState('design')
 
-    let [translatedLeys, setTranslatedKeys] = useState({} as TranslationKeys)
+    let [translatedKeys, setTranslatedKeys] = useState({} as TranslationKeys)
     let [languages, setLanguages] = useState([] as Language[])
 
     let [initialLoadingCompleted, setIinitialLoadingCompleted] = useState(false)
@@ -109,16 +109,18 @@ function App() {
     let view;
     if(appScreen=='keys') {
         view = <TranslationKeyListView 
-                    figmaRemote={figmaRemote}
                     translationKeyStore={memoryTranslationKeyStore}
-                    keys={translatedLeys} 
+                    localisedLabelManager={localizedLabelManager}
+                    keys={translatedKeys} 
                     languages={languages} 
+                    figmaRemote={figmaRemote}
                     refreshKeys={refreshTranslatedKeys}
                 />
     } else if(appScreen=='settings') {
         view = <ConfigView 
                     linkStyle={defaultLinkStyle}
                     setLinkStyle={setLinkStyle}
+                    translationKeyStore={memoryTranslationKeyStore}
                 />
     } else {
         view = <LocalizedLabelsListView 

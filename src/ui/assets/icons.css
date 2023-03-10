@@ -11,18 +11,10 @@
 
 
 .svg-container {
-    background-color: var(--figma-color-icon);
-
-    -webkit-mask-position-x: 50%;
-    -webkit-mask-position-y: 50%;
-    -webkit-mask-repeat-x: no-repeat;
-    -webkit-mask-repeat-y: no-repeat;
-    -webkit-mask-size: cover;
+    width: 16px;
+    height: 16px;
 }
 
-.selected .svg-container {
-    background-color: var(--figma-color-icon-selected);
-}
 
 
 .flag-cs {
@@ -126,9 +118,25 @@
     mask-image: url(./key.svg);
   }
 
+  .checkbox-svg {
+    -webkit-mask-image: url(./checkbox.svg);
+    mask-image: url(./checkbox.svg);
+  }
+
   .edit-svg {
     -webkit-mask-image: url(./edit.svg);
     mask-image: url(./edit.svg);
+  }
+
+
+  .trash-svg {
+    -webkit-mask-image: url(./trash.svg);
+    mask-image: url(./trash.svg);
+  }
+
+  .search-svg {
+    -webkit-mask-image: url(./search.svg);
+    mask-image: url(./search.svg);
   }
 
   .eye-svg {
@@ -148,6 +156,20 @@
     mask-image: url(./variable.svg);
   }
 
+  .expand-svg {
+    -webkit-mask-image: url(./expand.svg);
+    mask-image: url(./expand.svg);
+  }
+
+  .linked-svg {
+    -webkit-mask-image: url(./linked.svg);
+    mask-image: url(./linked.svg);
+  }
+
+  .unlinked-svg {
+    -webkit-mask-image: url(./unlinked.svg);
+    mask-image: url(./unlinked.svg);
+  }
 
   .arrow-up-svg {
     -webkit-mask-image: url(./arrow_up.svg);
@@ -159,6 +181,11 @@
     mask-image: url(./arrow_down.svg);
   }
 
+
+  .history-svg {
+    -webkit-mask-image: url(./history.svg);
+    mask-image: url(./history.svg);
+  }
 
   .placeholder-filled-svg {
     -webkit-mask-image: url(./placeholder-filled.svg);

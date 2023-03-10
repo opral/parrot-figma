@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as ReactDOM from "react-dom";
 import { Language } from "../../../lib/base/Language";
 import { LocalizedLabel } from "../../../lib/localizedlabels/LocalizedLabel";
@@ -13,6 +13,7 @@ import { Plural } from "../../../lib/base/Plural";
 import HistoryEntry from "../../compontents/history/HistoryEntry";
 import "./TranslationKeyView.css"
 import OutsideClickHandler from "react-outside-click-handler";
+import { LocalizedLabelManagerUI } from "../../../lib/localizedlabels/LocalizedLabelManagerUI";
 
 
 type TranslationKeyListViewProps = {
@@ -20,6 +21,7 @@ type TranslationKeyListViewProps = {
     languages: Language[]
 
     translationKeyStore: MemoryTranslationKeyStore
+    localisedLabelManager: LocalizedLabelManagerUI
     
     figmaRemote: FigmaUtil
     refreshKeys: Function
@@ -29,32 +31,110 @@ type TranslationKeyListViewProps = {
 export default function TranslationKeyListView(props: TranslationKeyListViewProps) {
 
     let [history, setHistory] =  useState(undefined as undefined | {text?: string}[])
+    let [trigger, setTrigger] = useState(0);
+    let [renderEntries, setRenderEntries] = useState(200);
+    let [searchText, setSearchText] = useState("");
+
+    useEffect(() => {
+        
+        props.localisedLabelManager.addEventListener('updated', refreshSelection)
+
+        return () => props.localisedLabelManager.removeEventListener('updated', refreshSelection)
+    }, [])
+
+    useEffect(() => {
+        
+        if (Object.keys(props.keys).length > renderEntries) {
+            console.log('scheduling next portion');
+            setTimeout(() => { 
+                console.log('rending next portion ' + (renderEntries + 100))
+                setRenderEntries(value => value + 250)
+            }, 5000);
+        } else {
+            console.log('rendering completed')
+        }
+
+    }, [renderEntries])
+    
+    function refreshSelection() {
+        props.refreshKeys();
+        setTrigger(v => v+1);
+    }
+
 
     if (Object.keys(props.keys).length == 0) {
         return <b>Keine Keys</b>
     }
 
+
     let showHistory = (keyName: string, language: Language, plural: Plural) => {
-        
         props.translationKeyStore.parentKeyStore.getHistory(keyName, language, plural).then(historyEntries => {
-            console.log('setting history to ')
-            console.log(historyEntries)
             setHistory(historyEntries)
         })
     }
 
+    let rendered = 0;
+
     return (
         <div >
+            <div className="style_picker--search search--margin">
+                <span className="svg-container search-svg">
+                </span>
+                <input type="text" placeholder="Search" className="search--searchInput" spellCheck="false" dir="auto" value={searchText} onChange={ (e) => { 
+                    setSearchText(e.target.value);
+                    setRenderEntries(100);
+                } } />
+            </div>
             <div className="grid">
-            {Object.keys(props.keys).map((key) => 
-                <TranslationKeyView
+            {Object.keys(props.keys).map((key, i) => {
+                if (rendered > renderEntries) {
+                    return
+                };
+                let match = undefined;
+                if (searchText != "") {
+                    let keyPosition = key.indexOf(searchText);
+                    if(keyPosition !== -1) {
+                        match = { key: { start: keyPosition, length: searchText.length}}
+                    } else {
+                        outer:
+                        for (let language of Object.keys(props.keys[key].translations)) {
+                            inner:
+                            for (let plural of Object.keys(props.keys[key].translations[language as Language]!)) {
+                                let text = props.keys[key].translations[language as Language]![plural as Plural]!.text;
+                                if (text === undefined) {
+                                    continue inner;
+                                }
+
+                                let matchStart = text.indexOf(searchText);
+                                if (matchStart !== -1) {
+                                    match = { [language]: { [plural]: {start: matchStart, length: searchText.length}}}
+
+                                    break outer;
+                                }
+
+                            }
+                        }
+                    }
+
+                    if (match === undefined) {
+                        return
+                    }
+                }
+                
+                rendered++;
+                return <TranslationKeyView
                     key={key} 
                     languages={props.languages}
                     translationKeyStore={props.translationKeyStore}
+                    localisedLabelManager={props.localisedLabelManager}
+                    searchMatch={match}
+                    
                     showHistory={showHistory}
                     translationKey={props.keys[key]}
                     figmaRemote={props.figmaRemote}
                     />
+            }
+                
             )}
             </div>
             <OutsideClickHandler

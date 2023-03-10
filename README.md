@@ -42,3 +42,13 @@ User pays per colaborator - one
 # investiage:
 how does pricing workg 
 https://www.figma.com/community/plugin/1169407128424809563
+
+
+undo forward:
+https://forum.figma.com/t/pass-shortcuts-to-figma-when-focused-on-the-plugin-window-and-vice-versa/10229
+
+
+react optimization
+https://tolgee.io/blog/2021/11/24/optimizing-react-to-the-bone
+
+https://lokalise.com/blog/design-stage-localization/

@@ -56,7 +56,7 @@ export class AsyncFunctionProxy {
      * @param instance 
      */
     proxyAsyncMethods(instance: any) {
-        let instanceClassName = instance.constructor.name
+        let instanceClassName = instance.proxClassName
         
         let instancePrototype = Object.getPrototypeOf(instance);
         for (let memberName of Object.getOwnPropertyNames(instancePrototype)) {
@@ -75,8 +75,9 @@ export class AsyncFunctionProxy {
     }
 
     registerInstance(instance: any) {
-        let instanceClassName = instance.constructor.name
-        //console.log(this.name+ ' proxy class:' + instanceClassName + Object.getOwnPropertyNames(instance));
+        let instanceClassName = instance.proxClassName
+        
+        // console.log(this.name+ ' proxy class:' + instanceClassName + Object.getOwnPropertyNames(instance));
 
         let instancePrototype = Object.getPrototypeOf(instance);
         for (let memberName of Object.getOwnPropertyNames(instancePrototype)) {
@@ -93,7 +94,9 @@ export class AsyncFunctionProxy {
     }
 
     private registerInvocationHandler(messageName: string, instance: any, messageHandler: Promise<any>) {
+        console.log('registerInvocationHandler' + messageName);
         if (this.invocationRequestHandler[messageName]) {
+            console.log(this.invocationRequestHandler[messageName]);
             throw new Error(this.name+ ' Message ' + messageName + ' handler did exist already')
         }
         this.invocationRequestHandler[messageName] = {

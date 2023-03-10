@@ -118,12 +118,24 @@ body {
   .view {
     overflow: scroll;
     
-    height: calc(100% - 32px);
+    height: calc(100% - 40px);
   }
 
   .element-symbol {
     width: 16px;
     height: 32px;
+  }
+
+
+  .element-symbol .svg-container.number-sign-svg {
+    width: 12px;
+    height: 12px;
+  }
+
+
+  .element-symbol .svg-container.text-sign-svg {
+    width: 10px;
+    height: 10px;
   }
   
   .circular-button:hover {

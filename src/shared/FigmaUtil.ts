@@ -4,6 +4,7 @@
  * All public async functions only accept and return primitives and can be proxied between sandbox and iframe
  */
 export class FigmaUtil {
+    public proxClassName = 'FigmaUtil'
 
     async getSelection() {
         let selections = [];

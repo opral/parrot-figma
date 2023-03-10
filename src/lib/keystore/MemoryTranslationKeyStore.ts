@@ -14,9 +14,11 @@ export interface TranslationKeyStore {
     getHistory(translationKeyName: string, language: Language, plural: Plural) : Promise<{text?: string}[]>
     load(): Promise<TranslationKeys>
     fillPlaceholdersWithSampleData(text: string, language: Language, plural: Plural): string
+    importFromLocalise() : Promise<void>
 }
 
 export class MemoryTranslationKeyStore extends BaseTranslationKeyStore {
+    
     async getHistory(translationKeyName: string, language: Language, plural: Plural): Promise<{ text?: string | undefined; }[]> {
         return await this.parentKeyStore.getHistory(translationKeyName, language, plural)
     }
@@ -35,7 +37,9 @@ export class MemoryTranslationKeyStore extends BaseTranslationKeyStore {
     }
 
     async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; }[]): Promise<TranslationKey> {
-        console.log('calling MemoryTranslationKeyStore createKey' )
+        if (keyName === '') {
+            throw new Error('keys mus have at least one character')
+        }
         let createdKey = await this.parentKeyStore.createKey(keyName, translations);
         return await this.persistKey(createdKey)
     }
@@ -60,4 +64,8 @@ export class MemoryTranslationKeyStore extends BaseTranslationKeyStore {
         return translationKey
     }
 
+    importFromLocalise(): Promise<void> {
+        return this.parentKeyStore.importFromLocalise();
+    }
+    
 }

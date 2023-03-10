@@ -5,7 +5,11 @@ import OutsideClickHandler from "react-outside-click-handler";
 import "./TextField.css"
 
 type TextFieldProps = {
-    editingTrigger: number
+    singleClick: boolean
+    editingTrigger?: number
+    placeholder?: string
+    icon?: string 
+    onSearchClick?: Function
     text?: string
     onSave: Function
 }
@@ -47,9 +51,9 @@ export default function TextField(props: TextFieldProps) {
             }
         }
 
-        document.addEventListener('keydown',keydownFunction )
+        inputFieldRef.current?.addEventListener('keydown',keydownFunction )
         return () => {
-          document.removeEventListener('keydown', keydownFunction)
+            inputFieldRef.current?.removeEventListener('keydown', keydownFunction)
         }
     }, [isEditing])
 
@@ -78,21 +82,37 @@ export default function TextField(props: TextFieldProps) {
             display='contents'
         >
         <div className={'text-field' + (isEditing ? ' editing' :'')}>
-            <div ref={textDivRef} className={"text-field-text" + (isEditing ? ' editing' :'')}>
+            
+            <div ref={textDivRef} className={"text-field-text" + (isEditing ? ' editing ' :'') + (props.icon ? ' icon-left ' :'') + (props.onSearchClick ? ' icon-right' :'')}>
+                
                 <input
                     ref={inputFieldRef}
                     style={{
                         visibility: (isEditing ? 'visible' :'hidden')
                     }}
                     value={text}
-                    onChange={handleChange} />
-                <p  className={'translation' + (isEditing ? ' editing' :'')}  onDoubleClick={e=> {
-                        if (!isEditing) {
+                    onChange={handleChange}
+                    placeholder={props.placeholder} />
+
+                <p className={'translation' + (isEditing ? ' editing' :'')} 
+                    onDoubleClick={e=> {
+                        if (!isEditing && !props.singleClick) {
+                            setEditingState(!isEditing);
+                        }
+                    }}
+                    onClick={e=> {
+                        if (!isEditing && props.singleClick) {
                             setEditingState(!isEditing);
                         }
                     }}>
-                    {text}
+                    {text === undefined || text === '' ? props.placeholder : text }
                 </p>
+                { props.icon !== undefined && (
+                    <span className={"svg-container " + props.icon} />
+                )}
+                { props.onSearchClick !== undefined && (
+                    <span className={"svg-container right search-svg"} onClick={(e => { if ( props.onSearchClick !== undefined ) props.onSearchClick() })} />
+                )}
             </div>
         </div>
     </OutsideClickHandler>

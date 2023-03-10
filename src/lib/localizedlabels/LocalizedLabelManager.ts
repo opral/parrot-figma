@@ -23,6 +23,8 @@ export class LocalizedLabelManager {
 
   }
 
+  public proxClassName = 'LocalizedLabelManager'
+
 
   public samplesPrefix = 'sample_values'
   public linkStilyDataKey = 'linkstyle'

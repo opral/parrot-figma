@@ -12,6 +12,8 @@ const defaultLinkStyleKey = 'defaultLinkStyle'
 
 export default class FigmaHelper {
 
+    public proxClassName = 'FigmaHelper'
+     
     figma: PluginAPI | undefined
     translationKeyStore: TranslationKeyStore | undefined
 
@@ -19,12 +21,6 @@ export default class FigmaHelper {
         this.figma = figma;
         this.translationKeyStore = keyStore
     }
-
-
-
-
-
-    
 
     async toggleKeyFrame(frameNodeId: string) {
 

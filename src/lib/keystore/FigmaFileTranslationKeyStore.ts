@@ -6,6 +6,8 @@ import { BaseTranslationKeyStore } from "./BaseTranslationKeyStore";
 
 export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
 
+    public proxClassName = 'LocalizedLabelManager'
+
     keyPrefix = 'aar_k__1';
     keyHistoryPrefix = 'aar_h__1';
 
@@ -16,11 +18,6 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
         if (keyRaw === '' || !keyRaw) {
             return undefined;
         }
-
-        console.log('---------------------------- keyName ---------------------');
-        console.log(keyName)
-        console.log(figma.root.getPluginData(this.keyPrefix + keyName));
-        console.log(figma.root.getPluginData(this.keyHistoryPrefix + keyName));
 
     
         return JSON.parse(keyRaw) as TranslationKey;
@@ -49,6 +46,7 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
     }
 
     async persistKey(translationKey: TranslationKey): Promise<TranslationKey> {
+        
         let keyHistoryRaw = figma.root.getPluginData(this.keyHistoryPrefix + translationKey.keyName);
         let keyHistory = (keyHistoryRaw !== undefined && keyHistoryRaw !== '' ? JSON.parse(keyHistoryRaw) : []);
 
@@ -104,6 +102,16 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
 
         keyHistory.push(differences);
         
+        if (translationKey.keyName === undefined) {
+            throw new Error('key name must be defined');
+        }
+
+
+        if (translationKey.keyName === 'undefined') {
+            throw new Error('key name must not be "undefined"');
+        }
+
+
         figma.root.setPluginData(this.keyPrefix + translationKey.keyName, JSON.stringify(translationKey));
         figma.root.setPluginData(this.keyHistoryPrefix + translationKey.keyName, JSON.stringify(keyHistory));
 
@@ -115,11 +123,12 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
     }
 
     async updateKey(keyName: string, translations: { language: Language; plural: Plural; text: string; }[]): Promise<TranslationKey> {
-        return super.updateKey(keyName, translations);
+        return await super.updateKey(keyName, translations);
     }
 
     async deleteKey(keyName: string): Promise<void> {
         figma.root.setPluginData(this.keyPrefix + keyName, '');
+        figma.root.setPluginData(this.keyHistoryPrefix + keyName, '');
     }
 
     async load(): Promise<TranslationKeys> {
@@ -135,6 +144,92 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
             }
         }
         return translationKeys;
+    }
+
+    async importFromLocalise(): Promise<void> {
+        let result = await fetch('http://localhost:3333/api/v1/lokalise', {
+          method: 'GET',
+          /*headers: {
+            'Authorization': 'DeepL-Auth-Key 391733de-67e0-be65-a8b7-4298511dd564:fx'
+          },*/ 
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+          
+        })
+        let lokaliseKeys = await result.json();
+
+        let start = Date.now();
+        
+        let translationKeys = [] as TranslationKey[];
+
+        for (let key of lokaliseKeys.keys) {
+            let keyName = key.key_name['other'];
+            let keyPlurals = [ Plural.Other ];
+
+            let translations ={} as {
+                [language in Language]? : {
+                    [plural in Plural]? : {
+                        version: number,
+                        text?: string
+                    } 
+                }
+            }
+            for (let transalation of key.translations) {
+                
+                let lokaliseLanguage = transalation.language_iso as Language;
+
+                let plurals = {} as {
+                    [plural in Plural]? : {
+                        version: number,
+                        text?: string
+                    } 
+                }
+                
+                if (key.is_plural) {
+                    let pluralsLokalise = JSON.parse(transalation.translation);
+                    
+                    for (let plural of Object.keys(pluralsLokalise)) {
+                        plurals[plural as Plural] = {
+                            version: -1,
+                            text: pluralsLokalise[plural]
+                        };
+
+                        if (keyPlurals.indexOf(plural as Plural) !== -1) {
+                            keyPlurals.push(plural as Plural)
+                        }
+                    }
+                } else {
+                    console.log(transalation);
+                    plurals[Plural.Other] = {
+                        version: -1,
+                        text: transalation.translation
+                    };
+
+                }
+
+                translations[lokaliseLanguage] = plurals;
+            }
+
+            translationKeys.push({
+                keyName: keyName,
+                latestVersion: 0,
+                plurals: keyPlurals,
+                translations: translations
+            })
+        }
+
+        console.log(`Execution time: Response processing: ${Date.now() - start} ms`);
+
+
+        console.log(translationKeys.length + ' keys found ');
+
+        for (let tanslationKey of translationKeys) {
+            this.persistKey(tanslationKey);
+        }
+        console.log(`Execution time: persisting keys: ${Date.now() - start} ms`);
+        
     }
 
 }

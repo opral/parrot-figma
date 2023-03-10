@@ -18,7 +18,7 @@
 .table {
 
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: 25% 1fr;
 }
 
 .header {
@@ -172,4 +172,10 @@
 
 .key-unset .text-field-text p {
     color: var(--color-text-disabled, #b3b3b3);
+}
+
+.localized-label .text-field-text p {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
 }

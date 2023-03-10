@@ -14,7 +14,7 @@ import { LocalizedLabelManagerUI } from "../../../lib/localizedlabels/LocalizedL
 import MatchView from "../../compontents/matchview/MatchView";
 import { match } from "assert";
 
-type TranslationKeyViewProps = {
+type TranslationKeyListItemProps = {
     languages: Language[],
     translationKey: TranslationKey,
     showHistory: Function
@@ -24,7 +24,7 @@ type TranslationKeyViewProps = {
     localisedLabelManager: LocalizedLabelManagerUI
 }
 
-export default function TranslationKeyView(props: TranslationKeyViewProps) {
+export default function TranslationKeyListItem(props: TranslationKeyListItemProps) {
     let translationKey = props.translationKey;
 
     let [showLocalizedText, setShowLocalizedText] = useState(false)

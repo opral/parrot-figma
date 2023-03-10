@@ -7,8 +7,8 @@ import { TranslationKeys } from "../../../lib/keystore/TranslationKey";
 import { MemoryTranslationKeyStore, TranslationKeyStore } from "../../../lib/keystore/MemoryTranslationKeyStore";
 import FigmaHelper from "../../../shared/FigmaHelper";
 import { FigmaUtil } from "../../../shared/FigmaUtil";
-import TranslationKeyView from "./TranslationKeyView";
-import TranslationStateItem from "./TranslationKeyView";
+import TranslationKeyListItem from "./TranslationKeyListItem";
+import TranslationStateItem from "./TranslationKeyListItem";
 import { Plural } from "../../../lib/base/Plural";
 import HistoryEntry from "../../compontents/history/HistoryEntry";
 import "./TranslationKeyView.css"
@@ -122,7 +122,7 @@ export default function TranslationKeyListView(props: TranslationKeyListViewProp
                 }
                 
                 rendered++;
-                return <TranslationKeyView
+                return <TranslationKeyListItem
                     key={key} 
                     languages={props.languages}
                     translationKeyStore={props.translationKeyStore}

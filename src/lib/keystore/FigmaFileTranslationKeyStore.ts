@@ -59,7 +59,8 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
 
         let differences = {} as { [language in Language]? : {
             [plural in Plural]? : {
-                text?: string
+                text?: string,
+                skip: boolean
             }
         }};
 
@@ -72,7 +73,8 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
             pluralLoop: 
             for (let plural of Object.keys(translationKey.translations[currentLanguage]!)) {
                 let currentPlural = plural as Plural
-                if (keyCurrentVersion.translations[currentLanguage]?.[currentPlural]?.text === translationKey.translations[currentLanguage]![currentPlural]?.text) {
+                if (keyCurrentVersion.translations[currentLanguage]?.[currentPlural]?.text === translationKey.translations[currentLanguage]![currentPlural]?.text && 
+                    keyCurrentVersion.translations[currentLanguage]?.[currentPlural]?.skip === translationKey.translations[currentLanguage]![currentPlural]?.skip) {
                     console.log('text equal! ' + currentLanguage + ' ' + currentPlural + ' ' + keyCurrentVersion.translations[currentLanguage]?.[currentPlural]?.text);
                     continue pluralLoop;
                 }
@@ -80,12 +82,14 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
                 if (differences[currentLanguage] === undefined) {
                     differences[currentLanguage] = {
                         [currentPlural]: {
-                            text: translationKey.translations[currentLanguage]![currentPlural]!.text
+                            text: translationKey.translations[currentLanguage]![currentPlural]!.text,
+                            skip: translationKey.translations[currentLanguage]![currentPlural]!.skip
                         }
                     }
                 } else if (differences[currentLanguage]![currentPlural] === undefined) {
                     differences[currentLanguage]![currentPlural] = {
-                            text: translationKey.translations[currentLanguage]![currentPlural]!.text
+                            text: translationKey.translations[currentLanguage]![currentPlural]!.text,
+                            skip: translationKey.translations[currentLanguage]![currentPlural]!.skip
                     }
                 }
 
@@ -118,11 +122,11 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
         return translationKey;
     }
 
-    async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string; }[]): Promise<TranslationKey> {
+    async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string; skip: boolean}[]): Promise<TranslationKey> {
         return await super.createKey(keyName, translations);
     }
 
-    async updateKey(keyName: string, translations: { language: Language; plural: Plural; text: string; }[]): Promise<TranslationKey> {
+    async updateKey(keyName: string, translations: { language: Language; plural: Plural; text: string; skip: boolean}[]): Promise<TranslationKey> {
         return await super.updateKey(keyName, translations);
     }
 
@@ -172,7 +176,8 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
                 [language in Language]? : {
                     [plural in Plural]? : {
                         version: number,
-                        text?: string
+                        text?: string,
+                        skip: boolean
                     } 
                 }
             }
@@ -183,7 +188,9 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
                 let plurals = {} as {
                     [plural in Plural]? : {
                         version: number,
-                        text?: string
+                        text?: string,
+                        skip: boolean
+
                     } 
                 }
                 
@@ -193,7 +200,8 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
                     for (let plural of Object.keys(pluralsLokalise)) {
                         plurals[plural as Plural] = {
                             version: -1,
-                            text: pluralsLokalise[plural]
+                            text: pluralsLokalise[plural],
+                            skip: false
                         };
 
                         if (keyPlurals.indexOf(plural as Plural) !== -1) {
@@ -204,7 +212,8 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
                     console.log(transalation);
                     plurals[Plural.Other] = {
                         version: -1,
-                        text: transalation.translation
+                        text: transalation.translation,
+                        skip: false
                     };
 
                 }

@@ -229,7 +229,7 @@ export class LocalizedLabelManager {
     let language = this.getFrameLanguage(frame);
 
     for (let localisedLabel of lokalisedLabels) {
-      if (localisedLabel.keyType === KeyState.Unset) {
+      if (localisedLabel.keyType === KeyState.Unlinked) {
         continue;
       }
 
@@ -523,7 +523,7 @@ export class LocalizedLabelManager {
         width: node.width,
         x: x,
         y: y,
-        keyType: keyType ? keyType : KeyState.Unset,
+        keyType: keyType ? keyType : KeyState.Unlinked,
         key: key ? key : undefined,
         keyVersion: keyVersion,
         derivedKey: derivable ? derivedName : undefined,

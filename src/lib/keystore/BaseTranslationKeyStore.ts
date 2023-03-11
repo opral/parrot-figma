@@ -7,7 +7,7 @@ import { TranslationKeyStore } from "./MemoryTranslationKeyStore";
 export abstract class BaseTranslationKeyStore implements TranslationKeyStore {
    
 
-    async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string; }[]): Promise<TranslationKey> {
+    async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string; skip: boolean }[]): Promise<TranslationKey> {
         let existingKey = this.getKey(keyName);
         if (existingKey) {
             throw Error("tried to create a key that already existed");
@@ -43,7 +43,7 @@ export abstract class BaseTranslationKeyStore implements TranslationKeyStore {
     }
 
 
-    async updateKey(keyName: string, translations: { language: Language; plural: Plural; text: string; }[]) {
+    async updateKey(keyName: string, translations: { language: Language; plural: Plural; text: string; skip: boolean}[]) {
         let keyToUpdate = this.getKey(keyName);
 
         if (keyToUpdate === undefined) {
@@ -53,18 +53,21 @@ export abstract class BaseTranslationKeyStore implements TranslationKeyStore {
         for (let translation of translations) {
             if (!keyToUpdate.translations[translation.language]) {
                 keyToUpdate.translations[translation.language] = { 'other': {
-                    version: -1
+                    version: -1,
+                    skip: false
                 } };
             }
 
             if (!keyToUpdate.translations[translation.language]![translation.plural]) {
                 keyToUpdate.translations[translation.language]![translation.plural] = {
-                    version: keyToUpdate.translations[translation.language]!['other']!.version
+                    version: keyToUpdate.translations[translation.language]!['other']!.version,
+                    skip: false 
                 };
             }
 
             keyToUpdate.translations[translation.language]![translation.plural]!.version = keyToUpdate.translations[translation.language]![translation.plural]!.version + 1;
             keyToUpdate.translations[translation.language]![translation.plural]!.text = translation.text;
+            keyToUpdate.translations[translation.language]![translation.plural]!.skip = translation.skip;
 
             if (keyToUpdate.plurals.indexOf(translation.plural as Plural) === -1) {
                 keyToUpdate.plurals.push(translation.plural as Plural);

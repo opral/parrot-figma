@@ -142,20 +142,23 @@ export class LocalizedLabelManagerUI extends EventTarget {
     async setLanguage(cachedLabel: LocalizedLabel, targetLanguage: Language, 
                         missingTranslationProvider: (input: string, language: string) => Promise<string | undefined>) {
 
-      // preset the translation key with a ephemeral key
-      let translationKeyName = cachedLabel.pageId + '-' + cachedLabel.rootFrameId + '-' + cachedLabel.nodeId + '-' + 'TODO-RANDOM';
-      let keyState = KeyState.Ephemeral;
+      
 
-      // the label has not yet a connected key
+      let translationKeyName : string | undefined
+      // the label has not yet a linked to a key
       if (cachedLabel.keyType === KeyState.Unset) {
-        // derivation possible
+        // derivation possible?
         if (cachedLabel.derivedKey !== undefined) {
           translationKeyName = cachedLabel.derivedKey
-          keyState = KeyState.Derived;
         } 
-      } else {
+      } else if (cachedLabel.keyType === KeyState.Linked) {
         translationKeyName = cachedLabel.key!
-        keyState = cachedLabel.keyType
+      }  
+
+
+      if (cachedLabel.keyType === KeyState.Unlinked || translationKeyName == undefined) {
+        // key was explicitly unlinked or it can't be derived or is not set
+        return
       }
 
       let translationKey = this.keyStore.getKey(translationKeyName); 
@@ -168,22 +171,32 @@ export class LocalizedLabelManagerUI extends EventTarget {
         let createdKey = await this.keyStore.createKey(translationKeyName, [{
           language: cachedLabel.rootFrameLanguage,
           plural: cachedLabel.pluralId,
-          text: cachedLabel.text
+          text: cachedLabel.text,
+          skip: false
         },{
           language: targetLanguage,
           plural: cachedLabel.pluralId,
-          text: translation
+          text: translation,
+          skip: false
         }]);
 
         this.updateLocalisedLabelProperties(cachedLabel.nodeId, {
           key: translationKeyName,
-          keyType: keyState, 
+          keyType: KeyState.Linked, 
           text: translation,
           keyVersion: createdKey.translations[cachedLabel.rootFrameLanguage]![cachedLabel.pluralId]!.version
         })
 
       } else {
+        // updating key
         if (translationKey.translations[targetLanguage]?.[cachedLabel.pluralId]?.text === undefined) {
+          if (translationKey.translations[targetLanguage]?.[cachedLabel.pluralId]?.skip === true) {
+            // TODO what to do in autotranslate in case a string is not meant to be translated into the given language?
+            // - option a: we replace the text with the base language
+            // - we set the label to an "unset" text
+            // how does the label tell the outside about its state? 
+            return
+          }
           // TODO check if base language exists and if figmas text differs -> how to handle this?
           // TODO how do we handle labels with useSampleValue == true?
           // translation missing - generate it and update the translation key
@@ -191,12 +204,13 @@ export class LocalizedLabelManagerUI extends EventTarget {
           let updatedKey = await this.keyStore.updateKey(translationKeyName, [ {
             language: targetLanguage, 
             plural: cachedLabel.pluralId,
-            text: translation
+            text: translation,
+            skip: false
           }])
 
           this.updateLocalisedLabelProperties(cachedLabel.nodeId, {
             key: translationKeyName,
-            keyType: keyState, 
+            keyType: KeyState.Linked, 
             text: translation,
             keyVersion: updatedKey.translations[targetLanguage]![cachedLabel.pluralId]!.version
           });
@@ -204,7 +218,7 @@ export class LocalizedLabelManagerUI extends EventTarget {
           // we have a translation - nothing to do - the text will get applied directly as soon as the parent frames language changed
           this.updateLocalisedLabelProperties(cachedLabel.nodeId, {
             key: translationKeyName,
-            keyType: keyState, 
+            keyType: KeyState.Linked, 
             text: translationKey.translations[targetLanguage]?.[cachedLabel.pluralId]?.text!,
             keyVersion: translationKey.translations[targetLanguage]![cachedLabel.pluralId]!.version
           });

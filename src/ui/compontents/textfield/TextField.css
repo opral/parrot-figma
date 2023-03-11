@@ -17,6 +17,19 @@
   border-color: var(--figma-color-border-brand-strong);
 }
 
+
+.text-field-text .missing {
+  color: var(--figma-color-text-danger);
+}
+
+.skipped .translation-editor-text p {
+  color: var(--figma-color-text-warning);
+}
+
+.missing.translation {
+  color: var(--figma-color-text-danger);
+}
+
 .text-field-text:hover {
   border-color: var(--figma-color-border);
 }

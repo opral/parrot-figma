@@ -2,9 +2,8 @@ import { Language } from "../base/Language";
 import { Plural } from "../base/Plural";
 
 export enum KeyState {
-    Unset = 'unset', // state when the label has not been translated by the plugin yet
-    Ephemeral = 'ephemeral', // a key was generated for a node that didn't fullfill the requirement to be derived 
-    Derived = 'derived', // a key was derived by the document derivation method
+    Unset = 'unset', // label has not yet modified by the plugin
+    Unlinked = 'unlinked', // state when the label has not been translated by the plugin yet
     Linked = 'linked',   // key was set to a fixed key 
   }
   

@@ -73,7 +73,9 @@ export default function TranslationKeyListItem(props: TranslationKeyListItemProp
                     <span className="rowText"><MatchView text={translationKey.keyName} match={props.searchMatch?.key}></MatchView></span>
                 </div>
                 <div className="grid-item-actions">
-                    <span className="layerIcon iconWrapper button" onClick={() => { props.translationKeyStore.deleteKey(translationKey.keyName); }}>
+                    <span className="layerIcon iconWrapper button" onClick={() => { 
+                            props.translationKeyStore.deleteKey(translationKey.keyName); 
+                        }}>
                         <span className="svg-container trash-svg">
 
                         </span>
@@ -105,25 +107,61 @@ export default function TranslationKeyListItem(props: TranslationKeyListItemProp
 
             </div>
             {props.languages.map((language) => {
+
+                let languageSkipped = false;
+                if (translationKey.translations[language as Language] != undefined) {
+                    for (let plural of Object.keys(translationKey.translations[language as Language]!)) {
+                        if (translationKey.translations[language as Language]![plural as Plural]!.skip !== true) {
+                            languageSkipped = false;
+                            break;
+                        } else {
+                            languageSkipped = true;
+                        }
+                    }
+                }
+                
+
                 return (
-                    <div className="languageWrapper" key={language}>
+                    <div className={"languageWrapper" + (languageSkipped ? ' skipped ' : '')} key={language}>
                         <div className="grid-item-language"><span className="rowText">{language}</span></div>
-                        {translationKey.translations[language as Language] && Object.keys(translationKey.translations[language as Language]!).map((pluralKey, i, plurals) => {
+                        {translationKey.plurals.map(plural => {
+                            let plurals = translationKey.translations[language as Language]
+                        // {translationKey.translations[language as Language] && Object.keys(translationKey.translations[language as Language]!).map((pluralKey, i, plurals) => {
                             return (
-                                <div className={"keyPluralWrapper " + (plurals.length == 1 ? 'onePlural' : ' multiplePlurals')}>
-                                    <div className="grid-item-plural"><span className="rowText">{pluralKey}</span></div>
+                                <div className={"keyPluralWrapper " + (translationKey.plurals.length == 1 ? 'onePlural' : ' multiplePlurals') + (translationKey.translations[language as Language]?.[plural as Plural]?.skip === true ? ' skipped' : '') }>
+                                    <div className="grid-item-plural"><span className="rowText">{plural}</span></div>
                                     <div className="grid-item-translation translation-container translation">
                                         <TranslationEditor
-                                            match={props.searchMatch?.[language]?.[pluralKey as Plural]}
+                                            match={props.searchMatch?.[language]?.[plural as Plural]}
                                             onSave={async function (text: any) {
-                                                let updatedTranslationKey = await props.translationKeyStore.updateKey(translationKey.keyName!, [{ language: language, plural: pluralKey as Plural, text: text }]);
+                                                let skip = translationKey.translations[language as Language]?.[plural as Plural]?.skip ?? false;
+
+                                                if (text !== undefined && text !== '') {
+                                                    skip = false;
+                                                }
+                                                let updatedTranslationKey = await props.translationKeyStore.updateKey(translationKey.keyName!, [{ language: language, plural: plural as Plural, text: text, skip: skip }]);
                                             }}
-                                            text={translationKey.translations[language as Language]![pluralKey as Plural]!.text}
+                                            text={translationKey.translations[language as Language]?.[plural as Plural]?.text}
                                         />
 
                                     </div>
                                     <div className="grid-item-actions">
-                                        <span className="layerIcon iconWrapper button" onClick={() => { props.showHistory(translationKey.keyName, language, pluralKey) }}>
+                                        <span className="layerIcon iconWrapper button" onClick={async () => { 
+                                            //debugger;
+                                                await props.translationKeyStore.updateKey(translationKey.keyName!, [{ 
+                                                    language: language, 
+                                                    plural: plural, 
+                                                    text: translationKey.translations[language as Language]?.[plural as Plural]?.text,
+                                                    skip: translationKey.translations[language as Language]?.[plural as Plural]?.skip == undefined ? true : !translationKey.translations[language as Language]![plural as Plural]!.skip }]);
+                                            }}>
+                                            <span className="svg-container eye-svg">
+
+                                            </span>
+                                        </span>
+                                        <span className="layerIcon iconWrapper button" onClick={async () => { 
+                                            
+                                                props.showHistory(translationKey.keyName, language, plural) 
+                                            }}>
                                             <span className="svg-container history-svg">
 
                                             </span>

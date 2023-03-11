@@ -18,7 +18,8 @@ export interface TranslationKey {
         [language in Language]? : {
             [plural in Plural]? : {
                 version: number,
-                text?: string
+                text?: string,
+                skip: boolean 
             } 
         }
     }

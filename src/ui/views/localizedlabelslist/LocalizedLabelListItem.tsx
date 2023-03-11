@@ -75,7 +75,7 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
     */
 
     let localizedLabel = props.localizedLabel;
-    let translatedKey = localizedLabel.keyType !== 'unset' ? props.translationKeyStore.getKey(localizedLabel.key!) : undefined;
+    let translatedKey = localizedLabel.keyType !== KeyState.Unset ? props.translationKeyStore.getKey(localizedLabel.key!) : undefined;
 
     let [editingLabelNameTrigger, setEditingNameTrigger] = useState(0)
     let [editingLabelKeyTrigger, setEditingKeyTrigger] = useState(0)
@@ -91,14 +91,10 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
         localizedTextToApply = props.translationKeyStore.fillPlaceholdersWithSampleData(localizedTextToApply!, localizedLabel.rootFrameLanguage, localizedLabel.pluralId);
     }
 
-    // start with the unset state
-    let keyOptions = getKeyOptions(localizedLabel);
-    
-
     let pluralsAvailable = [] as SelectOption[];
 
     async function onSaveFigmaVersionClick(key: string, language: string, plural: string, figmaText: string) {
-        await props.translationKeyStore.updateKey(key, [{ language: language as Language, plural: plural as Plural, text: figmaText}]);
+        await props.translationKeyStore.updateKey(key, [{ language: language as Language, plural: plural as Plural, text: figmaText, skip: false}]);
         console.warn('onSaveFigmaVersionClick back prob not implemented')
     }
 
@@ -119,7 +115,12 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
 
             // TODO check if design is sync with translation - if not offer update with prompt
         } else {
-            translationKey = await props.translationKeyStore.createKey(keyToLinkTo, [{ language: localizedLabel.rootFrameLanguage, plural: localizedLabel.pluralId, text: localizedLabel.text}])
+            translationKey = await props.translationKeyStore.createKey(keyToLinkTo, [{ 
+                language: localizedLabel.rootFrameLanguage, 
+                plural: localizedLabel.pluralId, 
+                text: localizedLabel.text,
+                skip: false
+            }])
             await props.localisedLabelManager.updateLocalisedLabelProperties(localizedLabel.nodeId, {
                 key: keyToLinkTo,
                 keyType: KeyState.Linked,
@@ -135,7 +136,7 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
     async function unlinkKey(keyName?: string) {
         await props.localisedLabelManager.updateLocalisedLabelProperties(localizedLabel.nodeId, {
             key: keyName,
-            keyType: KeyState.Unset
+            keyType: KeyState.Unlinked
         });
     }
 
@@ -164,7 +165,7 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
     return (
         
     <>
-    <div ref={rowRef} className={"row" + (props.selected ? ' selected ' :'') + (localizedLabel.keyType === KeyState.Unset ? ' key-unset ' : ' key-set ')} onClick={(e) => {onNodeSelect(localizedLabel.nodeId)}}>
+    <div ref={rowRef} className={"row" + (props.selected ? ' selected ' :'') + (localizedLabel.keyType === KeyState.Unlinked ? ' key-unset ' : ' key-set ')} onClick={(e) => {onNodeSelect(localizedLabel.nodeId)}}>
             <div className="column-1">
                 <div className="localized-label">
                     <div className="spacer"></div>
@@ -212,7 +213,7 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                                 let keyToSet = localizedLabel.key !== undefined ? localizedLabel.key : localizedLabel.derivedKey;
 
                                 if (keyToSet !== undefined) {
-                                    if (localizedLabel.keyType === KeyState.Unset) {
+                                    if (localizedLabel.keyType === KeyState.Unlinked) {
                                         await linkKey(keyToSet);
                                     } else {
                                         await unlinkKey(localizedLabel.key);
@@ -223,10 +224,10 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                                 }
                                    
                             }}>
-                                <span className={"svg-container " + (localizedLabel.keyType === KeyState.Unset ? 'unlinked-svg' : 'linked-svg')}/>
+                                <span className={"svg-container " + (localizedLabel.keyType === KeyState.Unlinked ? 'unlinked-svg' : 'linked-svg')}/>
                             </span>
                             
-                            {localizedLabel.keyType !== KeyState.Unset && (
+                            {localizedLabel.keyType !== KeyState.Unlinked && (
                               <Select
                                     placeholder="Select item"
                                     onChange={value => { 
@@ -242,9 +243,14 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                     </div>
                     <TranslationEditor
                         onSave={async function(text: any) {
-                            let translationKey;
+                            /*let translationKey;
                             if (keyExists === true) {
-                                translationKey = await props.translationKeyStore.updateKey(localizedLabel.key!, [{ language: localizedLabel.rootFrameLanguage, plural: localizedLabel.pluralId, text: text}]);
+                                translationKey = await props.translationKeyStore.updateKey(localizedLabel.key!, [{ 
+                                    language: localizedLabel.rootFrameLanguage, 
+                                    plural: localizedLabel.pluralId, 
+                                    text: text,
+
+                                }]);
                             } else {
                                // TODO  await props.translationKeyStore.createKey(localizedLabel.key, [{ language: localizedLabel.rootFrameLanguage, plural: localizedLabel.pluralId, text: text}]);
                             }
@@ -259,8 +265,8 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
                                 showSampleValuesInherited: localizedLabel.rootFrameUseSampleValues,
                                 text: textToApplyToDesign,
                                 keyVersion: translationKey?.latestVersion
-                            });
-                            console.warn('onSave back prob not implemented')
+                            });*/
+                            console.warn('TODO onSave back prob not implemented')
                         }}
                         text={localizedLabel.text}
                         match={undefined}
@@ -270,172 +276,4 @@ export default function LocalizedLabelListItem(props: LocalizedLabelListItemProp
             
           </div>
     </>)              
-}
-
-function getKeyOptions(localizedLabel: LocalizedLabel) {
-    let keyOptions = [ ] as SelectOption[];
-
-    // we don't have a key so far
-    if (localizedLabel.keyType === KeyState.Unset) {
-        keyOptions = [
-            {
-                value: 'select-for-link',
-                label: 'Link to existing Translation key',
-                icon: 'key-svg'
-            }
-        ];
-
-        if (localizedLabel.derivedKey === undefined) {
-            keyOptions.push({
-                value: 'set-id-for-derivation',
-                label: 'Set label id for derivation',
-                icon: 'key-svg'
-            })
-        } else {
-            keyOptions.push({
-                value: 'derived',
-                label: localizedLabel.derivedKey + ' - derived',
-                icon: 'key-svg'
-            });
-        }
-        
-        keyOptions.push({
-                value: "",
-                label: 'jo',
-                divider: true
-            })
-
-
-        keyOptions.push(
-            {
-                value: 'ephemeral',
-                label: 'No key',
-                icon: 'key-svg'
-            });
-            
-        return keyOptions;
-    } else 
-
-    // a key was generated - we have translations but not a "real" translation key
-    if (localizedLabel.keyType === KeyState.Ephemeral) {
-        keyOptions = [
-            {
-                value: 'select-for-link',
-                label: 'Link to existing Translation key',
-                icon: 'key-svg'
-            }
-        ];
-
-        if (localizedLabel.derivedKey === undefined) {
-            keyOptions.push({
-                value: 'set-id-for-derivation',
-                label: 'Set label id for derivation',
-                icon: 'key-svg'
-            })
-        } else {
-            keyOptions.push({
-                value: 'derived',
-                label: 'Use - '  + localizedLabel.derivedKey + ' - (derived)',
-                icon: 'key-svg'
-            });
-            keyOptions.push({
-                value: 'linked',
-                label: 'Use - '  + localizedLabel.derivedKey + ' - (linked)',
-                icon: 'key-svg'
-            });
-        }
-        
-        keyOptions.push({
-                value: "",
-                label: 'jo',
-                divider: true
-            })
-        
-
-        keyOptions.push({
-            value: 'ephemeral',
-            label: 'No key',
-            icon: 'key-svg'
-        });
-
-        return keyOptions;
-    } else 
-
-
-    if (localizedLabel.keyType === KeyState.Derived) {
-        keyOptions = [
-            {
-                value: 'select-for-link',
-                label: 'Link to existing Translation key',
-                icon: 'key-svg'
-            }
-        ];
-
-        keyOptions.push({
-            value: 'derived',
-            label: 'Use - '  + localizedLabel.derivedKey + ' - (derived)',
-            icon: 'key-svg'
-        });
-
-        keyOptions.push({
-            value: 'linked',
-            label: 'Use - '  + localizedLabel.derivedKey + ' - (linked)',
-            icon: 'key-svg'
-        });
-        
-        keyOptions.push({
-                value: "",
-                label: 'jo',
-                divider: true
-            })
-        
-
-        keyOptions.push({
-            value: 'ephemeral',
-            label: 'No key',
-            icon: 'key-svg'
-        });
-
-        return keyOptions;
-    } else {
-
-    
-    // if (localizedLabel.keyType === KeyState.Linked) {
-        keyOptions = [
-            {
-                value: 'select-for-link',
-                label: 'Link to existing Translation key',
-                icon: 'key-svg'
-            }
-        ];
-
-        keyOptions.push({
-            value: 'derived',
-            label: 'Use - '  + localizedLabel.derivedKey + ' - (derived)',
-            icon: 'key-svg'
-        });
-
-        keyOptions.push({
-            value: 'linked',
-            label: 'Use - '  + localizedLabel.derivedKey + ' - (linked)',
-            icon: 'key-svg'
-        });
-        
-        keyOptions.push({
-                value: "",
-                label: 'jo',
-                divider: true
-            })
-        
-
-        keyOptions.push({
-            value: 'ephemeral',
-            label: 'No key',
-            icon: 'key-svg'
-        });
-
-        return keyOptions;
-    }
-    
-
 }

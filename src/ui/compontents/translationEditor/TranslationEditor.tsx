@@ -57,7 +57,7 @@ export default function TranslationEditor(props: TranslationEditorProps) {
         };
       }, [textDivRef]);
     
-      let textToUse = text === undefined ? 'unset' : (text.charAt(text.length - 1) === '\n' ? text + '\n' : text); 
+      let textToUse = text === undefined ? '<no translation>' : (text.charAt(text.length - 1) === '\n' ? text + '\n' : text); 
 
     return (
         <div className={'translation-editor' + (editingState ? ' editing' :'')}>
@@ -76,7 +76,7 @@ export default function TranslationEditor(props: TranslationEditorProps) {
                 
             
             
-                <p  className={'translation' + (editingState ? ' editing' :'')}  onClick={e=> {
+                <p  className={'translation' + (editingState ? ' editing ' :'') + (text == undefined ? ' missing ' :'')}  onClick={e=> {
                         if (!editingState) {
                             setEditingState(!editingState);
                         }

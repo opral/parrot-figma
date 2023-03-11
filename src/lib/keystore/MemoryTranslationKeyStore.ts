@@ -7,9 +7,9 @@ import { BaseTranslationKeyStore } from "./BaseTranslationKeyStore";
 
 
 export interface TranslationKeyStore {
-    createKey(keyName: string, translations: {language: Language, plural: Plural, text: string | undefined}[]) : Promise<TranslationKey>
+    createKey(keyName: string, translations: {language: Language, plural: Plural, text: string | undefined, skip: boolean}[]) : Promise<TranslationKey>
     getKey(keyName: string) : TranslationKey | undefined
-    updateKey(keyName: string, translations: {language: Language, plural: Plural, text: string | undefined}[]) : Promise<TranslationKey>
+    updateKey(keyName: string, translations: {language: Language, plural: Plural, text: string | undefined, skip: boolean}[]) : Promise<TranslationKey>
     deleteKey(keyName: string) : Promise<void>
     getHistory(translationKeyName: string, language: Language, plural: Plural) : Promise<{text?: string}[]>
     load(): Promise<TranslationKeys>
@@ -36,7 +36,7 @@ export class MemoryTranslationKeyStore extends BaseTranslationKeyStore {
         return this.translationKeys[keyName]
     }
 
-    async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; }[]): Promise<TranslationKey> {
+    async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[]): Promise<TranslationKey> {
         if (keyName === '') {
             throw new Error('keys mus have at least one character')
         }
@@ -44,7 +44,7 @@ export class MemoryTranslationKeyStore extends BaseTranslationKeyStore {
         return await this.persistKey(createdKey)
     }
 
-    async updateKey(keyName: string, translations: {language: Language, plural: Plural, text: string | undefined}[]) {
+    async updateKey(keyName: string, translations: {language: Language, plural: Plural, text: string | undefined, skip: boolean}[]) {
        let updatedKey = await this.parentKeyStore.updateKey(keyName, translations);
        return await this.persistKey(updatedKey)
     }

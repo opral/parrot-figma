@@ -1,6 +1,9 @@
-import React, { useEffect, useState, useRef, createRef } from "react";
-import OutsideClickHandler from "react-outside-click-handler";
-import "./select.css"
+/* eslint-disable jsx-a11y/no-static-element-interactions */
+import React, {
+  useEffect, useState, useRef,
+} from 'react';
+import OutsideClickHandler from 'react-outside-click-handler';
+import './select.css';
 
 export interface SelectOption {
   divider?: string | boolean;
@@ -9,79 +12,75 @@ export interface SelectOption {
   icon?: string;
   title?: string;
 }
-  
-interface SelectProps {
+
+export interface SelectProps {
   className?: string;
   options: SelectOption[];
-  unSelectedIcon: string; 
   placeholder: string;
   isDisabled?: boolean;
   defaultValue?: string | number | boolean;
   onExpand?: (state: boolean) => void;
   onChange?: (option: SelectOption) => void;
 }
-  
-const Select: React.FunctionComponent<SelectProps> = ({
-  className = "",
-  unSelectedIcon,
+
+export default function Select({
+  className = '',
   options,
   placeholder,
   isDisabled,
   defaultValue,
   onExpand,
   onChange,
-}) => {
-
-  const menuRef = useRef<HTMLUListElement>(null)
-  const menuWrapperRef = useRef<HTMLDivElement>(null)
-  const menuContainerRef = useRef<HTMLDivElement>(null)
-  const scrollUpRef = useRef<HTMLDivElement>(null)
-  const scrollDownRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
+}: SelectProps) {
+  const menuRef = useRef<HTMLUListElement>(null);
+  const menuWrapperRef = useRef<HTMLDivElement>(null);
+  const menuContainerRef = useRef<HTMLDivElement>(null);
+  const scrollUpRef = useRef<HTMLDivElement>(null);
+  const scrollDownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const [canScrollUp, setCanScrollUp] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [isExpanded, onExpandedStateChange] = useState(false);
   const [selectedOption, onSelectOption] = useState(
-    options.find(({ value }) => defaultValue === value)
+    options.find(({ value }) => defaultValue === value),
   );
-  
+
   const [wrapperMaxHeight, setWrapperMaxHeigth] = useState(30);
   const [containerBox, setContainerBox] = useState({
     top: 30,
-    height: 30
+    height: 30,
   });
-  const [wrapperScrollTop, setWrapperScrollTop] = useState({scrollTop: 30});
+  const [wrapperScrollTop, setWrapperScrollTop] = useState({ scrollTop: 30 });
   const [viewPortHeight, setViewPortHeight] = useState(0);
 
-  let menuPositionIndex = options.findIndex(selectOption => selectedOption != undefined && selectOption.value === selectedOption?.value);
+  const menuPositionIndex = options.findIndex((selectOption) => selectedOption !== undefined && selectOption.value === selectedOption?.value);
 
   let initialPositioning = false;
 
   // synchronize visibile height
   useEffect(() => {
-    let threshol = [];
-    for (let i=0; i<=1.0; i+= 0.01) {
-        threshol.push(i); 
+    const threshol = [];
+    for (let i = 0; i <= 1.0; i += 0.01) {
+      threshol.push(i);
     }
 
-    const intersectionObserver = new IntersectionObserver((entries: IntersectionObserverEntry[]) => {    
-      
+    const intersectionObserver = new IntersectionObserver((entries: IntersectionObserverEntry[]) => {
       setViewPortHeight(entries[0].intersectionRect.height);
     }, {
-      root: null,   // default is the viewport
-      threshold: threshol // percentage of target's visible area. Triggers "onIntersection"
+      root: null, // default is the viewport
+      threshold: threshol, // percentage of target's visible area. Triggers "onIntersection"
     });
 
-    const resizeObserver = new ResizeObserver((entries) => {
+    const resizeObserver = new ResizeObserver(() => {
       // reobserve the intersection to get the correct sizing
       intersectionObserver.disconnect();
       intersectionObserver.observe(window.document.body);
-    })
+    });
 
     if (window) {
       intersectionObserver.observe(window.document.body);
-      resizeObserver.observe(window.document.body, {box: 'border-box'});
+      resizeObserver.observe(window.document.body, { box: 'border-box' });
     }
 
     return () => {
@@ -91,38 +90,38 @@ const Select: React.FunctionComponent<SelectProps> = ({
   }, []);
 
   useEffect(() => {
-    onExpand && onExpand(isExpanded);
-    if(isExpanded && menuWrapperRef.current !== undefined) {
+    if (onExpand !== undefined) {
+      onExpand(isExpanded);
+    }
 
-      
+    if (isExpanded && menuWrapperRef.current !== undefined) {
       // on expand calculate starting position
-      var rect = buttonRef.current!.getBoundingClientRect();
-      menuWrapperRef.current!.style.left = rect.left + 'px';
+      const rect = buttonRef.current!.getBoundingClientRect();
+      menuWrapperRef.current!.style.left = `${rect.left}px`;
 
-      let menuPadding = 8
-      let menuEntryHeight = 24;
-      let maxSpaceToTop = rect.top; 
-      let maxSpaceToBottom = viewPortHeight - rect.top - menuEntryHeight; 
+      const menuPadding = 8;
+      const menuEntryHeight = 24;
+      const maxSpaceToTop = rect.top;
+      const maxSpaceToBottom = viewPortHeight - rect.top - menuEntryHeight;
 
-      let selectedDiv = menuWrapperRef.current!.childNodes[0].childNodes[menuPositionIndex] as HTMLDivElement
-      
-      let spaceNeededOnTop = selectedDiv ? selectedDiv?.offsetTop : 0;
-      
-      let spaceNeededOnBottom = (options.length - menuPositionIndex -1) * menuEntryHeight + menuPadding;
-      
+      const selectedDiv = menuWrapperRef.current!.childNodes[0].childNodes[menuPositionIndex] as HTMLDivElement;
+
+      const spaceNeededOnTop = selectedDiv ? selectedDiv?.offsetTop : 0;
+
+      const spaceNeededOnBottom = (options.length - menuPositionIndex - 1) * menuEntryHeight + menuPadding;
+
       const height = Math.min(maxSpaceToTop, spaceNeededOnTop) + menuEntryHeight + Math.min(maxSpaceToBottom, spaceNeededOnBottom);
       const top = Math.max(0, maxSpaceToTop - spaceNeededOnTop);
-      
-      let scroll = Math.max(0, spaceNeededOnTop - maxSpaceToTop);
-      
-      setContainerBox({
-        top: top, 
-        height: height
-      })
-      
-      setWrapperMaxHeigth(maxSpaceToTop + menuEntryHeight + maxSpaceToBottom);
-      setWrapperScrollTop({scrollTop: scroll})
 
+      const scroll = Math.max(0, spaceNeededOnTop - maxSpaceToTop);
+
+      setContainerBox({
+        top,
+        height,
+      });
+
+      setWrapperMaxHeigth(maxSpaceToTop + menuEntryHeight + maxSpaceToBottom);
+      setWrapperScrollTop({ scrollTop: scroll });
     }
   }, [isExpanded, viewPortHeight, menuWrapperRef]);
 
@@ -130,57 +129,53 @@ const Select: React.FunctionComponent<SelectProps> = ({
     if (menuWrapperRef.current !== undefined) {
       initialPositioning = true;
 
-
       menuWrapperRef.current!.scrollTop = wrapperScrollTop.scrollTop;
 
-      if( menuWrapperRef.current!.scrollTop === (menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight) ||
-          menuRef.current?.clientHeight === menuWrapperRef.current?.clientHeight) {
+      if (menuWrapperRef.current!.scrollTop === (menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight)
+          || menuRef.current?.clientHeight === menuWrapperRef.current?.clientHeight) {
         // at bottom
         setCanScrollDown(false);
       } else {
         setCanScrollDown(true);
       }
-      
+
       if (menuWrapperRef.current!.scrollTop === 0) {
         // at top
         setCanScrollUp(false);
       } else {
         setCanScrollUp(true);
       }
-
     }
-    
-  }, [wrapperScrollTop])
+  }, [wrapperScrollTop]);
 
   useEffect(() => {
     if (menuWrapperRef.current !== undefined) {
-
-      if( menuWrapperRef.current!.scrollTop === (menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight) ||
-          menuRef.current?.clientHeight === menuWrapperRef.current?.clientHeight) {
+      if (menuWrapperRef.current!.scrollTop === (menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight)
+          || menuRef.current?.clientHeight === menuWrapperRef.current?.clientHeight) {
         // at bottom
         setCanScrollDown(false);
       } else {
         setCanScrollDown(true);
       }
-      
+
       if (menuWrapperRef.current!.scrollTop === 0) {
         // at top
         setCanScrollUp(false);
       } else {
         setCanScrollUp(true);
       }
-
     }
-    
-  }, [containerBox])
+  }, [containerBox]);
 
   useEffect(() => {
-    onChange && selectedOption && onSelectOption(selectedOption);
+    if (onChange && selectedOption) {
+      onSelectOption(selectedOption);
+    }
   }, [selectedOption]);
-  
+
   useEffect(() => {
     const newSelectedOption = options.find(
-      ({ value }) => defaultValue === value
+      ({ value }) => defaultValue === value,
     );
     onSelectOption(newSelectedOption);
   }, [defaultValue]);
@@ -188,143 +183,139 @@ const Select: React.FunctionComponent<SelectProps> = ({
   let lastScrollPos = 0;
 
   useEffect(() => {
-    const scrollHandler = (e: any) => {
-
+    const scrollHandler = () => {
       if (initialPositioning) {
         initialPositioning = false;
         return;
       }
 
-      let diff = menuWrapperRef.current!.scrollTop - lastScrollPos;
+      const diff = menuWrapperRef.current!.scrollTop - lastScrollPos;
       // menuWrapperRef.current!.scrollTop = lastScrollPos;
       lastScrollPos = menuWrapperRef.current!.scrollTop;
 
-      if( menuWrapperRef.current!.scrollTop === (menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight) ||
-          menuRef.current?.clientHeight === menuWrapperRef.current?.clientHeight) {
+      if (menuWrapperRef.current!.scrollTop === (menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight)
+          || menuRef.current?.clientHeight === menuWrapperRef.current?.clientHeight) {
         // at bottom
         setCanScrollDown(false);
       } else {
         setCanScrollDown(true);
       }
-      
+
       if (menuWrapperRef.current!.scrollTop === 0) {
         // at top
         setCanScrollUp(false);
       } else {
         setCanScrollUp(true);
       }
-      
+
       if (diff < 0) {
-        setContainerBox(box => {
+        setContainerBox((box) => {
           if (box.height - diff > wrapperMaxHeight) {
             return {
               height: wrapperMaxHeight,
-              top: box.top
-            }
+              top: box.top,
+            };
           }
           // scroll up - grow by setting height and reposition to top
           return {
             height: box.height - diff,
-            top: box.top
-          }
+            top: box.top,
+          };
         });
       } else {
-        setContainerBox(box => {
+        setContainerBox((box) => {
           if (box.height + diff > wrapperMaxHeight) {
             return {
               height: wrapperMaxHeight,
-              top: box.top
-            }
+              top: box.top,
+            };
           }
 
-        // scroll down - only grow by setting height
+          // scroll down - only grow by setting height
           return {
             height: box.height + diff,
-            top: box.top - diff
-          }
+            top: box.top - diff,
+          };
         });
       }
-    }
+    };
 
     if (menuWrapperRef.current) {
       lastScrollPos = menuWrapperRef.current!.scrollTop;
-      menuWrapperRef.current.addEventListener('scroll', scrollHandler )
+      menuWrapperRef.current.addEventListener('scroll', scrollHandler);
     }
 
-    return () => { menuWrapperRef.current?.removeEventListener('scroll', scrollHandler) }
-  })
+    return () => { menuWrapperRef.current?.removeEventListener('scroll', scrollHandler); };
+  });
 
   useEffect(() => {
     // Handler to call on window resize
     function handleResize() {
-      onExpandedStateChange(false)
+      onExpandedStateChange(false);
     }
     // Add event listener
-    window.addEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
     // Call handler right away so state gets updated with initial window size
     handleResize();
 
     // Remove event listener on cleanup
-    return () => window.removeEventListener("resize", handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []); // Empty array ensures that effect is only run on mount
 
-
   useEffect(() => {
+    let timeInterval = undefined as any;
 
-    let timeInterval = undefined as any
-
-    const startScrollUp = (e: any) => {
+    const startScrollUp = () => {
       timeInterval = setInterval(() => {
-        menuWrapperRef.current!.scrollTop  = menuWrapperRef.current!.scrollTop - 4        
+        menuWrapperRef.current!.scrollTop = menuWrapperRef.current!.scrollTop - 4;
       }, 20);
     };
 
-    const stopScrollUp = (e: any) => {
+    const stopScrollUp = () => {
       clearInterval(timeInterval);
     };
 
     if (scrollUpRef.current !== undefined) {
-      scrollUpRef.current?.addEventListener('mouseover', startScrollUp)
-      scrollUpRef.current?.addEventListener('mouseout', stopScrollUp)
+      scrollUpRef.current?.addEventListener('mouseover', startScrollUp);
+      scrollUpRef.current?.addEventListener('mouseout', stopScrollUp);
     }
 
-    return () => { 
-      scrollUpRef.current?.removeEventListener('mouseover', startScrollUp)
-      scrollUpRef.current?.removeEventListener('mouseout', stopScrollUp)
-    }
-  }, [scrollUpRef])
+    return () => {
+      scrollUpRef.current?.removeEventListener('mouseover', startScrollUp);
+      scrollUpRef.current?.removeEventListener('mouseout', stopScrollUp);
+    };
+  }, [scrollUpRef]);
 
   useEffect(() => {
+    let timeInterval = undefined as any;
 
-    let timeInterval = undefined as any
-
-    const startScrollDown = (e: any) => {
-      timeInterval = setInterval(() => { 
-        menuWrapperRef.current!.scrollTop  = menuWrapperRef.current!.scrollTop + 4
+    const startScrollDown = () => {
+      timeInterval = setInterval(() => {
+        menuWrapperRef.current!.scrollTop = menuWrapperRef.current!.scrollTop + 4;
       }, 20);
     };
 
-    const stopScrollDown = (e: any) => {
+    const stopScrollDown = () => {
       clearInterval(timeInterval);
     };
 
     if (scrollDownRef.current !== undefined) {
-      scrollDownRef.current?.addEventListener('mouseover', startScrollDown)
-      scrollDownRef.current?.addEventListener('mouseout', stopScrollDown)
+      scrollDownRef.current?.addEventListener('mouseover', startScrollDown);
+      scrollDownRef.current?.addEventListener('mouseout', stopScrollDown);
     }
 
-    return () => { 
-      scrollDownRef.current?.removeEventListener('mouseover', startScrollDown)
-      scrollDownRef.current?.removeEventListener('mouseout', stopScrollDown)
-    }
-  }, [scrollDownRef])
+    return () => {
+      scrollDownRef.current?.removeEventListener('mouseover', startScrollDown);
+      scrollDownRef.current?.removeEventListener('mouseout', stopScrollDown);
+    };
+  }, [scrollDownRef]);
 
-  const handleExpandClick = () => { 
-    onExpandedStateChange(!isExpanded)
+  const handleExpandClick = () => {
+    onExpandedStateChange(!isExpanded);
   };
 
-  const handleOutsideClick = () => { 
-     onExpandedStateChange(false)
+  const handleOutsideClick = () => {
+    onExpandedStateChange(false);
   };
 
   const handleSelectClick = (value: any) => {
@@ -332,12 +323,14 @@ const Select: React.FunctionComponent<SelectProps> = ({
     onExpandedStateChange(false);
     onSelectOption(newOption);
 
-    onChange && onChange(newOption!);
+    if (onChange) {
+      onChange(newOption!);
+    }
   };
 
-  const expandButtonClass = isExpanded ? "select-menu__button--active" : "";
-  const expanListClass = isExpanded ? "select-menu__menu--active" : "";
-  const disabledColorClass = isDisabled ? "icon--black-3" : "";
+  const expandButtonClass = isExpanded ? 'select-menu__button--active' : '';
+  const expanListClass = isExpanded ? 'select-menu__menu--active' : '';
+  const disabledColorClass = isDisabled ? 'icon--black-3' : '';
 
   return (
     <OutsideClickHandler
@@ -358,70 +351,83 @@ const Select: React.FunctionComponent<SelectProps> = ({
           </span>
           <span className="select-menu__caret" />
         </button>
-        <div ref={menuContainerRef} className="select-menu__menu_container" style={
+        <div
+          ref={menuContainerRef}
+          className="select-menu__menu_container"
+          style={
             {
-              height: containerBox.height + 'px',
-              top: containerBox.top + 'px'
-            }}>
-          <div ref={scrollUpRef} className="select-menu__menu-scroll-up" style={{
-            'visibility': canScrollUp ? 'visible' : 'hidden'  
-          }}>
-            <div className="svg-container arrow-up-svg" ></div>
+              height: `${containerBox.height}px`,
+              top: `${containerBox.top}px`,
+            }
+}
+        >
+          <div
+            ref={scrollUpRef}
+            className="select-menu__menu-scroll-up"
+            style={{
+              visibility: canScrollUp ? 'visible' : 'hidden',
+            }}
+          >
+            <div className="svg-container arrow-up-svg" />
           </div>
-          <div ref={scrollDownRef} className="select-menu__menu-scroll-down" style={{
-            'visibility': canScrollDown ? 'visible' : 'hidden' 
-          }}>
-            <div className="svg-container arrow-down-svg"></div> 
+          <div
+            ref={scrollDownRef}
+            className="select-menu__menu-scroll-down"
+            style={{
+              visibility: canScrollDown ? 'visible' : 'hidden',
+            }}
+          >
+            <div className="svg-container arrow-down-svg" />
           </div>
-          <div ref={menuWrapperRef} className="select-menu__menu_wrapper" >
-            <ul ref={menuRef} 
+          <div ref={menuWrapperRef} className="select-menu__menu_wrapper">
+            <ul
+              ref={menuRef}
               className={`select-menu__menu ${expanListClass} ${disabledColorClass}`}
-              
+
             >
-              {options &&
-                options.map(({ value, label, divider, title, icon }, i) =>
-                  divider ? (
-                    <React.Fragment key={`select-option-divider--${i}`}>
-                      {divider !== true && (
-                        <span className="select-menu__divider-label">
-                          {divider}
-                        </span>
-                      )}
-                      <div
-                        className="select-menu__divider"
-                        key={`select-option--${i}`}
-                      />
-                    </React.Fragment>
-                  ) : (
-                    <li
-                      className={`select-menu__item ${
-                        selectedOption && selectedOption.value === value
-                          ? "select-menu__item--selected"
-                          : ""
-                      }`}
-                      onMouseUp={() => handleSelectClick(value)}
-                      key={`select-option--${i}`}
-                      title={title}
-                    >
-                    
+              {options
+                && options.map(({
+                  value, label, divider, title, icon,
+                }, i) => (divider ? (
+                  // eslint-disable-next-line react/no-array-index-key  -- options are static and dont change - using the index is fine here
+                  <React.Fragment key={`select-option-divider--${i}`}>
+                    {divider !== true && (
+                    <span className="select-menu__divider-label">
+                      {divider}
+                    </span>
+                    )}
+                    <div
+                      className="select-menu__divider"
+                    />
+                  </React.Fragment>
+                ) : (
+                  <li
+                    className={`select-menu__item ${
+                      selectedOption && selectedOption.value === value
+                        ? 'select-menu__item--selected'
+                        : ''
+                    }`}
+                    // eslint-disable-next-line react/no-array-index-key  -- options are static and dont change - using the index is fine here
+                    key={`select-option--${i}`}
+                    title={title}
+                  >
+                    <div onMouseUp={() => handleSelectClick(value)}>
                       <div className="select-menu__item-check">
                         { selectedOption && selectedOption.value === value && (
-                        <div className={'svg-container checkmark-svg'} />
+                          <div className="svg-container checkmark-svg" />
                         )}
                       </div>
-                      <div className={'select-menu__item-icon'}>
-                            <div className={'svg-container ' + icon} />
+                      <div className="select-menu__item-icon">
+                        <div className={`svg-container ${icon}`} />
                       </div>
                       <span className="select-menu__item-label">{label}</span>
-                    </li>
-                  )
-                )}
+                    </div>
+                  </li>
+                )))}
             </ul>
           </div>
         </div>
       </div>
     </OutsideClickHandler>
   );
-};
-
-export default Select;
+}

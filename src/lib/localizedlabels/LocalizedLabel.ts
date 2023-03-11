@@ -1,40 +1,38 @@
-import { Language } from "../base/Language";
-import { Plural } from "../base/Plural";
+import Language from '../base/Language';
+import Plural from '../base/Plural';
 
 export enum KeyState {
-    Unset = 'unset', // label has not yet modified by the plugin
-    Unlinked = 'unlinked', // state when the label has not been translated by the plugin yet
-    Linked = 'linked',   // key was set to a fixed key 
-  }
-  
+  Unset = 'unset', // label has not yet modified by the plugin
+  Unlinked = 'unlinked', // state when the label has not been translated by the plugin yet
+  Linked = 'linked', // key was set to a fixed key
+}
 
 export interface LocalizedLabel {
-    
-    pageId: string;
-    pageName: string;
 
-    rootFrameId: string;
-    rootFrameName: string;
-    rootFrameLanguage: Language;
-    rootFrameUseSampleValues: boolean;
+  pageId: string;
+  pageName: string;
 
-    name: string;
-    nodeId: string;
-    useSampleValues: boolean;
+  rootFrameId: string;
+  rootFrameName: string;
+  rootFrameLanguage: Language;
+  rootFrameUseSampleValues: boolean;
 
-    x: number;
-    y: number;
-    width: number;
-    height: number;
+  name: string;
+  nodeId: string;
+  useSampleValues: boolean;
 
-    keyType: KeyState
-    key?: string;
-    derivedKey?: string;
-    text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 
-    keyVersion: number,
+  keyType: KeyState
+  key?: string;
+  derivedKey?: string;
+  text: string;
 
+  keyVersion: number,
 
-    pluralId: Plural;
+  pluralId: Plural;
 
 }

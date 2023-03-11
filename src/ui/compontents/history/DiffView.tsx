@@ -17,7 +17,7 @@ const defaultStyle: DiffStyles = {
   default: {},
 };
 
-export type StringDiffProps = {
+type StringDiffProps = {
   oldValue: string;
   newValue: string;
   styles?: DiffStyles;
@@ -25,28 +25,22 @@ export type StringDiffProps = {
   component?: React.ElementType;
 };
 
-export const StringDiff: React.FC<StringDiffProps> = ({
+export default function StringDiff({
   oldValue,
   newValue,
   styles = defaultStyle,
   className,
   component: Component = 'div',
-}) => {
-    console.log('----------------- StringDiff----------------')
-    console.log(oldValue);
-    
-    console.log(newValue);
-    
-    
+}: StringDiffProps) {
   const result = useMemo(() => {
-    
     const diff = Diff.diffChars(oldValue, newValue);
     return diff.map((part, index) => {
-      const style: React.CSSProperties = part.added
-        ? styles.added
-        : part.removed
-        ? styles.removed
-        : styles.default;
+      let style = styles.default as React.CSSProperties;
+      if (part.added) {
+        style = styles.added;
+      } else if (part.removed) {
+        style = styles.removed;
+      }
 
       return (
         <span
@@ -60,4 +54,4 @@ export const StringDiff: React.FC<StringDiffProps> = ({
     });
   }, [oldValue, newValue]);
   return <Component className={className}>{result}</Component>;
-};
+}

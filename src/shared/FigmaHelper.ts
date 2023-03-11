@@ -1,36 +1,32 @@
+/* eslint-disable -- TODO remove this when most of the class is used again */
+import { TranslationKeyStore } from '../lib/keystore/BaseTranslationKeyStore';
 
-import { TranslationKeyStore } from "../lib/keystore/MemoryTranslationKeyStore";
+import FigmaUtil from './FigmaUtil';
+import Language from '../lib/base/Language';
+import Plural from '../lib/base/Plural';
 
-
-
-import { figmaRGBToHex, hexToFigmaRGB } from "@figma-plugin/helpers";
-import { FigmaUtil } from "./FigmaUtil";
-import { text } from "stream/consumers";
-import { Language } from "../lib/base/Language";
-import { Plural } from "../lib/base/Plural";
-const defaultLinkStyleKey = 'defaultLinkStyle'
+const defaultLinkStyleKey = 'defaultLinkStyle';
 
 export default class FigmaHelper {
+  public proxClassName = 'FigmaHelper';
 
-    public proxClassName = 'FigmaHelper'
-     
-    figma: PluginAPI | undefined
-    translationKeyStore: TranslationKeyStore | undefined
+  figma: PluginAPI | undefined;
 
-    constructor(figma?: PluginAPI, keyStore?: TranslationKeyStore) {
-        this.figma = figma;
-        this.translationKeyStore = keyStore
+  translationKeyStore: TranslationKeyStore | undefined;
+
+  constructor(figma?: PluginAPI, keyStore?: TranslationKeyStore) {
+    this.figma = figma;
+    this.translationKeyStore = keyStore;
+  }
+
+  async toggleKeyFrame(frameNodeId: string) {
+    const frame = figma.getNodeById(frameNodeId);
+    if (!frame) {
+      return;
     }
-
-    async toggleKeyFrame(frameNodeId: string) {
-
-        let frame = figma.getNodeById(frameNodeId)
-        if (!frame) {
-            return
-        }
-        /*
+    /*
           let showSamleValues = frame.getPluginData(FigmaLocaliziationKeyHelper.sampleValuesDataKey) == '' ? false : true;
-        
+
           console.log('[' +frame.getPluginData(FigmaLocaliziationKeyHelper.sampleValuesDataKey) +']');
           if (showSamleValues) {
             console.log("showSamleValues true - setting it to none"  );
@@ -40,15 +36,14 @@ export default class FigmaHelper {
             frame.setPluginData(FigmaLocaliziationKeyHelper.sampleValuesDataKey, 'true');
           }
           */
-        this.drawKeyFrame(frame);
-        await this.updateFrame(frame)
-        
-    }
+    this.drawKeyFrame(frame);
+    await this.updateFrame(frame);
+  }
 
-    async drawKeyFrame(frame: BaseNode) {
- /*
+  async drawKeyFrame(frame: BaseNode) {
+    /*
         const MARGIN = 50;
-        
+
         let nodesWithKeys = FigmaLocaliziationHelper.extractAllKeysFromChildMixin(frame as ChildrenMixin, [])
 
         let keyFrame: FrameNode | null = null
@@ -187,14 +182,13 @@ export default class FigmaHelper {
         rectBottom.fills = fills;
         keyFrame.insertChild(0, rectBottom);
 */
-    }
+  }
 
-    async updateFrame(frame: BaseNode) {
-/*
+  async updateFrame(frame: BaseNode) {
+    /*
         console.log('updateFrame extractAllKeysFromChildMixin')
         let nodesWithKeys = FigmaLocaliziationHelper.extractAllKeysFromChildMixin(frame as ChildrenMixin, [])
         let language = frame.getPluginData(FigmaLocaliziationHelper.languageDataKey) == '' ? 'none' : frame.getPluginData(FigmaLocaliziationHelper.languageDataKey);
-
 
         let useSampleValues = frame.getPluginData(FigmaLocaliziationHelper.sampleValuesDataKey) == '' ? false : true;
 
@@ -215,7 +209,7 @@ export default class FigmaHelper {
 
                 let textNode = figma.getNodeById(textNodeId)! as TextNode;
                 let pluralId = textNode.getPluginData('pluralId') === '' ? Plural.Other : textNode.getPluginData('pluralId');
-                
+
                 let selectedPlural = nodeWithKey.translataions?.[pluralId]
                 if (selectedPlural && selectedPlural.translation && selectedPlural.translationFilled ) {
                     let text = selectedPlural.translation
@@ -229,8 +223,5 @@ export default class FigmaHelper {
         }
         console.log((new Date()).getTime()+' updateFrame done')
         */
-    }
-
-    
-
+  }
 }

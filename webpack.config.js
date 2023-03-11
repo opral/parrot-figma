@@ -1,76 +1,74 @@
-
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const InlineChunkHtmlPlugin = require('react-dev-utils/InlineChunkHtmlPlugin');
 
 const path = require('path');
-const webpack = require('webpack')
-
+const webpack = require('webpack');
 
 module.exports = (env, argv) => ({
-    devtool: argv.mode === 'production' ? false : 'inline-source-map',
+  devtool: argv.mode === 'production' ? false : 'inline-source-map',
 
-    module: {
-        rules: [
-                        // Converts TypeScript code to JavaScript
-          
-            // Converts TypeScript code to JavaScript
-            { test: /\.tsx?$/, use: 'ts-loader', exclude: /node_modules/ },
+  module: {
+    rules: [
+      // Converts TypeScript code to JavaScript
 
-            // Enables including CSS by doing "import './file.css'" in your TypeScript code
-            {
-                test: /\.css$/,
-                use: [
-                    'style-loader',
-                    'css-loader' 
-                ]
-            },
-            {
+      // Converts TypeScript code to JavaScript
+      { test: /\.tsx?$/, use: 'ts-loader', exclude: /node_modules/ },
 
-                test: /\.(png)$/,
-                use: {
-                    loader: 'url-loader',
-                    options: {
-                        limit: 25000,
-                    }
-                }
-            },
-            {
-                test: /\.(png|jpe?g|gif|svg|eot|ttf|woff|woff2)$/i,
-                // More information here https://webpack.js.org/guides/asset-modules/
-                type: "asset",
-              }
-        ]
-    },
+      // Enables including CSS by doing "import './file.css'" in your TypeScript code
+      {
+        test: /\.css$/,
+        use: [
+          'style-loader',
+          'css-loader',
+        ],
+      },
+      {
 
-    // defie the entrypoints for compilation
-    entry: {
-        ui: './src/ui/ui.tsx',
-        code: './src/sandbox/code.ts'
-    },
+        test: /\.(png)$/,
+        use: {
+          loader: 'url-loader',
+          options: {
+            limit: 25000,
+          },
+        },
+      },
+      {
+        test: /\.(png|jpe?g|gif|svg|eot|ttf|woff|woff2)$/i,
+        // More information here https://webpack.js.org/guides/asset-modules/
+        type: 'asset',
+      },
+    ],
+  },
 
-    resolve: {
-        extensions: ['.js', '.jsx', '.tsx', '.ts']
-    },
-    output: {
-        filename: '[name].js',
-        path: path.resolve(__dirname, 'dist')
-    },
-    plugins: [
-        new webpack.DefinePlugin({
-            'global': {} // Fix missing symbol error when running in developer VM
-        }),
+  // defie the entrypoints for compilation
+  entry: {
+    ui: './src/ui/ui.tsx',
+    code: './src/sandbox/code.ts',
+  },
 
-        new HtmlWebpackPlugin({
-            inject: "body",
+  resolve: {
+    extensions: ['.js', '.jsx', '.tsx', '.ts'],
+  },
+  output: {
+    filename: '[name].js',
+    path: path.resolve(__dirname, 'dist'),
+  },
+  plugins: [
+    new webpack.DefinePlugin({
+      global: {}, // Fix missing symbol error when running in developer VM
+    }),
 
-            template: './src/ui/ui.html',
-            filename: 'ui.html',
-            //inlineSource: '.(js)$',
-            cache: false,
+    new HtmlWebpackPlugin({
+      inject: 'body',
 
-            chunks: ['ui']
-        }),
-        new InlineChunkHtmlPlugin(HtmlWebpackPlugin, [/ui/]),
-        
-    ]
+      template: './src/ui/ui.html',
+      filename: 'ui.html',
+      // inlineSource: '.(js)$',
+      cache: false,
+
+      chunks: ['ui'],
+    }),
+    new InlineChunkHtmlPlugin(HtmlWebpackPlugin, [/ui/]),
+
+  ],
 });

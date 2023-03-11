@@ -1,120 +1,132 @@
-import * as React from "react";
-import { useEffect, useRef } from "react";
-import useState from 'react-usestateref'
-import OutsideClickHandler from "react-outside-click-handler";
-import "./TextField.css"
+/* eslint-disable jsx-a11y/no-static-element-interactions */
+/* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
+/* eslint-disable jsx-a11y/click-events-have-key-events */
+/* eslint-disable react/require-default-props */
+import * as React from 'react';
+import { useEffect, useRef } from 'react';
+import useState from 'react-usestateref';
+import OutsideClickHandler from 'react-outside-click-handler';
+import './TextField.css';
 
 type TextFieldProps = {
-    singleClick: boolean
-    editingTrigger?: number
-    placeholder?: string
-    icon?: string 
-    onSearchClick?: Function
-    text?: string
-    onSave: Function
-}
+  singleClick: boolean
+  editingTrigger?: number
+  placeholder?: string
+  icon?: string
+  onSearchClick?: Function
+  text?: string
+  onSave: Function
+};
 
-export default function TextField(props: TextFieldProps) {
-   
-    let [text, setText, textRef] = useState(props.text)
-    let [isEditing, setEditingState] = useState(false)
+export default function TextField({
+  singleClick,
+  editingTrigger,
+  placeholder,
+  icon,
+  onSearchClick,
+  text,
+  onSave,
+}: TextFieldProps) {
+  const [, setTextState, textStateRef] = useState(text);
+  const [isEditing, setEditingState] = useState(false);
 
-    const inputFieldRef = useRef<HTMLInputElement>(null);
-    const textDivRef = useRef<HTMLDivElement>(null);
-    
-    const handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-        const val = evt.target?.value;
-        setText(val);
+  const inputFieldRef = useRef<HTMLInputElement>(null);
+  const textDivRef = useRef<HTMLDivElement>(null);
+
+  const handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
+    const val = evt.target?.value;
+    setTextState(val);
+  };
+
+  const doSave = () => {
+    setEditingState(false);
+    onSave(textStateRef.current);
+  };
+
+  const onCancel = () => {
+    setEditingState(false);
+    setTextState(text);
+  };
+
+  const handleOutsideClick = () => {
+    doSave();
+  };
+
+  useEffect(() => {
+    const keydownFunction = (e: any) => {
+      if (e.key === 'Escape') {
+        onCancel();
+      } if (e.key === 'Enter') {
+        doSave();
+      }
     };
 
-    const onSave = () => {
-        setEditingState(false);
-        props.onSave(textRef.current);
+    inputFieldRef.current?.addEventListener('keydown', keydownFunction);
+    return () => {
+      inputFieldRef.current?.removeEventListener('keydown', keydownFunction);
+    };
+  }, [isEditing]);
+
+  useEffect(() => {
+    if (isEditing) {
+      inputFieldRef.current?.focus();
+      inputFieldRef.current?.select();
     }
+  }, [isEditing]);
 
-    const onCancel = () => {
-        setEditingState(false);
-        console.log('setting text to val:' + props.text);
-        setText(props.text);
-    } 
-
-    const handleOutsideClick = () => {
-        onSave()
+  useEffect(() => {
+    if (editingTrigger) {
+      setEditingState(true);
     }
+  }, [editingTrigger]);
 
-    useEffect(()=>{
-        const keydownFunction = (e: any) => {
-            if (e.key === 'Escape') {
-                onCancel();
-            } if (e.key === 'Enter') {
-                onSave();
-            }
-        }
+  useEffect(() => {
+    setTextState(text);
+  }, [text]);
 
-        inputFieldRef.current?.addEventListener('keydown',keydownFunction )
-        return () => {
-            inputFieldRef.current?.removeEventListener('keydown', keydownFunction)
-        }
-    }, [isEditing])
+  return (
+    <OutsideClickHandler
+      onOutsideClick={handleOutsideClick}
+      disabled={!isEditing}
+      display="contents"
+    >
+      <div className={`text-field${isEditing ? ' editing' : ''}`}>
 
-    useEffect(() => {
-        if (isEditing) {
-            inputFieldRef.current?.focus();
-            inputFieldRef.current?.select();
-        }
-    }, [isEditing]);
+        <div ref={textDivRef} className={`text-field-text${isEditing ? ' editing ' : ''}${icon ? ' icon-left ' : ''}${onSearchClick ? ' icon-right' : ''}`}>
 
-    useEffect(() => {
-        if(props.editingTrigger) {
-            setEditingState(true);
-        }
-    }, [props.editingTrigger]);
+          <input
+            ref={inputFieldRef}
+            style={{
+              visibility: (isEditing ? 'visible' : 'hidden'),
+            }}
+            value={text}
+            onChange={handleChange}
+            placeholder={placeholder}
+          />
 
-    useEffect(() => {
-        setText(props.text)
-    }, [props.text]);
-
-    
-    return (
-        <OutsideClickHandler
-            onOutsideClick={handleOutsideClick}
-            disabled={!isEditing}
-            display='contents'
-        >
-        <div className={'text-field' + (isEditing ? ' editing' :'')}>
-            
-            <div ref={textDivRef} className={"text-field-text" + (isEditing ? ' editing ' :'') + (props.icon ? ' icon-left ' :'') + (props.onSearchClick ? ' icon-right' :'')}>
-                
-                <input
-                    ref={inputFieldRef}
-                    style={{
-                        visibility: (isEditing ? 'visible' :'hidden')
-                    }}
-                    value={text}
-                    onChange={handleChange}
-                    placeholder={props.placeholder} />
-
-                <p className={'translation' + (isEditing ? ' editing' :'')} 
-                    onDoubleClick={e=> {
-                        if (!isEditing && !props.singleClick) {
-                            setEditingState(!isEditing);
-                        }
-                    }}
-                    onClick={e=> {
-                        if (!isEditing && props.singleClick) {
-                            setEditingState(!isEditing);
-                        }
-                    }}>
-                    {text === undefined || text === '' ? props.placeholder : text }
-                </p>
-                { props.icon !== undefined && (
-                    <span className={"svg-container " + props.icon} />
-                )}
-                { props.onSearchClick !== undefined && (
-                    <span className={"svg-container right search-svg"} onClick={(e => { if ( props.onSearchClick !== undefined ) props.onSearchClick() })} />
-                )}
-            </div>
+          <p
+            className={`translation${isEditing ? ' editing' : ''}`}
+            onDoubleClick={() => {
+              if (!isEditing && !singleClick) {
+                setEditingState(!isEditing);
+              }
+            }}
+            onClick={() => {
+              if (!isEditing && singleClick) {
+                setEditingState(!isEditing);
+              }
+            }}
+          >
+            {text === undefined || text === '' ? placeholder : text }
+          </p>
+          { icon !== undefined && (
+          <span className={`svg-container ${icon}`} />
+          )}
+          { onSearchClick !== undefined && (
+          <span className="svg-container right search-svg" onClick={(() => { if (onSearchClick !== undefined) onSearchClick(); })} />
+          )}
         </div>
+      </div>
     </OutsideClickHandler>
-    )
+  );
 }

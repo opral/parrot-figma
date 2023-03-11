@@ -1,0 +1,16 @@
+
+extends:
+- airbnb
+- airbnb-typescript
+parserOptions:
+  project:
+  - tsconfig.json
+rules:
+  no-restricted-syntax:
+  - error
+  - ForInStatement
+  - LabeledStatement
+  - WithStatement
+  jsx-a11y: 'off'
+  max-len: 'off'
+  react/require-default-props: 'off'

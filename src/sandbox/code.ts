@@ -7,33 +7,27 @@
 
 // This shows the HTML page in "ui.html".
 
-let height = 200;
-let widht = 800;
+import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
+import FigmaFileTranslationKeyStore from '../lib/keystore/FigmaFileTranslationKeyStore';
+import FigmaUtil from '../shared/FigmaUtil';
+import FigmaHelper from '../shared/FigmaHelper';
+import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowManagerSandbox';
+import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
 
-
-import { AsyncFunctionProxy } from "../lib/rpc/AsyncFunctionProxy";
-import { FigmaFileTranslationKeyStore } from "../lib/keystore/FigmaFileTranslationKeyStore";
-import { FigmaUtil } from "../shared/FigmaUtil"
-import FigmaHelper from "../shared/FigmaHelper";
-import { WindowManagerSandbox, WindowMode } from "../lib/windowManager/WindowManagerSandbox";
-import { LocalizedLabelManager } from "../lib/localizedlabels/LocalizedLabelManager";
-
-
-let figmaRemote = new FigmaUtil();
+const figmaRemote = new FigmaUtil();
 
 WindowManagerSandbox.init(200, 800, 300, WindowMode.BottomSheet);
 
-let asyncFunctionProxy = new AsyncFunctionProxy('SandboxAsyncFunctionProxy', (data: any) => {
-  figma.ui.postMessage( data )
+const asyncFunctionProxy = new AsyncFunctionProxy('SandboxAsyncFunctionProxy', (data: any) => {
+  figma.ui.postMessage(data);
 }, figma.ui);
-
 
 /*
 let result = fetch('https://figma-assets-and-resources.loca.lt/api/v1/translate', {
   method: 'POST',
   headers: {
     'Authorization': 'DeepL-Auth-Key 391733de-67e0-be65-a8b7-4298511dd564:fx'
-  }, 
+  },
   body: JSON.stringify({
     text: 'Hello world',
     target_lang: 'DE'
@@ -41,35 +35,36 @@ let result = fetch('https://figma-assets-and-resources.loca.lt/api/v1/translate'
   result.json().then(result => {
     console.log(result);
   })
-});*/
+}); */
 
 asyncFunctionProxy.registerInstance(figmaRemote);
 
-let localizationState = new FigmaFileTranslationKeyStore()
+const localizationState = new FigmaFileTranslationKeyStore();
 asyncFunctionProxy.registerInstance(localizationState);
 
-let remoteLocalizedLabelManager = new LocalizedLabelManager(localizationState);
-asyncFunctionProxy.registerInstance(remoteLocalizedLabelManager)
+const remoteLocalizedLabelManager = new LocalizedLabelManager(localizationState);
+asyncFunctionProxy.registerInstance(remoteLocalizedLabelManager);
 
 const figmaHelper = new FigmaHelper(figma, localizationState);
 asyncFunctionProxy.registerInstance(figmaHelper);
 
-figma.on("selectionchange", () => {
+figma.on('selectionchange', () => {
   figma.ui.postMessage(
     {
       type: 'event',
-      name: 'selectionchange'
-    });
-})
+      name: 'selectionchange',
+    },
+  );
+});
 
 // Calls to "parent.postMessage" from within the HTML page will trigger this
 // callback. The callback will be passed the "pluginMessage" property of the
 // posted message.
-figma.ui.onmessage = payload => {
+figma.ui.onmessage = () => {
 
-  /*if (asyncFunctionProxy.onMessage(payload)) {
+  /* if (asyncFunctionProxy.onMessage(payload)) {
     return
-  }*/
+  } */
 
   // Make sure to close the plugin when you're done. Otherwise the plugin will
   // keep running, which shows the cancel button at the bottom of the screen.

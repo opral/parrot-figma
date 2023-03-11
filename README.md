@@ -52,3 +52,17 @@ react optimization
 https://tolgee.io/blog/2021/11/24/optimizing-react-to-the-bone
 
 https://lokalise.com/blog/design-stage-localization/
+
+
+Todos: 
+ - make header columns fixed size based on maximum column content
+ - allow the user to resolve the apply
+ - key propagation from sandbox
+ - export tool for ios
+ - export tool for android
+ - export tool for react 
+ - localize tool using the tool :-)
+ - import of ios dict
+ - import of android dict
+ - fix window manager bugs
+

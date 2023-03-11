@@ -11,5 +11,5 @@
       "./node_modules/@figma"
     ]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "legacy/Actions.ts", "src/ui/keycontext/TranslatedKeysContext.jsx", "src/ui/keycontext/KeysContext.jsx"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

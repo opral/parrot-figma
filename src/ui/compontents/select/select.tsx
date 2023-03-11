@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 import React, {
   useEffect, useState, useRef,
@@ -410,18 +411,16 @@ export default function Select({
                     // eslint-disable-next-line react/no-array-index-key  -- options are static and dont change - using the index is fine here
                     key={`select-option--${i}`}
                     title={title}
-                  >
-                    <div onMouseUp={() => handleSelectClick(value)}>
-                      <div className="select-menu__item-check">
-                        { selectedOption && selectedOption.value === value && (
-                          <div className="svg-container checkmark-svg" />
-                        )}
-                      </div>
-                      <div className="select-menu__item-icon">
-                        <div className={`svg-container ${icon}`} />
-                      </div>
-                      <span className="select-menu__item-label">{label}</span>
+                    onMouseUp={() => handleSelectClick(value)}>
+                    <div className="select-menu__item-check">
+                      { selectedOption && selectedOption.value === value && (
+                        <div className="svg-container checkmark-svg" />
+                      )}
                     </div>
+                    <div className="select-menu__item-icon">
+                      <div className={`svg-container ${icon}`} />
+                    </div>
+                    <span className="select-menu__item-label">{label}</span>
                   </li>
                 )))}
             </ul>

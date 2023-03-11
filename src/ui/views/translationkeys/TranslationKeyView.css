@@ -1,362 +1,365 @@
-
-
 .grid {
-    display: grid;
-    grid-template-columns: [selector] min-content [key] min-content [language]  min-content [plural]  min-content [translation] auto [actions] 100px;
-    
-  }
-  
+  display: grid;
+  grid-template-columns: [selector] min-content [key] min-content [language] min-content [plural] min-content [translation] auto [actions] 100px;
 
-  .grid-item-selector {
-    grid-column-start: selector;
-    grid-row-end: span 1000;
-    display: flex;
-  }
+}
 
-  .grid-item-key {
-    grid-column-start: key;
-    grid-row-end: span 1000;
-    display: flex;
-    flex-direction: column;
-    font-weight: 600;
-  }
+.grid-item-selector {
+  grid-column-start: selector;
+  grid-row-end: span 1000;
+  display: flex;
+}
 
-  .grid-item-key .key-usage .localized-label .name {
-    white-space: nowrap;
-  }
+.grid-item-key {
+  grid-column-start: key;
+  grid-row-end: span 1000;
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
+}
 
+.grid-item-key .key-usage .localized-label .name {
+  white-space: nowrap;
+}
 
-  .grid-item-key .key-usage .collapsible-header {
-    display: flex;
-  }
+.grid-item-key .key-usage .collapsible-header {
+  display: flex;
+}
 
+.grid-item-key .key-usage .collapsible-header .svg-container {
+  width: 7px;
+  height: 7px;
+  margin: 3px;
+}
 
+.grid-item-key .key-usage .collapsible-header .title {
+  padding: 0 8px;
+  font-feature-settings: "ss02" on, "liga" on, "calt" on;
+  white-space: pre;
+  text-align: left;
+}
 
-  .grid-item-key .key-usage .collapsible-header .svg-container {
-    width: 7px;
-    height: 7px;
-    margin: 3px;
-  }
+.grid-item-key-header {
+  display: flex;
+  font-weight: 600;
+}
 
+.rowText {
+  padding: 0 8px;
+  font-feature-settings: "ss02" on, "liga" on, "calt" on;
+  line-height: 32px;
+  height: 32px;
+  white-space: pre;
+  text-align: left;
+}
 
-  
-  .grid-item-key .key-usage .collapsible-header .title {
-    padding: 0 8px;
-    font-feature-settings: "ss02" on,"liga" on,"calt" on;
-    white-space: pre;
-    text-align: left;
-  }
+.skipped .rowText {
+  text-decoration: line-through;
+}
 
-  .grid-item-key-header {
-    display: flex;
-    font-weight: 600;
-  }
-  
-  .rowText {
-      padding: 0 8px;
-      font-feature-settings: "ss02" on,"liga" on,"calt" on;
-      line-height: 32px;
-      height: 32px;
-      white-space: pre;
-      text-align: left;
-  }
+.checkboxHitbox {
+  display: flex;
+  margin-right: 0;
+  flex: 0 0 32px;
+  height: 32px;
+  width: 32px;
+  user-select: none;
+  justify-content: center;
+  align-items: center;
+  cursor: default;
+  position: relative;
+}
 
-  .skipped .rowText {
-      text-decoration: line-through;
-  }
-  
-  .checkboxHitbox {
-      display: flex;
-      margin-right: 0;
-      flex: 0 0 32px;
-      height: 32px;
-      width: 32px;
-      user-select: none;
-      justify-content: center;
-      align-items: center;
-      cursor: default;
-      position: relative;
-  }
-  
-  .checkboxHitbox .svg-container {
+.checkboxHitbox .svg-container {
 
-    background-color: var(--figma-color-icon-onbrand, #fff);
-    width: 8px;
-    height: 8px;
-  }
+  background-color: var(--figma-color-icon-onbrand, #fff);
+  width: 8px;
+  height: 8px;
+}
 
-  .checkboxInput {
-      margin: 0;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      appearance: none;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-  
-      flex: 0 0 32px;
-      width: 14px;
-      height: 14px;
-      display: inline-flex;
-      outline: none;
-  }
-  
-  .checkboxInput:after {
-      width: 12px;
-      height: 12px;
-      box-sizing: border-box;
-      background-color: transparent;
-  }
-  
-  .checkboxInput:after {
-      content: "";
-      display: inline-flex;
-      margin: 1px;
-      width: 12px;
-      height: 12px;
-      border-radius: 2px;
-      box-sizing: border-box;
-      background-color: var(--color-bg, white);
-      border: 1px solid var(--color-icon, #333333);
-      background-clip: padding-box;
-  }
-  
-  .checkboxInput:checked:after {
-      border-color: var(--color-bg-brand, #0d99ff);
-      background-color: var(--color-bg-brand, #0d99ff);
-  }
-  
-  .checkbox--checkmark {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate3d(-50%,-50%,0)!important;
-  }
-  
-  .grid-item-key .layerIcon {
-      width: 16px;
-      display: flex;
-      justify-content: center;
-      flex-shrink: 0;
-      height: 32px;
-      align-items: center;
-      color: var(--color-icon-tertiary, #b3b3b3);
-      fill: var(--color-icon-tertiary, #b3b3b3);
-      stroke: var(--color-icon-tertiary, #b3b3b3);
-      color: var(--color-icon, #333333);
-      fill: var(--color-icon, #333333);
-      stroke: var(--color-icon, #333333);
-  }
-  
-  .grid-item-key .iconWrapper {
-      position: relative;
-  }
-  
-  .grid-item-language {
-    grid-column-start: language;
-  }
-  
-  .grid-item-plural {
-    grid-column-start: plural;
-  }
-  
-  .grid-item-translation {
-    grid-column-start: translation;
-    padding: 0px;
-  }
-  
-  .grid-translation {
-      justify-self: stretch;
-      
-  }
-  
+.checkboxInput {
+  margin: 0;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 
-  
-  .grid-item-actions {
-    display: flex;
-    justify-content: flex-end;
-    padding-right: 6px;
-    grid-column-start: actions;
-  }
-  
-  
+  flex: 0 0 32px;
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  outline: none;
+}
 
-  .button .svg-container {
-    width: 32px;
-    height: 32px;
-    
-  }
-  .button .svg-container.history-svg {
-    width: 16px;
-    height: 16px;    
-  }
+.checkboxInput:after {
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  background-color: transparent;
+}
 
-  .button .svg-container.linked-svg {
-    width: 9px;
-    height: 15px;    
-  }
+.checkboxInput:after {
+  content: "";
+  display: inline-flex;
+  margin: 1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  box-sizing: border-box;
+  background-color: var(--color-bg, white);
+  border: 1px solid var(--color-icon, #333333);
+  background-clip: padding-box;
+}
 
+.checkboxInput:checked:after {
+  border-color: var(--color-bg-brand, #0d99ff);
+  background-color: var(--color-bg-brand, #0d99ff);
+}
 
-  .button .svg-container.unlinked-svg {
-    width: 9px;
-    height: 15px;    
-  }
-  
-  .button.layerIcon {
-      width: 16px;
-      display: flex;
-      justify-content: center;
-      flex-shrink: 0;
-      height: 100%;
-      align-items: center;
-      color: var(--color-icon-tertiary, #b3b3b3);
-      fill: var(--color-icon-tertiary, #b3b3b3);
-      stroke: var(--color-icon-tertiary, #b3b3b3);
-      color: var(--color-icon, #333333);
-      fill: var(--color-icon, #333333);
-      stroke: var(--color-icon, #333333);
-      
-  }
-  
-  .button.layerIcon {
-      position: relative;
-      border: 1px solid transparent;
-      height: 32px;
-      width: 32px;
-      border-radius: 2px;
-  }
+.checkbox--checkmark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate3d(-50%, -50%, 0) !important;
+}
+
+.grid-item-key .layerIcon {
+  width: 16px;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 32px;
+  align-items: center;
+  color: var(--color-icon-tertiary, #b3b3b3);
+  fill: var(--color-icon-tertiary, #b3b3b3);
+  stroke: var(--color-icon-tertiary, #b3b3b3);
+  color: var(--color-icon, #333333);
+  fill: var(--color-icon, #333333);
+  stroke: var(--color-icon, #333333);
+}
+
+.grid-item-key .iconWrapper {
+  position: relative;
+}
+
+.grid-item-language {
+  grid-column-start: language;
+}
+
+.grid-item-plural {
+  grid-column-start: plural;
+}
+
+.grid-item-translation {
+  grid-column-start: translation;
+  padding: 0px;
+}
+
+.grid-translation {
+  justify-self: stretch;
+
+}
 
 
 
-  .selected .button.iconWrapper:hover {
-    background-color: var(--figma-color-bg-selected-hover);
-    }
-  
-
-  .button.iconWrapper:hover {
-    background-color: var(--figma-color-bg-hover);
-    }
-  
-
-  .keyWrapper {
-      display: contents;
-  }
-  
-  
-  .keyPluralWrapper {
-      display: contents;
-  }
-
-  .languageWrapper {
-    display: contents;
-  }
-  
-
-  
-
-  .keyPluralWrapper:nth-child(even)>div {
-    background-color: green;
-  }
+.grid-item-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 6px;
+  grid-column-start: actions;
+}
 
 
-  .keyPluralWrapper.onePlural>div {
-    background-color: transparent;
-  }
 
-  .languageWrapper>div:first-child {
-    background-color: #E5E5E5;
-  }
+.button .svg-container {
+  width: 32px;
+  height: 32px;
 
-  .languageWrapper:nth-child(odd)>div:last-child>div {
-    
-  }
+}
 
-  .languageWrapper:nth-child(even)>div:last-child>div {
-    background-color: #F0F0F0;
-  }
-  
-  .side-drawer { 
-     height: 100%;
-     background: white;
-     position: fixed;
-     top: 0;
-     right: 0;
-     width: 40%;
-     z-index: 200;
-     box-shadow: 1px 0px 7px rgba(0,0,0,0.5); 
-     transform: translateX(100%);
-     transition: transform 0.3s ease-out;
-  }
-  
-  .side-drawer.open {
-     transform: translateX(0);
-  }
-  
+.button .svg-container.history-svg {
+  width: 16px;
+  height: 16px;
+}
 
-  .keyWrapper.selected>div {
-    background-color: var(--figma-color-bg-selected-secondary, #daebf7);
-  }
 
-  .keyWrapper.selected>div>div {
-    background-color: var(--figma-color-bg-selected-hover, #daebf7);
-  }
+.button .svg-container.eye-closed-svg {
+  width: 16px;
+  height: 16px;
+}
 
-  .keyWrapper.selected .languageWrapper:nth-child(even)>div:last-child>div {
-    background-color: var(--figma-color-bg-selected, #daebf7);    
-  }
+.button .svg-container.eye-svg {
+  width: 16px;
+  height: 16px;
+}
 
-  .keyWrapper.selected .languageWrapper:nth-child(odd)>div:last-child>div {
-    background-color: var(--figma-color-bg-selected-secondary, #daebf7);  
-  }
+.button .svg-container.linked-svg {
+  width: 9px;
+  height: 15px;
+}
 
-  .style_picker--search {
-    position: sticky;
-    z-index: 10;
-    top: 0;
-    box-sizing: border-box;
-    padding-right: 8px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    width: 100%;
-    overflow: hidden;
-    background-color: var(--figma-color-bg);
-    color: var(--figma-color-text);
-    fill: var(--figma-color-text);
+
+.button .svg-container.unlinked-svg {
+  width: 9px;
+  height: 15px;
+}
+
+.button.layerIcon {
+  width: 16px;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 100%;
+  align-items: center;
+  color: var(--color-icon-tertiary, #b3b3b3);
+  fill: var(--color-icon-tertiary, #b3b3b3);
+  stroke: var(--color-icon-tertiary, #b3b3b3);
+  color: var(--color-icon, #333333);
+  fill: var(--color-icon, #333333);
+  stroke: var(--color-icon, #333333);
+
+}
+
+.button.layerIcon {
+  position: relative;
+  border: 1px solid transparent;
+  height: 32px;
+  width: 32px;
+  border-radius: 2px;
+}
+
+
+
+.selected .button.iconWrapper:hover {
+  background-color: var(--figma-color-bg-selected-hover);
+}
+
+
+.button.iconWrapper:hover {
+  background-color: var(--figma-color-bg-hover);
+}
+
+
+.keyWrapper {
+  display: contents;
+}
+
+
+.keyPluralWrapper {
+  display: contents;
+}
+
+.languageWrapper {
+  display: contents;
+}
+
+
+
+
+.keyPluralWrapper:nth-child(even)>div {
+  background-color: green;
+}
+
+
+.keyPluralWrapper.onePlural>div {
+  background-color: transparent;
+}
+
+.languageWrapper>div:first-child {
+  background-color: #E5E5E5;
+}
+
+.languageWrapper:nth-child(odd)>div:last-child>div {}
+
+.languageWrapper:nth-child(even)>div:last-child>div {
+  background-color: #F0F0F0;
+}
+
+.side-drawer {
+  height: 100%;
+  background: white;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 40%;
+  z-index: 200;
+  box-shadow: 1px 0px 7px rgba(0, 0, 0, 0.5);
+  transform: translateX(100%);
+  transition: transform 0.3s ease-out;
+}
+
+.side-drawer.open {
+  transform: translateX(0);
+}
+
+
+.keyWrapper.selected>div {
+  background-color: var(--figma-color-bg-selected-secondary, #daebf7);
+}
+
+.keyWrapper.selected>div>div {
+  background-color: var(--figma-color-bg-selected-hover, #daebf7);
+}
+
+.keyWrapper.selected .languageWrapper:nth-child(even)>div:last-child>div {
+  background-color: var(--figma-color-bg-selected, #daebf7);
+}
+
+.keyWrapper.selected .languageWrapper:nth-child(odd)>div:last-child>div {
+  background-color: var(--figma-color-bg-selected-secondary, #daebf7);
+}
+
+.style_picker--search {
+  position: sticky;
+  z-index: 10;
+  top: 0;
+  box-sizing: border-box;
+  padding-right: 8px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--figma-color-bg);
+  color: var(--figma-color-text);
+  fill: var(--figma-color-text);
 }
 
 .style_picker--search:after {
-    content: "";
-    z-index: 10;
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background-color: var(--figma-color-border, rgba(0, 0, 0, .1));
+  content: "";
+  z-index: 10;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: var(--figma-color-border, rgba(0, 0, 0, .1));
 }
 
 .style_picker--search .svg-container {
-    position: absolute;
-    left: 16px;
-    width: 10px;
-    height: 10px;
+  position: absolute;
+  left: 16px;
+  width: 10px;
+  height: 10px;
 }
 
 .search--searchInput {
-    padding: 0 8px 0 35px;
+  padding: 0 8px 0 35px;
 }
+
 .search--searchInput {
-    outline: none;
-    border: none;
-    height: 100%;
-    width: 100%;
-    box-sizing: border-box;
-    flex: 1;
-    background-color: var(--color-bg);
-    color: var(--color-text);
+  outline: none;
+  border: none;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  flex: 1;
+  background-color: var(--color-bg);
+  color: var(--color-text);
 }
+
 .lazy_input {
-    cursor: auto;
+  cursor: auto;
 }
-  

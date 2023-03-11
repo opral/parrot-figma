@@ -1,3 +1,4 @@
+/* eslint-disable prefer-template */
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 /* eslint-disable jsx-a11y/label-has-associated-control */
@@ -157,7 +158,7 @@ export default function TranslationKeyListItem({
                       }]);
                     }}
                   >
-                    <span className="svg-container eye-svg" />
+                    <span className={'svg-container' + (translationKey.translations[language as Language]?.[plural as Plural]?.skip === true ? ' eye-closed-svg' : ' eye-svg')} />
                   </span>
                   <span
                     className="layerIcon iconWrapper button"

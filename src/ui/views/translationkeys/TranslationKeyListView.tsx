@@ -12,10 +12,11 @@ import Plural from '../../../lib/base/Plural';
 import HistoryEntry from '../../compontents/history/HistoryEntry';
 import './TranslationKeyView.css';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
+import MatchView from '../../compontents/matchview/MatchView';
 
 type TranslationKeyListViewProps = {
   keys: TranslationKeys,
-  
+
   translationKeyStore: MemoryTranslationKeyStore
   localizedLabelManager: LocalizedLabelManagerUI
 
@@ -47,15 +48,14 @@ export default function TranslationKeyListView({
   }, []);
 
   useEffect(() => {
+    let renderStepTimeout : number | undefined;
     if (Object.keys(keys).length > renderEntries) {
-      // console.log('scheduling next portion');
-      setTimeout(() => {
+      renderStepTimeout = setTimeout(() => {
         // console.log(`rending next portion ${renderEntries + 100}`);
         setRenderEntries((value) => value + 250);
-      }, 100);
-    } else {
-      // console.log('rendering completed');
+      }, 10);
     }
+    return () => { if (renderStepTimeout !== undefined) clearTimeout(renderStepTimeout); };
   }, [renderEntries]);
 
   if (Object.keys(keys).length === 0) {
@@ -67,6 +67,8 @@ export default function TranslationKeyListView({
       setHistory(historyEntries);
     });
   };
+
+  const longestKey = Object.keys(keys).reduce((acc, key) => (key.length > acc.length ? key : acc), '');
 
   let rendered = 0;
 
@@ -88,6 +90,17 @@ export default function TranslationKeyListView({
         />
       </div>
       <div className="grid">
+        <div className="grid-hidden-layout-helper">
+          <TranslationKeyListItem
+            key="max-width-helper-row"
+            translationKeyStore={translationKeyStore}
+            localizedLabelManager={localizedLabelManager}
+            searchMatch={undefined}
+            showHistory={showHistory}
+            translationKey={keys[longestKey]}
+            figmaRemote={figmaRemote}
+          />
+        </div>
         {Object.keys(keys).map((key) => {
           if (rendered > renderEntries) {
             return;

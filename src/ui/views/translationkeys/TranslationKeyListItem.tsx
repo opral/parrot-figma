@@ -96,7 +96,7 @@ export default function TranslationKeyListItem({
               </div>
               {showUsage && referencingLabels.map((label) => (
 
-                <div className="localized-label" onClick={() => onNodeSelect(label.nodeId)}>
+                <div key={label.nodeId} className="localized-label" onClick={() => onNodeSelect(label.nodeId)}>
                   <div className="spacer" />
                   <div className="element-symbol">
                     <div className="svg-container number-sign-svg" />
@@ -127,7 +127,7 @@ export default function TranslationKeyListItem({
           <div className={`languageWrapper${languageSkipped ? ' skipped ' : ''}`} key={language}>
             <div className="grid-item-language"><span className="rowText">{language}</span></div>
             {translationKey.plurals.map((plural) => (
-              <div className={`keyPluralWrapper ${translationKey.plurals.length === 1 ? 'onePlural' : ' multiplePlurals'}${translationKey.translations[language as Language]?.[plural as Plural]?.skip === true ? ' skipped' : ''}`}>
+              <div key={plural} className={`keyPluralWrapper ${translationKey.plurals.length === 1 ? 'onePlural' : ' multiplePlurals'}${translationKey.translations[language as Language]?.[plural as Plural]?.skip === true ? ' skipped' : ''}`}>
                 <div className="grid-item-plural"><span className="rowText">{plural}</span></div>
                 <div className="grid-item-translation translation-container translation">
                   <TranslationEditor

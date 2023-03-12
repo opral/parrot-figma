@@ -59,7 +59,7 @@ Todos:
  - [x] specify languages for file
  - [x] specfify base language 
  - [x] show baselanguage in lokalised key always on top 
- - [ ] make header columns fixed size based on maximum column content
+ - [x] make header columns fixed size based on maximum column content
  - [ ] allow the user to resolve the apply conflicts 
  - [ ] handle automatic design update based on version
  - [ ] allow user to select a key for a label
@@ -76,6 +76,7 @@ Todos:
  - [ ] history (who changed what when?) 
  - [ ] qa handling of translation
  - [ ] fix window manager bugs
+ - [ ] filter - match case, need review etc based on figmas search design
  
  - [ ] import of ios dict
  - [ ] import of android dict

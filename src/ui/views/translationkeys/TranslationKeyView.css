@@ -4,6 +4,15 @@
 
 }
 
+.grid-hidden-layout-helper {
+  display: contents;
+} 
+
+.grid-hidden-layout-helper * {
+  height: 0px !important;
+  overflow: hidden;
+}
+
 .grid-item-selector {
   grid-column-start: selector;
   grid-row-end: span 1000;

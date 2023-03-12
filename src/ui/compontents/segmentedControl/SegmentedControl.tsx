@@ -40,7 +40,6 @@ export default function SegmentedControl<Type>({
           <div className={`svg-container ${segment.iconName}`} />
         </div>
       ))}
-
     </div>
   );
 }

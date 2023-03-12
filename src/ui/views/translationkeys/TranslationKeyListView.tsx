@@ -15,8 +15,7 @@ import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabel
 
 type TranslationKeyListViewProps = {
   keys: TranslationKeys,
-  languages: Language[]
-
+  
   translationKeyStore: MemoryTranslationKeyStore
   localizedLabelManager: LocalizedLabelManagerUI
 
@@ -26,10 +25,8 @@ type TranslationKeyListViewProps = {
 
 export default function TranslationKeyListView({
   keys,
-  languages,
   translationKeyStore,
   localizedLabelManager,
-
   figmaRemote,
   refreshKeys,
 }: TranslationKeyListViewProps) {
@@ -134,7 +131,6 @@ export default function TranslationKeyListView({
           return (
             <TranslationKeyListItem
               key={key}
-              languages={languages}
               translationKeyStore={translationKeyStore}
               localizedLabelManager={localizedLabelManager}
               searchMatch={match}

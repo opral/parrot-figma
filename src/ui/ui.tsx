@@ -16,10 +16,9 @@ import WindowManagerUi from '../lib/windowManager/WindowManagerUI';
 import { WindowMode } from '../lib/windowManager/WindowManagerSandbox';
 import { TranslationKeys } from '../lib/keystore/TranslationKey';
 import TranslationKeyListView from './views/translationkeys/TranslationKeyListView';
-import Language from '../lib/base/Language';
 
 import MemoryTranslationKeyStore from '../lib/keystore/MemoryTranslationKeyStore';
-import FigmaFileTranslationKeyStore from '../lib/keystore/FigmaFileTranslationKeyStore';
+import { FigmaFileTranslationKeyStore } from '../lib/keystore/FigmaFileTranslationKeyStore';
 
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
 import LocalizedLabelManagerUI from '../lib/localizedlabels/LocalizedLabelManagerUI';
@@ -27,6 +26,7 @@ import LocalizedLabelManagerUI from '../lib/localizedlabels/LocalizedLabelManage
 import './tabbar.css';
 import './assets/icons.css';
 import SegmentedControl from './compontents/segmentedControl/SegmentedControl';
+import Filesetup from './views/filesetup/Filesetup';
 
 WindowManagerUi.init(
   document.getElementById('sizing-wrapper')!,
@@ -59,7 +59,6 @@ function App() {
   const [appScreen, setAppScreen] = useState('design');
 
   const [translatedKeys, setTranslatedKeys] = useState({} as TranslationKeys);
-  const [languages, setLanguages] = useState([] as Language[]);
 
   const [initialLoadingCompleted, setIinitialLoadingCompleted] = useState(false);
 
@@ -67,11 +66,6 @@ function App() {
 
   const refreshTranslatedKeys = async () => {
     setTranslatedKeys(memoryTranslationKeyStore.translationKeys);
-  };
-
-  const refreshLanguages = async () => {
-    // let languages = await figmaHelperRemote.getLanguages();
-    setLanguages([Language.De, Language.En, Language.Bg, Language.Fr, Language.Cs, Language.It, Language.Nl]);
   };
 
   useEffect(() => {
@@ -83,7 +77,6 @@ function App() {
       setDefaultLinkStyle(await remoteLocalizedLabelManager.getLinkStyle());
 
       await refreshTranslatedKeys();
-      await refreshLanguages();
 
       setIinitialLoadingCompleted(true);
     })();
@@ -96,6 +89,12 @@ function App() {
 
   if (!initialLoadingCompleted) {
     return <>Not ready</>;
+  } if (localizedLabelManager.keyStore.config!.baseLanguage === undefined) {
+    return (
+      <Filesetup
+        translationKeyStore={memoryTranslationKeyStore}
+      />
+    );
   }
 
   let view;
@@ -105,26 +104,27 @@ function App() {
         translationKeyStore={memoryTranslationKeyStore}
         localizedLabelManager={localizedLabelManager}
         keys={translatedKeys}
-        languages={languages}
         figmaRemote={figmaRemote}
         refreshKeys={refreshTranslatedKeys}
       />
     );
   } else if (appScreen === 'settings') {
-    view = (
+    view = <Filesetup
+              translationKeyStore={memoryTranslationKeyStore}
+            />  
+  /*(
       <ConfigView
         linkStyle={defaultLinkStyle}
         setLinkStyle={setLinkStyle}
         translationKeyStore={memoryTranslationKeyStore}
       />
-    );
+    );*/
   } else {
     view = (
       <LocalizedLabelsListView
         translationKeyStore={memoryTranslationKeyStore}
         localizedLabelManager={localizedLabelManager}
         figmaRemote={figmaRemote}
-        languages={languages}
       />
     );
   }

@@ -11,7 +11,6 @@ import Language from '../../../lib/base/Language';
 
 type LocalizedFrameGroupProps = {
   localizedLabels: LocalizedLabel[],
-  languages: Language[],
   translationKeyStore: MemoryTranslationKeyStore
   selectionByFrame: {
     [rootFrameId: string]: string[]
@@ -22,7 +21,6 @@ type LocalizedFrameGroupProps = {
 
 export default function LocalizedFrameGroup({
   localizedLabels,
-  languages,
   translationKeyStore,
   selectionByFrame,
   figmaRemote,
@@ -37,6 +35,8 @@ export default function LocalizedFrameGroup({
 
   let rootFrameLanguage: SelectOption | undefined;
   const languageOptiones = [] as SelectOption[];
+
+  const languages = translationKeyStore.getLanugages()!
 
   for (const language of languages) {
     const currentLanguageOption = {

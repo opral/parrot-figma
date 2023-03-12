@@ -14,7 +14,7 @@ export interface TranslationKeyStore {
 }
 
 export abstract class BaseTranslationKeyStore implements TranslationKeyStore {
-  async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string; skip: boolean }[]): Promise<TranslationKey> {
+  async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[]): Promise<TranslationKey> {
     const existingKey = this.getKey(keyName);
     if (existingKey) {
       throw Error('tried to create a key that already existed');
@@ -49,7 +49,7 @@ export abstract class BaseTranslationKeyStore implements TranslationKeyStore {
     return this.persistKey(createdKey);
   }
 
-  async updateKey(keyName: string, translations: { language: Language; plural: Plural; text: string; skip: boolean }[]) {
+  async updateKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[]) {
     const keyToUpdate = this.getKey(keyName);
 
     if (keyToUpdate === undefined) {

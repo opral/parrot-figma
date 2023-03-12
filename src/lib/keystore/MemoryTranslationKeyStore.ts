@@ -1,24 +1,51 @@
 import Language from '../base/Language';
 import Plural from '../base/Plural';
 import { TranslationKey, TranslationKeys } from './TranslationKey';
-import { BaseTranslationKeyStore, TranslationKeyStore } from './BaseTranslationKeyStore';
+import { BaseTranslationKeyStore } from './BaseTranslationKeyStore';
+import { Config, FigmaFileTranslationKeyStore } from './FigmaFileTranslationKeyStore';
 
 export default class MemoryTranslationKeyStore extends BaseTranslationKeyStore {
   async getHistory(translationKeyName: string, language: Language, plural: Plural): Promise<{ text?: string | undefined; }[]> {
     return this.parentKeyStore.getHistory(translationKeyName, language, plural);
   }
 
-  parentKeyStore: TranslationKeyStore;
+  parentKeyStore: FigmaFileTranslationKeyStore;
+
+  config: Config | undefined;
 
   translationKeys: TranslationKeys = { };
 
-  constructor(parentKeyStore: TranslationKeyStore) {
+  constructor(parentKeyStore: FigmaFileTranslationKeyStore) {
     super();
     this.parentKeyStore = parentKeyStore;
   }
 
   getKey(keyName: string) : TranslationKey | undefined {
     return this.translationKeys[keyName];
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  getLanugages(): Language[] | undefined {
+    return this.config!.enabledLanguages;
+  }
+
+  async setLanguages(languages: Language[]) {
+    this.config!.enabledLanguages = languages;
+    const parentConfig = await this.parentKeyStore.getConfig();
+    parentConfig.enabledLanguages = languages;
+    this.parentKeyStore.setConfig(parentConfig);
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  getBaseLanugage(): Language | undefined {
+    return this.config!.baseLanguage;
+  }
+
+  async setBaseLanguages(language: Language) {
+    this.config!.baseLanguage = language;
+    const parentConfig = await this.parentKeyStore.getConfig();
+    parentConfig.baseLanguage = language;
+    this.parentKeyStore.setConfig(parentConfig);
   }
 
   async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[]): Promise<TranslationKey> {
@@ -40,6 +67,7 @@ export default class MemoryTranslationKeyStore extends BaseTranslationKeyStore {
   }
 
   async load(): Promise<TranslationKeys> {
+    this.config = await this.parentKeyStore.getConfig();
     this.translationKeys = await this.parentKeyStore.load();
     return this.translationKeys;
   }

@@ -3,8 +3,15 @@ import Plural from '../base/Plural';
 import { TranslationKey, TranslationKeys } from './TranslationKey';
 import { BaseTranslationKeyStore } from './BaseTranslationKeyStore';
 
-export default class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
+export interface Config {
+  baseLanguage?: Language,
+  enabledLanguages?: Language[]
+}
+
+export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
   public proxClassName = 'LocalizedLabelManager';
+
+  languageConfigDataKey = 'aar_l_';
 
   keyPrefix = 'aar_k__1';
 
@@ -18,6 +25,23 @@ export default class FigmaFileTranslationKeyStore extends BaseTranslationKeyStor
     }
 
     return JSON.parse(keyRaw) as TranslationKey;
+  }
+
+  async getConfig() {
+    const keyRaw = figma.root.getPluginData(this.languageConfigDataKey);
+
+    if (keyRaw === '' || !keyRaw) {
+      return {
+        baseLanguage: undefined,
+        enabledLanguages: undefined,
+      } as Config;
+    }
+
+    return (JSON.parse(keyRaw) as Config);
+  }
+
+  async setConfig(languageConfig: Config) {
+    figma.root.setPluginData(this.languageConfigDataKey, JSON.stringify(languageConfig));
   }
 
   async getHistory(translationKeyName: string, language: Language, plural: Plural) : Promise<{ text?: string }[]> {
@@ -115,11 +139,11 @@ export default class FigmaFileTranslationKeyStore extends BaseTranslationKeyStor
     return translationKey;
   }
 
-  async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string; skip: boolean }[]): Promise<TranslationKey> {
+  async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[]): Promise<TranslationKey> {
     return super.createKey(keyName, translations);
   }
 
-  async updateKey(keyName: string, translations: { language: Language; plural: Plural; text: string; skip: boolean }[]): Promise<TranslationKey> {
+  async updateKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[]): Promise<TranslationKey> {
     return super.updateKey(keyName, translations);
   }
 

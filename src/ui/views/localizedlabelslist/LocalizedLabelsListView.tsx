@@ -9,7 +9,6 @@ import LocalizedFrameGroup from './LocalizedFrameGroup';
 import './LocalizedLabelsListView.css';
 
 type LocalizedLabelsListViewProps = {
-  languages: Language[]
   translationKeyStore: MemoryTranslationKeyStore
   figmaRemote: FigmaUtil
   localizedLabelManager: LocalizedLabelManagerUI,
@@ -20,7 +19,6 @@ interface LocalizedLabelListItem extends LocalizedLabel {
 }
 
 export default function LocalizedLabelsListView({
-  languages,
   translationKeyStore,
   figmaRemote,
   localizedLabelManager,
@@ -109,7 +107,6 @@ export default function LocalizedLabelsListView({
     <div className="table">
       {Object.keys(selection).map((mainFrameId) => (
         <LocalizedFrameGroup
-          languages={languages}
           localizedLabels={localizedLabels}
           selectionByFrame={selection}
           translationKeyStore={translationKeyStore}

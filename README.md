@@ -55,14 +55,50 @@ https://lokalise.com/blog/design-stage-localization/
 
 
 Todos: 
- - make header columns fixed size based on maximum column content
- - allow the user to resolve the apply
- - key propagation from sandbox
- - export tool for ios
- - export tool for android
- - export tool for react 
- - localize tool using the tool :-)
- - import of ios dict
- - import of android dict
- - fix window manager bugs
 
+ - [x] specify languages for file
+ - [x] specfify base language 
+ - [x] show baselanguage in lokalised key always on top 
+ - [ ] make header columns fixed size based on maximum column content
+ - [ ] allow the user to resolve the apply conflicts 
+ - [ ] handle automatic design update based on version
+ - [ ] allow user to select a key for a label
+ - [ ] allow to add a key manually 
+ - [ ] plural select
+ - [ ] key propagation from sandbox (multi user test)
+
+ - [ ] variable replacement logic
+ - [ ] distinct visual style for base language like bold
+ - [ ] translation editor ux - we should be able to hide skipped values from option in toolbar
+
+ - [ ] allow to rename keys
+ 
+ - [ ] history (who changed what when?) 
+ - [ ] qa handling of translation
+ - [ ] fix window manager bugs
+ 
+ - [ ] import of ios dict
+ - [ ] import of android dict
+ 
+ - [ ] add export tab with versioning
+ - [ ] export tool for ios
+ - [ ] export tool for android
+ - [ ] export tool for react 
+ - [ ] localize tool using the tool :-)
+ 
+ - [ ] sample values management tab?
+ - [ ] oboarding
+ - [ ] pricing overview 
+ - [ ] blog
+
+ 
+Daal
+Mata
+Palak
+
+
+Plugins:
+https://www.figma.com/community/plugin/864431140615310499/Transifex-Figma-Plugin
+https://www.figma.com/community/plugin/818840482503404814/Lokalise
+https://www.figma.com/community/plugin/803669834214399971/Phrase-Strings
+https://www.figma.com/community/plugin/802555101361690489/Crowdin-for-Figma

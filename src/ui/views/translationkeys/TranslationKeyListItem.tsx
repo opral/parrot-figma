@@ -16,7 +16,6 @@ import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabel
 import MatchView from '../../compontents/matchview/MatchView';
 
 type TranslationKeyListItemProps = {
-  languages: Language[],
   translationKey: TranslationKey,
   showHistory: Function,
   figmaRemote: FigmaUtil,
@@ -26,7 +25,6 @@ type TranslationKeyListItemProps = {
 };
 
 export default function TranslationKeyListItem({
-  languages,
   translationKey,
   showHistory,
   figmaRemote,
@@ -46,6 +44,9 @@ export default function TranslationKeyListItem({
     await figmaRemote.selectNode(nodeId);
   }
 
+  const baseLang = translationKeyStore.getBaseLanugage();
+
+  const languages = [baseLang, ...translationKeyStore.getLanugages()!.filter((l) => l !== baseLang)] as Language[];
   /*
         for (let plural of Object.values(Plural)) {
             const pluralOption = {

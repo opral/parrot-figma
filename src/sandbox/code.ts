@@ -8,7 +8,7 @@
 // This shows the HTML page in "ui.html".
 
 import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
-import FigmaFileTranslationKeyStore from '../lib/keystore/FigmaFileTranslationKeyStore';
+import { FigmaFileTranslationKeyStore } from '../lib/keystore/FigmaFileTranslationKeyStore';
 import FigmaUtil from '../shared/FigmaUtil';
 import FigmaHelper from '../shared/FigmaHelper';
 import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowManagerSandbox';

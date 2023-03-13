@@ -1,13 +1,14 @@
+/* eslint-disable consistent-return */
 import Language from '../base/Language';
 import Plural from '../base/Plural';
-import { TranslationKey, TranslationKeys } from './TranslationKey';
+import { HistoryEntry, TranslationKey, TranslationKeys } from './TranslationKey';
 
 export interface TranslationKeyStore {
   createKey(keyName: string, translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[]) : Promise<TranslationKey>
   getKey(keyName: string) : TranslationKey | undefined
   updateKey(keyName: string, translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[]) : Promise<TranslationKey>
   deleteKey(keyName: string) : Promise<void>
-  getHistory(translationKeyName: string, language: Language, plural: Plural) : Promise<{ text?: string }[]>
+  getHistory(translationKeyName: string) : Promise<HistoryEntry[]>
   load(): Promise<TranslationKeys>
   fillPlaceholdersWithSampleData(text: string, language: Language, plural: Plural): string
   importFromLocalise() : Promise<void>
@@ -45,6 +46,7 @@ export abstract class BaseTranslationKeyStore implements TranslationKeyStore {
       tags: [],
       plurals,
       translations: translationsObj,
+      history: [], // first history entry will be added in persistKey method...
     } as TranslationKey;
     return this.persistKey(createdKey);
   }
@@ -57,6 +59,7 @@ export abstract class BaseTranslationKeyStore implements TranslationKeyStore {
     }
 
     for (const translation of translations) {
+      // if no key for the given language exists - create an empty one for plural 'other' with version -1
       if (!keyToUpdate.translations[translation.language]) {
         keyToUpdate.translations[translation.language] = {
           other: {
@@ -66,14 +69,16 @@ export abstract class BaseTranslationKeyStore implements TranslationKeyStore {
         };
       }
 
+      // if the target plural does not extist yet create a dummy one - vlues get overriden in next step
       if (!keyToUpdate.translations[translation.language]![translation.plural]) {
         keyToUpdate.translations[translation.language]![translation.plural] = {
-          version: keyToUpdate.translations[translation.language]!.other!.version,
+          version: -1,
           skip: false,
         };
       }
 
-      keyToUpdate.translations[translation.language]![translation.plural]!.version = keyToUpdate.translations[translation.language]![translation.plural]!.version + 1;
+      // create a new translation entry with increased version
+      keyToUpdate.translations[translation.language]![translation.plural]!.version = keyToUpdate.latestVersion + 1;
       keyToUpdate.translations[translation.language]![translation.plural]!.text = translation.text;
       keyToUpdate.translations[translation.language]![translation.plural]!.skip = translation.skip;
 
@@ -84,7 +89,35 @@ export abstract class BaseTranslationKeyStore implements TranslationKeyStore {
     return this.persistKey(keyToUpdate);
   }
 
-  abstract getHistory(translationKeyName: string, language: Language, plural: Plural) : Promise<{ text?: string }[]>;
+  static getHistoryEntry(key: TranslationKey, language: Language, plural: Plural, version: number) : HistoryEntry | undefined {
+    if (key.history[version]?.[language]?.[plural]) {
+      return key.history[version];
+    }
+  }
+
+  static getLatestHistoryEntry(key: TranslationKey, language: Language, plural: Plural) : { version: number, historyEntry: HistoryEntry } | undefined {
+    let lastEntry: HistoryEntry | undefined;
+    let lastHistoryEntryIndex = -1;
+    let currentIndex = 0;
+    for (const keyHistoryEntry of key.history) {
+      if (keyHistoryEntry[language]?.[plural] !== undefined) {
+        lastEntry = keyHistoryEntry;
+        lastHistoryEntryIndex = currentIndex;
+      }
+      currentIndex += 1;
+    }
+
+    if (!lastEntry) {
+      return;
+    }
+
+    return {
+      version: lastHistoryEntryIndex,
+      historyEntry: lastEntry,
+    };
+  }
+
+  abstract getHistory(translationKeyName: string) : Promise<HistoryEntry[]>;
 
   abstract getKey(keyName: string): TranslationKey | undefined;
 

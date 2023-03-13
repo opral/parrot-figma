@@ -46,19 +46,8 @@ export default function TranslationKeyListItem({
 
   const baseLang = translationKeyStore.getBaseLanugage();
 
+  // create an array of languages with baselanguage at position zero
   const languages = [baseLang, ...translationKeyStore.getLanugages()!.filter((l) => l !== baseLang)] as Language[];
-  /*
-        for (let plural of Object.values(Plural)) {
-            const pluralOption = {
-                value: plural, label: plural
-            }
-
-            if (translationState.plurals.indexOf(plural) === -1) {
-                newPluralOptions.push(pluralOption)
-            }
-
-        }
-    */
 
   return (
     <div ref={rowRef} className={`keyWrapper${selected ? ' selected' : ''}`}>

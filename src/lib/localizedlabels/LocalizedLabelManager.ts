@@ -1,9 +1,16 @@
+/* eslint-disable no-await-in-loop */
 /* eslint-disable class-methods-use-this */
 import FigmaUtil from '../../shared/FigmaUtil';
 import Language from '../base/Language';
 import { KeyState, LocalizedLabel } from './LocalizedLabel';
 import Plural from '../base/Plural';
 import { BaseTranslationKeyStore } from '../keystore/BaseTranslationKeyStore';
+
+interface SyncState {
+  behind: number // how many version increments is the label behind
+  versionText: string // the text of the version of the label
+  labelText: string 
+}
 
 export default class LocalizedLabelManager {
   translationKeyStore?: BaseTranslationKeyStore;

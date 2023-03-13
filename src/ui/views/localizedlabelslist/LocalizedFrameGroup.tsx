@@ -73,7 +73,7 @@ export default function LocalizedFrameGroup({
       return translationResults.translations[0].text;
     };
 
-    localisedLabelManager.setLanguageToFrame(firstLocalizedLabelInFrame.rootFrameId, language, deepLTranslationProvider);
+    localisedLabelManager.setFrameLanguage(firstLocalizedLabelInFrame.rootFrameId, language, deepLTranslationProvider);
   }
 
   async function onSampleValuesClick(firstLocalizedLabelInFrame: LocalizedLabel) {

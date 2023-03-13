@@ -54,29 +54,108 @@ https://tolgee.io/blog/2021/11/24/optimizing-react-to-the-bone
 https://lokalise.com/blog/design-stage-localization/
 
 
+# Label synchronization
+ - label has no version - was never synced - no sync needed
+
+ - label has a verion older than one version less than the current - do nothing (manual update needed)
+  - 
+
+ - label has a version one version older than the current and the content has not changed - update
+
+# Label state  #1
+- no key (untracked)  - (unset)
+    Design View
+    - [ ] option to search for the key 
+    - [ ] enter a key
+        - [x] create key if name is not used yet - version set to the one of the key
+        - [ ] handle possible states if key exists
+            - [ ] text matches - set version to the one of the key
+            - [ ] text differes - prompt user and ask if 
+                - [ ] want to use key version in dsign 
+                - [ ] create a new key version from design text? 
+                - [ ] just link the key 
+    
+    Key View - on translation updated
+    - [x] nothing to do 
+
+- commited/unchanged
+    Design View
+    - [x] behind - option to update text to the current version
+        - [x] ui
+        - [x] implementation
+    - [ ] no difference - nothing to show
+
+    Key View - on translation updated
+    - [ ] behind - show behind in usage state
+    - [ ] no differences - update with key 
+
+    
+- modified (maybe also behind)
+    Design View
+    - behind
+        - [x] overide with latest version from key
+            - [x] ui
+            - [x] implementation
+        - [x] revert to last version (-> commited/unchanged behind)
+            - [x] ui
+            - [x] implementation
+        - [x] update key - create new key version from design
+            - [x] ui
+            - [x] implementation
+ 
+    - up to date (pointing to latest key version)
+        - [x] revert changes in design
+            - [x] ui
+            - [x] implementation
+        - [x] update key - create new key version from design
+            - [x] ui
+            - [x] implementation
+    
+    Key View - on translation updated
+    - [ ] behind - show behind in usage state
+    - [ ] nothing to do
+
+
+- Key View - on key name updated
+    - [ ] update key in all labels 
+
+    
+
+- head - label version == latest key version && key text == label text
+- behind - label version < latest key version && labels text == key text in version
+- text changed - labels text differs from the key text at the version of the label
+
+
+
 Todos: 
 
  - [x] specify languages for file
  - [x] specfify base language 
  - [x] show baselanguage in lokalised key always on top 
  - [x] make header columns fixed size based on maximum column content
- - [ ] allow the user to resolve the apply conflicts 
+ - [x] allow the user to resolve the apply conflicts 
  - [ ] handle automatic design update based on version
  - [ ] allow user to select a key for a label
- - [ ] allow to add a key manually 
  - [ ] plural select
- - [ ] key propagation from sandbox (multi user test)
-
  - [ ] variable replacement logic
+
+ - [ ] allow to add a key manually 
+ - [ ] selectiion - delete
+
  - [ ] distinct visual style for base language like bold
  - [ ] translation editor ux - we should be able to hide skipped values from option in toolbar
-
  - [ ] allow to rename keys
- 
+
+ - [ ] fix order
+ - [ ] fix window manager bugs
+ - [ ] Add tooltips 
+
+ - [ ] key propagation from sandbox (multi user test)
  - [ ] history (who changed what when?) 
  - [ ] qa handling of translation
- - [ ] fix window manager bugs
  - [ ] filter - match case, need review etc based on figmas search design
+
+ - [ ] use base language for translation if possible
  
  - [ ] import of ios dict
  - [ ] import of android dict
@@ -92,6 +171,11 @@ Todos:
  - [ ] pricing overview 
  - [ ] blog
 
+ - [ ] add platforms (ios/android/web/other)
+ - [ ] allow each key to select plattforms
+ - [ ] add tags
+ - [ ] base default plurals per language based on unicodes: https://www.unicode.org/cldr/cldr-aux/charts/29/supplemental/language_plural_rules.html
+
  
 Daal
 Mata
@@ -103,3 +187,13 @@ https://www.figma.com/community/plugin/864431140615310499/Transifex-Figma-Plugin
 https://www.figma.com/community/plugin/818840482503404814/Lokalise
 https://www.figma.com/community/plugin/803669834214399971/Phrase-Strings
 https://www.figma.com/community/plugin/802555101361690489/Crowdin-for-Figma
+
+
+Good resources:
+https://lokalise.com/blog/translation-keys-naming-and-organizing/?_ga=2.146791028.1532926386.1678634873-760110088.1676107100&_gac=1.254585466.1676366321.CjwKCAiA_6yfBhBNEiwAkmXy5xG_96z9c7XBYCXIcA1BDAndri1psVhtUrW-CoVUqjLWRe6gBMaPLhoCCOIQAvD_BwE
+
+https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
+
+
+
+Martin tschirsisch 

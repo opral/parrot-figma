@@ -1,12 +1,12 @@
 import Language from '../base/Language';
 import Plural from '../base/Plural';
-import { TranslationKey, TranslationKeys } from './TranslationKey';
+import { HistoryEntry, TranslationKey, TranslationKeys } from './TranslationKey';
 import { BaseTranslationKeyStore } from './BaseTranslationKeyStore';
 import { Config, FigmaFileTranslationKeyStore } from './FigmaFileTranslationKeyStore';
 
 export default class MemoryTranslationKeyStore extends BaseTranslationKeyStore {
-  async getHistory(translationKeyName: string, language: Language, plural: Plural): Promise<{ text?: string | undefined; }[]> {
-    return this.parentKeyStore.getHistory(translationKeyName, language, plural);
+  async getHistory(translationKeyName: string): Promise<HistoryEntry[]> {
+    return this.parentKeyStore.getHistory(translationKeyName);
   }
 
   parentKeyStore: FigmaFileTranslationKeyStore;

@@ -14,25 +14,24 @@ export interface LocalizedLabel {
 
   rootFrameId: string;
   rootFrameName: string;
-  rootFrameLanguage: Language;
-  rootFrameUseSampleValues: boolean;
 
-  name: string;
   nodeId: string;
-  useSampleValues: boolean;
-
+  name: string;
   x: number;
   y: number;
   width: number;
   height: number;
 
+  rootFrameLanguage: Language;
+  rootFrameUseSampleValues: boolean;
+
+  useSampleValues: boolean;
   keyType: KeyState
   key?: string;
-  derivedKey?: string;
+  keyVersion: number,
+  pluralId: Plural;
   text: string;
 
-  keyVersion: number,
-
-  pluralId: Plural;
+  derivedKey?: string;
 
 }

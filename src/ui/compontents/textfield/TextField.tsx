@@ -27,7 +27,7 @@ export default function TextField({
   text,
   onSave,
 }: TextFieldProps) {
-  const [, setTextState, textStateRef] = useState(text);
+  const [textState, setTextState, textStateRef] = useState(text);
   const [isEditing, setEditingState] = useState(false);
 
   const inputFieldRef = useRef<HTMLInputElement>(null);
@@ -99,7 +99,7 @@ export default function TextField({
             style={{
               visibility: (isEditing ? 'visible' : 'hidden'),
             }}
-            value={text}
+            value={textState}
             onChange={handleChange}
             placeholder={placeholder}
           />

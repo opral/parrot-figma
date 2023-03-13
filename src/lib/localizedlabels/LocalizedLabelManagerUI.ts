@@ -125,9 +125,9 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     return referencingLabels;
   }
 
-  async setLanguageToFrame(frameId: string, targetLanguage: Language, missingTranslationProvider: (input: string, language: string) => Promise<string | undefined>) {
+  async setFrameLanguage(frameId: string, targetLanguage: Language, missingTranslationProvider: (input: string, language: string) => Promise<string | undefined>) {
     for (const localizedLabel of this.cachedFrames[frameId].lokalizedLabels) {
-      this.setLanguage(localizedLabel, targetLanguage, missingTranslationProvider);
+      this.setLabelLanguage(localizedLabel, targetLanguage, missingTranslationProvider);
     }
 
     this.localisedLabelMangerSandbox.updateFrameProperties(frameId, {
@@ -135,7 +135,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     });
   }
 
-  async setLanguage(
+  async setLabelLanguage(
     cachedLabel: LocalizedLabel,
     targetLanguage: Language,
     missingTranslationProvider: (input: string, language: string) => Promise<string | undefined>,
@@ -174,7 +174,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
         skip: false,
       }]);
 
-      this.updateLocalisedLabelProperties(cachedLabel.nodeId, {
+      this.updateLabelProperties(cachedLabel.nodeId, {
         key: translationKeyName,
         keyType: KeyState.Linked,
         text: translation,
@@ -202,7 +202,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
           skip: false,
         }]);
 
-        this.updateLocalisedLabelProperties(cachedLabel.nodeId, {
+        this.updateLabelProperties(cachedLabel.nodeId, {
           key: translationKeyName,
           keyType: KeyState.Linked,
           text: translation,
@@ -210,7 +210,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
         });
       } else {
         // we have a translation - nothing to do - the text will get applied directly as soon as the parent frames language changed
-        this.updateLocalisedLabelProperties(cachedLabel.nodeId, {
+        this.updateLabelProperties(cachedLabel.nodeId, {
           key: translationKeyName,
           keyType: KeyState.Linked,
           text: translationKey.translations[targetLanguage]?.[cachedLabel.pluralId]?.text!,
@@ -220,7 +220,12 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     }
   }
 
-  async updateLocalisedLabelProperties(nodeId: string, changedProperties: {
+  /**
+   * Updates the label with the given nodeId with provided changes and updates the cache
+   * @param nodeId
+   * @param changedProperties
+   */
+  async updateLabelProperties(nodeId: string, changedProperties: {
     labelName?: string,
     keyType?: KeyState,
     key?: string,

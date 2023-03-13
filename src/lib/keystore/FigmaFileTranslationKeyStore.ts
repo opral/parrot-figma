@@ -1,6 +1,7 @@
+/* eslint-disable no-await-in-loop */
 import Language from '../base/Language';
 import Plural from '../base/Plural';
-import { TranslationKey, TranslationKeys } from './TranslationKey';
+import { HistoryEntry, TranslationKey, TranslationKeys } from './TranslationKey';
 import { BaseTranslationKeyStore } from './BaseTranslationKeyStore';
 
 export interface Config {
@@ -24,7 +25,10 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
       return undefined;
     }
 
-    return JSON.parse(keyRaw) as TranslationKey;
+    const key = JSON.parse(keyRaw) as TranslationKey;
+    key.history = this.getHistorySync(keyName);
+
+    return key;
   }
 
   async getConfig() {
@@ -44,7 +48,11 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
     figma.root.setPluginData(this.languageConfigDataKey, JSON.stringify(languageConfig));
   }
 
-  async getHistory(translationKeyName: string, language: Language, plural: Plural) : Promise<{ text?: string }[]> {
+  async getHistory(translationKeyName: string) : Promise<HistoryEntry[]> {
+    return this.getHistorySync(translationKeyName);
+  }
+
+  getHistorySync(translationKeyName: string) {
     const keyHistoryRaw = figma.root.getPluginData(this.keyHistoryPrefix + translationKeyName);
     const keyHistory = (keyHistoryRaw !== undefined && keyHistoryRaw !== '' ? JSON.parse(keyHistoryRaw) : []) as { [language in Language]? : {
       [plural in Plural]? : {
@@ -52,29 +60,12 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
       }
     } }[];
 
-    const specificHistory = [];
-
-    // filter relevant history changes for the given key
-    for (const keyHistoryEntry of keyHistory) {
-      if (keyHistoryEntry[language]?.[plural] !== undefined) {
-        specificHistory.push(keyHistoryEntry[language]![plural]!);
-      }
-    }
-
-    return specificHistory;
+    return keyHistory;
   }
 
   async persistKey(translationKeyPased: TranslationKey): Promise<TranslationKey> {
     const translationKey = translationKeyPased;
-    const keyHistoryRaw = figma.root.getPluginData(this.keyHistoryPrefix + translationKey.keyName);
-    const keyHistory = (keyHistoryRaw !== undefined && keyHistoryRaw !== '' ? JSON.parse(keyHistoryRaw) : []);
-
-    const keyCurrentVersionRaw = figma.root.getPluginData(this.keyPrefix + translationKey.keyName);
-    const keyCurrentVersion = (keyCurrentVersionRaw !== undefined && keyCurrentVersionRaw !== '' ? JSON.parse(keyCurrentVersionRaw) : {
-      keyName: translationKey.keyName,
-      plurals: [],
-      translations: {},
-    }) as TranslationKey;
+    const keyCurrentVersion = this.getKey(translationKey.keyName);
 
     const differences = {} as { [language in Language]? : {
       [plural in Plural]? : {
@@ -83,16 +74,14 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
       }
     } };
 
-    const currentHistoryIndex = keyHistory.length;
-
     // find differences
     for (const language of Object.keys(translationKey.translations)) {
       const currentLanguage = language as Language;
 
       for (const plural of Object.keys(translationKey.translations[currentLanguage]!)) {
         const currentPlural = plural as Plural;
-        if (keyCurrentVersion.translations[currentLanguage]?.[currentPlural]?.text === translationKey.translations[currentLanguage]![currentPlural]?.text
-                    && keyCurrentVersion.translations[currentLanguage]?.[currentPlural]?.skip === translationKey.translations[currentLanguage]![currentPlural]?.skip) {
+        if (keyCurrentVersion?.translations[currentLanguage]?.[currentPlural]?.text === translationKey.translations[currentLanguage]![currentPlural]?.text
+                    && keyCurrentVersion?.translations[currentLanguage]?.[currentPlural]?.skip === translationKey.translations[currentLanguage]![currentPlural]?.skip) {
           // console.log(`text equal! ${currentLanguage} ${currentPlural} ${keyCurrentVersion.translations[currentLanguage]?.[currentPlural]?.text}`);
           // eslint-disable-next-line no-continue
           continue;
@@ -112,7 +101,7 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
           };
         }
 
-        translationKey.translations[currentLanguage]![currentPlural]!.version = currentHistoryIndex;
+        translationKey.translations[currentLanguage]![currentPlural]!.version = translationKey.history.length;
       }
     }
 
@@ -121,9 +110,9 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
       return translationKey;
     }
 
-    translationKey.latestVersion = currentHistoryIndex;
+    translationKey.latestVersion = translationKey.history.length;
 
-    keyHistory.push(differences);
+    translationKey.history.push(differences);
 
     if (translationKey.keyName === undefined) {
       throw new Error('key name must be defined');
@@ -133,8 +122,14 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
       throw new Error('key name must not be "undefined"');
     }
 
-    figma.root.setPluginData(this.keyPrefix + translationKey.keyName, JSON.stringify(translationKey));
-    figma.root.setPluginData(this.keyHistoryPrefix + translationKey.keyName, JSON.stringify(keyHistory));
+    const serializableTranslationKey = translationKey as any;
+    const { history } = serializableTranslationKey;
+    delete serializableTranslationKey.history;
+
+    figma.root.setPluginData(this.keyPrefix + translationKey.keyName, JSON.stringify(serializableTranslationKey));
+    figma.root.setPluginData(this.keyHistoryPrefix + translationKey.keyName, JSON.stringify(history));
+
+    translationKey.history = history;
 
     return translationKey;
   }
@@ -160,6 +155,7 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
         const keyData = figma.root.getPluginData(keyWithPrefix);
         if (keyData && keyData !== '') {
           translationKeys[key] = this.getKey(key)!;
+          translationKeys[key].history = await this.getHistory(key);
         }
       }
     }
@@ -240,6 +236,7 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
         latestVersion: 0,
         plurals: keyPlurals,
         translations,
+        history: [],
       });
     }
 

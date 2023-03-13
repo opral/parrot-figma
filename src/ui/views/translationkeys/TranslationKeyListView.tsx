@@ -63,8 +63,17 @@ export default function TranslationKeyListView({
   }
 
   const showHistory = (keyName: string, language: Language, plural: Plural) => {
-    translationKeyStore.parentKeyStore.getHistory(keyName, language, plural).then((historyEntries) => {
-      setHistory(historyEntries);
+    translationKeyStore.parentKeyStore.getHistory(keyName).then((historyEntries) => {
+      const specificHistory = [];
+
+      // filter relevant history changes for the given key
+      for (const keyHistoryEntry of historyEntries) {
+        if (keyHistoryEntry[language]?.[plural] !== undefined) {
+          specificHistory.push(keyHistoryEntry[language]![plural]!);
+        }
+      }
+
+      setHistory(specificHistory);
     });
   };
 
@@ -107,7 +116,7 @@ export default function TranslationKeyListView({
           }
           let match;
           if (searchText !== '') {
-            const keyPosition = key.indexOf(searchText);
+            const keyPosition = key.toLowerCase().indexOf(searchText.toLowerCase());
             if (keyPosition !== -1) {
               match = { key: { start: keyPosition, length: searchText.length } };
             } else {
@@ -123,7 +132,7 @@ export default function TranslationKeyListView({
                     continue inner;
                   }
 
-                  const matchStart = text.indexOf(searchText);
+                  const matchStart = text.toLowerCase().indexOf(searchText.toLowerCase());
                   if (matchStart !== -1) {
                     match = { [language]: { [plural]: { start: matchStart, length: searchText.length } } };
 

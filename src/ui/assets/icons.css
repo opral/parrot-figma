@@ -151,6 +151,11 @@
   }
   
 
+  .undo-svg {
+    -webkit-mask-image: url(./undo.svg);
+
+    mask-image: url(./undo.svg);
+  }
   .variable-svg {
     -webkit-mask-image: url(./variable.svg);
     mask-image: url(./variable.svg);

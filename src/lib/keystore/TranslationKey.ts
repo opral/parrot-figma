@@ -1,6 +1,14 @@
 import Language from '../base/Language';
 import Plural from '../base/Plural';
 
+export type HistoryEntry = {
+  [language in Language]? : {
+    [plural in Plural]? : {
+      text?: string
+    }
+  }
+};
+
 // base language changed: baseVersionID > translation id
 // Each label stores the key + version of the translation > we need to know the latest version of each translation
 
@@ -9,7 +17,7 @@ import Plural from '../base/Plural';
 // additional like qa done, tags should be stored separately?
 //
 
-export interface TranslationKey {
+export interface SerializableTranslationKey {
   keyName: string
   latestVersion: number,
   plurals: Plural[],
@@ -22,6 +30,10 @@ export interface TranslationKey {
       }
     }
   }
+}
+
+export interface TranslationKey extends SerializableTranslationKey {
+  history: HistoryEntry[]
 }
 
 export interface TranslationKeys {

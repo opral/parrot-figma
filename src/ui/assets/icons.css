@@ -88,6 +88,23 @@
     mask-image: url(./download.svg);
   }
 
+  .use-label-svg {
+    -webkit-mask-image: url(./use-label.svg);
+    mask-image: url(./use-label.svg);
+  }
+
+
+  .restore-svg {
+    -webkit-mask-image: url(./restore.svg);
+    mask-image: url(./restore.svg);
+  }
+
+
+  .reset-instance-svg {
+    -webkit-mask-image: url(./reset-instance.svg);
+    mask-image: url(./reset-instance.svg);
+  }
+
   .upload-svg {
     -webkit-mask-image: url(./upload.svg);
     mask-image: url(./upload.svg);
@@ -132,6 +149,17 @@
   .trash-svg {
     -webkit-mask-image: url(./trash.svg);
     mask-image: url(./trash.svg);
+  }
+
+  .warning-svg {
+    -webkit-mask-image: url(./warning.svg);
+    mask-image: url(./warning.svg);
+  }
+  .dot-svg {
+    width: 7px;
+    height: 7px;
+    -webkit-mask-image: url(./dot.svg);
+    mask-image: url(./dot.svg);
   }
 
   .search-svg {

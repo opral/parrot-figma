@@ -9,7 +9,7 @@ import { BaseTranslationKeyStore } from '../keystore/BaseTranslationKeyStore';
 interface SyncState {
   behind: number // how many version increments is the label behind
   versionText: string // the text of the version of the label
-  labelText: string 
+  labelText: string
 }
 
 export default class LocalizedLabelManager {
@@ -193,18 +193,7 @@ export default class LocalizedLabelManager {
       }
     }
 
-    await this.updateFrame(frame);
-
     // console.log((new Date()).getTime() + 'execution finished - puting result into message');
-  }
-
-  private getFrameLanguage(frame: FrameNode) {
-    const language = frame.getPluginData(this.languageDataKey);
-    if (language === undefined || language !== '') {
-      return Language.De; // TODO return baselanguage instead
-    }
-
-    return language as Language;
   }
 
   private getUseSampleValues(node: FrameNode | TextNode) {
@@ -216,41 +205,13 @@ export default class LocalizedLabelManager {
     return true;
   }
 
-  async updateFrame(frame: FrameNode) {
-    const lokalisedLabels = (await this.getFrame(frame)).localizedLabelsInFrame;
-    // todo trigger update since the properties of the container frame changes the state of the localized labels
-
-    await this.loadFontsForTextNodes(lokalisedLabels.map((lokalisedLabel) => figma.getNodeById(lokalisedLabel.nodeId) as TextNode));
-
-    for (const localisedLabel of lokalisedLabels) {
-      if (localisedLabel.keyType === KeyState.Unlinked) {
-        // eslint-disable-next-line no-continue -- want to fast fail here for performance reason
-        continue;
-      }
-
-      let localizedText = this.translationKeyStore!.getKey(localisedLabel.key!)?.translations[localisedLabel.rootFrameLanguage]?.[localisedLabel.pluralId]?.text;
-
-      if (localizedText !== undefined && (localisedLabel.rootFrameUseSampleValues || localisedLabel.useSampleValues)) {
-        localizedText = this.translationKeyStore!.fillPlaceholdersWithSampleData(localizedText!, localisedLabel.rootFrameLanguage, localisedLabel.pluralId);
-      }
-
-      if (localizedText === undefined) {
-        localizedText = localisedLabel.text;
-      }
-
-      this.updateLocalisedLabelProperties(localisedLabel.nodeId, {
-        plural: localisedLabel.pluralId,
-        text: localizedText,
-        showSampleValues: localisedLabel.useSampleValues,
-      });
-    }
-  }
 
   async updateLocalisedLabelProperties(nodeId: string, changedProperties:
   {
     labelName?: string,
     keyType?: KeyState,
     key?: string,
+    language?: Language,
     plural?: Plural,
     keyVersion?: number,
     text?: string,
@@ -299,6 +260,10 @@ export default class LocalizedLabelManager {
 
     if (changedProperties.plural !== undefined) {
       textNode.setPluginData(this.keyPluralDataKey, changedProperties.plural ? changedProperties.plural : '');
+    }
+
+    if (changedProperties.language !== undefined) {
+      textNode.setPluginData(this.languageDataKey, changedProperties.language ? changedProperties.language : '');
     }
 
     if (changedProperties.showSampleValues !== undefined) {
@@ -479,10 +444,13 @@ export default class LocalizedLabelManager {
 
     // if no plural id is specified than we fall back to "other" - the default plural
     const pluralId = node.getPluginData(this.keyPluralDataKey) === '' ? Plural.Other : node.getPluginData(this.keyPluralDataKey);
+    // TODO #2 make use of base language instaed of falling back to .De
+    const language = node.getPluginData(this.languageDataKey) === '' ? Language.De : node.getPluginData(this.languageDataKey) as Language;
     const keyVersion = node.getPluginData(this.keyVersionDataKey) === '' ? -1 : parseInt(node.getPluginData(this.keyVersionDataKey), 10);
 
     const keyType = node.getPluginData(this.keyTypeDataKey) === '' || node.getPluginData(this.keyTypeDataKey) === undefined ? KeyState.Unset : node.getPluginData(this.keyTypeDataKey) as KeyState;
     const key = node.getPluginData(this.keyDataKey) === '' ? undefined : node.getPluginData(this.keyDataKey);
+    // TODO #2 make use of base language instaed of falling back to .De
     const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === '' ? Language.De : rootFrame.getPluginData(this.languageDataKey) as Language;
     const rootFrameUseSampleValues = rootFrame.getPluginData(this.sampleValuesDataKey) !== '';
     const useSampleValues = node.getPluginData(this.sampleValuesDataKey) !== '';
@@ -496,6 +464,7 @@ export default class LocalizedLabelManager {
         rootFrameId: rootFrame.id,
         rootFrameName: rootFrame.name,
         rootFrameLanguage,
+        language,
         rootFrameUseSampleValues,
         useSampleValues,
         nodeId: node.id,

@@ -119,13 +119,21 @@ https://lokalise.com/blog/design-stage-localization/
 - Key View - on key name updated
     - [ ] update key in all labels 
 
-    
+# Language property
 
-- head - label version == latest key version && key text == label text
-- behind - label version < latest key version && labels text == key text in version
-- text changed - labels text differs from the key text at the version of the label
+Currently the implementation allows one language per frame. This implementation has following downsides:
+- If a lable is moved from the parent frame to another frame (moved or copied) it looses the language information
+    - the language of the label would fall back to the base language and its text would most likly differ and show an incorrect change
+- If a label is in state changed and a frame changes the language we cant keep the conflicting label
 
+Solution: 
 
+We store the language per label and per frame. When the frame changes it will try to change all label's languages. If a label
+is in coflicting state it will not change its language and the ui will have to reflect this and give the user the posibility
+to change the language in a later stage. 
+
+Changes:
+The point of truth for synchronization is the language of the label
 
 Todos: 
 
@@ -136,6 +144,7 @@ Todos:
  - [x] allow the user to resolve the apply conflicts 
  - [ ] handle automatic design update based on version
  - [ ] allow user to select a key for a label
+ - [ ] define language handling per label (if a lable is in state changed a language switch may not work for that label only)
  - [ ] plural select
  - [ ] variable replacement logic
 
@@ -148,6 +157,9 @@ Todos:
 
  - [ ] fix order
  - [ ] fix window manager bugs
+    - [ ] window jumps when viewport is zoomed
+    - [ ] if zoomfactor is to small sizing glitches
+    - [ ] propagate viewport height via css variables (https://www.w3schools.com/css/css3_variables_javascript.asp)
  - [ ] Add tooltips 
 
  - [ ] key propagation from sandbox (multi user test)

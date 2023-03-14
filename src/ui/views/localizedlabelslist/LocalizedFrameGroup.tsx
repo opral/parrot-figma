@@ -78,7 +78,6 @@ export default function LocalizedFrameGroup({
 
   async function onSampleValuesClick(firstLocalizedLabelInFrame: LocalizedLabel) {
     localisedLabelManager.localisedLabelMangerSandbox.updateFrameProperties(firstLocalizedLabelInFrame.rootFrameId, {
-      language: firstLocalizedLabelInFrame.rootFrameLanguage,
       sampleValues: firstLocalizedLabelInFrame.rootFrameUseSampleValues!,
     });
 
@@ -101,7 +100,7 @@ export default function LocalizedFrameGroup({
           <div className="element-name font-body-24-bold">{rootFrameName}</div>
         </div>
         <div className="column-2">
-          <div className="frame-actions">
+          <div className="row-actions">
             <Select
               placeholder="Select item"
               onChange={(value) => { onLanguageSelectionClick(firstTranslationState, value.value as Language); }}
@@ -109,7 +108,7 @@ export default function LocalizedFrameGroup({
               options={languageOptiones}
             />
             <div
-              className="frame-icon"
+              className="row-action-icon"
               onClick={(e) => {
                 e.preventDefault();
                 onSampleValuesClick(firstTranslationState);
@@ -134,7 +133,7 @@ export default function LocalizedFrameGroup({
       ))}
 
       {rootFrameLanguage?.value === undefined
-              && <div>choose curent design language</div>}
+              && <div>choose current design language</div>}
 
     </>
   );

@@ -74,7 +74,7 @@ export default function LocalizedLabelsListView({
         const selectedLabelsByFrame = await localizedLabelManager.getLocalizedLabelsByFrame(selectedNode.rootFrameId);
 
         if (selectedLabelsByFrame) {
-          selectedLabels = selectedLabels.concat(selectedLabelsByFrame.lokalizedLabels);
+          selectedLabels = selectedLabels.concat(selectedLabelsByFrame);
         }
 
         // console.log(selectedLabels);

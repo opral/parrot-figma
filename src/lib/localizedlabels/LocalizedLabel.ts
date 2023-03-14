@@ -23,6 +23,8 @@ export interface LocalizedLabel {
   height: number;
 
   rootFrameLanguage: Language;
+
+  language: Language;
   rootFrameUseSampleValues: boolean;
 
   useSampleValues: boolean;

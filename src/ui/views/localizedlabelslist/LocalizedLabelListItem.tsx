@@ -10,7 +10,6 @@ import Language from '../../../lib/base/Language';
 import TranslationEditor from '../../compontents/translationEditor/TranslationEditor';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import TextField from '../../compontents/textfield/TextField';
-import { HistoryEntry } from '../../../lib/keystore/TranslationKey';
 
 type LocalizedLabelListItemProps = {
 
@@ -34,25 +33,10 @@ export default function LocalizedLabelListItem({
 
   const rowRef = React.useRef<HTMLDivElement>(null);
 
-  let modified = false;
-  let behind = 0;
+  const labelState = localisedLabelManager.getLabelState(localizedLabel);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO remove when we implemented the design != keystore resolution
-  const translations = translatedKey?.translations[localizedLabel.rootFrameLanguage];
-  let currentVersion: HistoryEntry | undefined;
-  let latestVersion: { version: number, historyEntry: HistoryEntry } | undefined;
-
-  if (translatedKey) {
-    currentVersion = translatedKey.history[localizedLabel.keyVersion];
-    latestVersion = MemoryTranslationKeyStore.getLatestHistoryEntry(translatedKey, localizedLabel.rootFrameLanguage, localizedLabel.pluralId);
-
-    if (currentVersion === undefined) {
-      console.warn(`Illegal state on label ${localizedLabel.key} ${localizedLabel.keyVersion}`);
-    } else if (latestVersion !== undefined) {
-      behind = latestVersion.version - localizedLabel.keyVersion;
-      modified = currentVersion[localizedLabel.rootFrameLanguage]?.[localizedLabel.pluralId]?.text !== localizedLabel.text;
-    }
-  }
+  const translations = translatedKey?.translations[localizedLabel.language];
 
   /* let localizedTextToApply = localizedText;
 
@@ -66,10 +50,10 @@ export default function LocalizedLabelListItem({
   async function createNewVersionFromDesign() {
     // TODO update key (lang, plural, text, skiped) with text frin design
     const localizedKey = await translationKeyStore.updateKey(localizedLabel.key!, [{
-      language: localizedLabel.rootFrameLanguage as Language, plural: localizedLabel.pluralId as Plural, text: localizedLabel.text, skip: false,
+      language: localizedLabel.language as Language, plural: localizedLabel.pluralId as Plural, text: localizedLabel.text, skip: false,
     }]);
 
-    const latestVersionForLanguageConfig = MemoryTranslationKeyStore.getLatestHistoryEntry(localizedKey!, localizedLabel.rootFrameLanguage, localizedLabel.pluralId);
+    const latestVersionForLanguageConfig = MemoryTranslationKeyStore.getLatestHistoryEntry(localizedKey!, localizedLabel.language, localizedLabel.pluralId);
 
     console.log(`setting key v to ${latestVersionForLanguageConfig!.version}`);
     await localisedLabelManager.updateLabelProperties(localizedLabel.nodeId, {
@@ -80,12 +64,12 @@ export default function LocalizedLabelListItem({
   async function updateToLatestKeyVersion() {
     const translationKey = translationKeyStore.getKey(localizedLabel.key!);
 
-    const latestVersionForLanguageConfig = MemoryTranslationKeyStore.getLatestHistoryEntry(translationKey!, localizedLabel.rootFrameLanguage, localizedLabel.pluralId);
+    const latestVersionForLanguageConfig = MemoryTranslationKeyStore.getLatestHistoryEntry(translationKey!, localizedLabel.language, localizedLabel.pluralId);
 
     // TODO set labels text to the latest key version
     await localisedLabelManager.updateLabelProperties(localizedLabel.nodeId, {
       keyVersion: latestVersionForLanguageConfig!.version,
-      text: latestVersionForLanguageConfig!.historyEntry[localizedLabel.rootFrameLanguage]?.[localizedLabel.pluralId]?.text,
+      text: latestVersionForLanguageConfig!.historyEntry[localizedLabel.language]?.[localizedLabel.pluralId]?.text,
     });
   }
 
@@ -96,8 +80,8 @@ export default function LocalizedLabelListItem({
 
     // TODO set labels text to the latest key version
     await localisedLabelManager.updateLabelProperties(localizedLabel.nodeId, {
-      keyVersion: latestVersion!.version,
-      text: currentLabelVersion![localizedLabel.rootFrameLanguage]?.[localizedLabel.pluralId]?.text,
+      keyVersion: localizedLabel.keyVersion,
+      text: currentLabelVersion![localizedLabel.language]?.[localizedLabel.pluralId]?.text,
     });
   }
 
@@ -118,7 +102,7 @@ export default function LocalizedLabelListItem({
     let translationKey = translationKeyStore.getKey(keyToLinkTo);
 
     if (translationKey !== undefined) {
-      latestVersion = MemoryTranslationKeyStore.getLatestHistoryEntry(translationKey!, localizedLabel.rootFrameLanguage, localizedLabel.pluralId);
+      const latestVersion = MemoryTranslationKeyStore.getLatestHistoryEntry(translationKey!, localizedLabel.language, localizedLabel.pluralId);
       await localisedLabelManager.updateLabelProperties(localizedLabel.nodeId, {
         key: keyToLinkTo,
         keyType: KeyState.Linked,
@@ -128,7 +112,7 @@ export default function LocalizedLabelListItem({
       // TODO check if design is sync with translation - if not offer update with prompt
     } else {
       translationKey = await translationKeyStore.createKey(keyToLinkTo, [{
-        language: localizedLabel.rootFrameLanguage,
+        language: localizedLabel.language,
         plural: localizedLabel.pluralId,
         text: localizedLabel.text,
         skip: false,
@@ -234,37 +218,37 @@ export default function LocalizedLabelListItem({
                 <span className={`svg-container ${localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? 'linked-svg' : 'unlinked-svg'}`} />
               </span>
 
-              { (localizedLabel.keyType === KeyState.Linked && behind > 0) && ( // allow the user to catch up with the keys version
+              { (localizedLabel.keyType === KeyState.Linked && labelState.behind > 0) && ( // allow the user to catch up with the keys version
               <span
                 className="layerIcon iconWrapper button"
                 onClick={updateToLatestKeyVersion}
               >
-                <span className="svg-container refresh-svg" />
+                <span className="svg-container reset-instance-svg" />
               </span>
               )}
 
-              { ((localizedLabel.keyType === KeyState.Linked && modified)) && ( // allow the user revert the changes in design to the last versioned text
+              { ((localizedLabel.keyType === KeyState.Linked && labelState.modified)) && ( // allow the user revert the changes in design to the last versioned text
               <span
                 className="layerIcon iconWrapper button"
-                onClick={revertDesignChanges}
+                onClick={revertDesignChanges} // 
               >
-                <span className="svg-container undo-svg" />
+                <span className="svg-container restore-svg" />
               </span>
               )}
 
-              { ((localizedLabel.keyType === KeyState.Linked && modified)) && (
+              { ((localizedLabel.keyType === KeyState.Linked && labelState.modified)) && (
               <span
                 className="layerIcon iconWrapper button"
                 onClick={createNewVersionFromDesign}
               >
-                <span className="svg-container download-svg" />
+                <span className="svg-container use-label-svg" />
               </span>
               )}
 
               {localizedLabel.keyType === KeyState.Linked && (
                 <Select
                   onChange={(value) => {
-                    onSaveFigmaVersionClick(localizedLabel.key!, localizedLabel.rootFrameLanguage, value.value as string, localizedLabel.text!);
+                    onSaveFigmaVersionClick(localizedLabel.key!, localizedLabel.language, value.value as string, localizedLabel.text!);
                   }}
                   defaultValue={localizedLabel.pluralId}
                   options={pluralsAvailable}
@@ -274,6 +258,7 @@ export default function LocalizedLabelListItem({
 
             </div>
           </div>
+
           <TranslationEditor
             // eslint-disable-next-line @typescript-eslint/no-unused-vars, func-names -- TODO remove after refactor
             onSave={async (text: any) => {
@@ -306,6 +291,23 @@ export default function LocalizedLabelListItem({
             text={localizedLabel.text}
             match={undefined}
           />
+        </div>
+        <div className="row-actions">
+          { ((localizedLabel.rootFrameLanguage !== localizedLabel.language)) && (
+            <span
+              className="row-action-icon"
+              onClick={createNewVersionFromDesign}
+            >
+              <span className={`svg-container warning-svg`} />
+            </span>
+          )}
+          { ((localizedLabel.rootFrameLanguage === localizedLabel.language)) && (
+            <span
+              className="row-action-icon"
+            >
+              <span className="svg-container dot-svg" />
+            </span>
+          )}
         </div>
       </div>
 

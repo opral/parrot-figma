@@ -18,7 +18,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
   private cachedFrames = {} as { [rootFrameId: string]: {
     frameId: string,
     frameName: string,
-    lokalizedLabels: LocalizedLabel[]
+    lokalizedLabelIds: string[]
   } };
 
   localisedLabelMangerSandbox: LocalizedLabelManager;
@@ -42,8 +42,10 @@ export default class LocalizedLabelManagerUI extends EventTarget {
   invalidateFrame(frameId: string) {
     //  console.log('invalidating frame');
     if (this.cachedFrames[frameId] !== undefined) {
-      this.cachedFrames[frameId].lokalizedLabels.forEach((label) => {
-        this.invalidateCacheIfNeeded(label, true);
+      this.cachedFrames[frameId].lokalizedLabelIds.forEach((labelId) => {
+        if (this.cachedLokalisedLabels[labelId]) {
+          this.invalidateCacheIfNeeded(this.cachedLokalisedLabels[labelId]!, true);
+        }
       });
       delete this.cachedFrames[frameId];
     }
@@ -92,7 +94,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
         this.cachedKeysToLabels[changedLabel.key].add(changedLabel.nodeId);
       }
 
-      if (this.cachedFrames[changedLabel.rootFrameId]) {
+      /*if (this.cachedFrames[changedLabel.rootFrameId]) {
       //  console.log('updating cached');
         const updatedLabels = this.cachedFrames[changedLabel.rootFrameId].lokalizedLabels.map((localizedlabel) => {
           if (localizedlabel.nodeId === changedLabel.nodeId) {
@@ -105,7 +107,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
         this.cachedFrames[changedLabel.rootFrameId].lokalizedLabels = updatedLabels;
       } else {
         // console.log(`no cache found for frame: ${changedLabel.rootFrameId}`);
-      }
+      }*/
     }
 
     const event = new CustomEvent('updated', { });
@@ -126,13 +128,45 @@ export default class LocalizedLabelManagerUI extends EventTarget {
   }
 
   async setFrameLanguage(frameId: string, targetLanguage: Language, missingTranslationProvider: (input: string, language: string) => Promise<string | undefined>) {
-    for (const localizedLabel of this.cachedFrames[frameId].lokalizedLabels) {
-      this.setLabelLanguage(localizedLabel, targetLanguage, missingTranslationProvider);
-    }
-
-    this.localisedLabelMangerSandbox.updateFrameProperties(frameId, {
+    await this.localisedLabelMangerSandbox.updateFrameProperties(frameId, {
       language: targetLanguage,
     });
+
+    for (const localizedLabelId of this.cachedFrames[frameId].lokalizedLabelIds) {
+      const localisedLabel = this.cachedLokalisedLabels[localizedLabelId]!;
+      // eslint-disable-next-line no-await-in-loop
+      await this.setLabelLanguage(localisedLabel, targetLanguage, missingTranslationProvider);
+    }
+
+    // await this.localisedLabelMangerSandbox.updateFrameById(frameId);
+  }
+
+  getLabelState(localizedLabel: LocalizedLabel): { behind: number, orginalText?: string, modified: boolean } {
+    const state = {
+      modified: false,
+      behind: 0,
+      original: undefined as string | undefined,
+    };
+
+    const translatedKey = localizedLabel.keyType !== KeyState.Unset ? this.keyStore.getKey(localizedLabel.key!) : undefined;
+
+    if (translatedKey) {
+      const currentVersion = translatedKey.history[localizedLabel.keyVersion];
+      const latestVersion = MemoryTranslationKeyStore.getLatestHistoryEntry(translatedKey, localizedLabel.language, localizedLabel.pluralId);
+
+      if (currentVersion === undefined) {
+        console.warn(`Illegal state on label ${localizedLabel.key} ${localizedLabel.keyVersion}`);
+      } else if (latestVersion !== undefined) {
+        state.behind = latestVersion.version - localizedLabel.keyVersion;
+
+        if (currentVersion[localizedLabel.language]?.[localizedLabel.pluralId]?.text !== localizedLabel.text) {
+          state.modified = true;
+          state.original = currentVersion[localizedLabel.language]?.[localizedLabel.pluralId]?.text;
+        }
+      }
+    }
+
+    return state;
   }
 
   async setLabelLanguage(
@@ -140,30 +174,24 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     targetLanguage: Language,
     missingTranslationProvider: (input: string, language: string) => Promise<string | undefined>,
   ) {
-    let translationKeyName : string | undefined;
-    // the label has not yet a linked to a key
-    if (cachedLabel.keyType === KeyState.Unset) {
-      // derivation possible?
-      if (cachedLabel.derivedKey !== undefined) {
-        translationKeyName = cachedLabel.derivedKey;
-      }
-    } else if (cachedLabel.keyType === KeyState.Linked) {
-      translationKeyName = cachedLabel.key!;
-    }
+    const translationKeyName = cachedLabel.key ?? cachedLabel.derivedKey;
 
-    if (cachedLabel.keyType === KeyState.Unlinked || translationKeyName === undefined) {
-      // key was explicitly unlinked or it can't be derived or is not set
+    if (cachedLabel.keyType === KeyState.Unlinked // we don't update unlinked labels
+      || translationKeyName === undefined // or labels where we cant derive or get the key
+      || this.getLabelState(cachedLabel).modified) { // or that are modified
+      // root language has changed - trigger cache update
+      await this.updateLabelProperties(cachedLabel.nodeId, {});
       return;
     }
 
-    const translationKey = this.keyStore.getKey(translationKeyName);
+    let translationKey = this.keyStore.getKey(translationKeyName);
     // check if key exists
     if (translationKey === undefined) {
       const translation = await missingTranslationProvider(cachedLabel.text, targetLanguage);
 
       // ok we have a fresh key to create - no translation to expect
-      const createdKey = await this.keyStore.createKey(translationKeyName, [{
-        language: cachedLabel.rootFrameLanguage,
+      translationKey = await this.keyStore.createKey(translationKeyName, [{
+        language: cachedLabel.language,
         plural: cachedLabel.pluralId,
         text: cachedLabel.text,
         skip: false,
@@ -173,13 +201,6 @@ export default class LocalizedLabelManagerUI extends EventTarget {
         text: translation,
         skip: false,
       }]);
-
-      this.updateLabelProperties(cachedLabel.nodeId, {
-        key: translationKeyName,
-        keyType: KeyState.Linked,
-        text: translation,
-        keyVersion: createdKey.translations[cachedLabel.rootFrameLanguage]![cachedLabel.pluralId]!.version,
-      });
     } else {
       // updating key
       // eslint-disable-next-line no-lonely-if -- TODO remove when all todos are mimplemtned
@@ -191,32 +212,25 @@ export default class LocalizedLabelManagerUI extends EventTarget {
           // how does the label tell the outside about its state?
           return;
         }
-        // TODO check if base language exists and if figmas text differs -> how to handle this?
         // TODO how do we handle labels with useSampleValue == true?
         // translation missing - generate it and update the translation key
         const translation = await missingTranslationProvider(cachedLabel.text, targetLanguage);
-        const updatedKey = await this.keyStore.updateKey(translationKeyName, [{
+        translationKey = await this.keyStore.updateKey(translationKeyName, [{
           language: targetLanguage,
           plural: cachedLabel.pluralId,
           text: translation,
           skip: false,
         }]);
-
-        this.updateLabelProperties(cachedLabel.nodeId, {
-          key: translationKeyName,
-          keyType: KeyState.Linked,
-          text: translation,
-          keyVersion: updatedKey.translations[targetLanguage]![cachedLabel.pluralId]!.version,
-        });
-      } else {
-        // we have a translation - nothing to do - the text will get applied directly as soon as the parent frames language changed
-        this.updateLabelProperties(cachedLabel.nodeId, {
-          key: translationKeyName,
-          keyType: KeyState.Linked,
-          text: translationKey.translations[targetLanguage]?.[cachedLabel.pluralId]?.text!,
-          keyVersion: translationKey.translations[targetLanguage]![cachedLabel.pluralId]!.version,
-        });
       }
+
+      // we have a translation - nothing to do - the text will get applied directly as soon as the parent frames language changed
+      await this.updateLabelProperties(cachedLabel.nodeId, {
+        key: translationKeyName,
+        keyType: KeyState.Linked,
+        language: targetLanguage,
+        text: translationKey.translations[targetLanguage]?.[cachedLabel.pluralId]?.text!,
+        keyVersion: translationKey.translations[targetLanguage]![cachedLabel.pluralId]!.version,
+      });
     }
   }
 
@@ -230,6 +244,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     keyType?: KeyState,
     key?: string,
     keyVersion?: number,
+    language?: Language,
     plural?: Plural,
     text?: string,
     showSampleValues?: boolean,
@@ -241,7 +256,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
 
   async getLocalizedLabelsByFrame(frameId: string) {
     if (this.cachedFrames[frameId]) {
-      return this.cachedFrames[frameId];
+      return this.cachedFrames[frameId].lokalizedLabelIds.map((labelId) => this.cachedLokalisedLabels[labelId]!);
     }
 
     // console.log(`refreshing frame with id ${frameId}`);
@@ -251,10 +266,11 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     this.cachedFrames[frameId] = {
       frameId,
       frameName: frameData.name,
-      lokalizedLabels: frameData.localizedLabelsInFrame,
+      lokalizedLabelIds: [],
     };
 
     for (const freshLocalizedLabel of frameData.localizedLabelsInFrame) {
+      this.cachedFrames[frameId].lokalizedLabelIds.push(freshLocalizedLabel.nodeId);
       this.invalidateCacheIfNeeded(freshLocalizedLabel);
       this.cachedLokalisedLabels[freshLocalizedLabel.nodeId] = freshLocalizedLabel;
       if (freshLocalizedLabel.key !== undefined) {
@@ -265,7 +281,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
       }
     }
 
-    return this.cachedFrames[frameId];
+    return this.cachedFrames[frameId].lokalizedLabelIds.map((labelId) => this.cachedLokalisedLabels[labelId]!);
   }
 
   invalidateCacheIfNeeded(updatedLocalizedLabel: LocalizedLabel, force: boolean = false) {

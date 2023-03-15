@@ -1,3 +1,4 @@
+import blake from 'blakejs';
 /* eslint-disable no-await-in-loop */
 /* eslint-disable class-methods-use-this */
 import FigmaUtil from '../../shared/FigmaUtil';
@@ -6,24 +7,8 @@ import { KeyState, LocalizedLabel } from './LocalizedLabel';
 import Plural from '../base/Plural';
 import { BaseTranslationKeyStore } from '../keystore/BaseTranslationKeyStore';
 
-interface SyncState {
-  behind: number // how many version increments is the label behind
-  versionText: string // the text of the version of the label
-  labelText: string
-}
-
 export default class LocalizedLabelManager {
   translationKeyStore?: BaseTranslationKeyStore;
-
-  constructor(translationKeyStore: BaseTranslationKeyStore | undefined) {
-    this.translationKeyStore = translationKeyStore;
-
-    if (translationKeyStore === undefined) {
-      return;
-    }
-
-    figma.on('documentchange', this.forwardDocumentChanges.bind(this));
-  }
 
   public proxClassName = 'LocalizedLabelManager';
 
@@ -32,6 +17,8 @@ export default class LocalizedLabelManager {
   public linkStilyDataKey = 'linkstyle';
 
   public separator = '__';
+
+  public filledTemplateHashDataKey = 'fth';
 
   public sampleValuesDataKey = 'sv';
 
@@ -46,6 +33,16 @@ export default class LocalizedLabelManager {
   public keyDataKey = 'key';
 
   public labelIdDataKey = 'olid'; // we store the orginal label id (the id of the node when the plugin changed properties the first time) to detect a copy
+
+  constructor(translationKeyStore: BaseTranslationKeyStore | undefined) {
+    this.translationKeyStore = translationKeyStore;
+
+    if (translationKeyStore === undefined) {
+      return;
+    }
+
+    figma.on('documentchange', this.forwardDocumentChanges.bind(this));
+  }
 
   forwardDocumentChanges(event: any) {
     const figmaUtil = new FigmaUtil();
@@ -205,7 +202,6 @@ export default class LocalizedLabelManager {
     return true;
   }
 
-
   async updateLocalisedLabelProperties(nodeId: string, changedProperties:
   {
     labelName?: string,
@@ -215,7 +211,7 @@ export default class LocalizedLabelManager {
     plural?: Plural,
     keyVersion?: number,
     text?: string,
-    showSampleValues?: boolean
+    showSampleValues?: boolean,
   }) {
     const textNode = figma.getNodeById(nodeId)! as TextNode;
 
@@ -237,12 +233,25 @@ export default class LocalizedLabelManager {
       textNode.setPluginData(this.keyVersionDataKey, `${changedProperties.keyVersion}`);
     }
 
+    if (changedProperties.showSampleValues !== undefined) {
+      textNode.setPluginData('showSampleValues', changedProperties.showSampleValues ? `${true}` : '');
+    }
+
     if (changedProperties.text !== undefined) {
       const linkStyle = await this.getLinkStyle();
 
       await this.loadFontsForTextNodes([textNode]);
 
       const textWithDecorators = this.toTextRangeObject(changedProperties.text);
+
+      const useSampleValues = textNode.getPluginData(this.sampleValuesDataKey) !== '';
+
+      if ((useSampleValues && changedProperties.showSampleValues === undefined)
+        || changedProperties.showSampleValues === true) {
+        textNode.setPluginData(this.filledTemplateHashDataKey, blake.blake2sHex(changedProperties.text));
+      } else {
+        textNode.setPluginData(this.filledTemplateHashDataKey, '');
+      }
 
       textNode.characters = textWithDecorators.text;
 
@@ -264,10 +273,6 @@ export default class LocalizedLabelManager {
 
     if (changedProperties.language !== undefined) {
       textNode.setPluginData(this.languageDataKey, changedProperties.language ? changedProperties.language : '');
-    }
-
-    if (changedProperties.showSampleValues !== undefined) {
-      textNode.setPluginData('showSampleValues', changedProperties.showSampleValues ? `${true}` : '');
     }
 
     return this.toLocalizedLabelOrUndefined(textNode)!.localizedLabel;
@@ -455,6 +460,10 @@ export default class LocalizedLabelManager {
     const rootFrameUseSampleValues = rootFrame.getPluginData(this.sampleValuesDataKey) !== '';
     const useSampleValues = node.getPluginData(this.sampleValuesDataKey) !== '';
 
+    const filledTemplateHash = node.getPluginData(this.filledTemplateHashDataKey) !== '' ? node.getPluginData(this.filledTemplateHashDataKey) : undefined;
+
+    const textChangedAfterGeneration = filledTemplateHash === undefined || blake.blake2sHex(text) !== filledTemplateHash;
+
     // eslint-disable-next-line consistent-return
     return {
       parentIds,
@@ -466,6 +475,7 @@ export default class LocalizedLabelManager {
         rootFrameLanguage,
         language,
         rootFrameUseSampleValues,
+        textChangedAfterGeneration,
         useSampleValues,
         nodeId: node.id,
         name: node.name,

@@ -90,13 +90,19 @@ export abstract class BaseTranslationKeyStore implements TranslationKeyStore {
   }
 
   static getHistoryEntry(key: TranslationKey, language: Language, plural: Plural, version: number) : HistoryEntry | undefined {
-    if (key.history[version]?.[language]?.[plural]) {
-      return key.history[version];
+    // iterate backward until we have a match
+    let currentVersion = version;
+    while (currentVersion >= 0) {
+      if (key.history[version]?.[language]?.[plural]) {
+        return key.history[version];
+      }
+      currentVersion -= 1;
     }
+    return undefined;
   }
 
-  static getLatestHistoryEntry(key: TranslationKey, language: Language, plural: Plural) : { version: number, historyEntry: HistoryEntry } | undefined {
-    let lastEntry: HistoryEntry | undefined;
+  static getLatestHistoryEntry(key: TranslationKey, language: Language, plural: Plural) : { version: number, historyEntry: HistoryEntry } | undefined {
+    let lastEntry: HistoryEntry | undefined;
     let lastHistoryEntryIndex = -1;
     let currentIndex = 0;
     for (const keyHistoryEntry of key.history) {

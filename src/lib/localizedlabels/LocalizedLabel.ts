@@ -32,7 +32,9 @@ export interface LocalizedLabel {
   key?: string;
   keyVersion: number,
   pluralId: Plural;
-  text: string;
+  text?: string;
+
+  textChangedAfterGeneration: boolean;
 
   derivedKey?: string;
 

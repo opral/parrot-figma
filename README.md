@@ -119,6 +119,40 @@ https://lokalise.com/blog/design-stage-localization/
 - Key View - on key name updated
     - [ ] update key in all labels 
 
+# Versioning
+
+The way we comunicate changes over time from the first steps of a welcome message "Hi user" to "Great to have you". A keys value does change correspondinly. To keep track of the different representation a user received keys play a major role. "How did we introduce this feature to the user when we first released it?" "We thought about that text but we decided to drop that idea because of...". 
+
+To answer those questions the extension keeps track of the changes of keys over time. 
+It should allow to grasp an overview of states from released version down to individual changes.
+
+To be able to achive this we keep a version counter for each key. Each change of each language/plural will increment this counter and store the new version in the history array at the version position. 
+
+Version 1 (user creates key_1 for de/other):
+
+Key:
+key_1 - de - other "Hallo wie gehts?"
+
+versions: 
+[
+    key_1 - de - other "Hallo wie gehts?",
+]
+
+
+Version 2 (user adds a translation for the language en):
+key_1 - de - other "Hallo wie gehts?"
+key_1 - en - other "Hello how are you?"
+
+
+versions: 
+[
+    de - other "Hallo wie gehts?",
+    en - other "Hello how are you?"
+]
+
+
+
+
 # Language property
 
 Currently the implementation allows one language per frame. This implementation has following downsides:
@@ -135,7 +169,49 @@ to change the language in a later stage.
 Changes:
 The point of truth for synchronization is the language of the label
 
-Todos: 
+## UI: 
+- Frame                          EN
+
+    - Label with changes         EN
+    - Label with 1+ behind       EN
+    - Label in sync with         CZ
+    - Label in sync              EN
+
+Frame language changed to DE
+
+- Frame                          DE 
+
+    - Label with changes         EN (sticks to english because of outstandign changes)
+    - Label with 1+ behind       DE (save to switch language - so we do it still one behind) 
+    - Label in sync with         DE (no need to not sync it back in) 
+    - Label in sync              DE (easy)
+
+
+
+
+
+# Use sample values property
+The useSampleValues property was stored on frames first the problem is very similiar to the language problem. 
+
+What we want from ui point of view: 
+- The user want to toggle the whole frame 
+    - all view should be configured to render or not render sample values
+
+## UI:
+ - Frame                                [X] <- click deactivates all
+    - Label with sampleValues active    [X]
+    - Label with sampleValues active    [X]
+
+
+ - Frame                                [ ] <- click activates all 
+    - Label with sampleValues active    [ ]
+    - Label with sampleValues active    [ ]
+
+ - Frame                                [ ] <- click activates all (symbol greyed out to indicate not representative)
+    - Label with sampleValues active    [X]
+    - Label with sampleValues inactive  [ ]
+
+# Todos: 
 
  - [x] specify languages for file
  - [x] specfify base language 
@@ -154,6 +230,9 @@ Todos:
  - [ ] distinct visual style for base language like bold
  - [ ] translation editor ux - we should be able to hide skipped values from option in toolbar
  - [ ] allow to rename keys
+
+ - [ ] #3 implement fallback mechanism (plural skipped -> other -> other skipped -> base lang plural -> base lang plural skipped -> base lang other ) 
+    - [ ] does the label need to know what it falled back to - how can synchonization handle that?
 
  - [ ] fix order
  - [ ] fix window manager bugs

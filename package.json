@@ -5,7 +5,7 @@
   "main": "code.js",
   "scripts": {
     "start": "webpack --mode development --watch",
-    "lint" : "./node_modules/.bin/eslint",
+    "lint": "./node_modules/.bin/eslint",
     "lintfix": "./node_modules/.bin/eslint . --fix "
   },
   "author": "Martin Lysk",
@@ -38,6 +38,7 @@
     "@types/diff": "^5.0.2",
     "@types/react": "^17.0.19",
     "@types/react-dom": "^17.0.9",
+    "blakejs": "^1.2.1",
     "diff": "^5.1.0",
     "figma-plugin-ds": "^1.0.1",
     "install": "^0.13.0",

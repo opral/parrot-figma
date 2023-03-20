@@ -3,12 +3,14 @@ import StringDiff from './DiffView';
 import './HistoryEntry.css';
 
 interface HistoryEntryProps {
+  version: number,
   tag?: string;
   text?: string;
   previousText?: string;
 }
 
 export default function HistoryEntry({
+  version,
   tag,
   text,
   previousText,
@@ -53,6 +55,7 @@ export default function HistoryEntry({
             oldValue={previousText || ''}
             newValue={text || ''}
           />
+          {` (${version})`}
         </div>
         <div>
           <div className="history_view--editors">

@@ -170,21 +170,23 @@ Changes:
 The point of truth for synchronization is the language of the label
 
 ## UI: 
-- Frame                          EN
+- Frame                              EN
 
-    - Label with changes         EN
-    - Label with 1+ behind       EN
-    - Label in sync with         CZ
-    - Label in sync              EN
+    - Label with changes            EN
+    - Label with 1+ behind          EN
+    - Label in sync with            CZ
+    - Label in sync                 EN
+    - Label with no DE translation  EN
 
 Frame language changed to DE
 
-- Frame                          DE 
+- Frame                             DE 
 
-    - Label with changes         EN (sticks to english because of outstandign changes)
-    - Label with 1+ behind       DE (save to switch language - so we do it still one behind) 
-    - Label in sync with         DE (no need to not sync it back in) 
-    - Label in sync              DE (easy)
+    - Label with changes            EN (sticks to english because of outstandign changes) open q: when to switch to DE? never / when changes are handled?
+    - Label with 1+ behind          DE (save to switch language - so we do it still one behind) 
+    - Label in sync with            DE (no need to not sync it back in) 
+    - Label in sync                 DE (easy)
+    - Label with no DE translation  DE (changes to german but with changed state no revert back but use label)
 
 
 
@@ -215,16 +217,33 @@ What we want from ui point of view:
 
  - [x] specify languages for file
  - [x] specfify base language 
- - [x] show baselanguage in lokalised key always on top 
+ - [x] show baselanguage in localised key always on top 
  - [x] make header columns fixed size based on maximum column content
  - [x] allow the user to resolve the apply conflicts 
- - [ ] handle automatic design update based on version
- - [ ] allow user to select a key for a label
- - [ ] define language handling per label (if a lable is in state changed a language switch may not work for that label only)
- - [ ] plural select
- - [ ] variable replacement logic
+ - [x] define language handling per label (if a lable is in state changed a language switch may not work for that label only)
+ - [ ] check keyname for at least one visible character
+ - [ ] allow user to select a key for a label 
+    - [ ] top down drawer window
+    - [ ] show only base language and current frame language
+    - [ ] hide usage 
+    - [ ] hide multiselect
+    - [ ] search by key "key:keyname or other"
+    - [ ] add single line action button "use key"
 
  - [ ] allow to add a key manually 
+
+
+ - [ ] better no keys - empty list messages (no search results / no keys at all) 
+ - [ ] add automatic design update for labels with state modified == false && behind == 0 - feedback?
+ - [ ] variable replacement logic
+ - [ ] ensure only one open editor - tbd what to do with current active editor with due changes
+ - [ ] focus key field on link click if no derviation is posible
+ - [ ] handle empty text in translation as mising translation '' == undefined
+ - [ ] plural select
+ - [ ] add revert button to history
+
+ - [x] when checking for behind always use the  frames language instead of the labels one to detect a ne translation that gets added and allow to switch language by updating instance
+
  - [ ] selectiion - delete
 
  - [ ] distinct visual style for base language like bold

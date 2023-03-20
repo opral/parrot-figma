@@ -93,34 +93,25 @@ export abstract class BaseTranslationKeyStore implements TranslationKeyStore {
     // iterate backward until we have a match
     let currentVersion = version;
     while (currentVersion >= 0) {
-      if (key.history[version]?.[language]?.[plural]) {
-        return key.history[version];
+      if (key.history[currentVersion]?.[language]?.[plural]) {
+        return key.history[currentVersion];
       }
       currentVersion -= 1;
     }
     return undefined;
   }
 
-  static getLatestHistoryEntry(key: TranslationKey, language: Language, plural: Plural) : { version: number, historyEntry: HistoryEntry } | undefined {
-    let lastEntry: HistoryEntry | undefined;
-    let lastHistoryEntryIndex = -1;
-    let currentIndex = 0;
-    for (const keyHistoryEntry of key.history) {
-      if (keyHistoryEntry[language]?.[plural] !== undefined) {
-        lastEntry = keyHistoryEntry;
-        lastHistoryEntryIndex = currentIndex;
+  static getChangesSince(key: TranslationKey, language: Language, plural: Plural, version: number) {
+    let changeCounter = 0;
+
+    let currentVersion = key.latestVersion;
+    while (currentVersion >= 0 && currentVersion > version) {
+      if (key.history[currentVersion]?.[language]?.[plural]) {
+        changeCounter += 1;
       }
-      currentIndex += 1;
+      currentVersion -= 1;
     }
-
-    if (!lastEntry) {
-      return;
-    }
-
-    return {
-      version: lastHistoryEntryIndex,
-      historyEntry: lastEntry,
-    };
+    return changeCounter;
   }
 
   abstract getHistory(translationKeyName: string) : Promise<HistoryEntry[]>;

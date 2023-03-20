@@ -411,7 +411,8 @@ export default function Select({
                     // eslint-disable-next-line react/no-array-index-key  -- options are static and dont change - using the index is fine here
                     key={`select-option--${i}`}
                     title={title}
-                    onMouseUp={() => handleSelectClick(value)}>
+                    onMouseUp={() => handleSelectClick(value)}
+                  >
                     <div className="select-menu__item-check">
                       { selectedOption && selectedOption.value === value && (
                         <div className="svg-container checkmark-svg" />

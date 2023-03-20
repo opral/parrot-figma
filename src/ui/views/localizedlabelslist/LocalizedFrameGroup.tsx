@@ -36,7 +36,7 @@ export default function LocalizedFrameGroup({
   let rootFrameLanguage: SelectOption | undefined;
   const languageOptiones = [] as SelectOption[];
 
-  const languages = translationKeyStore.getLanugages()!
+  const languages = translationKeyStore.getLanugages()!;
 
   for (const language of languages) {
     const currentLanguageOption = {
@@ -51,6 +51,7 @@ export default function LocalizedFrameGroup({
 
   async function onLanguageSelectionClick(firstLocalizedLabelInFrame: LocalizedLabel, language: Language) {
     const deepLTranslationProvider = async (text: String, targetLanguage: string) => {
+      return undefined;
       // console.log(`tranalating: ${text} with deepl`);
       const result = await fetch('http://localhost:3333/api/v1/translate', {
         method: 'POST',
@@ -77,15 +78,8 @@ export default function LocalizedFrameGroup({
   }
 
   async function onSampleValuesClick(firstLocalizedLabelInFrame: LocalizedLabel) {
-    localisedLabelManager.localisedLabelMangerSandbox.updateFrameProperties(firstLocalizedLabelInFrame.rootFrameId, {
-      sampleValues: firstLocalizedLabelInFrame.rootFrameUseSampleValues!,
-    });
-
-    // eslint-disable-next-line no-console -- TODO remove when implemented
-    console.warn('onSampleValuesClick back prop not implemented');
-    /*
-      await figmaHelper.toggleSampleValues(frameNode);
-      await refreshKeys(); */
+    // TODO #4 check how we want to handle the toggle on the frame
+    localisedLabelManager.setFrameUseSampleValues(firstLocalizedLabelInFrame.rootFrameId, firstLocalizedLabelInFrame.useSampleValues);
   }
 
   return (

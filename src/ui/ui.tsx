@@ -7,7 +7,6 @@ import * as React from 'react';
 import { useEffect, useState } from 'react';
 import * as ReactDOM from 'react-dom';
 
-import ConfigView from './views/config/ConfigView';
 import LocalizedLabelsListView from './views/localizedlabelslist/LocalizedLabelsListView';
 import FigmaUtil from '../shared/FigmaUtil';
 import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
@@ -62,7 +61,7 @@ function App() {
 
   const [initialLoadingCompleted, setIinitialLoadingCompleted] = useState(false);
 
-  const [defaultLinkStyle, setDefaultLinkStyle] = useState('' as string);
+  const [, setDefaultLinkStyle] = useState('' as string);
 
   const refreshTranslatedKeys = async () => {
     setTranslatedKeys(memoryTranslationKeyStore.translationKeys);
@@ -82,6 +81,7 @@ function App() {
     })();
   }, []);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO implement this
   const setLinkStyle = async (linkStyle: string) => {
     remoteLocalizedLabelManager.setLinkStyle(linkStyle);
     setDefaultLinkStyle(linkStyle);
@@ -109,16 +109,18 @@ function App() {
       />
     );
   } else if (appScreen === 'settings') {
-    view = <Filesetup
-              translationKeyStore={memoryTranslationKeyStore}
-            />  
-  /*(
+    view = (
+      <Filesetup
+        translationKeyStore={memoryTranslationKeyStore}
+      />
+    );
+  /* (
       <ConfigView
         linkStyle={defaultLinkStyle}
         setLinkStyle={setLinkStyle}
         translationKeyStore={memoryTranslationKeyStore}
       />
-    );*/
+    ); */
   } else {
     view = (
       <LocalizedLabelsListView

@@ -13,6 +13,12 @@
   overflow: hidden;
 }
 
+
+.grid-hidden-layout-helper .rowText {
+  min-width: 100px;
+}
+
+
 .grid-item-selector {
   grid-column-start: selector;
   grid-row-end: span 1000;

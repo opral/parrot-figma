@@ -34,6 +34,7 @@ export interface LocalizedLabel {
   pluralId: Plural;
   text?: string;
 
+  filledTemplateHash?: string;
   textChangedAfterGeneration: boolean;
 
   derivedKey?: string;

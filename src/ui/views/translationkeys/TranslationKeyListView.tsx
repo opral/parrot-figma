@@ -12,7 +12,6 @@ import Plural from '../../../lib/base/Plural';
 import HistoryEntry from '../../compontents/history/HistoryEntry';
 import './TranslationKeyView.css';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
-import MatchView from '../../compontents/matchview/MatchView';
 
 type TranslationKeyListViewProps = {
   keys: TranslationKeys,
@@ -31,7 +30,7 @@ export default function TranslationKeyListView({
   figmaRemote,
   refreshKeys,
 }: TranslationKeyListViewProps) {
-  const [history, setHistory] = useState(undefined as undefined | { text?: string }[]);
+  const [history, setHistory] = useState(undefined as undefined | { version: number, text?: string }[]);
   const [, setTrigger] = useState(0);
   const [renderEntries, setRenderEntries] = useState(200);
   const [searchText, setSearchText] = useState('');
@@ -64,13 +63,18 @@ export default function TranslationKeyListView({
 
   const showHistory = (keyName: string, language: Language, plural: Plural) => {
     translationKeyStore.parentKeyStore.getHistory(keyName).then((historyEntries) => {
-      const specificHistory = [];
+      const specificHistory = [] as { text?: string, version: number}[];
 
+      let version = 0;
       // filter relevant history changes for the given key
       for (const keyHistoryEntry of historyEntries) {
         if (keyHistoryEntry[language]?.[plural] !== undefined) {
-          specificHistory.push(keyHistoryEntry[language]![plural]!);
+          specificHistory.push({
+            text: keyHistoryEntry[language]![plural]!.text,
+            version,
+          });
         }
+        version += 1;
       }
 
       setHistory(specificHistory);
@@ -183,7 +187,7 @@ export default function TranslationKeyListView({
               </svg>
             </span>
           </div>
-          {history?.reverse().map((entry, i, array) => <HistoryEntry text={entry.text} previousText={i < (array.length - 1) ? array[i + 1].text : undefined} />)}
+          {history?.reverse().map((entry, i, array) => <HistoryEntry version={entry.version} text={entry.text} previousText={i < (array.length - 1) ? array[i + 1].text : undefined} />)}
         </div>
       </OutsideClickHandler>
     </div>

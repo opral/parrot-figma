@@ -1,4 +1,4 @@
-import blake from 'blakejs';
+
 /* eslint-disable no-await-in-loop */
 /* eslint-disable class-methods-use-this */
 import FigmaUtil from '../../shared/FigmaUtil';
@@ -119,7 +119,7 @@ export default class LocalizedLabelManager {
     return this.getFrame(frame);
   }
 
-  async getFrame(frame: FrameNode): Promise<{
+  private async getFrame(frame: FrameNode): Promise<{
     id: string,
     name: string,
     localizedLabelsInFrame: LocalizedLabel[],
@@ -155,6 +155,10 @@ export default class LocalizedLabelManager {
   }
 
   async getBaseLanguage() {
+    return this.getBaseLanguageSync()
+  }
+
+  getBaseLanguageSync() {
     return figma.root.getPluginData(this.languageDataKey) === '' ? Language.En : figma.root.getPluginData(this.languageDataKey) as Language;
   }
 
@@ -210,6 +214,7 @@ export default class LocalizedLabelManager {
     language?: Language,
     plural?: Plural,
     keyVersion?: number,
+    filledTemplateHash?: string,
     text?: string,
     showSampleValues?: boolean,
   }) {
@@ -234,7 +239,7 @@ export default class LocalizedLabelManager {
     }
 
     if (changedProperties.showSampleValues !== undefined) {
-      textNode.setPluginData('showSampleValues', changedProperties.showSampleValues ? `${true}` : '');
+      textNode.setPluginData(this.sampleValuesDataKey, changedProperties.showSampleValues ? `${true}` : '');
     }
 
     if (changedProperties.text !== undefined) {
@@ -246,9 +251,8 @@ export default class LocalizedLabelManager {
 
       const useSampleValues = textNode.getPluginData(this.sampleValuesDataKey) !== '';
 
-      if ((useSampleValues && changedProperties.showSampleValues === undefined)
-        || changedProperties.showSampleValues === true) {
-        textNode.setPluginData(this.filledTemplateHashDataKey, blake.blake2sHex(changedProperties.text));
+      if (useSampleValues) {
+        textNode.setPluginData(this.filledTemplateHashDataKey, changedProperties.filledTemplateHash ? changedProperties.filledTemplateHash : '');
       } else {
         textNode.setPluginData(this.filledTemplateHashDataKey, '');
       }
@@ -449,21 +453,18 @@ export default class LocalizedLabelManager {
 
     // if no plural id is specified than we fall back to "other" - the default plural
     const pluralId = node.getPluginData(this.keyPluralDataKey) === '' ? Plural.Other : node.getPluginData(this.keyPluralDataKey);
-    // TODO #2 make use of base language instaed of falling back to .De
-    const language = node.getPluginData(this.languageDataKey) === '' ? Language.De : node.getPluginData(this.languageDataKey) as Language;
+    const language = node.getPluginData(this.languageDataKey) === '' ? this.getBaseLanguageSync() : node.getPluginData(this.languageDataKey) as Language;
     const keyVersion = node.getPluginData(this.keyVersionDataKey) === '' ? -1 : parseInt(node.getPluginData(this.keyVersionDataKey), 10);
 
     const keyType = node.getPluginData(this.keyTypeDataKey) === '' || node.getPluginData(this.keyTypeDataKey) === undefined ? KeyState.Unset : node.getPluginData(this.keyTypeDataKey) as KeyState;
     const key = node.getPluginData(this.keyDataKey) === '' ? undefined : node.getPluginData(this.keyDataKey);
-    // TODO #2 make use of base language instaed of falling back to .De
-    const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === '' ? Language.De : rootFrame.getPluginData(this.languageDataKey) as Language;
+    const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === '' ? this.getBaseLanguageSync() : rootFrame.getPluginData(this.languageDataKey) as Language;
     const rootFrameUseSampleValues = rootFrame.getPluginData(this.sampleValuesDataKey) !== '';
     const useSampleValues = node.getPluginData(this.sampleValuesDataKey) !== '';
 
     const filledTemplateHash = node.getPluginData(this.filledTemplateHashDataKey) !== '' ? node.getPluginData(this.filledTemplateHashDataKey) : undefined;
 
-    const textChangedAfterGeneration = filledTemplateHash === undefined || blake.blake2sHex(text) !== filledTemplateHash;
-
+   
     // eslint-disable-next-line consistent-return
     return {
       parentIds,
@@ -475,7 +476,8 @@ export default class LocalizedLabelManager {
         rootFrameLanguage,
         language,
         rootFrameUseSampleValues,
-        textChangedAfterGeneration,
+        textChangedAfterGeneration: false,
+        filledTemplateHash,
         useSampleValues,
         nodeId: node.id,
         name: node.name,

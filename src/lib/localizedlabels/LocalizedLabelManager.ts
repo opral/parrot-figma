@@ -1,4 +1,3 @@
-
 /* eslint-disable no-await-in-loop */
 /* eslint-disable class-methods-use-this */
 import FigmaUtil from '../../shared/FigmaUtil';
@@ -155,7 +154,7 @@ export default class LocalizedLabelManager {
   }
 
   async getBaseLanguage() {
-    return this.getBaseLanguageSync()
+    return this.getBaseLanguageSync();
   }
 
   getBaseLanguageSync() {
@@ -464,7 +463,6 @@ export default class LocalizedLabelManager {
 
     const filledTemplateHash = node.getPluginData(this.filledTemplateHashDataKey) !== '' ? node.getPluginData(this.filledTemplateHashDataKey) : undefined;
 
-   
     // eslint-disable-next-line consistent-return
     return {
       parentIds,

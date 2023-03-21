@@ -292,6 +292,8 @@
   background-color: #F0F0F0;
 }
 
+
+
 .side-drawer {
   overflow: scroll;
   height: var(--window-client-height);
@@ -382,4 +384,21 @@
 
 .lazy_input {
   cursor: auto;
+}
+
+.searchResults {
+  
+  box-sizing: border-box;
+  
+  
+  padding: 0 8px 0 16px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--figma-color-bg);
+  color: var(--figma-color-text);
+  fill: var(--figma-color-text);
+
 }

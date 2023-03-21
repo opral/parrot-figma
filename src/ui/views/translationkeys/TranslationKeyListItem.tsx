@@ -22,6 +22,7 @@ type TranslationKeyListItemProps = {
   searchMatch: any,
   translationKeyStore: MemoryTranslationKeyStore,
   localizedLabelManager: LocalizedLabelManagerUI,
+  select?: Function
 };
 
 export default function TranslationKeyListItem({
@@ -31,6 +32,7 @@ export default function TranslationKeyListItem({
   searchMatch,
   translationKeyStore,
   localizedLabelManager,
+  select,
 }: TranslationKeyListItemProps) {
   const [selected, setSelected] = useState(false);
   const [showUsage, setShowUsage] = useState(false);
@@ -50,13 +52,23 @@ export default function TranslationKeyListItem({
   const languages = [baseLang, ...translationKeyStore.getLanugages()!.filter((l) => l !== baseLang)] as Language[];
 
   return (
-    <div ref={rowRef} className={`keyWrapper${selected ? ' selected' : ''}`}>
+    <div
+      ref={rowRef}
+      className={`keyWrapper${selected ? ' selected' : ''}`}
+      onClick={() => {
+        if (select) {
+          select(translationKey.keyName);
+        }
+      }}
+    >
+      { select === undefined && (
       <div className="grid-item-selector">
         <label className="checkboxHitbox">
           <input id="fix-position-when-scrolling" type="checkbox" className="checkboxInput" onChange={(e) => { setSelected(e.target.checked); }} />
           <span className={`svg-container checkbox-svg checkbox--checkmark checkbox--checkmark mixed_checkbox--checkmark${selected ? ' checkbox--checked' : ''}`} />
         </label>
       </div>
+      )}
       <div className="grid-item-key">
         <div className="grid-item-key-header">
           <span className="layerIcon iconWrapper">
@@ -65,6 +77,7 @@ export default function TranslationKeyListItem({
           <span className="rowText"><MatchView text={translationKey.keyName} match={searchMatch?.key} /></span>
         </div>
         <div className="grid-item-actions">
+          { select === undefined && (
           <span
             className="layerIcon iconWrapper button"
             onClick={() => {
@@ -73,8 +86,9 @@ export default function TranslationKeyListItem({
           >
             <span className="svg-container trash-svg" />
           </span>
+          )}
         </div>
-
+        { select === undefined && (
         <div className="key-usage">
           {referencingLabels.length === 0 && <div>no usage</div>}
           {referencingLabels.length > 0 && (
@@ -97,7 +111,7 @@ export default function TranslationKeyListItem({
             </>
           )}
         </div>
-
+        )}
       </div>
       {languages.map((language) => {
         let languageSkipped = false;
@@ -120,6 +134,7 @@ export default function TranslationKeyListItem({
                 <div className="grid-item-plural"><span className="rowText">{plural}</span></div>
                 <div className="grid-item-translation translation-container translation">
                   <TranslationEditor
+                    editable={select === undefined}
                     match={searchMatch?.[language]?.[plural as Plural]}
                     onSave={async (text: any) => {
                       let skip = translationKey.translations[language as Language]?.[plural as Plural]?.skip ?? false;
@@ -136,28 +151,33 @@ export default function TranslationKeyListItem({
 
                 </div>
                 <div className="grid-item-actions">
-                  <span
-                    className="layerIcon iconWrapper button"
-                    onClick={async () => {
-                      // debugger;
-                      await translationKeyStore.updateKey(translationKey.keyName!, [{
-                        language,
-                        plural,
-                        text: translationKey.translations[language as Language]?.[plural as Plural]?.text,
-                        skip: translationKey.translations[language as Language]?.[plural as Plural]?.skip === undefined ? true : !translationKey.translations[language as Language]![plural as Plural]!.skip,
-                      }]);
-                    }}
-                  >
-                    <span className={'svg-container' + (translationKey.translations[language as Language]?.[plural as Plural]?.skip === true ? ' eye-closed-svg' : ' eye-svg')} />
-                  </span>
-                  <span
-                    className="layerIcon iconWrapper button"
-                    onClick={async () => {
-                      showHistory(translationKey.keyName, language, plural);
-                    }}
-                  >
-                    <span className="svg-container history-svg" />
-                  </span>
+                  { select === undefined && (
+                    <>
+                      <span
+                        className="layerIcon iconWrapper button"
+                        onClick={async () => {
+                          // debugger;
+                          await translationKeyStore.updateKey(translationKey.keyName!, [{
+                            language,
+                            plural,
+                            text: translationKey.translations[language as Language]?.[plural as Plural]?.text,
+                            skip: translationKey.translations[language as Language]?.[plural as Plural]?.skip === undefined ? true : !translationKey.translations[language as Language]![plural as Plural]!.skip,
+                          }]);
+                        }}
+                      >
+                        <span className={'svg-container' + (translationKey.translations[language as Language]?.[plural as Plural]?.skip === true ? ' eye-closed-svg' : ' eye-svg')} />
+                      </span>
+                      <span
+                        className="layerIcon iconWrapper button"
+                        onClick={async () => {
+                          showHistory(translationKey.keyName, language, plural);
+                        }}
+                      >
+                        <span className="svg-container history-svg" />
+                      </span>
+
+                    </>
+                  )}
                 </div>
               </div>
             ))}

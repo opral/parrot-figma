@@ -138,6 +138,7 @@ function App() {
         <div className="tabHeader">
           <div className={`tab ${appScreen === 'design' ? 'active' : ''}`} onClick={() => setAppScreen('design')}>Design</div>
           <div className={`tab ${appScreen === 'keys' ? 'active' : ''}`} onClick={() => setAppScreen('keys')}>Keys</div>
+          <div className={`tab ${appScreen === 'version&export' ? 'active' : ''}`} onClick={() => setAppScreen('keys')}>Versions & Export</div>
           <div className={`tab ${appScreen === 'settings' ? 'active' : ''}`} onClick={() => setAppScreen('settings')}>Settings</div>
         </div>
         <div className="window-control">

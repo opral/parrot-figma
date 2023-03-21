@@ -11,9 +11,12 @@ type TranslationEditorProps = {
   text?: string,
   onSave: Function
   match: { start: number, length: number } | undefined
+  editable: boolean
 };
 
-export default function TranslationEditor({ text, onSave, match }: TranslationEditorProps) {
+export default function TranslationEditor({
+  text, onSave, match, editable = true,
+}: TranslationEditorProps) {
   const [textState, setTextState] = useState(text);
   const [editingState, setEditingState] = useState(false);
   const [textAreaHeight, setTextAreaHeigth] = useState(0);
@@ -83,7 +86,7 @@ export default function TranslationEditor({ text, onSave, match }: TranslationEd
         <p
           className={`translation${editingState ? ' editing ' : ''}${textState === undefined ? ' missing ' : ''}`}
           onClick={() => {
-            if (!editingState) {
+            if (!editingState && editable) {
               setEditingState(!editingState);
             }
           }}

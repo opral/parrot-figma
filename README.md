@@ -221,19 +221,21 @@ What we want from ui point of view:
  - [x] make header columns fixed size based on maximum column content
  - [x] allow the user to resolve the apply conflicts 
  - [x] define language handling per label (if a lable is in state changed a language switch may not work for that label only)
- - [ ] check keyname for at least one visible character
- - [ ] allow user to select a key for a label 
-    - [ ] top down drawer window
-    - [ ] show only base language and current frame language
-    - [ ] hide usage 
-    - [ ] hide multiselect
+ - [x] allow user to select a key for a label 
+    - [x] top down drawer window
+    - [x] hide usage 
+    - [x] hide multiselect
+ - [ ] UX key select
     - [ ] search by key "key:keyname or other"
+    - [ ] show only base language and current frame language
     - [ ] add single line action button "use key"
+ - [ ] check keyname for at least one visible character
 
  - [ ] allow to add a key manually 
 
 
- - [ ] better no keys - empty list messages (no search results / no keys at all) 
+ - [x] better no keys - empty list messages (no search results / no keys at all) 
+
  - [ ] add automatic design update for labels with state modified == false && behind == 0 - feedback?
  - [ ] variable replacement logic
  - [ ] ensure only one open editor - tbd what to do with current active editor with due changes

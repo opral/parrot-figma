@@ -1,6 +1,8 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 import * as React from 'react';
+import { useState } from 'react';
+import OutsideClickHandler from 'react-outside-click-handler';
 import Plural from '../../../lib/base/Plural';
 import { KeyState, LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
 import FigmaUtil from '../../../shared/FigmaUtil';
@@ -10,6 +12,7 @@ import Language from '../../../lib/base/Language';
 import TranslationEditor from '../../compontents/translationEditor/TranslationEditor';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import TextField from '../../compontents/textfield/TextField';
+import TranslationKeyListView from '../translationkeys/TranslationKeyListView';
 
 type LocalizedLabelListItemProps = {
 
@@ -34,6 +37,8 @@ export default function LocalizedLabelListItem({
   const rowRef = React.useRef<HTMLDivElement>(null);
 
   const labelState = localisedLabelManager.getLabelState(localizedLabel);
+
+  const [searchKey, setSearchKey] = useState(undefined as any);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO remove when we implemented the design != keystore resolution
   const translations = translatedKey?.translations[localizedLabel.language];
@@ -120,80 +125,110 @@ export default function LocalizedLabelListItem({
   }, [selected]);
 
   return (
+    <>
 
-    <div ref={rowRef} className={`row${selected ? ' selected ' : ''}${localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? ' key-set ' : ' key-unset '}`} onClick={() => { onNodeSelect(localizedLabel.nodeId); }}>
-      <div className="column-1">
-        <div className="localized-label">
-          <div className="spacer" />
-          <div className="spacer" />
-          <div className="element-symbol">
-            <div className="svg-container text-sign-svg" />
+      <OutsideClickHandler
+        onOutsideClick={() => { setSearchKey(undefined); }}
+        disabled={searchKey === undefined}
+        display="contents"
+      >
+        <div className={`top-drawer${searchKey !== undefined ? ' open' : ' '}`}>
+          <div className="history_view--topHeader">
+            Select Key
           </div>
-          <TextField
-            singleClick={false}
-            onSave={async (labelName: string) => {
-              await localisedLabelManager.updateLabelName(localizedLabel, labelName);
+          { searchKey !== undefined && (
+          <TranslationKeyListView
+            translationKeyStore={translationKeyStore}
+            localizedLabelManager={localisedLabelManager}
+            keys={translationKeyStore.translationKeys}
+            figmaRemote={figmaRemote}
+            refreshKeys={() => {}}
+            select={(key: string) => {
+              linkKey(key);
+              setSearchKey(undefined);
             }}
-            text={localizedLabel.name}
           />
+          )}
+        </div>
+      </OutsideClickHandler>
+
+      <div ref={rowRef} className={`row${selected ? ' selected ' : ''}${localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? ' key-set ' : ' key-unset '}`} onClick={() => { onNodeSelect(localizedLabel.nodeId); }}>
+        <div className="column-1">
+          <div className="localized-label">
+            <div className="spacer" />
+            <div className="spacer" />
+            <div className="element-symbol">
+              <div className="svg-container text-sign-svg" />
+            </div>
+            <TextField
+              singleClick={false}
+              onSave={async (labelName: string) => {
+                await localisedLabelManager.updateLabelName(localizedLabel, labelName);
+              }}
+              text={localizedLabel.name}
+            />
+
+          </div>
 
         </div>
+        <div className="column localized-text column-2">
 
-      </div>
-      <div className="column localized-text column-2">
+          <div className="translation-container">
+            <div className="localized-label-details">
+              <div className="key-panel">
+                <TextField
+                  icon="key-svg"
+                  singleClick
+                  onSave={async (key: string) => {
+                    if (key === '') {
+                      unlinkKey(undefined);
+                    } else {
+                      linkKey(key);
+                    }
+                  }}
+                  text={localizedLabel.key !== undefined ? localizedLabel.key : localizedLabel.derivedKey}
+                  placeholder="Keyname..."
+                  onSearchClick={(key: any) => {
+                    setSearchKey({
+                      seach: key,
+                    });
+                  }}
+                />
+                <span
+                  className="layerIcon iconWrapper button"
+                  onClick={linkToggle}
+                >
+                  <span className={`svg-container ${localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? 'linked-svg' : 'unlinked-svg'}`} />
+                </span>
+                { false && `localizedLabel.keyType: ${localizedLabel.keyType} lang: ${localizedLabel.rootFrameLanguage}/${localizedLabel.language} version: ${localizedLabel.keyVersion} behind: ${labelState.behind} modified: ${labelState.modified}` }
+                { (localizedLabel.keyType === KeyState.Linked && (labelState.behind > 0 || localizedLabel.language !== localizedLabel.rootFrameLanguage)) && ( // allow the user to catch up with the keys version
+                <span
+                  className="layerIcon iconWrapper button"
+                  onClick={updateToLatestKeyVersion}
+                >
+                  <span className="svg-container reset-instance-svg" />
+                </span>
+                )}
 
-        <div className="translation-container">
-          <div className="localized-label-details">
-            <div className="key-panel">
-              <TextField
-                icon="key-svg"
-                singleClick
-                onSave={async (key: string) => {
-                  if (key === '') {
-                    unlinkKey(undefined);
-                  } else {
-                    linkKey(key);
-                  }
-                }}
-                text={localizedLabel.key !== undefined ? localizedLabel.key : localizedLabel.derivedKey}
-                placeholder="Keyname..."
-                onSearchClick={() => { }}
-              />
-              <span
-                className="layerIcon iconWrapper button"
-                onClick={linkToggle}
-              >
-                <span className={`svg-container ${localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? 'linked-svg' : 'unlinked-svg'}`} />
-              </span>
-              { 'localizedLabel.keyType: ' + localizedLabel.keyType + ' lang: ' +localizedLabel.rootFrameLanguage+ '/'+localizedLabel.language + ' version: ' +localizedLabel.keyVersion + ' behind: '+ labelState.behind  + ' modified: ' +labelState.modified }
-              { (localizedLabel.keyType === KeyState.Linked && (labelState.behind > 0 || localizedLabel.language !== localizedLabel.rootFrameLanguage)) && ( // allow the user to catch up with the keys version
-              <span
-                className="layerIcon iconWrapper button"
-                onClick={updateToLatestKeyVersion}
-              >
-                <span className="svg-container reset-instance-svg" />
-              </span>
-              )}
+                { ((localizedLabel.keyType === KeyState.Linked && labelState.modified && labelState.orginalText !== undefined)) && ( // allow the user revert the changes in design to the last versioned text
+                <span
+                  className="layerIcon iconWrapper button"
+                  onClick={revertDesignChanges}
+                >
+                  <span className="svg-container restore-svg" />
+                </span>
+                )}
 
-              { ((localizedLabel.keyType === KeyState.Linked && labelState.modified && labelState.orginalText !== undefined)) && ( // allow the user revert the changes in design to the last versioned text
-              <span
-                className="layerIcon iconWrapper button"
-                onClick={revertDesignChanges} //
-              >
-                <span className="svg-container restore-svg" />
-              </span>
-              )}
+                { ((localizedLabel.keyType === KeyState.Linked && labelState.modified)) && (
+                <span
+                  className="layerIcon iconWrapper button"
+                  onClick={createNewVersionFromDesign}
+                >
+                  <span className="svg-container use-label-svg" />
+                </span>
+                )}
 
-              { ((localizedLabel.keyType === KeyState.Linked && labelState.modified)) && (
-              <span
-                className="layerIcon iconWrapper button"
-                onClick={createNewVersionFromDesign}
-              >
-                <span className="svg-container use-label-svg" />
-              </span>
-              )}
-
-              {localizedLabel.keyType === KeyState.Linked && (
+                {localizedLabel.keyType === KeyState.Linked && (
                 <Select
                   onChange={(value) => {
                     onSaveFigmaVersionClick(localizedLabel.key!, localizedLabel.language, value.value as string, localizedLabel.text!);
@@ -202,14 +237,14 @@ export default function LocalizedLabelListItem({
                   options={pluralsAvailable}
                   placeholder=""
                 />
-              )}
+                )}
 
+              </div>
             </div>
-          </div>
 
-          <TranslationEditor
+            <TranslationEditor
             // eslint-disable-next-line @typescript-eslint/no-unused-vars, func-names -- TODO remove after refactor
-            onSave={async (text: any) => {
+              onSave={async (text: any) => {
               /* let translationKey;
                             if (keyExists === true) {
                                 translationKey = await translationKeyStore.updateKey(localizedLabel.key!, [{
@@ -233,42 +268,44 @@ export default function LocalizedLabelListItem({
                                 text: textToApplyToDesign,
                                 keyVersion: translationKey?.latestVersion
                             }); */
-              // eslint-disable-next-line no-console -- TODO remove when implemented
-              console.warn('TODO onSave back prob not implemented');
-            }}
-            text={localizedLabel.text}
-            match={undefined}
-          />
-        </div>
-        <div className="row-actions">
-          { ((localizedLabel.rootFrameLanguage !== localizedLabel.language)) && (
+                // eslint-disable-next-line no-console -- TODO remove when implemented
+                console.warn('TODO onSave back prob not implemented');
+              }}
+              text={localizedLabel.text}
+              match={undefined}
+              editable
+            />
+          </div>
+          <div className="row-actions">
+            { ((localizedLabel.rootFrameLanguage !== localizedLabel.language)) && (
             <span
               className="row-action-icon"
               onClick={createNewVersionFromDesign}
             >
               <span className="svg-container warning-svg" />
             </span>
-          )}
-          { ((localizedLabel.rootFrameLanguage === localizedLabel.language)) && (
+            )}
+            { ((localizedLabel.rootFrameLanguage === localizedLabel.language)) && (
             <span
               className="row-action-icon"
             >
               <span className="svg-container dot-svg" />
             </span>
-          )}
+            )}
 
-          <span
-            className="row-action-icon"
-          >
             <span
-              className={`svg-container ${localizedLabel.useSampleValues === false ? 'placeholder-svg' : 'placeholder-filled-svg'}`}
-              onClick={() => { localisedLabelManager.setLabelUseSampleValues(localizedLabel.nodeId, !localizedLabel.useSampleValues); }}
-            />
-          </span>
+              className="row-action-icon"
+            >
+              <span
+                className={`svg-container ${localizedLabel.useSampleValues === false ? 'placeholder-svg' : 'placeholder-filled-svg'}`}
+                onClick={() => { localisedLabelManager.setLabelUseSampleValues(localizedLabel.nodeId, !localizedLabel.useSampleValues); }}
+              />
+            </span>
 
+          </div>
         </div>
-      </div>
 
-    </div>
+      </div>
+    </>
   );
 }

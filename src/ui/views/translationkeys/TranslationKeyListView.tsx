@@ -21,6 +21,7 @@ type TranslationKeyListViewProps = {
 
   figmaRemote: FigmaUtil
   refreshKeys: Function
+  select?: Function
 };
 
 export default function TranslationKeyListView({
@@ -29,6 +30,7 @@ export default function TranslationKeyListView({
   localizedLabelManager,
   figmaRemote,
   refreshKeys,
+  select,
 }: TranslationKeyListViewProps) {
   const [history, setHistory] = useState(undefined as undefined | { version: number, text?: string }[]);
   const [, setTrigger] = useState(0);
@@ -58,12 +60,23 @@ export default function TranslationKeyListView({
   }, [renderEntries]);
 
   if (Object.keys(keys).length === 0) {
-    return <b>Keine Keys</b>;
+    return (
+      <div className="emptyState">
+        <div className="emptyStateTitle">No Translation keys yet</div>
+        <div className="emptyStateSubtitle">
+          <div>
+            Localized Keys
+            <br />
+            will show up here.
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const showHistory = (keyName: string, language: Language, plural: Plural) => {
     translationKeyStore.parentKeyStore.getHistory(keyName).then((historyEntries) => {
-      const specificHistory = [] as { text?: string, version: number}[];
+      const specificHistory = [] as { text?: string, version: number }[];
 
       let version = 0;
       // filter relevant history changes for the given key
@@ -85,6 +98,37 @@ export default function TranslationKeyListView({
 
   let rendered = 0;
 
+  const filteredKeys: any = Object.keys(keys).reduce((matchingKeys, key) => {
+    if (searchText === '') {
+      return matchingKeys.concat({ key });
+    }
+
+    const keyPosition = key.toLowerCase().indexOf(searchText.toLowerCase());
+    if (keyPosition !== -1) {
+      return matchingKeys.concat({
+        key,
+        match: { key: { start: keyPosition, length: searchText.length } },
+      });
+    }
+
+    for (const language of Object.keys(keys[key].translations)) {
+      for (const plural of Object.keys(keys[key].translations[language as Language]!)) {
+        const { text } = keys[key].translations[language as Language]![plural as Plural]!;
+        if (text !== undefined) {
+          const matchStart = text.toLowerCase().indexOf(searchText.toLowerCase());
+          if (matchStart !== -1) {
+            return filteredKeys.concat({
+              key,
+              match: { [language]: { [plural]: { start: matchStart, length: searchText.length } } },
+            });
+          }
+        }
+      }
+    }
+
+    return matchingKeys;
+  }, [] as any[]);
+
   return (
     <div>
       <div className="style_picker--search search--margin">
@@ -102,6 +146,11 @@ export default function TranslationKeyListView({
           }}
         />
       </div>
+      { searchText && (
+        <div className="searchResults">
+          { filteredKeys.length === 0 ? 'No results in this file' : `${filteredKeys.length} results` }
+        </div>
+      )}
       <div className="grid">
         <div className="grid-hidden-layout-helper">
           <TranslationKeyListItem
@@ -112,57 +161,27 @@ export default function TranslationKeyListView({
             showHistory={showHistory}
             translationKey={keys[longestKey]}
             figmaRemote={figmaRemote}
+            select={select}
           />
         </div>
-        {Object.keys(keys).map((key) => {
+        {filteredKeys.map((matching: any) => {
           if (rendered > renderEntries) {
             return;
           }
-          let match;
-          if (searchText !== '') {
-            const keyPosition = key.toLowerCase().indexOf(searchText.toLowerCase());
-            if (keyPosition !== -1) {
-              match = { key: { start: keyPosition, length: searchText.length } };
-            } else {
-              // eslint-disable-next-line no-restricted-syntax, no-labels
-              outer:
-              for (const language of Object.keys(keys[key].translations)) {
-                // eslint-disable-next-line no-restricted-syntax, no-labels
-                inner:
-                for (const plural of Object.keys(keys[key].translations[language as Language]!)) {
-                  const { text } = keys[key].translations[language as Language]![plural as Plural]!;
-                  if (text === undefined) {
-                    // eslint-disable-next-line no-continue, no-labels, no-extra-label
-                    continue inner;
-                  }
 
-                  const matchStart = text.toLowerCase().indexOf(searchText.toLowerCase());
-                  if (matchStart !== -1) {
-                    match = { [language]: { [plural]: { start: matchStart, length: searchText.length } } };
-
-                    // eslint-disable-next-line no-labels
-                    break outer;
-                  }
-                }
-              }
-            }
-
-            if (match === undefined) {
-              return;
-            }
-          }
-
+          found += 1;
           rendered += 1;
           // eslint-disable-next-line consistent-return
           return (
             <TranslationKeyListItem
-              key={key}
+              key={matching.key}
               translationKeyStore={translationKeyStore}
               localizedLabelManager={localizedLabelManager}
-              searchMatch={match}
+              searchMatch={matching.match}
               showHistory={showHistory}
-              translationKey={keys[key]}
+              translationKey={keys[matching.key]}
               figmaRemote={figmaRemote}
+              select={select}
             />
           );
         })}

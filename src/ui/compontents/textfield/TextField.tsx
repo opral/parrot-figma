@@ -123,7 +123,7 @@ export default function TextField({
           <span className={`svg-container ${icon}`} />
           )}
           { onSearchClick !== undefined && (
-          <span className="svg-container right search-svg" onClick={(() => { if (onSearchClick !== undefined) onSearchClick(); })} />
+          <span className="svg-container right search-svg" onClick={(() => { if (onSearchClick !== undefined) onSearchClick(text); })} />
           )}
         </div>
       </div>

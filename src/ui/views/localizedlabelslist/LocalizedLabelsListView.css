@@ -196,3 +196,30 @@
     white-space: nowrap;
     overflow: hidden;
 }
+
+
+
+
+.top-drawer {
+    overflow: scroll;
+    height: var(--window-client-height);
+    background: white;
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 90%;
+    left: 5%;
+    height: 70%;
+    z-index: 200;
+    box-shadow: 0 0px 0px rgba(0,0,0,0.15);
+    transform: translateY(-100%);
+    transition: box-shadow 0.3s ease-out, transform 0.3s ease-out;
+    
+  }
+  
+  .top-drawer.open {
+    
+    box-shadow: 1px 0px 7px rgba(0, 0, 0, 0.5);
+    transform: translateY(0);
+    transition: box-shadow 0.3s ease-out, transform 0.3s ease-out;
+  }

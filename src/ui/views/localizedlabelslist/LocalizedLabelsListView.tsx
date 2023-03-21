@@ -103,17 +103,20 @@ export default function LocalizedLabelsListView({
   }
 
   return (
-    <div className="table">
-      {Object.keys(selection).map((mainFrameId) => (
-        <LocalizedFrameGroup
-          localizedLabels={localizedLabels}
-          selectionByFrame={selection}
-          translationKeyStore={translationKeyStore}
-          figmaRemote={figmaRemote}
-          localisedLabelManager={localizedLabelManager}
-          key={mainFrameId}
-        />
-      ))}
+    <div>
+
+      <div className="table">
+        {Object.keys(selection).map((mainFrameId) => (
+          <LocalizedFrameGroup
+            localizedLabels={localizedLabels}
+            selectionByFrame={selection}
+            translationKeyStore={translationKeyStore}
+            figmaRemote={figmaRemote}
+            localisedLabelManager={localizedLabelManager}
+            key={mainFrameId}
+          />
+        ))}
+      </div>
     </div>
   );
 }

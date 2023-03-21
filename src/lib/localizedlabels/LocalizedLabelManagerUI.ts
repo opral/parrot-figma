@@ -121,9 +121,9 @@ export default class LocalizedLabelManagerUI extends EventTarget {
    * The state of a label is represented by two main properties:
    * modified: was the labels text changed in the design compared to the version the label is pointing to
    * behind: the number of changes that have been applied to the language relative to the version the label is currently pointing to
-   * 
+   *
    * @param localizedLabel the label to provide the state for
-   * @returns 
+   * @returns
    */
   getLabelState(localizedLabel: LocalizedLabel): { behind: number, orginalText?: string, modified: boolean } {
     const state = {

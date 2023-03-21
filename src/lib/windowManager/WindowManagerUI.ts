@@ -37,6 +37,7 @@ export default class WindowManagerUi {
           lastRatio = entries[0].intersectionRatio;
 
           this.contentEl!.style.height = `${entries[0].intersectionRect.height}px`;
+          ((document.querySelector(':root')!) as HTMLElement).style.setProperty('--window-client-height', `${entries[0].intersectionRect.height}px`);
           // eslint-disable-next-line no-restricted-globals
           parent.postMessage({
             pluginMessage: {

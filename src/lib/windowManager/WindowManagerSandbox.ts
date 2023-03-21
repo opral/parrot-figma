@@ -101,7 +101,7 @@ export class WindowManagerSandbox {
           if (message.size) {
             this.handleSizeMessage(message);
           } else if (message.windowMode !== undefined) {
-            this.setWindwoMode(message.windowMode);
+            this.setWindowMode(message.windowMode);
           }
         }
       });
@@ -144,13 +144,13 @@ export class WindowManagerSandbox {
       const rightPanelWidth = 240;
 
       width = figma.viewport.bounds.width * figma.viewport.zoom + leftPanelWidth + rightPanelWidth;
-      height = figma.viewport.bounds.height;
+      height = figma.viewport.bounds.height * figma.viewport.zoom;
 
       x = figma.viewport.bounds.x - ((leftPanelWidth) / figma.viewport.zoom);
       y = figma.viewport.bounds.y;
     } else if (this.windowMode === WindowMode.BottomSheet) {
       width = figma.viewport.bounds.width * figma.viewport.zoom;
-      height = figma.viewport.bounds.height;
+      height = figma.viewport.bounds.height * figma.viewport.zoom;
 
       x = figma.viewport.bounds.x;
       y = figma.viewport.bounds.y + figma.viewport.bounds.height - ((this.bottomSheetHeight + titleBarHeight) / figma.viewport.zoom);
@@ -177,7 +177,7 @@ export class WindowManagerSandbox {
     figma.ui.show();
   }
 
-  setWindwoMode(mode: WindowMode) {
+  setWindowMode(mode: WindowMode) {
     this.windowMode = mode;
 
     figma.clientStorage.setAsync('windowMode', mode);

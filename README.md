@@ -255,8 +255,8 @@ What we want from ui point of view:
 
  - [ ] fix order
  - [ ] fix window manager bugs
-    - [ ] window jumps when viewport is zoomed
-    - [ ] if zoomfactor is to small sizing glitches
+    - [x] window jumps when viewport is zoomed
+    - [x] if zoomfactor is to small sizing glitches
     - [ ] propagate viewport height via css variables (https://www.w3schools.com/css/css3_variables_javascript.asp)
  - [ ] Add tooltips 
 

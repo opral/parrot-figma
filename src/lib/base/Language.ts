@@ -1,5 +1,6 @@
 enum Language {
   De = 'de',
+  Se = 'se',
   En = 'en',
   Bg = 'bg',
   Cs = 'cs',

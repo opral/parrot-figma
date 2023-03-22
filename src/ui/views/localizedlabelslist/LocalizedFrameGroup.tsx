@@ -51,7 +51,6 @@ export default function LocalizedFrameGroup({
 
   async function onLanguageSelectionClick(firstLocalizedLabelInFrame: LocalizedLabel, language: Language) {
     const deepLTranslationProvider = async (text: String, targetLanguage: string) => {
-      return undefined;
       // console.log(`tranalating: ${text} with deepl`);
       const result = await fetch('http://localhost:3333/api/v1/translate', {
         method: 'POST',

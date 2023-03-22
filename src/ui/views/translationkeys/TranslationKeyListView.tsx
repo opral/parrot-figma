@@ -169,7 +169,6 @@ export default function TranslationKeyListView({
             return;
           }
 
-          found += 1;
           rendered += 1;
           // eslint-disable-next-line consistent-return
           return (

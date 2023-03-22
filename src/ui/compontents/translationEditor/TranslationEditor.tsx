@@ -4,6 +4,7 @@
 /* eslint-disable react/require-default-props */
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
+import OutsideClickHandler from 'react-outside-click-handler';
 import MatchView from '../matchview/MatchView';
 import './TranslationEditor.css';
 
@@ -69,37 +70,45 @@ export default function TranslationEditor({
     textToUse = textState;
   }
   return (
-    <div className={`translation-editor${editingState ? ' editing' : ''}`}>
-      <div ref={textDivRef} className={`translation-editor-text${editingState ? ' editing' : ''}`}>
+    <OutsideClickHandler
+      onOutsideClick={() => {
+        setEditingState(!editingState);
+        onSave(textState);
+      }}
+      disabled={!editingState}
+      display="contents"
+    >
+      <div className={`translation-editor${editingState ? ' editing' : ''}`}>
+        <div ref={textDivRef} className={`translation-editor-text${editingState ? ' editing' : ''}`}>
 
-        <textarea
-          ref={textAreaRef}
-          style={{
-            height: textAreaHeight,
-            width: textAreaWidth,
-            visibility: (editingState ? 'visible' : 'hidden'),
-          }}
-          value={textState}
-          onChange={handleChange}
-        />
-
-        <p
-          className={`translation${editingState ? ' editing ' : ''}${textState === undefined ? ' missing ' : ''}`}
-          onClick={() => {
-            if (!editingState && editable) {
-              setEditingState(!editingState);
-            }
-          }}
-        >
-          <MatchView
-            match={match}
-            text={textToUse}
+          <textarea
+            ref={textAreaRef}
+            style={{
+              height: textAreaHeight,
+              width: textAreaWidth,
+              visibility: (editingState ? 'visible' : 'hidden'),
+            }}
+            value={textState}
+            onChange={handleChange}
           />
 
-        </p>
+          <p
+            className={`translation${editingState ? ' editing ' : ''}${textState === undefined ? ' missing ' : ''}`}
+            onClick={() => {
+              if (!editingState && editable) {
+                setEditingState(!editingState);
+              }
+            }}
+          >
+            <MatchView
+              match={match}
+              text={textToUse}
+            />
 
-      </div>
-      { editingState && (
+          </p>
+
+        </div>
+        { editingState && (
         <>
 
           <input
@@ -129,7 +138,8 @@ export default function TranslationEditor({
           </div>
           )}
         </>
-      )}
-    </div>
+        )}
+      </div>
+    </OutsideClickHandler>
   );
 }

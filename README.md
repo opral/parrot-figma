@@ -230,6 +230,7 @@ What we want from ui point of view:
     - [ ] show only base language and current frame language
     - [ ] add single line action button "use key"
  - [ ] check keyname for at least one visible character
+ - [x] ensure only one open editor - tbd what to do with current active editor with due changes - we save the changes since we have versioning
 
  - [ ] allow to add a key manually 
 
@@ -238,7 +239,6 @@ What we want from ui point of view:
 
  - [ ] add automatic design update for labels with state modified == false && behind == 0 - feedback?
  - [ ] variable replacement logic
- - [ ] ensure only one open editor - tbd what to do with current active editor with due changes
  - [ ] focus key field on link click if no derviation is posible
  - [ ] handle empty text in translation as mising translation '' == undefined
  - [ ] plural select
@@ -246,7 +246,7 @@ What we want from ui point of view:
 
  - [x] when checking for behind always use the  frames language instead of the labels one to detect a ne translation that gets added and allow to switch language by updating instance
 
- - [ ] selectiion - delete
+ - [ ] delete selection (multi select)
 
  - [ ] distinct visual style for base language like bold
  - [ ] translation editor ux - we should be able to hide skipped values from option in toolbar

@@ -43,11 +43,16 @@
   }
 
 
-.flag-de {
+  .flag-de {
     width: 16px;
     height: 16px;
     background-image: url(./flags/de.svg);
   }
+  .flag-se {
+      width: 16px;
+      height: 16px;
+      background-image: url(./flags/se.svg);
+    }
 
 .flag-en {
     width: 16px;

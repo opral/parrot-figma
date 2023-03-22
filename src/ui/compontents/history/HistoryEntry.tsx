@@ -7,7 +7,7 @@ interface HistoryEntryProps {
   tag?: string;
   text?: string;
   previousText?: string;
-  onRestore?: Function
+  onReuse?: Function
 }
 
 export default function HistoryEntry({
@@ -15,7 +15,7 @@ export default function HistoryEntry({
   tag,
   text,
   previousText,
-  onRestore,
+  onReuse,
 }: HistoryEntryProps) {
   return (
     <div className="history_view">
@@ -57,11 +57,11 @@ export default function HistoryEntry({
             oldValue={previousText || ''}
             newValue={text || ''}
           />
-          {` (${version})`}
-          { onRestore !== undefined && (
-          <button className="button button--buttonSecondary" type="button" onClick={() => { onRestore(text); }}>
+          
+          { onReuse !== undefined && (
+          <button className="button button--buttonSecondary" type="button" onClick={() => { onReuse(text); }}>
             <span data-tooltip-type="text">
-              Restore
+              Reuse
             </span>
           </button>
           )}
@@ -107,7 +107,6 @@ export default function HistoryEntry({
             {' '}
             <span className="">21 hours ago</span>
           </span>
-          
         </div>
       </div>
     </div>

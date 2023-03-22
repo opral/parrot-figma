@@ -10,16 +10,18 @@ import './Filesetup.css';
 
   type FilesetupProps = {
     translationKeyStore: MemoryTranslationKeyStore
+    showNextButton: boolean
     // selectLanguage: Function,
   };
 
 export default function Filesetup({
   translationKeyStore,
+  showNextButton = false,
 }: FilesetupProps) {
   const languageOptiones = [] as SelectOption[];
 
   const availableLanguages = Object.values(Language);
-  const [selectedLanguages, setSelectedLanguages] = useState(translationKeyStore.getLanugages() ?? []);
+  const [selectedLanguages, setSelectedLanguages] = useState<Language[]>(translationKeyStore.getLanugages() ?? []);
   const [baseLanguageState, setBaseLanguageState] = useState(translationKeyStore.getBaseLanugage());
 
   // const [baseLanguage, setBaseLanguages] = useState(translationKeyStore.getBaseLanugages());
@@ -47,7 +49,9 @@ export default function Filesetup({
       } else {
         newLanguages = languages.filter((l) => l !== language);
       }
-      translationKeyStore.setLanguages(newLanguages);
+      if (!showNextButton) {
+        translationKeyStore.setLanguages(newLanguages);
+      }
       return newLanguages;
     });
   }
@@ -55,26 +59,28 @@ export default function Filesetup({
   function setBaselanguage(language: Language) {
     setLanguageSelected(language, true);
     setBaseLanguageState(language);
-    translationKeyStore.setBaseLanguages(language);
+    if (!showNextButton) {
+      translationKeyStore.setBaseLanguages(language);
+    }
   }
-
-  useEffect(() => {
-
-  }, []);
 
   return (
     <div>
       <div>
-        Please select the base language.
-        <br />
-        Please select the language in which the design file is currently written?
-        <br />
+        <div>
+          Please choose the base language.
+          <br />
+          Please select the language in which the design file is currently written?
+        </div>
         <Select
           placeholder="Select item"
           onChange={(value) => { setBaselanguage(value.value as Language); }}
           // defaultValue={rootFrameLanguage?.value}
           options={languageOptiones}
         />
+        <div>
+          Please select langueages to translate the designfile for.
+        </div>
         <div>
           { Object.values(availableLanguages).map((language) => (
             <div key={language} className="available-language">
@@ -100,6 +106,15 @@ export default function Filesetup({
           )) }
         </div>
       </div>
+      { showNextButton && (
+      <div>
+        <button className="button button--buttonSecondary" type="button" onClick={() => { }}>
+          <span data-tooltip-type="text">
+            Next
+          </span>
+        </button>
+      </div>
+      )}
     </div>
   );
 }

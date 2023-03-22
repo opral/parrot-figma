@@ -12,7 +12,7 @@ export interface Config {
 export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
   public proxClassName = 'LocalizedLabelManager';
 
-  languageConfigDataKey = 'aar_l_';
+  public static languageConfigDataKey = 'aar_l_';
 
   keyPrefix = 'aar_k__1';
 
@@ -32,7 +32,7 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
   }
 
   async getConfig() {
-    const keyRaw = figma.root.getPluginData(this.languageConfigDataKey);
+    const keyRaw = figma.root.getPluginData(FigmaFileTranslationKeyStore.languageConfigDataKey);
 
     if (keyRaw === '' || !keyRaw) {
       return {
@@ -44,8 +44,9 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
     return (JSON.parse(keyRaw) as Config);
   }
 
+  // eslint-disable-next-line class-methods-use-this
   async setConfig(languageConfig: Config) {
-    figma.root.setPluginData(this.languageConfigDataKey, JSON.stringify(languageConfig));
+    figma.root.setPluginData(FigmaFileTranslationKeyStore.languageConfigDataKey, JSON.stringify(languageConfig));
   }
 
   async getHistory(translationKeyName: string) : Promise<HistoryEntry[]> {

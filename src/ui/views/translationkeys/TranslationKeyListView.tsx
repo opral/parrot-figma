@@ -96,7 +96,7 @@ export default function TranslationKeyListView({
         if (text !== undefined) {
           const matchStart = text.toLowerCase().indexOf(searchText.toLowerCase());
           if (matchStart !== -1) {
-            return filteredKeys.concat({
+            return matchingKeys.concat({
               key,
               match: { [language]: { [plural]: { start: matchStart, length: searchText.length } } },
             });

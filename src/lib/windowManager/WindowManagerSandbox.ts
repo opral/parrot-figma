@@ -1,3 +1,5 @@
+import { FigmaFileTranslationKeyStore } from '../keystore/FigmaFileTranslationKeyStore';
+
 const titleBarHeight = 40;
 
 export enum WindowMode {
@@ -35,15 +37,15 @@ export class WindowManagerSandbox {
 
   static instance: WindowManagerSandbox | undefined;
 
-  static init(initalWidth: number, initialHeight: number, initialBottomSheetHeight: number, initalWindowMode = WindowMode.Window as WindowMode) {
+  static init(initalWidth: number, initialHeight: number, initialBottomSheetHeight: number, initalWindowMode: WindowMode, enforceInitialConfig: boolean) {
     if (this.instance) {
       throw new Error('init called twice');
     }
 
-    this.instance = new WindowManagerSandbox(initalWidth, initialHeight, initialBottomSheetHeight, initalWindowMode);
+    this.instance = new WindowManagerSandbox(initalWidth, initialHeight, initialBottomSheetHeight, initalWindowMode, enforceInitialConfig);
   }
 
-  private constructor(initalWidth: number, initialHeight: number, initialBottomSheetHeight: number, initalWindowMode = WindowMode.Window as WindowMode) {
+  private constructor(initalWidth: number, initialHeight: number, initialBottomSheetHeight: number, initalWindowMode: WindowMode, enforceInitialConfig: boolean) {
     this.bottomSheetHeight = initialBottomSheetHeight;
     this.windowMode = initalWindowMode;
 
@@ -60,16 +62,18 @@ export class WindowManagerSandbox {
     ]).then((values) => {
       const [storedWindowSize, , storedWindowBottomSheetHeight, storedWindowMode] = values;
 
-      if (storedWindowSize) {
-        this.size = storedWindowSize;
-      }
+      if (!enforceInitialConfig) {
+        if (storedWindowSize) {
+          this.size = storedWindowSize;
+        }
 
-      if (storedWindowBottomSheetHeight) {
-        this.bottomSheetHeight = storedWindowBottomSheetHeight;
-      }
+        if (storedWindowBottomSheetHeight) {
+          this.bottomSheetHeight = storedWindowBottomSheetHeight;
+        }
 
-      if (storedWindowMode) {
-        this.windowMode = storedWindowMode;
+        if (storedWindowMode) {
+          this.windowMode = storedWindowMode;
+        }
       }
 
       figma.showUI(__html__, {

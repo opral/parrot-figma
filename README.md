@@ -213,6 +213,13 @@ What we want from ui point of view:
     - Label with sampleValues active    [X]
     - Label with sampleValues inactive  [ ]
 
+# Onboarding
+
+- select the base language
+- select the languages you want to translate the designfile to
+- select the platforms the designs should be used in (ios / android / web / ... ) - this will preconfigure the export eventually
+- import existing key file (ios/android)
+
 # Todos: 
 
  - [x] specify languages for file
@@ -233,6 +240,7 @@ What we want from ui point of view:
  - [x] ensure only one open editor - tbd what to do with current active editor with due changes - we save the changes since we have versioning
 
  - [ ] allow to add a key manually 
+ - [ ] add show difference toggle to history view
 
 
  - [x] better no keys - empty list messages (no search results / no keys at all) 
@@ -255,7 +263,7 @@ What we want from ui point of view:
  - [ ] #3 implement fallback mechanism (plural skipped -> other -> other skipped -> base lang plural -> base lang plural skipped -> base lang other ) 
     - [ ] does the label need to know what it falled back to - how can synchonization handle that?
 
- - [ ] fix order
+ - [x] fix order in label screen
  - [ ] fix window manager bugs
     - [x] window jumps when viewport is zoomed
     - [x] if zoomfactor is to small sizing glitches

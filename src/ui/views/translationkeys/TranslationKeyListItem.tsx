@@ -236,7 +236,7 @@ export default function TranslationKeyListItem({
               version={entry.version}
               text={entry.text}
               previousText={i < (array.length - 1) ? array[i + 1].text : undefined}
-              onRestore={i === 0 ? undefined : async (text: string) => {
+              onReuse={i === 0 ? undefined : async (text: string) => {
                 if (showHistory === undefined) return;
 
                 await translationKeyStore.updateKey(translationKey.keyName!, [{

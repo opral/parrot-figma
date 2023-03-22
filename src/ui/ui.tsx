@@ -93,6 +93,7 @@ function App() {
     return (
       <Filesetup
         translationKeyStore={memoryTranslationKeyStore}
+        showNextButton={true}
       />
     );
   }
@@ -112,6 +113,7 @@ function App() {
     view = (
       <Filesetup
         translationKeyStore={memoryTranslationKeyStore}
+        showNextButton={false}
       />
     );
   /* (

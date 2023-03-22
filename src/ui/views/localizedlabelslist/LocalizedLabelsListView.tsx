@@ -22,7 +22,7 @@ export default function LocalizedLabelsListView({
   figmaRemote,
   localizedLabelManager,
 }: LocalizedLabelsListViewProps) {
-  const [localizedLabels, setLocalizedLabels] = useState([] as LocalizedLabelListItem[]);
+  const [localizedLabels, setLocalizedLabels] = useState<LocalizedLabelListItem[]>([]);
 
   const [selection, setSelection] = useState({} as {
     [rootFrameId: string]: string[]
@@ -108,7 +108,7 @@ export default function LocalizedLabelsListView({
       <div className="table">
         {Object.keys(selection).map((mainFrameId) => (
           <LocalizedFrameGroup
-            localizedLabels={localizedLabels}
+            localizedLabels={localizedLabels.filter((l) => l.rootFrameId === mainFrameId).reverse()}
             selectionByFrame={selection}
             translationKeyStore={translationKeyStore}
             figmaRemote={figmaRemote}

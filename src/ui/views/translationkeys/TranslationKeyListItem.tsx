@@ -1,9 +1,11 @@
+/* eslint-disable jsx-a11y/interactive-supports-focus */
 /* eslint-disable prefer-template */
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 /* eslint-disable jsx-a11y/label-has-associated-control */
 import * as React from 'react';
 import { useState } from 'react';
+import OutsideClickHandler from 'react-outside-click-handler';
 import Language from '../../../lib/base/Language';
 import Plural from '../../../lib/base/Plural';
 import { TranslationKey } from '../../../lib/keystore/TranslationKey';
@@ -14,10 +16,10 @@ import FigmaUtil from '../../../shared/FigmaUtil';
 import TranslationEditor from '../../compontents/translationEditor/TranslationEditor';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import MatchView from '../../compontents/matchview/MatchView';
+import HistoryEntry from '../../compontents/history/HistoryEntry';
 
 type TranslationKeyListItemProps = {
   translationKey: TranslationKey,
-  showHistory: Function,
   figmaRemote: FigmaUtil,
   searchMatch: any,
   translationKeyStore: MemoryTranslationKeyStore,
@@ -27,7 +29,6 @@ type TranslationKeyListItemProps = {
 
 export default function TranslationKeyListItem({
   translationKey,
-  showHistory,
   figmaRemote,
   searchMatch,
   translationKeyStore,
@@ -36,6 +37,9 @@ export default function TranslationKeyListItem({
 }: TranslationKeyListItemProps) {
   const [selected, setSelected] = useState(false);
   const [showUsage, setShowUsage] = useState(false);
+  const [history, setHistory] = useState<undefined | { version: number, text?: string }[]>(undefined);
+
+  const [showHistory, setShowHistory] = useState<undefined | { language: Language, plural: Plural }>(undefined);
 
   const rowRef = React.useRef<HTMLDivElement>(null);
 
@@ -50,6 +54,27 @@ export default function TranslationKeyListItem({
 
   // create an array of languages with baselanguage at position zero
   const languages = [baseLang, ...translationKeyStore.getLanugages()!.filter((l) => l !== baseLang)] as Language[];
+
+  const onShowHistoryClick = (language: Language, plural: Plural) => {
+    translationKeyStore.parentKeyStore.getHistory(translationKey.keyName).then((historyEntries) => {
+      const specificHistory = [] as { text?: string, version: number }[];
+
+      let version = 0;
+      // filter relevant history changes for the given key
+      for (const keyHistoryEntry of historyEntries) {
+        if (keyHistoryEntry[language]?.[plural] !== undefined) {
+          specificHistory.push({
+            text: keyHistoryEntry[language]![plural]!.text,
+            version,
+          });
+        }
+        version += 1;
+      }
+
+      setHistory(specificHistory.reverse());
+      setShowHistory({ language, plural });
+    });
+  };
 
   return (
     <div
@@ -170,7 +195,7 @@ export default function TranslationKeyListItem({
                       <span
                         className="layerIcon iconWrapper button"
                         onClick={async () => {
-                          showHistory(translationKey.keyName, language, plural);
+                          onShowHistoryClick(language, plural);
                         }}
                       >
                         <span className="svg-container history-svg" />
@@ -185,6 +210,44 @@ export default function TranslationKeyListItem({
         );
       })}
       <div className="grid-item-language" style={{ height: '10px' }} />
+      <OutsideClickHandler
+        onOutsideClick={() => { setShowHistory(undefined); }}
+        disabled={showHistory === undefined}
+        display="contents"
+      >
+        <div className={`side-drawer${showHistory !== undefined ? ' open' : ' '}`}>
+          <div className="history_view--topHeader">
+            Version history
+            <span
+              role="button"
+              onClick={() => { setShowHistory(undefined); }}
+              className="svg-container raw_components--iconButtonEnabled raw_components--_iconButton history_view--headerButton"
+              data-tooltip-type="text"
+              data-tooltip="Close"
+              aria-label="Close"
+            >
+              <svg className="svg" width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 5.71l3.646 3.647.707-.707-3.646-3.647 3.646-3.646L8.646.65 5 4.296 1.353.65l-.707.707 3.646 3.646L.646 8.65l.707.707L5 5.71z" fillRule="nonzero" fillOpacity="1" fill="#000" stroke="none" />
+              </svg>
+            </span>
+          </div>
+          {history?.map((entry, i, array) => (
+            <HistoryEntry
+              version={entry.version}
+              text={entry.text}
+              previousText={i < (array.length - 1) ? array[i + 1].text : undefined}
+              onRestore={i === 0 ? undefined : async (text: string) => {
+                if (showHistory === undefined) return;
+
+                await translationKeyStore.updateKey(translationKey.keyName!, [{
+                  language: showHistory.language, plural: showHistory.plural as Plural, text, skip: false,
+                }]);
+                setShowHistory(undefined);
+              }}
+            />
+          ))}
+        </div>
+      </OutsideClickHandler>
     </div>
   );
 }

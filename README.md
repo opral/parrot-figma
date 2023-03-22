@@ -242,7 +242,7 @@ What we want from ui point of view:
  - [ ] focus key field on link click if no derviation is posible
  - [ ] handle empty text in translation as mising translation '' == undefined
  - [ ] plural select
- - [ ] add revert button to history
+ - [x] add revert button to history
 
  - [x] when checking for behind always use the  frames language instead of the labels one to detect a ne translation that gets added and allow to switch language by updating instance
 

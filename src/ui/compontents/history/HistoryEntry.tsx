@@ -7,6 +7,7 @@ interface HistoryEntryProps {
   tag?: string;
   text?: string;
   previousText?: string;
+  onRestore?: Function
 }
 
 export default function HistoryEntry({
@@ -14,6 +15,7 @@ export default function HistoryEntry({
   tag,
   text,
   previousText,
+  onRestore,
 }: HistoryEntryProps) {
   return (
     <div className="history_view">
@@ -49,13 +51,20 @@ export default function HistoryEntry({
         <div
           className="history_view--description"
           dir="auto"
-          style={{ maxWidth: '165px', marginTop: tag ? '-8px' : '-24px' }}
+          style={{ marginTop: tag ? '-8px' : '-24px' }}
         >
           <StringDiff
             oldValue={previousText || ''}
             newValue={text || ''}
           />
           {` (${version})`}
+          { onRestore !== undefined && (
+          <button className="button button--buttonSecondary" type="button" onClick={() => { onRestore(text); }}>
+            <span data-tooltip-type="text">
+              Restore
+            </span>
+          </button>
+          )}
         </div>
         <div>
           <div className="history_view--editors">
@@ -98,6 +107,7 @@ export default function HistoryEntry({
             {' '}
             <span className="">21 hours ago</span>
           </span>
+          
         </div>
       </div>
     </div>

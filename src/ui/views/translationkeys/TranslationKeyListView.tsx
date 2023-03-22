@@ -32,7 +32,6 @@ export default function TranslationKeyListView({
   refreshKeys,
   select,
 }: TranslationKeyListViewProps) {
-  const [history, setHistory] = useState(undefined as undefined | { version: number, text?: string }[]);
   const [, setTrigger] = useState(0);
   const [renderEntries, setRenderEntries] = useState(200);
   const [searchText, setSearchText] = useState('');
@@ -73,26 +72,6 @@ export default function TranslationKeyListView({
       </div>
     );
   }
-
-  const showHistory = (keyName: string, language: Language, plural: Plural) => {
-    translationKeyStore.parentKeyStore.getHistory(keyName).then((historyEntries) => {
-      const specificHistory = [] as { text?: string, version: number }[];
-
-      let version = 0;
-      // filter relevant history changes for the given key
-      for (const keyHistoryEntry of historyEntries) {
-        if (keyHistoryEntry[language]?.[plural] !== undefined) {
-          specificHistory.push({
-            text: keyHistoryEntry[language]![plural]!.text,
-            version,
-          });
-        }
-        version += 1;
-      }
-
-      setHistory(specificHistory);
-    });
-  };
 
   const longestKey = Object.keys(keys).reduce((acc, key) => (key.length > acc.length ? key : acc), '');
 
@@ -158,7 +137,6 @@ export default function TranslationKeyListView({
             translationKeyStore={translationKeyStore}
             localizedLabelManager={localizedLabelManager}
             searchMatch={undefined}
-            showHistory={showHistory}
             translationKey={keys[longestKey]}
             figmaRemote={figmaRemote}
             select={select}
@@ -177,7 +155,6 @@ export default function TranslationKeyListView({
               translationKeyStore={translationKeyStore}
               localizedLabelManager={localizedLabelManager}
               searchMatch={matching.match}
-              showHistory={showHistory}
               translationKey={keys[matching.key]}
               figmaRemote={figmaRemote}
               select={select}
@@ -185,29 +162,7 @@ export default function TranslationKeyListView({
           );
         })}
       </div>
-      <OutsideClickHandler
-        onOutsideClick={() => { setHistory(undefined); }}
-        disabled={history === undefined}
-      >
-        <div className={`side-drawer${history !== undefined ? ' open' : ' '}`}>
-          <div className="history_view--topHeader">
-            Version history
-            <span
-              role="button"
-              onClick={() => { setHistory(undefined); }}
-              className="svg-container raw_components--iconButtonEnabled raw_components--_iconButton history_view--headerButton"
-              data-tooltip-type="text"
-              data-tooltip="Close"
-              aria-label="Close"
-            >
-              <svg className="svg" width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg">
-                <path d="M5 5.71l3.646 3.647.707-.707-3.646-3.647 3.646-3.646L8.646.65 5 4.296 1.353.65l-.707.707 3.646 3.646L.646 8.65l.707.707L5 5.71z" fillRule="nonzero" fillOpacity="1" fill="#000" stroke="none" />
-              </svg>
-            </span>
-          </div>
-          {history?.reverse().map((entry, i, array) => <HistoryEntry version={entry.version} text={entry.text} previousText={i < (array.length - 1) ? array[i + 1].text : undefined} />)}
-        </div>
-      </OutsideClickHandler>
+      
     </div>
   );
 }

@@ -183,7 +183,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     }
   }
 
-  async setFrameLanguage(frameId: string, targetLanguage: Language, missingTranslationProvider: (input: string, language: string) => Promise<string | undefined>) {
+  async setFrameLanguage(frameId: string, targetLanguage: Language, missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | undefined>) {
     await this.localisedLabelMangerSandbox.updateFrameProperties(frameId, {
       language: targetLanguage,
     });
@@ -200,7 +200,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
   async setLabelLanguage(
     cachedLabel: LocalizedLabel,
     targetLanguage: Language,
-    missingTranslationProvider: (input: string, language: string) => Promise<string | undefined>,
+    missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | undefined>,
   ) {
     const translationKeyName = cachedLabel.key ?? cachedLabel.derivedKey;
     const labelState = this.getLabelState(cachedLabel);
@@ -217,7 +217,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     let translationKey = this.keyStore.getKey(translationKeyName);
     // check if key exists
     if (translationKey === undefined) {
-      const translation = await missingTranslationProvider(cachedLabel.text!, targetLanguage);
+      const translation = await missingTranslationProvider(cachedLabel.text!, cachedLabel.language, targetLanguage);
 
       // ok we have a fresh key to create - no translation to expect
       translationKey = await this.keyStore.createKey(translationKeyName, [{
@@ -246,9 +246,15 @@ export default class LocalizedLabelManagerUI extends EventTarget {
           }
 
           // translation missing - generate it and update the translation key
-          const originText = translationKey.translations[this.keyStore.getBaseLanugage()!]![cachedLabel.pluralId]?.text ?? translationKey.translations[cachedLabel.language]![cachedLabel.pluralId]?.text!;
+          let originLanguage = this.keyStore.getBaseLanugage();
+          let originText = translationKey.translations[this.keyStore.getBaseLanugage()!]?.[cachedLabel.pluralId]?.text;
 
-          const translation = await missingTranslationProvider(originText, targetLanguage);
+          if (originText === undefined) {
+            originLanguage = cachedLabel.language;
+            originText = translationKey.translations[cachedLabel.language]![cachedLabel.pluralId]?.text!;
+          }
+
+          const translation = await missingTranslationProvider(originText, originLanguage as string, targetLanguage);
           translationKey = await this.keyStore.updateKey(translationKeyName, [{
             language: targetLanguage,
             plural: cachedLabel.pluralId,

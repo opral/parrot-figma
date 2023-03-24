@@ -33,18 +33,19 @@ export default class WindowManagerUi {
     let lastRatio = 0 as number;
     this.intersectionObserver = new IntersectionObserver((entries: IntersectionObserverEntry[]) => {
       if (entries[0] && entries[0].target === this.sizeWrapper) {
-        if (lastRatio !== entries[0].intersectionRatio && entries[0].intersectionRatio !== 1) {
+        if (lastRatio !== entries[0].intersectionRatio && entries[0].intersectionRatio !== 1 && entries[0].intersectionRect.height !== 0) {
           lastRatio = entries[0].intersectionRatio;
 
           this.contentEl!.style.height = `${entries[0].intersectionRect.height}px`;
           ((document.querySelector(':root')!) as HTMLElement).style.setProperty('--window-client-height', `${entries[0].intersectionRect.height}px`);
+          
           // eslint-disable-next-line no-restricted-globals
           parent.postMessage({
             pluginMessage: {
               target: 'WindowManager',
               size: {
                 width: contentEl.clientWidth,
-                height: contentEl.clientHeight,
+                height: entries[0].intersectionRect.height,
               },
               source: 'intersection',
             },

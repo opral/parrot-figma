@@ -12,11 +12,11 @@ export interface Config {
 export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
   public proxClassName = 'LocalizedLabelManager';
 
-  public static languageConfigDataKey = 'aar_l_';
+  public static languageConfigDataKey = 'aar_c';
 
-  keyPrefix = 'aar_k__1';
+  keyPrefix = 'aar_k__';
 
-  keyHistoryPrefix = 'aar_h__1';
+  keyHistoryPrefix = 'aar_h__';
 
   getKey(keyName: string): TranslationKey | undefined {
     const keyRaw = figma.root.getPluginData(this.keyPrefix + keyName);
@@ -33,6 +33,8 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
 
   async getConfig() {
     const keyRaw = figma.root.getPluginData(FigmaFileTranslationKeyStore.languageConfigDataKey);
+
+    console.log(`keyRaw: ${keyRaw}`);
 
     if (keyRaw === '' || !keyRaw) {
       return {

@@ -228,7 +228,7 @@ export default function LocalizedLabelListItem({
                 </span>
                 )}
 
-                {localizedLabel.keyType === KeyState.Linked && (
+                {localizedLabel.keyType === KeyState.Linked && pluralsAvailable.length > 1 && (
                 <Select
                   onChange={(value) => {
                     onSaveFigmaVersionClick(localizedLabel.key!, localizedLabel.language, value.value as string, localizedLabel.text!);

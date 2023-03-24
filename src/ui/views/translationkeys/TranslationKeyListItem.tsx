@@ -86,7 +86,7 @@ export default function TranslationKeyListItem({
         }
       }}
     >
-      { select === undefined && (
+      { select === undefined && false && (
       <div className="grid-item-selector">
         <label className="checkboxHitbox">
           <input id="fix-position-when-scrolling" type="checkbox" className="checkboxInput" onChange={(e) => { setSelected(e.target.checked); }} />
@@ -115,8 +115,9 @@ export default function TranslationKeyListItem({
         </div>
         { select === undefined && (
         <div className="key-usage">
-          {referencingLabels.length === 0 && <div>no usage</div>}
-          {referencingLabels.length > 0 && (
+          { /* TODO add references to keys */ }
+          {false && referencingLabels.length === 0 && <div>no usage</div>}
+          {false && referencingLabels.length > 0 && (
             <>
               <div className="collapsible-header" onClick={() => setShowUsage((value) => !value)}>
                 <div className={`svg-container${showUsage ? 'expand-svg' : 'collapse-svg'}`} />
@@ -233,6 +234,7 @@ export default function TranslationKeyListItem({
           </div>
           {history?.map((entry, i, array) => (
             <HistoryEntry
+              key={entry.version}
               version={entry.version}
               text={entry.text}
               previousText={i < (array.length - 1) ? array[i + 1].text : undefined}

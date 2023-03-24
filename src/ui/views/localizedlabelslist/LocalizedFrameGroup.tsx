@@ -50,13 +50,32 @@ export default function LocalizedFrameGroup({
   }
 
   async function onLanguageSelectionClick(firstLocalizedLabelInFrame: LocalizedLabel, language: Language) {
-    const deepLTranslationProvider = async (text: String, targetLanguage: string) => {
+    const deepLTranslationProvider = async (text: string, sourceLanguage: string, targetLanguage: string) => {
+
+      const result = await fetch(`https://translate.googleapis.com/translate_a/single?${new URLSearchParams({
+        client: 'gtx',
+        dt: 't',
+        sl: sourceLanguage === 'se' ? 'SV' : sourceLanguage,
+        tl: targetLanguage === 'se' ? 'SV' : targetLanguage,
+        q: text,
+      })}`, {
+        method: 'GET',
+      /* headers: {
+          'origin-when-cross-origin': '*',
+        }, */
+      });
+
+      const translationResults = await result.json();
+      return translationResults[0][0][0];
+      /*
+      // https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=fr&dt=t&q=Hello
+      // origin-when-cross-origin
       // console.log(`tranalating: ${text} with deepl`);
       const result = await fetch('http://localhost:3333/api/v1/translate', {
         method: 'POST',
-        /* headers: {
+         headers: {
             'Authorization': 'DeepL-Auth-Key 391733de-67e0-be65-a8b7-4298511dd564:fx'
-          }, */
+          },
         headers: {
           Accept: 'application/json',
           'Content-Type': 'application/json',
@@ -64,13 +83,13 @@ export default function LocalizedFrameGroup({
         body: JSON.stringify(
           {
             text: [text],
-            target_lang: targetLanguage,
+            target_lang: targetLanguage === 'se' ? 'SV' : targetLanguage,
           },
         ),
       });
       const translationResults = await result.json();
 
-      return translationResults.translations[0].text;
+      return translationResults.translations[0].text; */
     };
 
     localisedLabelManager.setFrameLanguage(firstLocalizedLabelInFrame.rootFrameId, language, deepLTranslationProvider);

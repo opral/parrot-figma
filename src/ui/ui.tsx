@@ -7,6 +7,7 @@ import * as React from 'react';
 import { useEffect, useState } from 'react';
 import * as ReactDOM from 'react-dom';
 
+import LocalizedStrings, { LocalizedStringsMethods } from 'localized-strings';
 import LocalizedLabelsListView from './views/localizedlabelslist/LocalizedLabelsListView';
 import FigmaUtil from '../shared/FigmaUtil';
 import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
@@ -26,12 +27,19 @@ import './tabbar.css';
 import './assets/icons.css';
 import SegmentedControl from './compontents/segmentedControl/SegmentedControl';
 import Filesetup from './views/filesetup/Filesetup';
+import Onboarding from './views/onboarding/Onboarding';
+import Language from '../lib/base/Language';
 
 WindowManagerUi.init(
   document.getElementById('sizing-wrapper')!,
   document.getElementById('react-page')!,
   document.getElementById('corner')!,
 );
+
+export interface IStrings extends LocalizedStringsMethods {
+  score:string;
+  time: String;
+}
 
 const asyncFunctionProxy = new AsyncFunctionProxy('UIAsyncFunctionProxy', (data: any) => {
   // eslint-disable-next-line no-restricted-globals
@@ -55,11 +63,9 @@ const localizedLabelManager = new LocalizedLabelManagerUI(remoteLocalizedLabelMa
 
 function App() {
   // initial app screen is startup until we initialy loaded the data
-  const [appScreen, setAppScreen] = useState('design');
+  const [appScreen, setAppScreen] = useState(undefined as String | undefined);
 
   const [translatedKeys, setTranslatedKeys] = useState({} as TranslationKeys);
-
-  const [initialLoadingCompleted, setIinitialLoadingCompleted] = useState(false);
 
   const [, setDefaultLinkStyle] = useState('' as string);
 
@@ -77,7 +83,12 @@ function App() {
 
       await refreshTranslatedKeys();
 
-      setIinitialLoadingCompleted(true);
+      let initialScreen = 'design';
+      if (localizedLabelManager.keyStore.config?.baseLanguage === undefined
+        || localizedLabelManager.keyStore.config?.enabledLanguages === undefined) {
+        initialScreen = 'onboarding';
+      }
+      setAppScreen(initialScreen);
     })();
   }, []);
 
@@ -87,19 +98,23 @@ function App() {
     setDefaultLinkStyle(linkStyle);
   };
 
-  if (!initialLoadingCompleted) {
+  if (!appScreen) {
     return <>Not ready</>;
-  } if (localizedLabelManager.keyStore.config!.baseLanguage === undefined) {
-    return (
-      <Filesetup
-        translationKeyStore={memoryTranslationKeyStore}
-        showNextButton={true}
-      />
-    );
   }
 
   let view;
-  if (appScreen === 'keys') {
+  if (appScreen === 'onboarding') {
+    return (
+      <Onboarding onFinishSetup={async (baseLanguage: Language, selectedLanguages: Language[]) => {
+        // put baselanguage to the first position
+        const languages = [baseLanguage, ...selectedLanguages.filter((lang) => lang !== baseLanguage)];
+        await memoryTranslationKeyStore.setLanguages(languages);
+        await memoryTranslationKeyStore.setBaseLanguage(baseLanguage);
+        setAppScreen('design');
+      }}
+      />
+    );
+  } if (appScreen === 'keys') {
     view = (
       <TranslationKeyListView
         translationKeyStore={memoryTranslationKeyStore}

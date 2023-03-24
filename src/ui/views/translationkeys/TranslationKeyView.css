@@ -31,6 +31,7 @@
   display: flex;
   flex-direction: column;
   font-weight: 600;
+  margin-left: 16px;
 }
 
 .grid-item-key .key-usage .localized-label .name {
@@ -177,13 +178,16 @@
 
 }
 
-
-
 .grid-item-actions {
   display: flex;
+  visibility: hidden;
   justify-content: flex-end;
   padding-right: 6px;
   grid-column-start: actions;
+}
+
+.keyWrapper:hover .grid-item-actions {
+  visibility: visible;
 }
 
 
@@ -269,7 +273,20 @@
 .languageWrapper {
   display: contents;
 }
+.keyPluralWrapper .grid-item-actions {
+  visibility: visible;
+}
 
+
+.keyPluralWrapper .grid-item-actions .button {
+  visibility: hidden;
+}
+
+
+
+.keyPluralWrapper:hover .grid-item-actions .button {
+  visibility: visible;
+}
 
 
 

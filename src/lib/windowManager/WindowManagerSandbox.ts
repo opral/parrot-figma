@@ -83,6 +83,7 @@ export class WindowManagerSandbox {
       this.viewportResizeCheckInterval = setInterval(() => {
         if (this.handledViewportWidth !== figma.viewport.bounds.width
                     || this.handledViewportHeight !== figma.viewport.bounds.height) {
+          // set flag to signal the user is currently changing the viewport this can be zooming or parent window size change
           this.viewPortResizing = true;
 
           if (this.viewPortResizeSettleTimeout) {
@@ -90,9 +91,11 @@ export class WindowManagerSandbox {
           }
           this.viewPortResizeSettleTimeout = setTimeout(() => {
             this.viewPortResizing = false;
+            console.log('vieportChange -> repositionWindow (settled)');
             this.repositionWindow();
           }, this.settleTime);
 
+          console.log('vieportChange -> repositionWindow ');
           this.repositionWindow();
 
           this.handledViewportWidth = figma.viewport.bounds.width;
@@ -118,14 +121,12 @@ export class WindowManagerSandbox {
     if (this.windowMode === WindowMode.Window && message.source === 'dragging') {
       this.size = message.size;
       figma.clientStorage.setAsync('windowSize', this.size);
-    } else if (this.windowMode === WindowMode.BottomSheet) {
-      if (!this.viewPortResizing) {
-        this.bottomSheetHeight = message.size.height;
-      }
-
+    } else if (this.windowMode === WindowMode.BottomSheet && !this.viewPortResizing) {
+      this.bottomSheetHeight = message.size.height;
       figma.clientStorage.setAsync('windowBottomSheetHeight', message.size.height);
     }
 
+    console.log('handleSizeMessage -> repositionWindow');
     this.repositionWindow();
 
     if (this.windowResizeSettleTimeout) {
@@ -133,17 +134,20 @@ export class WindowManagerSandbox {
     }
     this.windowResizeSettleTimeout = setTimeout(() => {
       this.windowResizing = false;
+      console.log('handleSizeMessage -> repositionWindow (settled)');
       this.repositionWindow();
     }, 500);
   }
 
   repositionWindow() {
+    console.log('repositionWindow');
     let { height } = this.size;
     let { width } = this.size;
     let x = undefined as number | undefined;
     let y = undefined as number | undefined;
 
     if (this.windowMode === WindowMode.Fullscreen) {
+      console.log('Fullscreen');
       const leftPanelWidth = 240;
       const rightPanelWidth = 240;
 
@@ -153,12 +157,14 @@ export class WindowManagerSandbox {
       x = figma.viewport.bounds.x - ((leftPanelWidth) / figma.viewport.zoom);
       y = figma.viewport.bounds.y;
     } else if (this.windowMode === WindowMode.BottomSheet) {
+      console.log('BottomSheet');
       width = figma.viewport.bounds.width * figma.viewport.zoom;
       height = figma.viewport.bounds.height * figma.viewport.zoom;
 
       x = figma.viewport.bounds.x;
       y = figma.viewport.bounds.y + figma.viewport.bounds.height - ((this.bottomSheetHeight + titleBarHeight) / figma.viewport.zoom);
     } else if (this.windowMode === WindowMode.Window) {
+      console.log('Window');
       if (this.currentMode !== this.windowMode) {
         // center window on switch to window mode
         x = figma.viewport.bounds.x + ((figma.viewport.bounds.width / 2) - ((width / 2) / figma.viewport.zoom));
@@ -166,7 +172,10 @@ export class WindowManagerSandbox {
       }
     }
 
+    let reshow = false;
     if (x !== undefined && y !== undefined && !this.windowResizing) {
+      reshow = true;
+      console.log(`hiding to reposition${y} ${x}`);
       // figma doesn't allow reposition after the user has moved the window manual once - by hiding and showing the ui it looses its corresponding state
       figma.ui.hide();
       // @ts-ignore
@@ -178,7 +187,12 @@ export class WindowManagerSandbox {
 
     this.currentMode = this.windowMode;
 
-    figma.ui.show();
+    if (reshow) {
+      setTimeout(() => {
+        figma.ui.show();
+      }, 1);
+    } 
+  
   }
 
   setWindowMode(mode: WindowMode) {
@@ -186,6 +200,7 @@ export class WindowManagerSandbox {
 
     figma.clientStorage.setAsync('windowMode', mode);
 
+    console.log('setWindowMode -> repositionWindow (settled)');
     this.repositionWindow();
   }
 }

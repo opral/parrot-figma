@@ -32,8 +32,9 @@ export default class MemoryTranslationKeyStore extends BaseTranslationKeyStore {
   async setLanguages(languages: Language[]) {
     this.config!.enabledLanguages = languages;
     const parentConfig = await this.parentKeyStore.getConfig();
+
     parentConfig.enabledLanguages = languages;
-    this.parentKeyStore.setConfig(parentConfig);
+    await this.parentKeyStore.setConfig(parentConfig);
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -41,11 +42,11 @@ export default class MemoryTranslationKeyStore extends BaseTranslationKeyStore {
     return this.config!.baseLanguage;
   }
 
-  async setBaseLanguages(language: Language) {
+  async setBaseLanguage(language: Language) {
     this.config!.baseLanguage = language;
     const parentConfig = await this.parentKeyStore.getConfig();
     parentConfig.baseLanguage = language;
-    this.parentKeyStore.setConfig(parentConfig);
+    await this.parentKeyStore.setConfig(parentConfig);
   }
 
   async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[]): Promise<TranslationKey> {

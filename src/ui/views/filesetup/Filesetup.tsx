@@ -60,7 +60,7 @@ export default function Filesetup({
     setLanguageSelected(language, true);
     setBaseLanguageState(language);
     if (!showNextButton) {
-      translationKeyStore.setBaseLanguages(language);
+      translationKeyStore.setBaseLanguage(language);
     }
   }
 

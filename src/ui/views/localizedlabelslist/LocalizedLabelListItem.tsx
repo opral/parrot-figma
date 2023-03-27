@@ -196,6 +196,8 @@ export default function LocalizedLabelListItem({
                 />
                 <span
                   className="layerIcon iconWrapper button"
+                  data-tooltip-trigger="span"
+                  data-tooltip-content={localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? 'Linked Label (click to remove link)' : 'Unlinked Label (click to link)'}
                   onClick={linkToggle}
                 >
                   <span className={`svg-container ${localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? 'linked-svg' : 'unlinked-svg'}`} />
@@ -204,6 +206,8 @@ export default function LocalizedLabelListItem({
                 { (localizedLabel.keyType === KeyState.Linked && (labelState.behind > 0 || localizedLabel.language !== localizedLabel.rootFrameLanguage)) && ( // allow the user to catch up with the keys version
                 <span
                   className="layerIcon iconWrapper button"
+                  data-tooltip-trigger="span"
+                  data-tooltip-content="Update Label with latest version"
                   onClick={updateToLatestKeyVersion}
                 >
                   <span className="svg-container reset-instance-svg" />
@@ -213,6 +217,8 @@ export default function LocalizedLabelListItem({
                 { ((localizedLabel.keyType === KeyState.Linked && labelState.modified && labelState.orginalText !== undefined)) && ( // allow the user revert the changes in design to the last versioned text
                 <span
                   className="layerIcon iconWrapper button"
+                  data-tooltip-trigger="span"
+                  data-tooltip-content="Revert changes in Design"
                   onClick={revertDesignChanges}
                 >
                   <span className="svg-container restore-svg" />
@@ -222,6 +228,8 @@ export default function LocalizedLabelListItem({
                 { ((localizedLabel.keyType === KeyState.Linked && labelState.modified)) && (
                 <span
                   className="layerIcon iconWrapper button"
+                  data-tooltip-trigger="span"
+                  data-tooltip-content="Save Design state as new Version"
                   onClick={createNewVersionFromDesign}
                 >
                   <span className="svg-container use-label-svg" />
@@ -280,7 +288,8 @@ export default function LocalizedLabelListItem({
             { ((localizedLabel.rootFrameLanguage !== localizedLabel.language)) && (
             <span
               className="row-action-icon"
-              onClick={createNewVersionFromDesign}
+              data-tooltip-trigger="span"
+              data-tooltip-content="Frame Language differs from Label"
             >
               <span className="svg-container warning-svg" />
             </span>
@@ -295,6 +304,8 @@ export default function LocalizedLabelListItem({
 
             <span
               className="row-action-icon"
+              data-tooltip-trigger="span"
+              data-tooltip-content={localizedLabel.useSampleValues === false ? "Use Sample values" : "Show placeholders" }
             >
               <span
                 className={`svg-container ${localizedLabel.useSampleValues === false ? 'placeholder-svg' : 'placeholder-filled-svg'}`}

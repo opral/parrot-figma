@@ -29,6 +29,8 @@ import SegmentedControl from './compontents/segmentedControl/SegmentedControl';
 import Filesetup from './views/filesetup/Filesetup';
 import Onboarding from './views/onboarding/Onboarding';
 import Language from '../lib/base/Language';
+import LanguageContextProvider from './LanguageContext';
+import Tooltip from './compontents/tooltip/Tooltip';
 
 WindowManagerUi.init(
   document.getElementById('sizing-wrapper')!,
@@ -105,14 +107,18 @@ function App() {
   let view;
   if (appScreen === 'onboarding') {
     return (
-      <Onboarding onFinishSetup={async (baseLanguage: Language, selectedLanguages: Language[]) => {
+      <>
+        <Tooltip triggerAttribute="data-tooltip-trigger" contentAttribute="data-tooltip-content" />
+        <Onboarding onFinishSetup={async (baseLanguage: Language, selectedLanguages: Language[]) => {
         // put baselanguage to the first position
-        const languages = [baseLanguage, ...selectedLanguages.filter((lang) => lang !== baseLanguage)];
-        await memoryTranslationKeyStore.setLanguages(languages);
-        await memoryTranslationKeyStore.setBaseLanguage(baseLanguage);
-        setAppScreen('design');
-      }}
-      />
+          const languages = [baseLanguage, ...selectedLanguages.filter((lang) => lang !== baseLanguage)];
+          await memoryTranslationKeyStore.setLanguages(languages);
+          await memoryTranslationKeyStore.setBaseLanguage(baseLanguage);
+          setAppScreen('design');
+        }}
+        />
+      </>
+
     );
   } if (appScreen === 'keys') {
     view = (
@@ -150,7 +156,8 @@ function App() {
 
   return (
 
-    <>
+    <LanguageContextProvider>
+      <Tooltip triggerAttribute="data-tooltip-trigger" contentAttribute="data-tooltip-content" />
       <div className="toolbar">
         <div className="tabHeader">
           <div className={`tab ${appScreen === 'design' ? 'active' : ''}`} onClick={() => setAppScreen('design')}>Design</div>
@@ -182,7 +189,8 @@ function App() {
         {view}
       </div>
       <a id="focusHelper" href="" />
-    </>
+
+    </LanguageContextProvider>
   );
 }
 

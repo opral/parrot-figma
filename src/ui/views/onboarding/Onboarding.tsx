@@ -3,9 +3,10 @@
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 import * as React from 'react';
 import { useState } from 'react';
-import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
 import Language from '../../../lib/base/Language';
 import TileSelect, { TileSelectOption } from '../../compontents/tileselect/tileselect';
+import useTranslation from '../../localization/useTranslation';
+
 import './Onboarding.css';
 
   type OnboardingProps = {
@@ -15,6 +16,8 @@ import './Onboarding.css';
 export default function Onboarding({
   onFinishSetup,
 }: OnboardingProps) {
+  const strings = useTranslation();
+
   const languageOptiones = [] as TileSelectOption<Language>[];
   const baseLanguageOptiones = [] as TileSelectOption<Language>[];
 
@@ -26,17 +29,24 @@ export default function Onboarding({
   // const [baseLanguage, setBaseLanguages] = useState(translationKeyStore.getBaseLanugages());
 
   for (const language of availableLanguages) {
+    const untypedStrings = strings as any;
     const currentLanguageOption = {
-      value: language, label: language, icon: `flag-${language}`,
+      value: language,
+      label: untypedStrings[language] ?? language,
+      icon: `flag-${language}`,
+      // tooltip: 'select this',
     };
 
     baseLanguageOptiones.push(currentLanguageOption);
   }
 
   for (const language of availableLanguages) {
+    const untypedStrings = strings as any;
+
     const currentLanguageOption = {
       value: language,
-      label: language,
+      label: untypedStrings[language] ?? language,
+      // tooltip: 'select this',
       icon: `flag-${language}`,
       forceSelected: language === baseLanguageState,
       subLabel: language === baseLanguageState ? '(base language)' : undefined,
@@ -51,8 +61,9 @@ export default function Onboarding({
       <>
         <div>
           <div>
-            Please choose the base language.
+            {strings.intro__baselang_cta}
             <br />
+            {strings.intro__baselang_cta_detail}
             Please select the language in which the design file is currently written?
           </div>
           <TileSelect<Language>
@@ -72,7 +83,7 @@ export default function Onboarding({
         <div>
           <button className="button button--buttonSecondary" type="button" onClick={() => { setActiveView('languages'); }}>
             <span data-tooltip-type="text">
-              Next
+            {strings.next_button}
             </span>
           </button>
         </div>
@@ -83,7 +94,7 @@ export default function Onboarding({
 
       <>
         <div>
-          <div>
+          <div >
             Please select langueages to translate the designfile for.
           </div>
           <div>
@@ -102,7 +113,7 @@ export default function Onboarding({
         <div>
           <button className="button button--buttonSecondary" type="button" onClick={() => { setActiveView('baselanguage'); }}>
             <span data-tooltip-type="text">
-              Back
+              {strings.back_button}
             </span>
           </button>
           {
@@ -110,7 +121,7 @@ export default function Onboarding({
           }
           <button className="button button--buttonSecondary" type="button" onClick={() => { if (baseLanguageState !== undefined) { onFinishSetup(baseLanguageState, selectedLanguages); } }}>
             <span data-tooltip-type="text">
-              Finish setup
+            {strings.finish_setup_button}
             </span>
           </button>
         </div>

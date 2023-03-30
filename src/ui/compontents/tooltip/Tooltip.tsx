@@ -7,9 +7,11 @@ interface TooltipProps {
   contentAttribute: string;
 }
 
+interface Placement { top: number, left: number, position: string, transformX?: number}
+
 export default function Tooltip({ triggerAttribute, contentAttribute }: TooltipProps) {
   const [tooltipVisible, setTooltipVisible] = useState(false);
-  const [tooltipPlacement, setTooltipPlacement] = useState<any | { top: number, left: number, position: string }>({ top: 0, left: 0, position: 'none' });
+  const [tooltipPlacement, setTooltipPlacement] = useState<any | Placement>({ top: 0, left: 0, position: 'none' });
   const [tooltipSourceRect, setTooltipSourceRect] = useState<DOMRect | undefined>(undefined);
   const tooltipContentEl = useRef<HTMLDivElement | null>(null);
 
@@ -33,7 +35,7 @@ export default function Tooltip({ triggerAttribute, contentAttribute }: TooltipP
       clearTimeout(hideTooltipTimeoutRef.current);
     }
     hideTooltipTimeoutRef.current = setTimeout(() => {
-      setTooltipVisible(false);
+      // setTooltipVisible(false);
     }, hideTimeout);
   };
 
@@ -52,7 +54,6 @@ export default function Tooltip({ triggerAttribute, contentAttribute }: TooltipP
   };
 
   useEffect(() => {
-    console.log(`handling placement; ${tooltipPlacement}`);
     if (tooltipPlacement !== undefined) {
       return;
     }
@@ -63,7 +64,7 @@ export default function Tooltip({ triggerAttribute, contentAttribute }: TooltipP
     // - try center, try left or use right
 
     const element = tooltipContentEl.current;
-    if (element === null || tooltipSourceRect === undefined) {
+    if (element === null || tooltipSourceRect === undefined) {
       return;
     }
 
@@ -73,35 +74,52 @@ export default function Tooltip({ triggerAttribute, contentAttribute }: TooltipP
     const parent = document.getElementById('react-page')!;
     const parentRect = parent.getBoundingClientRect();
 
+    console.log('rects: parent, tooltip');
+    console.log(JSON.stringify(parentRect));
+    console.log(JSON.stringify(elementRect));
+
+    console.log('right:');
+    console.log(parentRect.right - (tooltipSourceRect.left! + (elementRect.width / 2)));
+
+    console.log('left:');
+    console.log(parentRect.left - (tooltipSourceRect.left! + (elementRect.width / 2)));
+
     if (parentRect.bottom - tooltipSourceRect.bottom > height) {
       // great if fits below
       const placement = {
         top: tooltipSourceRect.bottom,
         left: tooltipSourceRect.left + tooltipSourceRect.width / 2,
         position: 'bottom-center',
-      };
+      } as Placement;
+
+      if (parentRect.right - (tooltipSourceRect.left! + (elementRect.width / 2)) < 0) {
+        console.log('overlapping right1');
+        placement.transformX = (parentRect.right - (tooltipSourceRect.left! + (elementRect.width + 16)));
+      } else if (parentRect.left - (tooltipSourceRect.left! - (elementRect.width / 2)) > 0) {
+        console.log('overlapping left1');
+        placement.transformX = parentRect.left - (tooltipSourceRect.left! + 16);
+      }
 
       setTooltipPlacement(placement);
+      
     } else {
       // ok we have to put it on top
       const placement = {
         top: tooltipSourceRect.top - height,
         left: tooltipSourceRect.left + tooltipSourceRect.width / 2,
         position: 'top-center',
-      };
-      setTooltipPlacement(placement);
-    }
+      } as Placement;
 
-    console.log('is fully visible?');
-    console.log(elementRect.top, parentRect.top);
-    console.log(elementRect.bottom, parentRect.bottom);
-    console.log(elementRect.left, parentRect.left);
-    console.log(
-      elementRect.top >= parentRect.top
-    && elementRect.bottom <= parentRect.bottom
-    && elementRect.left >= parentRect.left
-    && elementRect.right <= parentRect.right,
-    );
+      if (parentRect.right - (tooltipSourceRect.left! + (elementRect.width / 2)) < 0) {
+        console.log('overlapping right1');
+        placement.transformX = (parentRect.right - (tooltipSourceRect.left! + (elementRect.width + 16)));
+      } else if (parentRect.left - (tooltipSourceRect.left! - (elementRect.width / 2)) > 0) {
+        console.log('overlapping left1');
+        placement.transformX = parentRect.left - (tooltipSourceRect.left! + 16);
+      }
+      setTooltipPlacement(placement);
+      
+    }
   }, [tooltipPlacement]);
 
   useEffect(() => {
@@ -181,6 +199,7 @@ export default function Tooltip({ triggerAttribute, contentAttribute }: TooltipP
           style={{
             top: tooltipPlacement?.top ?? 0,
             left: tooltipPlacement?.left ?? 0,
+
           }}
         />
         <div
@@ -189,6 +208,7 @@ export default function Tooltip({ triggerAttribute, contentAttribute }: TooltipP
           style={{
             top: tooltipPlacement?.top ?? 0,
             left: tooltipPlacement?.left ?? 0,
+            transform: tooltipPlacement?.transformX ? `translate(${tooltipPlacement.transformX}px, 0)` : 'translate(-50%, 0)',
           }}
           dir="auto"
         >

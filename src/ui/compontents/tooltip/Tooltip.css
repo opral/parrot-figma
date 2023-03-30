@@ -43,9 +43,8 @@
   color: var(--color-text-tooltip, white);
   z-index: 14;
   border-radius: 2px;
-  white-space: pre-wrap;
+  white-space: nowrap;
   box-shadow: var(--elevation-300-tooltip, 0 2px 7px rgba(0, 0, 0, .15));
-  word-break: break-word;
 }
 
 .tooltip--content-down {

@@ -289,6 +289,8 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     await this.updateLabelProperties(localizedLabel.nodeId, {
       keyVersion: localizedKey.latestVersion,
     });
+
+    await this.localisedLabelMangerSandbox.commitUndo();
   }
 
   async updateToLatestKeyVersion(localizedLabel: LocalizedLabel) {
@@ -301,6 +303,8 @@ export default class LocalizedLabelManagerUI extends EventTarget {
       keyVersion: translationKey.latestVersion,
       text: historyEntryForVersion![localizedLabel.language]?.[localizedLabel.pluralId]?.text,
     });
+
+    await this.localisedLabelMangerSandbox.commitUndo();
   }
 
   async revertDesignChanges(localizedLabel: LocalizedLabel) {
@@ -311,6 +315,8 @@ export default class LocalizedLabelManagerUI extends EventTarget {
       keyVersion: localizedLabel.keyVersion,
       text: currentLabelVersion![localizedLabel.language]?.[localizedLabel.pluralId]?.text,
     });
+
+    await this.localisedLabelMangerSandbox.commitUndo();
   }
 
   async linkKey(localizedLabel: LocalizedLabel, keyToLinkTo: string) {
@@ -344,6 +350,8 @@ export default class LocalizedLabelManagerUI extends EventTarget {
         text: localizedLabel.text,
       });
     }
+
+    await this.localisedLabelMangerSandbox.commitUndo();
   }
 
   async unlinkKey(localizedLabel: LocalizedLabel, keyName?: string) {
@@ -351,12 +359,16 @@ export default class LocalizedLabelManagerUI extends EventTarget {
       key: keyName,
       keyType: KeyState.Unlinked,
     });
+
+    await this.localisedLabelMangerSandbox.commitUndo();
   }
 
   async updateLabelName(localizedLabel: LocalizedLabel, labelName: string) {
     await this.updateLabelProperties(localizedLabel.nodeId, {
       labelName,
     });
+
+    await this.localisedLabelMangerSandbox.commitUndo();
   }
 
   /**

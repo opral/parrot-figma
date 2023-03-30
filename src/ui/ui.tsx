@@ -32,6 +32,18 @@ import Language from '../lib/base/Language';
 import LanguageContextProvider from './LanguageContext';
 import Tooltip from './compontents/tooltip/Tooltip';
 
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'z' && !e.shiftKey && !e.altKey) {
+    // Undo the action in Figma
+    const isMac = navigator.userAgent.indexOf('Macintosh') >= 0;
+    const isCmd = isMac && e.metaKey && !e.ctrlKey;
+    const isCtrl = !isMac && !e.metaKey && e.ctrlKey;
+    if (isCmd || isCtrl) {
+      window.parent.postMessage({ pluginMessage: { type: 'undo' } }, '*');
+    }
+  }
+});
+
 WindowManagerUi.init(
   document.getElementById('sizing-wrapper')!,
   document.getElementById('react-page')!,
@@ -170,15 +182,15 @@ function App() {
             segments={[{
               iconName: 'window-mode-window-svg',
               value: WindowMode.Window,
-              tooltip: "Window Mode",
+              tooltip: 'Window Mode',
             }, {
               iconName: 'window-mode-fullscreen-svg',
               value: WindowMode.Fullscreen,
-              tooltip: "Fullscreen Mode",
+              tooltip: 'Fullscreen Mode',
             }, {
               iconName: 'window-mode-bottom-attached-svg',
               value: WindowMode.BottomSheet,
-              tooltip: "Dock to bottom",
+              tooltip: 'Dock to bottom',
             }]}
             selectedSegment={WindowMode.Window}
             onChoose={(windowMode: WindowMode) => { WindowManagerUi.instance?.setWindowMode(windowMode); }}

@@ -281,6 +281,10 @@ export default class LocalizedLabelManager {
     return this.toLocalizedLabelOrUndefined(textNode)!.localizedLabel;
   }
 
+  async commitUndo() {
+    return figma.commitUndo();
+  }
+
   private async loadFontsForTextNodes(textNodes: TextNode[]) {
     const fontsToLoad = [] as FontName[];
     for (const textNode of textNodes) {

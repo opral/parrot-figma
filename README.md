@@ -313,6 +313,8 @@ What we want from ui point of view:
  - [ ] allow each key to select plattforms
  - [ ] add tags
  - [ ] base default plurals per language on unicodes: https://www.unicode.org/cldr/cldr-aux/charts/29/supplemental/language_plural_rules.html
+ - [ ] darkmode
+ - [ ] last character bug in key editor
 
  
 Daal

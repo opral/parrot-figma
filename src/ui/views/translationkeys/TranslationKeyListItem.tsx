@@ -171,6 +171,7 @@ export default function TranslationKeyListItem({
                       await translationKeyStore.updateKey(translationKey.keyName!, [{
                         language, plural: plural as Plural, text, skip,
                       }]);
+                      await translationKeyStore.parentKeyStore.commitUndo();
                     }}
                     text={translationKey.translations[language as Language]?.[plural as Plural]?.text}
                   />
@@ -189,6 +190,7 @@ export default function TranslationKeyListItem({
                             text: translationKey.translations[language as Language]?.[plural as Plural]?.text,
                             skip: translationKey.translations[language as Language]?.[plural as Plural]?.skip === undefined ? true : !translationKey.translations[language as Language]![plural as Plural]!.skip,
                           }]);
+                          await translationKeyStore.parentKeyStore.commitUndo();
                         }}
                       >
                         <span className={'svg-container' + (translationKey.translations[language as Language]?.[plural as Plural]?.skip === true ? ' eye-closed-svg' : ' eye-svg')} />
@@ -244,6 +246,7 @@ export default function TranslationKeyListItem({
                 await translationKeyStore.updateKey(translationKey.keyName!, [{
                   language: showHistory.language, plural: showHistory.plural as Plural, text, skip: false,
                 }]);
+                await translationKeyStore.parentKeyStore.commitUndo();
                 setShowHistory(undefined);
               }}
             />

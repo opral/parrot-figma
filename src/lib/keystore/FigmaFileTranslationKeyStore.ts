@@ -37,8 +37,7 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
       // eslint-disable-next-line default-case
       switch (change.type) {
         case 'PROPERTY_CHANGE': {
-          // TODO check if change is in root node other than magic id 0:0
-          if (change.node.id === '0:0'
+          if (change.node.parent === null // easy way to check if the node is the root node
           && change.properties.indexOf('pluginData') !== -1) {
             const currentFileStorageKeys = figma.root.getPluginDataKeys().filter((value) => value.indexOf(this.keyHistoryPrefix) === 0);
             let currentCachedKeys = Object.keys(this.keyState);
@@ -142,7 +141,7 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
     };
   }
 
-  async persistKey(translationKeyPased: TranslationKey): Promise<TranslationKey> {
+  private async persistKey(translationKeyPased: TranslationKey): Promise<TranslationKey> {
     const translationKey = translationKeyPased;
     const keyCurrentVersion = this.getKey(translationKey.keyName);
 
@@ -308,6 +307,12 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
     return translationKeys;
   }
 
+  // eslint-disable-next-line class-methods-use-this
+  async commitUndo() {
+    return figma.commitUndo();
+  }
+
+
   async importFromLocalise(): Promise<void> {
     const result = await fetch('http://localhost:3333/api/v1/lokalise', {
       method: 'GET',
@@ -393,6 +398,8 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
     for (const tanslationKey of translationKeys) {
       this.persistKey(tanslationKey);
     }
+
+    figma.commitUndo();
     // console.log(`Execution time: persisting keys: ${Date.now() - start} ms`);
   }
 }

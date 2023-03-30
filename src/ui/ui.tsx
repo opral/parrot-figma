@@ -56,7 +56,7 @@ asyncFunctionProxy.proxyAsyncMethods(remoteLocalizedLabelManager);
 const figmaRemote = new FigmaUtil();
 asyncFunctionProxy.proxyAsyncMethods(figmaRemote);
 
-const figmaFileTranslationKeyStore = new FigmaFileTranslationKeyStore();
+const figmaFileTranslationKeyStore = new FigmaFileTranslationKeyStore(true);
 asyncFunctionProxy.proxyAsyncMethods(figmaFileTranslationKeyStore);
 
 const memoryTranslationKeyStore = new MemoryTranslationKeyStore(figmaFileTranslationKeyStore);
@@ -170,12 +170,15 @@ function App() {
             segments={[{
               iconName: 'window-mode-window-svg',
               value: WindowMode.Window,
+              tooltip: "Window Mode",
             }, {
               iconName: 'window-mode-fullscreen-svg',
               value: WindowMode.Fullscreen,
+              tooltip: "Fullscreen Mode",
             }, {
               iconName: 'window-mode-bottom-attached-svg',
               value: WindowMode.BottomSheet,
+              tooltip: "Dock to bottom",
             }]}
             selectedSegment={WindowMode.Window}
             onChoose={(windowMode: WindowMode) => { WindowManagerUi.instance?.setWindowMode(windowMode); }}

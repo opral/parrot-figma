@@ -10,7 +10,6 @@ export interface TranslationKeyStore {
   deleteKey(keyName: string) : Promise<void>
   getHistory(translationKeyName: string) : Promise<HistoryEntry[]>
   load(): Promise<TranslationKeys>
-  fillPlaceholdersWithSampleData(text: string, language: Language, plural: Plural): string
   importFromLocalise() : Promise<void>
 }
 
@@ -126,41 +125,4 @@ export abstract class BaseTranslationKeyStore implements TranslationKeyStore {
 
   abstract importFromLocalise(): Promise<void>;
 
-  fillPlaceholdersWithSampleData(text: string, language: Language, plural: Plural) {
-    const placeholders = /\[%(s|n|i):(\w+)\]/g;
-    return text.replace(placeholders, (substring, type, key) => {
-      // exact match
-      let matchingTranslation = this.getKey(`sample_values__${type}:${key}`);
-
-      // name match in samples
-      if (matchingTranslation === undefined) {
-        matchingTranslation = this.getKey(`sample_values__${key}`);
-      }
-
-      // key match
-      if (!matchingTranslation === undefined) {
-        matchingTranslation = this.getKey(key);
-      }
-
-      if (!matchingTranslation === undefined) {
-        return substring;
-      }
-
-      // exact language/plural match
-      const matchingLangugae = matchingTranslation!.translations[language]?.[plural]?.text;
-      if (matchingLangugae !== undefined) {
-        return matchingLangugae;
-      }
-
-      const baseLanguage = Object.keys(matchingTranslation!.translations)[0]! as Language;
-      if (matchingTranslation!.translations[baseLanguage]![plural]?.text !== undefined) {
-        return matchingTranslation!.translations[baseLanguage]![plural]!.text!;
-      } if (matchingTranslation!.translations[baseLanguage]![Plural.Other]?.text !== undefined) {
-        return matchingTranslation!.translations[baseLanguage]![Plural.Other]?.text!;
-      }
-
-      // not found
-      return substring;
-    });
-  }
 }

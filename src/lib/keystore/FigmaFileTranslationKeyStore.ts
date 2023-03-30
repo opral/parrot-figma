@@ -10,13 +10,78 @@ export interface Config {
 }
 
 export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
-  public proxClassName = 'LocalizedLabelManager';
+  public proxClassName = 'FigmaFileTranslationKeyStore';
 
   public static languageConfigDataKey = 'aar_c';
 
   keyPrefix = 'aar_k__';
 
   keyHistoryPrefix = 'aar_h__';
+
+  keyState = {
+
+  } as any;
+
+  constructor(asProxy: boolean) {
+    super();
+    console.log(`constructor FigmaFileTranslationKeyStore called ${asProxy}`);
+    if (!asProxy) {
+      console.log('register document change');
+      figma.on('documentchange', this.forwardDocumentChanges.bind(this));
+    }
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  forwardDocumentChanges(event: any) {
+    console.log(event);
+    for (const change of event.documentChanges) {
+      // eslint-disable-next-line default-case
+      switch (change.type) {
+        case 'PROPERTY_CHANGE': {
+          // TODO check if change is in root node other than magic id 0:0
+          if (change.node.id === '0:0'
+          && change.properties.indexOf('pluginData') !== -1) {
+            const currentFileStorageKeys = figma.root.getPluginDataKeys().filter((value) => value.indexOf(this.keyHistoryPrefix) === 0);
+            let currentCachedKeys = Object.keys(this.keyState);
+
+            const changedKeys = {
+              deleted: [] as string[],
+              updated: [] as string[],
+              added: [] as string[],
+            };
+
+            for (const currentFileStorageKey of currentFileStorageKeys) {
+              const keyName = currentFileStorageKey.slice(this.keyHistoryPrefix.length);
+
+              if (this.keyState[keyName] === undefined) {
+                changedKeys.added.push(keyName);
+              } else {
+                if (figma.root.getPluginData(currentFileStorageKey).length !== this.keyState[keyName]) {
+                  changedKeys.updated.push(keyName);
+                }
+
+                currentCachedKeys = currentCachedKeys.filter((key) => key !== keyName);
+              }
+            }
+            changedKeys.deleted = currentCachedKeys;
+
+            for (const deletedKey of currentCachedKeys) {
+              delete this.keyState[deletedKey];
+            }
+
+            console.log('cache changes informed');
+            console.log(changedKeys)
+            figma.ui.postMessage({
+              target: 'TranslationKeyStore',
+              type: 'cacheUpdate',
+              changedKeys,
+            });
+          }
+          break;
+        }
+      }
+    }
+  }
 
   getKey(keyName: string): TranslationKey | undefined {
     const keyRaw = figma.root.getPluginData(this.keyPrefix + keyName);
@@ -26,15 +91,15 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
     }
 
     const key = JSON.parse(keyRaw) as TranslationKey;
-    key.history = this.getHistorySync(keyName);
+    const historyObj = this.getHistorySync(keyName);
+    key.history = historyObj.keyHistory;
+    this.keyState[keyName] = historyObj.state;
 
     return key;
   }
 
   async getConfig() {
     const keyRaw = figma.root.getPluginData(FigmaFileTranslationKeyStore.languageConfigDataKey);
-
-    console.log(`keyRaw: ${keyRaw}`);
 
     if (keyRaw === '' || !keyRaw) {
       return {
@@ -52,7 +117,7 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
   }
 
   async getHistory(translationKeyName: string) : Promise<HistoryEntry[]> {
-    return this.getHistorySync(translationKeyName);
+    return this.getHistorySync(translationKeyName).keyHistory;
   }
 
   getHistorySync(translationKeyName: string) {
@@ -63,7 +128,10 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
       }
     } }[];
 
-    return keyHistory;
+    return {
+      keyHistory,
+      state: keyHistoryRaw.length,
+    };
   }
 
   async persistKey(translationKeyPased: TranslationKey): Promise<TranslationKey> {
@@ -132,6 +200,8 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
     figma.root.setPluginData(this.keyPrefix + translationKey.keyName, JSON.stringify(serializableTranslationKey));
     figma.root.setPluginData(this.keyHistoryPrefix + translationKey.keyName, JSON.stringify(history));
 
+    // TODO key history: pause event event handling using a flag;
+
     translationKey.history = history;
 
     return translationKey;
@@ -158,7 +228,6 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
         const keyData = figma.root.getPluginData(keyWithPrefix);
         if (keyData && keyData !== '') {
           translationKeys[key] = this.getKey(key)!;
-          translationKeys[key].history = await this.getHistory(key);
         }
       }
     }

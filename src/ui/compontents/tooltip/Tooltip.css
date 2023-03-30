@@ -27,6 +27,13 @@
   border-bottom-color: var(--color-bg-tooltip, #050505);
 }
 
+.tooltip--downArrow {
+  transform: translate(-50%, 0);
+  border-top-color: var(--color-bg-tooltip, #050505);
+  border-bottom: none;
+  margin: 26px -1px;
+}
+
 .tooltip--content {
   position: fixed;
   margin-top: 7px;
@@ -39,6 +46,11 @@
   white-space: pre-wrap;
   box-shadow: var(--elevation-300-tooltip, 0 2px 7px rgba(0, 0, 0, .15));
   word-break: break-word;
+}
+
+.tooltip--content-down {
+  margin-bottom: 7px;
+  margin-top: 0px;
 }
 
 .tooltip--text {

@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 import Language from '../base/Language';
 import Plural from '../base/Plural';
 import { HistoryEntry, TranslationKey, TranslationKeys } from './TranslationKey';
@@ -18,6 +19,38 @@ export default class MemoryTranslationKeyStore extends BaseTranslationKeyStore {
   constructor(parentKeyStore: FigmaFileTranslationKeyStore) {
     super();
     this.parentKeyStore = parentKeyStore;
+
+    window.addEventListener('message', (event : MessageEvent) => {
+      if (event.data.pluginMessage.target === 'TranslationKeyStore') {
+        if (event.data.pluginMessage.type === 'cacheUpdate') {
+          this.processCacheUpdate(event.data.pluginMessage.changedKeys);
+        }
+      }
+    });
+  }
+
+  async processCacheUpdate(changedKeys: { delted: string[], added: string[], updeted: string[] }) {
+    for (const deltedKey of changedKeys.delted) {
+      delete this.translationKeys[deltedKey];
+    }
+
+    for (const updatedKey of changedKeys.updeted) {
+      const freshKey = await this.parentKeyStore.getKey(updatedKey);
+      if (!freshKey) {
+        throw new Error(`fresh key does not exist... [${updatedKey}]`);
+      }
+
+      this.persistKey(freshKey);
+    }
+
+    for (const addedKey of changedKeys.added) {
+      const freshKey = await this.parentKeyStore.getKey(addedKey);
+      if (!freshKey) {
+        throw new Error(`fresh key does not exist... [${addedKey}]`);
+      }
+
+      this.persistKey(freshKey);
+    }
   }
 
   getKey(keyName: string) : TranslationKey | undefined {
@@ -80,5 +113,43 @@ export default class MemoryTranslationKeyStore extends BaseTranslationKeyStore {
 
   importFromLocalise(): Promise<void> {
     return this.parentKeyStore.importFromLocalise();
+  }
+
+  fillPlaceholdersWithSampleData(text: string, language: Language, plural: Plural) {
+    const placeholders = /\[%(s|n|i):(\w+)\]/g;
+    return text.replace(placeholders, (substring, type, key) => {
+      // exact match
+      let matchingTranslation = this.getKey(`sample_values__${type}:${key}`);
+
+      // name match in samples
+      if (matchingTranslation === undefined) {
+        matchingTranslation = this.getKey(`sample_values__${key}`);
+      }
+
+      // key match
+      if (!matchingTranslation === undefined) {
+        matchingTranslation = this.getKey(key);
+      }
+
+      if (!matchingTranslation === undefined) {
+        return substring;
+      }
+
+      // exact language/plural match
+      const matchingLangugae = matchingTranslation!.translations[language]?.[plural]?.text;
+      if (matchingLangugae !== undefined) {
+        return matchingLangugae;
+      }
+
+      const baseLanguage = Object.keys(matchingTranslation!.translations)[0]! as Language;
+      if (matchingTranslation!.translations[baseLanguage]![plural]?.text !== undefined) {
+        return matchingTranslation!.translations[baseLanguage]![plural]!.text!;
+      } if (matchingTranslation!.translations[baseLanguage]![Plural.Other]?.text !== undefined) {
+        return matchingTranslation!.translations[baseLanguage]![Plural.Other]?.text!;
+      }
+
+      // not found
+      return substring;
+    });
   }
 }

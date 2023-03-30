@@ -117,7 +117,7 @@ export default function TextField({
               }
             }}
           >
-            {text === undefined || text === '' ? placeholder : text }
+            {textState === undefined || textState === '' ? placeholder : textState }
           </p>
           { icon !== undefined && (
           <span className={`svg-container ${icon}`} />

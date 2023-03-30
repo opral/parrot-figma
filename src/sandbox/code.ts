@@ -42,7 +42,7 @@ let result = fetch('https://figma-assets-and-resources.loca.lt/api/v1/translate'
 
 asyncFunctionProxy.registerInstance(figmaRemote);
 
-const localizationState = new FigmaFileTranslationKeyStore();
+const localizationState = new FigmaFileTranslationKeyStore(false);
 asyncFunctionProxy.registerInstance(localizationState);
 
 const remoteLocalizedLabelManager = new LocalizedLabelManager(localizationState);

@@ -93,9 +93,11 @@
 
 .text-field-text.icon-left input {
   padding-left: 26px;
+  padding-right: 26px;
 }
 .text-field-text.icon-left p {
   padding-left: 26px;
+  padding-right: 26px;
 }
 
 

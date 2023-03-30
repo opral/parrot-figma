@@ -8,6 +8,7 @@ import './SegmentedControl.css';
 export interface Segment {
   iconName: string;
   value: string
+  tooltip?: string;
 }
 
 type SegmentedControlProps<Type> = {
@@ -33,6 +34,8 @@ export default function SegmentedControl<Type>({
     <div className="segmented-control">
       {segments.map((segment) => (
         <div
+          data-tooltip-trigger={segment.tooltip ? 'div' : undefined}
+          data-tooltip-content={segment.tooltip}
           key={segment.value}
           className={`segmented-control-segment${segment.value === selectedSegmentState ? ' selected' : ''}`}
           onClick={() => handleSelectClick(segment.value)}

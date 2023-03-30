@@ -283,7 +283,20 @@ What we want from ui point of view:
  - [ ] use base language for translation if possible
  
  - [ ] import of ios dict
+    - files sitting in de.lproj / en.lproj foldern that contain two files
+        - *.strings a simple key value fule "key" = "value" while i guess newlines and '"' are encoded somehow
+        - *.stringsdict file containing xml structure for plurals
  - [ ] import of android dict
+    - android has multiple xml files per language - it separates by folders on drop we can check the folders postfix for the language values-de would be the german strings - we don't know the language for values so
+    - files are in xml format so we need to parse it
+ - [ ] file import ui
+    - drop area for files 
+    - import action screen that allows to choose a language and choose the import option
+        - ignore new keys (number of keys affected)
+        - override existing keys (number of keys affected)
+        - ignor existing keys 
+        - match by content and add platform specific keys
+
  - [ ] import from lokalize
  
  - [ ] add export tab with versioning

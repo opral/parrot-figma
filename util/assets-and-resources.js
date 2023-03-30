@@ -7,20 +7,22 @@ async function main() {
     });
     const json = await result.json();
     
-    const prefix = 'aar_k__';
+    const keyPrefix = 'aar_k__';
   
     const entries = json.document.pluginData['1205803482754362456'];
   
     const keys = {};
   
-    console.log(entries);
+    const configKey = 'aar_c';
+    const configRaw = entries[configKey];
+    const config = JSON.parse(configRaw);
   
     for (const entryKey of Object.keys(entries)) {
-      if (!entryKey.startsWith(prefix)) {
+      if (!entryKey.startsWith(keyPrefix)) {
         continue;
       }
   
-      const key = entryKey.substring(prefix.length);
+      const key = entryKey.substring(keyPrefix.length);
       const keyRaw = entries[entryKey];
   
       if (keyRaw === '') {
@@ -40,14 +42,17 @@ async function main() {
   
     for (const key of Object.keys(keys)) {
         
-        for (const language of Object.keys(keys[key].translations)) {
-            if (languages[language] === undefined) {
-                languages[language] = {};
-            }    
-            languages[language][key] = keys[key].translations[language].other?.text ?? '';
+      for (const language of config.enabledLanguages) {
+        if (languages[language] === undefined) {
+          languages[language] = {};
         }
         
-      //console.log(`Key: ${key}`);
+        if (keys[key].translations[language] === undefined) {
+          console.warn('No translation of key ' + key +' for Language ' + language + ' found.');
+        } else {
+          languages[language][key] = keys[key].translations[language].other?.text ?? '';
+        }
+      }
       
     }
     console.log('const Strings = ' + JSON.stringify(languages, null, 4));

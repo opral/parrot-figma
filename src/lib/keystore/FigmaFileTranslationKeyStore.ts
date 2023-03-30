@@ -2,14 +2,14 @@
 import Language from '../base/Language';
 import Plural from '../base/Plural';
 import { HistoryEntry, TranslationKey, TranslationKeys } from './TranslationKey';
-import { BaseTranslationKeyStore } from './BaseTranslationKeyStore';
+import { BaseTranslationKeyStore, TranslationKeyStore } from './BaseTranslationKeyStore';
 
 export interface Config {
   baseLanguage?: Language,
   enabledLanguages?: Language[]
 }
 
-export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
+export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
   public proxClassName = 'FigmaFileTranslationKeyStore';
 
   public static languageConfigDataKey = 'aar_c';
@@ -23,7 +23,6 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
   } as any;
 
   constructor(asProxy: boolean) {
-    super();
     console.log(`constructor FigmaFileTranslationKeyStore called ${asProxy}`);
     if (!asProxy) {
       console.log('register document change');
@@ -70,12 +69,17 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
             }
 
             console.log('cache changes informed');
-            console.log(changedKeys)
-            figma.ui.postMessage({
-              target: 'TranslationKeyStore',
-              type: 'cacheUpdate',
-              changedKeys,
-            });
+            console.log(changedKeys);
+
+            if (changedKeys.deleted.length > 0
+              || changedKeys.added.length > 0
+              || changedKeys.updated.length > 0) {
+              figma.ui.postMessage({
+                target: 'TranslationKeyStore',
+                type: 'cacheUpdate',
+                changedKeys,
+              });
+            }
           }
           break;
         }
@@ -96,6 +100,10 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
     this.keyState[keyName] = historyObj.state;
 
     return key;
+  }
+
+  async getKeyAsync(keyName: string) {
+    return this.getKey(keyName);
   }
 
   async getConfig() {
@@ -208,11 +216,77 @@ export class FigmaFileTranslationKeyStore extends BaseTranslationKeyStore {
   }
 
   async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[]): Promise<TranslationKey> {
-    return super.createKey(keyName, translations);
+    const existingKey = this.getKey(keyName);
+    if (existingKey) {
+      throw Error('tried to create a key that already existed');
+    }
+
+    const plurals = [] as Plural[];
+
+    const translationsObj = {} as any;
+    for (const translation of translations) {
+      if (!translationsObj[translation.language]) {
+        translationsObj[translation.language] = {};
+      }
+
+      if (!translationsObj[translation.language][translation.plural]) {
+        translationsObj[translation.language][translation.plural] = {};
+      }
+
+      translationsObj[translation.language][translation.plural].text = translation.text;
+
+      if (plurals.indexOf(translation.plural) === -1) {
+        plurals.push(translation.plural);
+      }
+    }
+
+    const createdKey = {
+      latestVersion: 0,
+      keyName,
+      tags: [],
+      plurals,
+      translations: translationsObj,
+      history: [], // first history entry will be added in persistKey method...
+    } as TranslationKey;
+    return this.persistKey(createdKey);
   }
 
   async updateKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[]): Promise<TranslationKey> {
-    return super.updateKey(keyName, translations);
+    const keyToUpdate = this.getKey(keyName);
+
+    if (keyToUpdate === undefined) {
+      throw new Error(`Key [${keyName}] not found!`);
+    }
+
+    for (const translation of translations) {
+      // if no key for the given language exists - create an empty one for plural 'other' with version -1
+      if (!keyToUpdate.translations[translation.language]) {
+        keyToUpdate.translations[translation.language] = {
+          other: {
+            version: -1,
+            skip: false,
+          },
+        };
+      }
+
+      // if the target plural does not extist yet create a dummy one - vlues get overriden in next step
+      if (!keyToUpdate.translations[translation.language]![translation.plural]) {
+        keyToUpdate.translations[translation.language]![translation.plural] = {
+          version: -1,
+          skip: false,
+        };
+      }
+
+      // create a new translation entry with increased version
+      keyToUpdate.translations[translation.language]![translation.plural]!.version = keyToUpdate.latestVersion + 1;
+      keyToUpdate.translations[translation.language]![translation.plural]!.text = translation.text;
+      keyToUpdate.translations[translation.language]![translation.plural]!.skip = translation.skip;
+
+      if (keyToUpdate.plurals.indexOf(translation.plural as Plural) === -1) {
+        keyToUpdate.plurals.push(translation.plural as Plural);
+      }
+    }
+    return this.persistKey(keyToUpdate);
   }
 
   async deleteKey(keyName: string): Promise<void> {

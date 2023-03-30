@@ -2,10 +2,10 @@
 import Language from '../base/Language';
 import Plural from '../base/Plural';
 import { HistoryEntry, TranslationKey, TranslationKeys } from './TranslationKey';
-import { BaseTranslationKeyStore } from './BaseTranslationKeyStore';
+import { BaseTranslationKeyStore, TranslationKeyStore } from './BaseTranslationKeyStore';
 import { Config, FigmaFileTranslationKeyStore } from './FigmaFileTranslationKeyStore';
 
-export default class MemoryTranslationKeyStore extends BaseTranslationKeyStore {
+export default class MemoryTranslationKeyStore extends EventTarget implements TranslationKeyStore {
   async getHistory(translationKeyName: string): Promise<HistoryEntry[]> {
     return this.parentKeyStore.getHistory(translationKeyName);
   }
@@ -29,13 +29,13 @@ export default class MemoryTranslationKeyStore extends BaseTranslationKeyStore {
     });
   }
 
-  async processCacheUpdate(changedKeys: { delted: string[], added: string[], updeted: string[] }) {
-    for (const deltedKey of changedKeys.delted) {
+  async processCacheUpdate(changedKeys: { deleted: string[], added: string[], updated: string[] }) {
+    for (const deltedKey of changedKeys.deleted) {
       delete this.translationKeys[deltedKey];
     }
 
-    for (const updatedKey of changedKeys.updeted) {
-      const freshKey = await this.parentKeyStore.getKey(updatedKey);
+    for (const updatedKey of changedKeys.updated) {
+      const freshKey = await this.parentKeyStore.getKeyAsync(updatedKey);
       if (!freshKey) {
         throw new Error(`fresh key does not exist... [${updatedKey}]`);
       }
@@ -44,13 +44,16 @@ export default class MemoryTranslationKeyStore extends BaseTranslationKeyStore {
     }
 
     for (const addedKey of changedKeys.added) {
-      const freshKey = await this.parentKeyStore.getKey(addedKey);
+      const freshKey = await this.parentKeyStore.getKeyAsync(addedKey);
       if (!freshKey) {
         throw new Error(`fresh key does not exist... [${addedKey}]`);
       }
 
       this.persistKey(freshKey);
     }
+
+    const event = new CustomEvent('updated', { });
+    this.dispatchEvent(event);
   }
 
   getKey(keyName: string) : TranslationKey | undefined {

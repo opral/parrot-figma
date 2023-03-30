@@ -43,8 +43,12 @@ export default function TranslationKeyListView({
 
   useEffect(() => {
     localizedLabelManager.addEventListener('updated', refreshSelection);
+    translationKeyStore.addEventListener('updated', refreshSelection);
 
-    return () => localizedLabelManager.removeEventListener('updated', refreshSelection);
+    return () => {
+      localizedLabelManager.removeEventListener('updated', refreshSelection);
+      translationKeyStore.removeEventListener('updated', refreshSelection);
+    };
   }, []);
 
   useEffect(() => {

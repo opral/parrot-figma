@@ -28,32 +28,6 @@ export default function LocalizedLabelsListView({
     [rootFrameId: string]: string[]
   });
 
-  useEffect(() => {
-    // connect figmas plugin message to the apps onMessage handler
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    onmessage = messageHandler;
-
-    // asynchronous fetch the state from figma helper
-    (async () => {
-      // eslint-disable-next-line @typescript-eslint/no-use-before-define
-      await refreshSelection();
-    })();
-
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
-    localizedLabelManager.addEventListener('updated', refreshSelection);
-
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
-    return () => localizedLabelManager.removeEventListener('updated', refreshSelection);
-  }, []);
-
-  function messageHandler(event: any) {
-    if (event.data.pluginMessage.type === 'event') {
-      if (event.data.pluginMessage.name === 'selectionchange') {
-        // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
-        refreshSelection();
-      }
-    }
-  }
 
   async function refreshSelection() {
     // console.log('refreshSelection()');
@@ -85,6 +59,37 @@ export default function LocalizedLabelsListView({
     }
     setLocalizedLabels(selectedLabels);
     setSelection(selectedByFrame);
+  }
+
+  useEffect(() => {
+    // connect figmas plugin message to the apps onMessage handler
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    onmessage = messageHandler;
+
+    // asynchronous fetch the state from figma helper
+    (async () => {
+      // eslint-disable-next-line @typescript-eslint/no-use-before-define
+      await refreshSelection();
+    })();
+
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
+    localizedLabelManager.addEventListener('updated', refreshSelection);
+    translationKeyStore.addEventListener('updated', refreshSelection);
+
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
+    return () => {
+      localizedLabelManager.removeEventListener('updated', refreshSelection);
+      translationKeyStore.removeEventListener('updated', refreshSelection);
+    };
+  }, []);
+
+  function messageHandler(event: any) {
+    if (event.data.pluginMessage.type === 'event') {
+      if (event.data.pluginMessage.name === 'selectionchange') {
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
+        refreshSelection();
+      }
+    }
   }
 
   if (localizedLabels.length === 0) {

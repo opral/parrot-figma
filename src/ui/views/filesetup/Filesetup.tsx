@@ -106,6 +106,19 @@ export default function Filesetup({
           )) }
         </div>
       </div>
+      <div>
+        <button
+          className="button button--buttonSecondary"
+          type="button"
+          onClick={() => {
+            translationKeyStore.importFromLocalise();
+          }}
+        >
+          <span data-tooltip-type="text">
+            Import from Lokalise
+          </span>
+        </button>
+      </div>
       { showNextButton && (
       <div>
         <button className="button button--buttonSecondary" type="button" onClick={() => { }}>

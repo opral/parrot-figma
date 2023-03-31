@@ -366,7 +366,7 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
               skip: false,
             };
 
-            if (keyPlurals.indexOf(plural as Plural) !== -1) {
+            if (keyPlurals.indexOf(plural as Plural) === -1) {
               keyPlurals.push(plural as Plural);
             }
           }

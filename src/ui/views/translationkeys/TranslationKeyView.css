@@ -312,7 +312,7 @@
 
 
 .side-drawer {
-  overflow: scroll;
+  overflow: auto;
   height: var(--window-client-height);
   background: white;
   position: fixed;

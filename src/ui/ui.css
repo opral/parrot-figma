@@ -116,7 +116,7 @@ body {
   }
 
   .view {
-    overflow: scroll;
+    overflow: auto;
     
     height: calc(100% - 40px);
   }

@@ -3,12 +3,12 @@
 import * as React from 'react';
 import { useState } from 'react';
 import OutsideClickHandler from 'react-outside-click-handler';
-import Plural from '../../../lib/base/Plural';
+import { Plural } from '../../../lib/base/Plural';
 import { KeyState, LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
 import FigmaUtil from '../../../shared/FigmaUtil';
 import Select, { SelectOption } from '../../compontents/select/select';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
-import Language from '../../../lib/base/Language';
+import { Language } from '../../../lib/base/Language';
 import TranslationEditor from '../../compontents/translationEditor/TranslationEditor';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import TextField from '../../compontents/textfield/TextField';
@@ -96,7 +96,7 @@ export default function LocalizedLabelListItem({
     }
   } else {
     pluralsAvailable.push({
-      value: Plural.Other, label: Plural.Other,
+      value: Plural.OTHER, label: Plural.OTHER,
     });
   }
 
@@ -281,7 +281,7 @@ export default function LocalizedLabelListItem({
               }}
               text={localizedLabel.text}
               match={undefined}
-              editable
+              editable={false}
             />
           </div>
           <div className="row-actions">

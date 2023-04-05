@@ -1,8 +1,8 @@
 /* eslint-disable no-await-in-loop */
-import Language from '../base/Language';
-import Plural from '../base/Plural';
+import { Language } from '../base/Language';
+import { Plural } from '../base/Plural';
 import { HistoryEntry, TranslationKey, TranslationKeys } from './TranslationKey';
-import { BaseTranslationKeyStore, TranslationKeyStore } from './BaseTranslationKeyStore';
+import { TranslationKeyStore } from './BaseTranslationKeyStore';
 import { Config, FigmaFileTranslationKeyStore } from './FigmaFileTranslationKeyStore';
 
 export default class MemoryTranslationKeyStore extends EventTarget implements TranslationKeyStore {
@@ -85,16 +85,16 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     await this.parentKeyStore.setConfig(parentConfig);
   }
 
-  async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[]): Promise<TranslationKey> {
+  async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean): Promise<TranslationKey> {
     if (keyName === '') {
       throw new Error('keys mus have at least one character');
     }
-    const createdKey = await this.parentKeyStore.createKey(keyName, translations);
+    const createdKey = await this.parentKeyStore.createKey(keyName, translations, plural);
     return this.persistKey(createdKey);
   }
 
-  async updateKey(keyName: string, translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[]) {
-    const updatedKey = await this.parentKeyStore.updateKey(keyName, translations);
+  async updateKey(keyName: string, translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[], plural?: boolean) {
+    const updatedKey = await this.parentKeyStore.updateKey(keyName, translations, plural);
     return this.persistKey(updatedKey);
   }
 
@@ -147,8 +147,8 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
       const baseLanguage = Object.keys(matchingTranslation!.translations)[0]! as Language;
       if (matchingTranslation!.translations[baseLanguage]![plural]?.text !== undefined) {
         return matchingTranslation!.translations[baseLanguage]![plural]!.text!;
-      } if (matchingTranslation!.translations[baseLanguage]![Plural.Other]?.text !== undefined) {
-        return matchingTranslation!.translations[baseLanguage]![Plural.Other]?.text!;
+      } if (matchingTranslation!.translations[baseLanguage]![Plural.OTHER]?.text !== undefined) {
+        return matchingTranslation!.translations[baseLanguage]![Plural.OTHER]?.text!;
       }
 
       // not found

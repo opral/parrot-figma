@@ -7,7 +7,7 @@ import Select, { SelectOption } from '../../compontents/select/select';
 import FigmaUtil from '../../../shared/FigmaUtil';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
-import Language from '../../../lib/base/Language';
+import { Language } from '../../../lib/base/Language';
 
 type LocalizedFrameGroupProps = {
   localizedLabels: LocalizedLabel[],

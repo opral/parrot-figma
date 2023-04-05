@@ -1,10 +1,18 @@
-import Language from '../base/Language';
-import Plural from '../base/Plural';
+import { Language } from '../base/Language';
+import { Plural } from '../base/Plural';
 
 export type HistoryEntry = {
-  [language in Language]? : {
-    [plural in Plural]? : {
-      text?: string
+  user: string,
+  date: number,
+  plural?: boolean,
+  tags?: string[],
+  translations?: {
+    [language in Language]? : {
+      [plural in Plural]? : {
+        text?: string,
+        // TODO verified
+        skip?: boolean
+      }
     }
   }
 };
@@ -20,12 +28,14 @@ export type HistoryEntry = {
 export interface SerializableTranslationKey {
   keyName: string
   latestVersion: number,
-  plurals: Plural[],
+  plural: boolean,
+  tags: string[],
   translations: {
     [language in Language]? : {
       [plural in Plural]? : {
         version: number,
         text?: string,
+        // TODO verified
         skip: boolean
       }
     }

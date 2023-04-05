@@ -2,10 +2,10 @@
 /* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Select, { SelectOption } from '../../compontents/select/select';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
-import Language from '../../../lib/base/Language';
+import { Language } from '../../../lib/base/Language';
 import './Filesetup.css';
 
   type FilesetupProps = {
@@ -38,7 +38,7 @@ export default function Filesetup({
   }
 
   function setLanguageSelected(language: Language, selected: boolean) {
-    setSelectedLanguages((languages) => {
+    setSelectedLanguages((languages : Language[]) => {
       let newLanguages;
       if (selected) {
         if (languages.indexOf(language) === -1) {

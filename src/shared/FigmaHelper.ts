@@ -2,8 +2,8 @@
 import { TranslationKeyStore } from '../lib/keystore/BaseTranslationKeyStore';
 
 import FigmaUtil from './FigmaUtil';
-import Language from '../lib/base/Language';
-import Plural from '../lib/base/Plural';
+import { Language } from '../lib/base/Language';
+import { Plural } from '../lib/base/Plural';
 
 const defaultLinkStyleKey = 'defaultLinkStyle';
 

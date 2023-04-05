@@ -5,10 +5,12 @@
 /* eslint-disable jsx-a11y/label-has-associated-control */
 import * as React from 'react';
 import { useState } from 'react';
+import '../../localization/i18n';
+import { useTranslation } from 'react-i18next';
 import OutsideClickHandler from 'react-outside-click-handler';
-import Language from '../../../lib/base/Language';
-import Plural from '../../../lib/base/Plural';
-import { TranslationKey } from '../../../lib/keystore/TranslationKey';
+import { Language } from '../../../lib/base/Language';
+import { Plural, pluralArrayByLanguage } from '../../../lib/base/Plural';
+import { HistoryEntry, TranslationKey } from '../../../lib/keystore/TranslationKey';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
 
 import FigmaUtil from '../../../shared/FigmaUtil';
@@ -16,7 +18,7 @@ import FigmaUtil from '../../../shared/FigmaUtil';
 import TranslationEditor from '../../compontents/translationEditor/TranslationEditor';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import MatchView from '../../compontents/matchview/MatchView';
-import HistoryEntry from '../../compontents/history/HistoryEntry';
+import HistoryEntryView from '../../compontents/history/HistoryEntryView';
 
 type TranslationKeyListItemProps = {
   translationKey: TranslationKey,
@@ -35,9 +37,10 @@ export default function TranslationKeyListItem({
   localizedLabelManager,
   select,
 }: TranslationKeyListItemProps) {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState(false);
   const [showUsage, setShowUsage] = useState(false);
-  const [history, setHistory] = useState<undefined | { version: number, text?: string }[]>(undefined);
+  const [history, setHistory] = useState<undefined | HistoryEntry[]>(undefined);
 
   const [showHistory, setShowHistory] = useState<undefined | { language: Language, plural: Plural }>(undefined);
 
@@ -57,18 +60,13 @@ export default function TranslationKeyListItem({
 
   const onShowHistoryClick = (language: Language, plural: Plural) => {
     translationKeyStore.parentKeyStore.getHistory(translationKey.keyName).then((historyEntries) => {
-      const specificHistory = [] as { text?: string, version: number }[];
+      const specificHistory = [] as HistoryEntry[];
 
-      let version = 0;
       // filter relevant history changes for the given key
       for (const keyHistoryEntry of historyEntries) {
-        if (keyHistoryEntry[language]?.[plural] !== undefined) {
-          specificHistory.push({
-            text: keyHistoryEntry[language]![plural]!.text,
-            version,
-          });
+        if (keyHistoryEntry.translations?.[language]?.[plural] !== undefined) {
+          specificHistory.push(keyHistoryEntry);
         }
-        version += 1;
       }
 
       setHistory(specificHistory.reverse());
@@ -103,14 +101,25 @@ export default function TranslationKeyListItem({
         </div>
         <div className="grid-item-actions">
           { select === undefined && (
-          <span
-            className="layerIcon iconWrapper button"
-            onClick={() => {
-              translationKeyStore.deleteKey(translationKey.keyName);
-            }}
-          >
-            <span className="svg-container trash-svg" />
-          </span>
+          <>
+            <span
+              className="layerIcon iconWrapper button"
+              onClick={() => {
+                translationKeyStore.deleteKey(translationKey.keyName);
+              }}
+            >
+              <span className="svg-container trash-svg" />
+            </span>
+            <span
+              className="layerIcon iconWrapper button"
+              onClick={() => {
+                translationKeyStore.updateKey(translationKey.keyName, [], !translationKey.plural);
+              }}
+            >
+              <span className={'svg-container ' + (translationKey.plural ? 'plural-svg' : 'no-plural-svg')} />
+            </span>
+
+          </>
           )}
         </div>
         { select === undefined && (
@@ -155,30 +164,35 @@ export default function TranslationKeyListItem({
         return (
           <div className={`languageWrapper${languageSkipped ? ' skipped ' : ''}`} key={language}>
             <div className="grid-item-language"><span className="rowText">{language}</span></div>
-            {translationKey.plurals.map((plural) => (
-              <div key={plural} className={`keyPluralWrapper ${translationKey.plurals.length === 1 ? 'onePlural' : ' multiplePlurals'}${translationKey.translations[language as Language]?.[plural as Plural]?.skip === true ? ' skipped' : ''}`}>
-                <div className="grid-item-plural"><span className="rowText">{plural}</span></div>
-                <div className="grid-item-translation translation-container translation">
-                  <TranslationEditor
-                    editable={select === undefined}
-                    match={searchMatch?.[language]?.[plural as Plural]}
-                    onSave={async (text: any) => {
-                      let skip = translationKey.translations[language as Language]?.[plural as Plural]?.skip ?? false;
+            {pluralArrayByLanguage[language].map((plural) => {
+              if (!translationKey.plural && plural !== Plural.OTHER) {
+                return null;
+              }
+              // eslint-disable-next-line consistent-return
+              return (
+                <div key={plural} className={`keyPluralWrapper ${translationKey.plural ? 'onePlural' : ' multiplePlurals'}${translationKey.translations[language as Language]?.[plural as Plural]?.skip === true ? ' skipped' : ''}`}>
+                  { translationKey.plural && <div className="grid-item-plural"><span className="rowText">{plural}</span></div>}
+                  <div className="grid-item-translation translation-container translation">
+                    <TranslationEditor
+                      editable={select === undefined}
+                      match={searchMatch?.[language]?.[plural as Plural]}
+                      onSave={async (text: any) => {
+                        let skip = translationKey.translations[language as Language]?.[plural as Plural]?.skip ?? false;
 
-                      if (text !== undefined && text !== '') {
-                        skip = false;
-                      }
-                      await translationKeyStore.updateKey(translationKey.keyName!, [{
-                        language, plural: plural as Plural, text, skip,
-                      }]);
-                      await translationKeyStore.parentKeyStore.commitUndo();
-                    }}
-                    text={translationKey.translations[language as Language]?.[plural as Plural]?.text}
-                  />
+                        if (text !== undefined && text !== '') {
+                          skip = false;
+                        }
+                        await translationKeyStore.updateKey(translationKey.keyName!, [{
+                          language, plural: plural as Plural, text, skip,
+                        }]);
+                        await translationKeyStore.parentKeyStore.commitUndo();
+                      }}
+                      text={translationKey.translations[language as Language]?.[plural as Plural]?.text}
+                    />
 
-                </div>
-                <div className="grid-item-actions">
-                  { select === undefined && (
+                  </div>
+                  <div className="grid-item-actions">
+                    { select === undefined && (
                     <>
                       <span
                         className="layerIcon iconWrapper button"
@@ -205,10 +219,11 @@ export default function TranslationKeyListItem({
                       </span>
 
                     </>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         );
       })}
@@ -220,7 +235,7 @@ export default function TranslationKeyListItem({
       >
         <div className={`side-drawer${showHistory !== undefined ? ' open' : ' '}`}>
           <div className="history_view--topHeader">
-            Version history
+            { t('keys__version__title') }
             <span
               role="button"
               onClick={() => { setShowHistory(undefined); }}
@@ -235,11 +250,13 @@ export default function TranslationKeyListItem({
             </span>
           </div>
           {history?.map((entry, i, array) => (
-            <HistoryEntry
-              key={entry.version}
-              version={entry.version}
-              text={entry.text}
-              previousText={i < (array.length - 1) ? array[i + 1].text : undefined}
+            <HistoryEntryView
+              key={i}
+              text="entry.text"
+              time={entry.date ?? 0}
+              userName={entry.user}
+              userIconUrl={entry.user}
+              previousText="entry.text" /* {i < (array.length - 1) ? array[i + 1].text : undefined} */
               onReuse={i === 0 ? undefined : async (text: string) => {
                 if (showHistory === undefined) return;
 

@@ -1,9 +1,9 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable class-methods-use-this */
 import FigmaUtil from '../../shared/FigmaUtil';
-import Language from '../base/Language';
+import { Language } from '../base/Language';
 import { KeyState, LocalizedLabel } from './LocalizedLabel';
-import Plural from '../base/Plural';
+import { Plural } from '../base/Plural';
 import { BaseTranslationKeyStore } from '../keystore/BaseTranslationKeyStore';
 
 export default class LocalizedLabelManager {
@@ -158,7 +158,7 @@ export default class LocalizedLabelManager {
   }
 
   getBaseLanguageSync() {
-    return figma.root.getPluginData(this.languageDataKey) === '' ? Language.En : figma.root.getPluginData(this.languageDataKey) as Language;
+    return figma.root.getPluginData(this.languageDataKey) === '' ? Language.EN : figma.root.getPluginData(this.languageDataKey) as Language;
   }
 
   async setLinkStyle(linkStyle: string) {
@@ -455,7 +455,7 @@ export default class LocalizedLabelManager {
     const text = this.toTokenizedText(node);
 
     // if no plural id is specified than we fall back to "other" - the default plural
-    const pluralId = node.getPluginData(this.keyPluralDataKey) === '' ? Plural.Other : node.getPluginData(this.keyPluralDataKey);
+    const pluralId = node.getPluginData(this.keyPluralDataKey) === '' ? Plural.OTHER : node.getPluginData(this.keyPluralDataKey);
     const language = node.getPluginData(this.languageDataKey) === '' ? this.getBaseLanguageSync() : node.getPluginData(this.languageDataKey) as Language;
     const keyVersion = node.getPluginData(this.keyVersionDataKey) === '' ? -1 : parseInt(node.getPluginData(this.keyVersionDataKey), 10);
 

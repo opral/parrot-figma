@@ -1,12 +1,12 @@
 /* eslint-disable consistent-return */
-import Language from '../base/Language';
-import Plural from '../base/Plural';
+import { Language } from '../base/Language';
+import { Plural } from '../base/Plural';
 import { HistoryEntry, TranslationKey, TranslationKeys } from './TranslationKey';
 
 export interface TranslationKeyStore {
-  createKey(keyName: string, translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[]) : Promise<TranslationKey>
+  createKey(keyName: string, translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[], plural: boolean) : Promise<TranslationKey>
   getKey(keyName: string) : TranslationKey | undefined
-  updateKey(keyName: string, translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[]) : Promise<TranslationKey>
+  updateKey(keyName: string, translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[], plural?: boolean) : Promise<TranslationKey>
   deleteKey(keyName: string) : Promise<void>
   getHistory(translationKeyName: string) : Promise<HistoryEntry[]>
   load(): Promise<TranslationKeys>
@@ -18,7 +18,7 @@ export class BaseTranslationKeyStore {
     // iterate backward until we have a match
     let currentVersion = version;
     while (currentVersion >= 0) {
-      if (key.history[currentVersion]?.[language]?.[plural]) {
+      if (key.history[currentVersion]?.translations?.[language]?.[plural]) {
         return key.history[currentVersion];
       }
       currentVersion -= 1;
@@ -31,7 +31,7 @@ export class BaseTranslationKeyStore {
 
     let currentVersion = key.latestVersion;
     while (currentVersion >= 0 && currentVersion > version) {
-      if (key.history[currentVersion]?.[language]?.[plural]) {
+      if (key.history[currentVersion]?.translations?.[language]?.[plural]) {
         changeCounter += 1;
       }
       currentVersion -= 1;

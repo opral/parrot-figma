@@ -1,8 +1,8 @@
 import blake from 'blakejs';
 import { KeyState, LocalizedLabel } from './LocalizedLabel';
-import Plural from '../base/Plural';
+import { Plural } from '../base/Plural';
 import LocalizedLabelManager from './LocalizedLabelManager';
-import Language from '../base/Language';
+import { Language } from '../base/Language';
 import MemoryTranslationKeyStore from '../keystore/MemoryTranslationKeyStore';
 import { BaseTranslationKeyStore } from '../keystore/BaseTranslationKeyStore';
 
@@ -143,9 +143,9 @@ export default class LocalizedLabelManagerUI extends EventTarget {
       } else {
         state.behind = BaseTranslationKeyStore.getChangesSince(translatedKey, localizedLabel.language, localizedLabel.pluralId, localizedLabel.keyVersion);
 
-        if (currentVersion[localizedLabel.language]?.[localizedLabel.pluralId]?.text !== localizedLabel.text || (localizedLabel.useSampleValues && localizedLabel.textChangedAfterGeneration)) {
+        if (currentVersion.translations?.[localizedLabel.language]?.[localizedLabel.pluralId]?.text !== localizedLabel.text || (localizedLabel.useSampleValues && localizedLabel.textChangedAfterGeneration)) {
           state.modified = true;
-          state.orginalText = currentVersion[localizedLabel.language]?.[localizedLabel.pluralId]?.text;
+          state.orginalText = currentVersion.translations?.[localizedLabel.language]?.[localizedLabel.pluralId]?.text;
         }
       }
     }
@@ -175,7 +175,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
 
     const versionToApply = BaseTranslationKeyStore.getHistoryEntry(translationKey, localizeLabel.language, localizeLabel.pluralId, localizeLabel.keyVersion);
 
-    const text = versionToApply?.[localizeLabel.language]?.[localizeLabel.pluralId]?.text;
+    const text = versionToApply?.translations?.[localizeLabel.language]?.[localizeLabel.pluralId]?.text;
     if (text) {
       await this.updateLabelProperties(localizedLabelId, {
         showSampleValues: useSampleValues,
@@ -231,7 +231,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
         plural: cachedLabel.pluralId,
         text: translation,
         skip: false,
-      }]);
+      }], cachedLabel.pluralId !== Plural.OTHER);
       labelVersion = translationKey.latestVersion;
     } else {
       if (labelState.behind === 0) {
@@ -272,7 +272,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
         key: translationKeyName,
         keyType: KeyState.Linked,
         language: targetLanguage,
-        text: versionToApply?.[targetLanguage]?.[cachedLabel.pluralId]?.text,
+        text: versionToApply?.translations?.[targetLanguage]?.[cachedLabel.pluralId]?.text,
         keyVersion: labelVersion,
       });
     }
@@ -301,7 +301,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     // TODO set labels text to the latest key version
     await this.updateLabelProperties(localizedLabel.nodeId, {
       keyVersion: translationKey.latestVersion,
-      text: historyEntryForVersion![localizedLabel.language]?.[localizedLabel.pluralId]?.text,
+      text: historyEntryForVersion!.translations?.[localizedLabel.language]?.[localizedLabel.pluralId]?.text,
     });
 
     await this.localisedLabelMangerSandbox.commitUndo();
@@ -313,7 +313,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     const currentLabelVersion = BaseTranslationKeyStore.getHistoryEntry(translationKey, localizedLabel.language, localizedLabel.pluralId, localizedLabel.keyVersion);
     await this.updateLabelProperties(localizedLabel.nodeId, {
       keyVersion: localizedLabel.keyVersion,
-      text: currentLabelVersion![localizedLabel.language]?.[localizedLabel.pluralId]?.text,
+      text: currentLabelVersion!.translations?.[localizedLabel.language]?.[localizedLabel.pluralId]?.text,
     });
 
     await this.localisedLabelMangerSandbox.commitUndo();
@@ -326,7 +326,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
       await this.updateLabelProperties(localizedLabel.nodeId, {
         key: keyToLinkTo,
         keyType: KeyState.Linked,
-        plural: Plural.Other,
+        plural: Plural.OTHER,
         language: localizedLabel.rootFrameLanguage,
         keyVersion: translationKey.latestVersion,
         showSampleValues: localizedLabel.rootFrameUseSampleValues,
@@ -340,7 +340,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
         plural: localizedLabel.pluralId,
         text: localizedLabel.text,
         skip: false,
-      }]);
+      }], localizedLabel.pluralId !== Plural.OTHER);
       await this.updateLabelProperties(localizedLabel.nodeId, {
         key: keyToLinkTo,
         keyType: KeyState.Linked,

@@ -3,9 +3,10 @@
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 import * as React from 'react';
 import { useState } from 'react';
-import Language from '../../../lib/base/Language';
+import '../../localization/i18n';
+import { useTranslation } from 'react-i18next';
+import { SupportedLanguages, Language } from '../../../lib/base/Language';
 import TileSelect, { TileSelectOption } from '../../compontents/tileselect/tileselect';
-import useTranslation from '../../localization/useTranslation';
 
 import './Onboarding.css';
 
@@ -16,12 +17,12 @@ import './Onboarding.css';
 export default function Onboarding({
   onFinishSetup,
 }: OnboardingProps) {
-  const strings = useTranslation();
+  const { t } = useTranslation();
 
   const languageOptiones = [] as TileSelectOption<Language>[];
   const baseLanguageOptiones = [] as TileSelectOption<Language>[];
 
-  const availableLanguages = Object.values(Language);
+  const availableLanguages = SupportedLanguages;
   const [selectedLanguages, setSelectedLanguages] = useState<Language[]>([]);
   const [baseLanguageState, setBaseLanguageState] = useState<Language | undefined>(undefined);
   const [activeView, setActiveView] = useState('baselanguage');
@@ -29,10 +30,9 @@ export default function Onboarding({
   // const [baseLanguage, setBaseLanguages] = useState(translationKeyStore.getBaseLanugages());
 
   for (const language of availableLanguages) {
-    const untypedStrings = strings as any;
     const currentLanguageOption = {
       value: language,
-      label: untypedStrings[language] ?? language,
+      label: t(`l_${language}`) ?? language,
       icon: `flag-${language}`,
       // tooltip: 'select this',
     };
@@ -41,11 +41,11 @@ export default function Onboarding({
   }
 
   for (const language of availableLanguages) {
-    const untypedStrings = strings as any;
+    // const untypedStrings = strings as any;
 
     const currentLanguageOption = {
       value: language,
-      label: untypedStrings[language] ?? language,
+      label: t(`l_${language}`) ?? language,
       // tooltip: 'select this',
       icon: `flag-${language}`,
       forceSelected: language === baseLanguageState,
@@ -61,10 +61,9 @@ export default function Onboarding({
       <>
         <div>
           <div>
-            {strings.intro__baselang_cta}
+            {t('file_onboarding__baselang_cta')}
             <br />
-            {strings.intro__baselang_cta_detail}
-            Please select the language in which the design file is currently written?
+            {t('file_onboarding__baselang_cta_detail')}
           </div>
           <TileSelect<Language>
             onChange={(baseLanguage: Language[]) => {
@@ -83,7 +82,7 @@ export default function Onboarding({
         <div>
           <button className="button button--buttonSecondary" type="button" onClick={() => { setActiveView('languages'); }}>
             <span data-tooltip-type="text">
-            {strings.next_button}
+              {t('file_onboarding__next_button')}
             </span>
           </button>
         </div>
@@ -94,7 +93,7 @@ export default function Onboarding({
 
       <>
         <div>
-          <div >
+          <div>
             Please select langueages to translate the designfile for.
           </div>
           <div>
@@ -113,7 +112,7 @@ export default function Onboarding({
         <div>
           <button className="button button--buttonSecondary" type="button" onClick={() => { setActiveView('baselanguage'); }}>
             <span data-tooltip-type="text">
-              {strings.back_button}
+              {t('file_onboarding__back_button')}
             </span>
           </button>
           {
@@ -121,7 +120,7 @@ export default function Onboarding({
           }
           <button className="button button--buttonSecondary" type="button" onClick={() => { if (baseLanguageState !== undefined) { onFinishSetup(baseLanguageState, selectedLanguages); } }}>
             <span data-tooltip-type="text">
-            {strings.finish_setup_button}
+              {t('file_onboarding__finish_setup_button')}
             </span>
           </button>
         </div>

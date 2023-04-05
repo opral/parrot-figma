@@ -62,6 +62,10 @@ export default class FigmaUtil {
      */
   // eslint-disable-next-line class-methods-use-this
   public getRootFrame(node: any): FrameNode | undefined {
+    if (!node.parent) {
+      console.log(node);
+      throw new Error('given node has no parent');
+    }
     let { parent } = node;
 
     let rootFrame: FrameNode | undefined;

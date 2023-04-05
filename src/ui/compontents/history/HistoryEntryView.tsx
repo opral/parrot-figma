@@ -1,22 +1,31 @@
 import React from 'react';
+import '../../localization/i18n';
+import { useTranslation } from 'react-i18next';
+// eslint-disable-next-line import/no-extraneous-dependencies
+import ReactTimeAgo from 'react-time-ago';
 import StringDiff from './DiffView';
-import './HistoryEntry.css';
+import './HistoryEntryView.css';
 
-interface HistoryEntryProps {
-  version: number,
+interface HistoryEntryViewProps {
   tag?: string;
   text?: string;
+  time: number;
+  userName: string;
+  userIconUrl: string;
   previousText?: string;
   onReuse?: Function
 }
 
-export default function HistoryEntry({
-  version,
+export default function HistoryEntryView({
   tag,
   text,
+  time,
+  userName,
+  userIconUrl,
   previousText,
   onReuse,
-}: HistoryEntryProps) {
+}: HistoryEntryViewProps) {
+  const { t } = useTranslation();
   return (
     <div className="history_view">
       <div className="history_view--verticalLineRow" />
@@ -57,11 +66,10 @@ export default function HistoryEntry({
             oldValue={previousText || ''}
             newValue={text || ''}
           />
-          
           { onReuse !== undefined && (
           <button className="button button--buttonSecondary" type="button" onClick={() => { onReuse(text); }}>
             <span data-tooltip-type="text">
-              Reuse
+              { t('keys__version__reuse_button') }
             </span>
           </button>
           )}
@@ -95,7 +103,7 @@ export default function HistoryEntry({
                 data-tooltip-max-width="1000"
                 dir="auto"
               >
-                Martin Lysk
+                { userName }
               </div>
             </span>
           </div>
@@ -105,7 +113,9 @@ export default function HistoryEntry({
             data-tooltip="Mar 5, 11:18 PM"
           >
             {' '}
-            <span className="">21 hours ago</span>
+            <span className="">
+              <ReactTimeAgo date={time} locale="en-US" />
+            </span>
           </span>
         </div>
       </div>

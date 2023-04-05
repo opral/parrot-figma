@@ -242,46 +242,55 @@ What we want from ui point of view:
     - [x] if zoomfactor is to small sizing glitches
     - [x] propagate viewport height via css variables (https://www.w3schools.com/css/css3_variables_javascript.asp)
 
- - [ ] polish mouse pointer styles
- - [ ] fix flicker on zoom
   
  - [ ] localize tool using the tool :-)
- - [ ] Add tooltips 
+ - [x] Add tooltips 
 
+ - [ ] polish mouse pointer styles
+ - [ ] check keyname for at least one visible character
+ - [ ] handle empty text in translation as mising translation '' == undefined
+ - [ ] last character bug in key editor
+ - [ ] fix flicker on zoom
+ - [ ] add show difference toggle to history view
  - [ ] focus key field on link click if no derviation is posible
  - [ ] plural select
- - [ ] fix row design
-    - [ ] do we need to edit or even show the complete text inline in the designs tab?
-    - [ ] plural select (should it be visible if there is only the other option?)
-
- - [ ] allow to add a key manually using drawer? Currently one can only create a key form a lable 
- - [ ] check keyname for at least one visible character
- - [ ] add automatic design update for labels with state modified == false && behind == 0 - feedback?
- - [ ] handle empty text in translation as mising translation '' == undefined
- - [ ] distinct visual style for base language like bold
- - [ ] translation editor ux - we should be able to hide skipped values from option in toolbar
  - [ ] UX key select
     - [ ] search by key "key:keyname or other"
     - [ ] show only base language and current frame language
     - [ ] add single line action button "use key"
+ 
+
+ - [ ] fix localized label row design
+    - [ ] do we need to edit or even show the complete text inline in the designs tab?
+    - [ ] plural select (should it be visible if there is only the other option?)
+    - [ ] distinct visual style for base language like bold
+
+ - [ ] allow to add a key manually using drawer? Currently one can only create a key form a lable 
+
+ - [ ] add automatic design update for labels with state modified == false && behind == 0 - feedback?
+ - [ ] translation editor ux - we should be able to hide skipped values from option in toolbar
+ 
  - [ ] delete selection (multi select)
 
+ 
  - [ ] variable replacement logic
-
+    - [ ] placeholder style
+    
 
  - [ ] #3 implement fallback mechanism (plural skipped -> other -> other skipped -> base lang plural -> base lang plural skipped -> base lang other ) 
     - [ ] does the label need to know what it falled back to - how can synchonization handle that?
 
- - [ ] key propagation from sandbox (multi user test)
+ - [x] key propagation from sandbox (multi user test)
  - [ ] history (who changed what when?) 
  - [ ] allow to rename keys
     - [ ] think about edgecases here 
- - [ ] add show difference toggle to history view
  - [ ] qa handling of translation
  - [ ] filter - match case, need review etc based on figmas search design
 
  - [ ] use base language for translation if possible
  
+
+#### import
  - [ ] import of ios dict
     - files sitting in de.lproj / en.lproj foldern that contain two files
         - *.strings a simple key value fule "key" = "value" while i guess newlines and '"' are encoded somehow
@@ -296,9 +305,9 @@ What we want from ui point of view:
         - override existing keys (number of keys affected)
         - ignor existing keys 
         - match by content and add platform specific keys
-
  - [ ] import from lokalize
  
+ #### Export
  - [ ] add export tab with versioning
  - [ ] export tool for ios
  - [ ] export tool for android
@@ -311,16 +320,11 @@ What we want from ui point of view:
 
  - [ ] add platforms (ios/android/web/other)
  - [ ] allow each key to select plattforms
- - [ ] add tags
- - [ ] base default plurals per language on unicodes: https://www.unicode.org/cldr/cldr-aux/charts/29/supplemental/language_plural_rules.html
  - [ ] darkmode
- - [ ] last character bug in key editor
 
- 
-Daal
-Mata
-Palak
-
+ ### After MVP
+ - [ ] base default plurals per language on unicodes: https://www.unicode.org/cldr/cldr-aux/charts/29/supplemental/language_plural_rules.html
+ - [ ] add tags
 
 Plugins:
 https://www.figma.com/community/plugin/864431140615310499/Transifex-Figma-Plugin
@@ -336,4 +340,3 @@ https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
 
 
 
-Martin tschirsisch 

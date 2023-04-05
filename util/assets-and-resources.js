@@ -44,13 +44,19 @@ async function main() {
         
       for (const language of config.enabledLanguages) {
         if (languages[language] === undefined) {
-          languages[language] = {};
+          languages[language] = { translation: {} };
         }
         
         if (keys[key].translations[language] === undefined) {
           console.warn('No translation of key ' + key +' for Language ' + language + ' found.');
         } else {
-          languages[language][key] = keys[key].translations[language].other?.text ?? '';
+          if (keys[key].plural) {
+            for (let plural of Object.keys(keys[key].translations[language])) {
+              languages[language].translation[key+ '_' + plural] = keys[key].translations[language][plural].text.replace('[%i:count]', '{{count}}') ?? '';
+            }
+          } else {
+            languages[language].translation[key] = keys[key].translations[language].other?.text.replace('[%i:count]', '{{count}}') ?? '';
+          }
         }
       }
       

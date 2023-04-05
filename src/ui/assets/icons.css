@@ -225,6 +225,16 @@
     mask-image: url(./history.svg);
   }
 
+  .plural-svg {
+    -webkit-mask-image: url(./plural.svg);
+    mask-image: url(./plural.svg);
+  }
+
+  .no-plural-svg {
+    -webkit-mask-image: url(./no-plural.svg);
+    mask-image: url(./no-plural.svg);
+  }
+
   .placeholder-filled-svg {
     -webkit-mask-image: url(./placeholder-filled.svg);
     mask-image: url(./placeholder-filled.svg);

@@ -6,8 +6,9 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import * as ReactDOM from 'react-dom';
+import TimeAgo from 'javascript-time-ago';
+import en from 'javascript-time-ago/locale/en.json';
 
-import LocalizedStrings, { LocalizedStringsMethods } from 'localized-strings';
 import LocalizedLabelsListView from './views/localizedlabelslist/LocalizedLabelsListView';
 import FigmaUtil from '../shared/FigmaUtil';
 import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
@@ -28,9 +29,10 @@ import './assets/icons.css';
 import SegmentedControl from './compontents/segmentedControl/SegmentedControl';
 import Filesetup from './views/filesetup/Filesetup';
 import Onboarding from './views/onboarding/Onboarding';
-import Language from '../lib/base/Language';
-import LanguageContextProvider from './LanguageContext';
+import { Language } from '../lib/base/Language';
 import Tooltip from './compontents/tooltip/Tooltip';
+
+TimeAgo.addDefaultLocale(en);
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'z' && !e.shiftKey && !e.altKey) {
@@ -49,11 +51,6 @@ WindowManagerUi.init(
   document.getElementById('react-page')!,
   document.getElementById('corner')!,
 );
-
-export interface IStrings extends LocalizedStringsMethods {
-  score:string;
-  time: String;
-}
 
 const asyncFunctionProxy = new AsyncFunctionProxy('UIAsyncFunctionProxy', (data: any) => {
   // eslint-disable-next-line no-restricted-globals
@@ -168,7 +165,7 @@ function App() {
 
   return (
 
-    <LanguageContextProvider>
+    <>
       <Tooltip triggerAttribute="data-tooltip-trigger" contentAttribute="data-tooltip-content" />
       <div className="toolbar">
         <div className="tabHeader">
@@ -205,7 +202,7 @@ function App() {
       </div>
       <a id="focusHelper" href="" />
 
-    </LanguageContextProvider>
+    </>
   );
 }
 

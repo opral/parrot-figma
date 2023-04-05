@@ -1,5 +1,5 @@
-import Language from '../base/Language';
-import Plural from '../base/Plural';
+import { Language } from '../base/Language';
+import { Plural } from '../base/Plural';
 
 export enum KeyState {
   Unset = 'unset', // label has not yet modified by the plugin

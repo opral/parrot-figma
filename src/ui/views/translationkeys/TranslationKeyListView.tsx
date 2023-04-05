@@ -2,14 +2,15 @@
 /* eslint-disable jsx-a11y/interactive-supports-focus */
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import OutsideClickHandler from 'react-outside-click-handler';
-import Language from '../../../lib/base/Language';
+import '../../localization/i18n';
+import { useTranslation } from 'react-i18next';
+import { Language } from '../../../lib/base/Language';
 import { TranslationKeys } from '../../../lib/keystore/TranslationKey';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
 import FigmaUtil from '../../../shared/FigmaUtil';
 import TranslationKeyListItem from './TranslationKeyListItem';
-import Plural from '../../../lib/base/Plural';
-import HistoryEntry from '../../compontents/history/HistoryEntry';
+import { Plural } from '../../../lib/base/Plural';
+
 import './TranslationKeyView.css';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 
@@ -32,6 +33,7 @@ export default function TranslationKeyListView({
   refreshKeys,
   select,
 }: TranslationKeyListViewProps) {
+  const { t } = useTranslation();
   const [, setTrigger] = useState(0);
   const [renderEntries, setRenderEntries] = useState(200);
   const [searchText, setSearchText] = useState('');
@@ -118,7 +120,7 @@ export default function TranslationKeyListView({
         <span className="svg-container search-svg" />
         <input
           type="text"
-          placeholder="Search"
+          placeholder={t('keys__search_placeholder')!}
           className="search--searchInput"
           spellCheck="false"
           dir="auto"
@@ -131,7 +133,7 @@ export default function TranslationKeyListView({
       </div>
       { searchText && (
         <div className="searchResults">
-          { filteredKeys.length === 0 ? 'No results in this file' : `${filteredKeys.length} results` }
+          { t('keys__search_result_hint', { count: filteredKeys.length })}
         </div>
       )}
       <div className="grid">
@@ -166,7 +168,6 @@ export default function TranslationKeyListView({
           );
         })}
       </div>
-      
     </div>
   );
 }

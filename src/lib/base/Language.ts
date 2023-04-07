@@ -120,14 +120,14 @@ export enum Language {
 }
 
 export const SupportedLanguages = [
-  Language.AR,
+  // Language.AR,
   Language.BG,
-  Language.CA,
+  // Language.CA,
   Language.CS,
-  Language.DA,
+  // Language.DA,
   Language.DE,
-  Language.EL,
   Language.EN,
+  /* Language.EL,
   Language.ES,
   Language.ET,
   Language.FI,
@@ -136,9 +136,9 @@ export const SupportedLanguages = [
   Language.HI,
   Language.HR,
   Language.HU,
-  Language.ID,
+  Language.ID, */
   Language.IT,
-  Language.JA,
+  /* Language.JA,
   Language.KO,
   Language.LT,
   Language.LV,
@@ -151,7 +151,7 @@ export const SupportedLanguages = [
   Language.RO,
   Language.RU,
   Language.SK,
-  Language.SL,
+  Language.SL, */
   Language.SV,
-  Language.ZH,
+  // Language.ZH, 
 ];

@@ -25,21 +25,6 @@ const asyncFunctionProxy = new AsyncFunctionProxy('SandboxAsyncFunctionProxy', (
   figma.ui.postMessage(data);
 }, figma.ui);
 
-/*
-let result = fetch('https://figma-assets-and-resources.loca.lt/api/v1/translate', {
-  method: 'POST',
-  headers: {
-    'Authorization': 'DeepL-Auth-Key 391733de-67e0-be65-a8b7-4298511dd564:fx'
-  },
-  body: JSON.stringify({
-    text: 'Hello world',
-    target_lang: 'DE'
-  }) }).then(result => {
-  result.json().then(result => {
-    console.log(result);
-  })
-}); */
-
 asyncFunctionProxy.registerInstance(figmaRemote);
 
 const localizationState = new FigmaFileTranslationKeyStore(false);

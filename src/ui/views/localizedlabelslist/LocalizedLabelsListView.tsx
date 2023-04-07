@@ -28,10 +28,7 @@ export default function LocalizedLabelsListView({
     [rootFrameId: string]: string[]
   });
 
-
   async function refreshSelection() {
-    // console.log('refreshSelection()');
-
     const selectedNodes = await figmaRemote.getSelection();
 
     const selectedByFrame = {} as {

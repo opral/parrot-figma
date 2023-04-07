@@ -288,7 +288,7 @@ What we want from ui point of view:
  - [ ] filter - match case, need review etc based on figmas search design
 
  - [ ] use base language for translation if possible
- 
+ - [ ] handle selection for keys as well (provide an option to only show keys of current selection)
 
 #### import
  - [ ] import of ios dict

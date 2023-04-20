@@ -241,6 +241,8 @@ What we want from ui point of view:
     - [x] window jumps when viewport is zoomed
     - [x] if zoomfactor is to small sizing glitches
     - [x] propagate viewport height via css variables (https://www.w3schools.com/css/css3_variables_javascript.asp)
+ - [x] handle empty text in translation as mising translation '' == undefined
+ - [x] fix flicker on zoom
 
   
  - [ ] localize tool using the tool :-)
@@ -248,18 +250,15 @@ What we want from ui point of view:
 
  - [ ] polish mouse pointer styles
  - [ ] check keyname for at least one visible character
- - [ ] handle empty text in translation as mising translation '' == undefined
- - [ ] last character bug in key editor
- - [ ] fix flicker on zoom
- - [ ] add show difference toggle to history view
  - [ ] focus key field on link click if no derviation is posible
+ - [ ] last character bug in key editor
+ - [ ] add show difference toggle to history view
  - [ ] plural select
  - [ ] UX key select
     - [ ] search by key "key:keyname or other"
     - [ ] show only base language and current frame language
     - [ ] add single line action button "use key"
  
-
  - [ ] fix localized label row design
     - [ ] do we need to edit or even show the complete text inline in the designs tab?
     - [ ] plural select (should it be visible if there is only the other option?)
@@ -293,7 +292,7 @@ What we want from ui point of view:
 #### import
  - [ ] import of ios dict
     - files sitting in de.lproj / en.lproj foldern that contain two files
-        - *.strings a simple key value fule "key" = "value" while i guess newlines and '"' are encoded somehow
+        - [x] *.strings a simple key value fule "key" = "value" while i guess newlines and '"' are encoded somehow
         - *.stringsdict file containing xml structure for plurals
  - [ ] import of android dict
     - android has multiple xml files per language - it separates by folders on drop we can check the folders postfix for the language values-de would be the german strings - we don't know the language for values so

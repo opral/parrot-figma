@@ -1,3 +1,4 @@
+/* eslint-disable class-methods-use-this */
 import { WindowMode } from './WindowManagerSandbox';
 
 export default class WindowManagerUi {
@@ -25,6 +26,7 @@ export default class WindowManagerUi {
     this.contentEl = contentEl;
     this.resizeHandelEl = resizeHandelEl;
 
+
     const threshol = [];
     for (let i = 0; i <= 1.0; i += 0.01) {
       threshol.push(i);
@@ -36,16 +38,19 @@ export default class WindowManagerUi {
         if (lastRatio !== entries[0].intersectionRatio && entries[0].intersectionRatio !== 1 && entries[0].intersectionRect.height !== 0) {
           lastRatio = entries[0].intersectionRatio;
 
-          this.contentEl!.style.height = `${entries[0].intersectionRect.height}px`;
+          const intersectionHeight = Math.ceil(entries[0].intersectionRect.height);
+
+          console.log('height detected: ' + entries[0].intersectionRect.height);
+          this.contentEl!.style.height = `${intersectionHeight}px`;
           ((document.querySelector(':root')!) as HTMLElement).style.setProperty('--window-client-height', `${entries[0].intersectionRect.height}px`);
-          
+
           // eslint-disable-next-line no-restricted-globals
           parent.postMessage({
             pluginMessage: {
               target: 'WindowManager',
               size: {
                 width: contentEl.clientWidth,
-                height: entries[0].intersectionRect.height,
+                height: intersectionHeight,
               },
               source: 'intersection',
             },
@@ -63,7 +68,6 @@ export default class WindowManagerUi {
     this.resizeHandelEl.onpointerup = this.onResizeHandlePointerUp.bind(this);
   }
 
-  // eslint-disable-next-line class-methods-use-this
   onResizeHandleDrag(e: any) {
     const size = {
       width: Math.max(50, Math.floor(e.clientX + 5)),
@@ -73,7 +77,6 @@ export default class WindowManagerUi {
     parent.postMessage({ pluginMessage: { target: 'WindowManager', size, source: 'dragging' } }, '*');
   }
 
-  // eslint-disable-next-line class-methods-use-this
   onResizeHandlePointerUp(e: any) {
     e.target.onpointermove = null;
     e.target.releasePointerCapture(e.pointerId);
@@ -84,7 +87,6 @@ export default class WindowManagerUi {
     e.target.setPointerCapture(e.pointerId);
   }
 
-  // eslint-disable-next-line class-methods-use-this
   setWindowMode(mode: WindowMode) {
     // eslint-disable-next-line no-restricted-globals
     parent.postMessage({ pluginMessage: { target: 'WindowManager', windowMode: mode } }, '*');

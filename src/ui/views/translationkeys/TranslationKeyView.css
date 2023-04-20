@@ -291,7 +291,7 @@
 
 
 .keyPluralWrapper:nth-child(even)>div {
-  background-color: green;
+  /* background-color: green;*/
 }
 
 

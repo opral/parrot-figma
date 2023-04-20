@@ -16,7 +16,7 @@ import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager'
 
 const figmaRemote = new FigmaUtil();
 
-const fileConfigured = figma.root.getPluginData(FigmaFileTranslationKeyStore.languageConfigDataKey) !== '';
+const fileConfigured = figma.root.getPluginData(FigmaFileTranslationKeyStore.configDataKey) !== '';
 const introShownToUser = true; // TODO change this to a config when implemented
 
 WindowManagerSandbox.init(800, 600, 300, WindowMode.Window, !introShownToUser || !fileConfigured);
@@ -43,6 +43,44 @@ figma.on('selectionchange', () => {
       name: 'selectionchange',
     },
   );
+});
+
+figma.on('drop', (event: { files: string | any[]; }) => {
+  if (event.files && event.files.length > 0) {
+    const file = event.files[0];
+
+    const fileNameParts = file.name.split('.');
+    if (fileNameParts[fileNameParts.length - 1] === 'strings') {
+
+      file.getTextAsync().then((r: string) => {
+        remoteLocalizedLabelManager.translationKeyStore!.importStringsFile(fileNameParts[0], r);
+      });
+    }
+
+    console.log(file.name.indexOf('.strings'));
+    
+  }
+  return false;/*
+    if (file.type === 'image/png') {
+      file.getBytesAsync().then(bytes => {
+        const image = figma.createImage(bytes)
+
+        const ellipse = figma.createEllipse();
+        ellipse.x = event.x
+        ellipse.y = event.y
+        ellipse.resize(320, 320);
+        ellipse.fills = [{
+          imageHash: image.hash,
+          scaleMode: "FILL",
+          scalingFactor: 1,
+          type: "IMAGE",
+        }];
+      });
+
+      return false;
+    }
+  }*/
+
 });
 
 // Calls to "parent.postMessage" from within the HTML page will trigger this

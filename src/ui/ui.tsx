@@ -87,14 +87,15 @@ function App() {
   useEffect(() => {
     // asynchronous fetch the state from figma helper
     (async () => {
+      // console.log('load - keys');
       await memoryTranslationKeyStore.load();
+      // console.log('load - keys done');
       await localizedLabelManager.loadAll();
 
       setDefaultLinkStyle(await remoteLocalizedLabelManager.getLinkStyle());
 
       await refreshTranslatedKeys();
-
-      let initialScreen = 'design';
+      let initialScreen = (await figmaRemote.getLocalFileConfig('lastView')) ?? 'design';
       if (localizedLabelManager.keyStore.config?.baseLanguage === undefined
         || localizedLabelManager.keyStore.config?.enabledLanguages === undefined) {
         initialScreen = 'onboarding';
@@ -102,6 +103,12 @@ function App() {
       setAppScreen(initialScreen);
     })();
   }, []);
+
+  useEffect(() => {
+    if (appScreen) {
+      figmaRemote.setLocalFileConfig('lastView', appScreen);
+    }
+  }, [appScreen]);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO implement this
   const setLinkStyle = async (linkStyle: string) => {

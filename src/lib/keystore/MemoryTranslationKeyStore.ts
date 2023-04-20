@@ -6,10 +6,7 @@ import { TranslationKeyStore } from './BaseTranslationKeyStore';
 import { Config, FigmaFileTranslationKeyStore } from './FigmaFileTranslationKeyStore';
 
 export default class MemoryTranslationKeyStore extends EventTarget implements TranslationKeyStore {
-  async getHistory(translationKeyName: string): Promise<HistoryEntry[]> {
-    return this.parentKeyStore.getHistory(translationKeyName);
-  }
-
+  
   parentKeyStore: FigmaFileTranslationKeyStore;
 
   config: Config | undefined;
@@ -29,9 +26,9 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     });
   }
 
-  async processCacheUpdate(changedKeys: { deleted: string[], added: string[], updated: string[] }) {
+  private async processCacheUpdate(changedKeys: { deleted: string[], added: string[], updated: string[] }) {
     for (const deltedKey of changedKeys.deleted) {
-      delete this.translationKeys[deltedKey];
+      this.removeCache(deltedKey);
     }
 
     for (const updatedKey of changedKeys.updated) {
@@ -40,7 +37,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
         throw new Error(`fresh key does not exist... [${updatedKey}]`);
       }
 
-      this.persistKey(freshKey);
+      this.upsertCache(freshKey);
     }
 
     for (const addedKey of changedKeys.added) {
@@ -49,18 +46,22 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
         throw new Error(`fresh key does not exist... [${addedKey}]`);
       }
 
-      this.persistKey(freshKey);
+      this.upsertCache(freshKey);
     }
 
     const event = new CustomEvent('updated', { });
     this.dispatchEvent(event);
   }
 
-  getKey(keyName: string) : TranslationKey | undefined {
-    return this.translationKeys[keyName];
+  private async upsertCache(translationKey: TranslationKey): Promise<TranslationKey> {
+    this.translationKeys[translationKey.keyName] = translationKey;
+    return translationKey;
   }
 
-  // eslint-disable-next-line class-methods-use-this
+  private removeCache(keyName: string) {
+    delete this.translationKeys[keyName];
+  }
+
   getLanugages(): Language[] | undefined {
     return this.config!.enabledLanguages;
   }
@@ -73,7 +74,6 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     await this.parentKeyStore.setConfig(parentConfig);
   }
 
-  // eslint-disable-next-line class-methods-use-this
   getBaseLanugage(): Language | undefined {
     return this.config!.baseLanguage;
   }
@@ -85,37 +85,36 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     await this.parentKeyStore.setConfig(parentConfig);
   }
 
+  async getHistory(translationKeyName: string): Promise<HistoryEntry[]> {
+    return this.parentKeyStore.getHistory(translationKeyName);
+  }
+
+  getKey(keyName: string) : TranslationKey | undefined {
+    return this.translationKeys[keyName];
+  }
+
   async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean): Promise<TranslationKey> {
     if (keyName === '') {
       throw new Error('keys mus have at least one character');
     }
     const createdKey = await this.parentKeyStore.createKey(keyName, translations, plural);
-    return this.persistKey(createdKey);
+    return this.upsertCache(createdKey);
   }
 
   async updateKey(keyName: string, translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[], plural?: boolean) {
     const updatedKey = await this.parentKeyStore.updateKey(keyName, translations, plural);
-    return this.persistKey(updatedKey);
+    return this.upsertCache(updatedKey);
   }
 
   async deleteKey(keyName: string) {
     await this.parentKeyStore.deleteKey(keyName);
-    delete this.translationKeys[keyName];
+    this.removeCache(keyName);
   }
 
   async load(): Promise<TranslationKeys> {
     this.config = await this.parentKeyStore.getConfig();
     this.translationKeys = await this.parentKeyStore.load();
     return this.translationKeys;
-  }
-
-  async persistKey(translationKey: TranslationKey): Promise<TranslationKey> {
-    this.translationKeys[translationKey.keyName] = translationKey;
-    return translationKey;
-  }
-
-  importFromLocalise(): Promise<void> {
-    return this.parentKeyStore.importFromLocalise();
   }
 
   fillPlaceholdersWithSampleData(text: string, language: Language, plural: Plural) {
@@ -154,5 +153,9 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
       // not found
       return substring;
     });
+  }
+
+  importFromLocalise(): Promise<void> {
+    return this.parentKeyStore.importFromLocalise();
   }
 }

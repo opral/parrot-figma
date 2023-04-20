@@ -249,14 +249,14 @@ export default function TranslationKeyListItem({
               </svg>
             </span>
           </div>
-          {history?.map((entry, i, array) => (
+          {showHistory?.language && history?.map((entry, i, array) => (
             <HistoryEntryView
               key={i}
-              text="entry.text"
+              text={entry.translations?.[showHistory!.language]?.[showHistory!.plural]?.text}
               time={entry.date ?? 0}
               userName={entry.user}
               userIconUrl={entry.user}
-              previousText="entry.text" /* {i < (array.length - 1) ? array[i + 1].text : undefined} */
+              previousText={i < (array.length - 1) ? array[i + 1].translations?.[showHistory!.language]?.[showHistory!.plural]?.text : undefined}
               onReuse={i === 0 ? undefined : async (text: string) => {
                 if (showHistory === undefined) return;
 

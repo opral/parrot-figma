@@ -6,15 +6,28 @@
 export default class FigmaUtil {
   public proxClassName = 'FigmaUtil';
 
-  async getSelection() {
-    const selections = [];
-    for (const node of figma.currentPage.selection) {
-      const rootFrame = this.getRootFrame(node);
-      if (rootFrame) {
-        selections.push({ rootFrameId: rootFrame.id, selectedNodeId: node.id });
-      }
+  private getFileKey(): string {
+    let fileKey = figma.root.getPluginData('uniqFileKey');
+    if (!fileKey) {
+      fileKey = `${Math.floor(Math.random() * 100)}`;
+      figma.root.setPluginData('uniqFileKey', fileKey);
     }
-    return selections;
+
+    return fileKey;
+  }
+
+  async getLocalFileConfig(key: string) {
+    const fileKey = this.getFileKey();
+    const value = await figma.clientStorage.getAsync(`${fileKey}__${key}`);
+
+    console.log(`${fileKey}__${key} - ${value} GET LOCALFILE` );
+    return value !== '' ? value : undefined;
+  }
+
+  async setLocalFileConfig(key: string, value: any) {
+    const fileKey = this.getFileKey();
+    console.log(`${fileKey}__${key} - ${value} SET LOCALFILE` );
+    return figma.clientStorage.setAsync(`${fileKey}__${key}`, value);
   }
 
   async scrollIntoViewIfNeeded(nodeId: string) {
@@ -52,37 +65,6 @@ export default class FigmaUtil {
 
   async loadFontsForNodesWithId(textNodeIds: string[]) {
     await this.loadFontForTextNodes(textNodeIds.map((textNodeId) => figma.getNodeById(textNodeId)! as TextNode));
-  }
-
-  /**
-     * Walks up the tree and returns the frame closest to the root node
-     *
-     * @param node the node to extract the root frame from
-     * @returns the root frame (The last parent of type frame)
-     */
-  // eslint-disable-next-line class-methods-use-this
-  public getRootFrame(node: any): FrameNode | undefined {
-    if (!node.parent) {
-      console.log(node);
-      throw new Error('given node has no parent');
-    }
-    let { parent } = node;
-
-    let rootFrame: FrameNode | undefined;
-
-    if (node.type === 'FRAME') {
-      rootFrame = node;
-    }
-
-    while (parent) {
-      if (parent.type === 'FRAME') {
-        rootFrame = parent as FrameNode;
-      }
-
-      parent = parent.parent;
-    }
-
-    return rootFrame;
   }
 
   private async loadFontForTextNodes(textNodes: TextNode[]) {

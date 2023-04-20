@@ -1,3 +1,4 @@
+/* eslint-disable class-methods-use-this */
 /* eslint-disable no-await-in-loop */
 import { Language } from '../base/Language';
 import { Plural } from '../base/Plural';
@@ -12,27 +13,22 @@ export interface Config {
 export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
   public proxClassName = 'FigmaFileTranslationKeyStore';
 
-  public static languageConfigDataKey = 'aar_c';
+  public static configDataKey = 'aar_c';
 
   keyPrefix = 'aar_k__';
 
   keyHistoryPrefix = 'aar_h__';
 
-  keyState = {
-
-  } as any;
+  keyState = { } as any;
 
   constructor(asProxy: boolean) {
-    console.log(`constructor FigmaFileTranslationKeyStore called ${asProxy}`);
     if (!asProxy) {
-      console.log('register document change');
       figma.on('documentchange', this.forwardDocumentChanges.bind(this));
     }
   }
 
   // eslint-disable-next-line class-methods-use-this
   forwardDocumentChanges(event: any) {
-    console.log(event);
     for (const change of event.documentChanges) {
       // eslint-disable-next-line default-case
       switch (change.type) {
@@ -67,9 +63,6 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
               delete this.keyState[deletedKey];
             }
 
-            console.log('cache changes informed');
-            console.log(changedKeys);
-
             if (changedKeys.deleted.length > 0
               || changedKeys.added.length > 0
               || changedKeys.updated.length > 0) {
@@ -86,28 +79,8 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
     }
   }
 
-  getKey(keyName: string): TranslationKey | undefined {
-    const keyRaw = figma.root.getPluginData(this.keyPrefix + keyName);
-
-    if (keyRaw === '' || !keyRaw) {
-      return undefined;
-    }
-
-    const key = JSON.parse(keyRaw) as TranslationKey;
-    const historyObj = this.getHistorySync(keyName);
-    key.history = historyObj.keyHistory;
-    this.keyState[keyName] = historyObj.state;
-
-    return key;
-  }
-
-  async getKeyAsync(keyName: string) {
-    return this.getKey(keyName);
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  async getConfig() {
-    const keyRaw = figma.root.getPluginData(FigmaFileTranslationKeyStore.languageConfigDataKey);
+  getConfigSync() {
+    const keyRaw = figma.root.getPluginData(FigmaFileTranslationKeyStore.configDataKey);
 
     if (keyRaw === '' || !keyRaw) {
       return {
@@ -119,9 +92,12 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
     return (JSON.parse(keyRaw) as Config);
   }
 
-  // eslint-disable-next-line class-methods-use-this
+  async getConfig() {
+    return this.getConfigSync();
+  }
+
   async setConfig(languageConfig: Config) {
-    figma.root.setPluginData(FigmaFileTranslationKeyStore.languageConfigDataKey, JSON.stringify(languageConfig));
+    figma.root.setPluginData(FigmaFileTranslationKeyStore.configDataKey, JSON.stringify(languageConfig));
   }
 
   async getHistory(translationKeyName: string) : Promise<HistoryEntry[]> {
@@ -146,6 +122,25 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
     };
   }
 
+  getKey(keyName: string): TranslationKey | undefined {
+    const keyRaw = figma.root.getPluginData(this.keyPrefix + keyName);
+
+    if (keyRaw === '' || !keyRaw) {
+      return undefined;
+    }
+
+    const key = JSON.parse(keyRaw) as TranslationKey;
+    const historyObj = this.getHistorySync(keyName);
+    key.history = historyObj.keyHistory;
+    this.keyState[keyName] = historyObj.state;
+
+    return key;
+  }
+
+  async getKeyAsync(keyName: string) {
+    return this.getKey(keyName);
+  }
+
   private async persistKey(translationKeyPased: TranslationKey): Promise<TranslationKey> {
     const translationKey = translationKeyPased;
     const keyCurrentVersion = this.getKey(translationKey.keyName);
@@ -159,6 +154,9 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
 
       for (const plural of Object.keys(translationKey.translations[currentLanguage]!)) {
         const currentPlural = plural as Plural;
+        if (translationKey.translations[currentLanguage]![currentPlural]) {
+          translationKey.translations[currentLanguage]![currentPlural]!.text = translationKey.translations[currentLanguage]![currentPlural]?.text === '' ? undefined : translationKey.translations[currentLanguage]![currentPlural]?.text;
+        }
         if (keyCurrentVersion?.translations[currentLanguage]?.[currentPlural]?.text === translationKey.translations[currentLanguage]![currentPlural]?.text
                     && keyCurrentVersion?.translations[currentLanguage]?.[currentPlural]?.skip === translationKey.translations[currentLanguage]![currentPlural]?.skip) {
           // console.log(`text equal! ${currentLanguage} ${currentPlural} ${keyCurrentVersion.translations[currentLanguage]?.[currentPlural]?.text}`);
@@ -336,9 +334,105 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
     return translationKeys;
   }
 
-  // eslint-disable-next-line class-methods-use-this
   async commitUndo() {
     return figma.commitUndo();
+  }
+
+  async importStringsFile(language: string, stringsFileContent: string) {
+    // split the file contents into an array of lines
+    const lines = stringsFileContent.split('\n');
+
+    // create an empty object to hold our key-value pairs
+    const result = {} as any;
+
+    // iterate over each line of the file
+    // eslint-disable-next-line no-plusplus
+    let inComment = false;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      // handle the start of a /* */ comment
+      if (line.startsWith('/*')) {
+        inComment = true;
+        if (line.endsWith('*/')) {
+          inComment = false;
+        }
+        continue;
+      }
+
+      // handle the end of a /* */ comment
+      if (line.endsWith('*/')) {
+        inComment = false;
+        continue;
+      }
+
+      // skip any comments or empty lines
+      if (line.startsWith('//') || line.length === 0 || inComment) {
+        continue;
+      }
+
+      // split the line into a key and value pair
+      const parts = line.split('=');
+      let key = parts[0].trim();
+      let value = parts[1].trim();
+
+
+      // remove any surrounding quotes from the key and value
+      if (key.startsWith('"') && key.endsWith('"')) {
+        key = key.slice(1, -1);
+      }
+      if (value.startsWith('"') && value.endsWith('"')) {
+        value = value.slice(1, -1);
+      }
+
+      if (value.startsWith('"') && value.endsWith('";')) {
+        value = value.slice(1, -2);
+      }
+
+
+      // add the key-value pair to our result object
+      result[key] = value;
+    }
+
+    const changedKeys = {
+      added: [] as TranslationKey[],
+      updated: [] as TranslationKey[],
+      deleted: [] as TranslationKey[],
+    };
+
+    
+    for (const key of Object.keys(result)) {
+      console.log('processing key ' + key);
+      const lang = language as Language;
+      const currentKey = this.getKey(key);
+      if (!currentKey) {
+        const createdKey = await this.createKey(key, [{
+          language: lang, plural: Plural.OTHER, text: result[key], skip: false,
+        }], false);
+        changedKeys.added.push(createdKey);
+      } else if (currentKey!.translations[lang]?.other?.text !== result[key]) {
+        const skip = currentKey!.translations[lang]?.other?.skip ?? false;
+        const updatedKey = await this.updateKey(key, [{
+          language: lang, plural: Plural.OTHER, text: result[key], skip,
+        }]);
+        changedKeys.updated.push(updatedKey);
+      } else {
+        console.log('skipping '+ key + ' text is equal');
+        // eslint-disable-next-line no-continue
+        continue;
+      }
+    }
+
+    figma.commitUndo();
+
+    if (changedKeys.added.length > 0
+      || changedKeys.updated.length > 0) {
+      figma.ui.postMessage({
+        target: 'TranslationKeyStore',
+        type: 'cacheUpdate',
+        changedKeys,
+      });
+    }
   }
 
   async importFromLocalise(): Promise<void> {

@@ -12,9 +12,7 @@ import { Language } from '../../../lib/base/Language';
 type LocalizedFrameGroupProps = {
   localizedLabels: LocalizedLabel[],
   translationKeyStore: MemoryTranslationKeyStore
-  selectionByFrame: {
-    [rootFrameId: string]: string[]
-  }
+  selectedNodes: string[]
   figmaRemote: FigmaUtil
   localisedLabelManager: LocalizedLabelManagerUI
 };
@@ -22,7 +20,7 @@ type LocalizedFrameGroupProps = {
 export default function LocalizedFrameGroup({
   localizedLabels,
   translationKeyStore,
-  selectionByFrame,
+  selectedNodes,
   figmaRemote,
   localisedLabelManager,
 }: LocalizedFrameGroupProps) {
@@ -51,22 +49,32 @@ export default function LocalizedFrameGroup({
 
   async function onLanguageSelectionClick(firstLocalizedLabelInFrame: LocalizedLabel, language: Language) {
     const deepLTranslationProvider = async (text: string, sourceLanguage: string, targetLanguage: string) => {
+      const sentences = text.split('. ');
+      const translatedSentences = [] as string[];
+      for (const sentence of sentences) {
+        // eslint-disable-next-line no-await-in-loop
+        const result = await fetch(`https://translate.googleapis.com/translate_a/single?${new URLSearchParams({
+          client: 'gtx',
+          dt: 't',
+          sl: sourceLanguage === 'se' ? 'SV' : sourceLanguage,
+          tl: targetLanguage === 'se' ? 'SV' : targetLanguage,
+          q: sentence.split('.').join('{{dot}}').split('#').join('{{route}}')
+            .split('\n')
+            .join('{{newline}}'),
+        })}`, {
+          method: 'GET',
+        /* headers: {
+            'origin-when-cross-origin': '*',
+          }, */
+        });
+        // eslint-disable-next-line no-await-in-loop
+        const translationResults = await result.json();
+        translatedSentences.push(translationResults[0][0][0].split('{{dot}}').join('.').split('{{route}}').join('#')
+          .split('{{newline}}')
+          .join('\n'));
+      }
 
-      const result = await fetch(`https://translate.googleapis.com/translate_a/single?${new URLSearchParams({
-        client: 'gtx',
-        dt: 't',
-        sl: sourceLanguage === 'se' ? 'SV' : sourceLanguage,
-        tl: targetLanguage === 'se' ? 'SV' : targetLanguage,
-        q: text,
-      })}`, {
-        method: 'GET',
-      /* headers: {
-          'origin-when-cross-origin': '*',
-        }, */
-      });
-
-      const translationResults = await result.json();
-      return translationResults[0][0][0];
+      return translatedSentences.join('. ');
       /*
       // https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=fr&dt=t&q=Hello
       // origin-when-cross-origin
@@ -140,7 +148,7 @@ export default function LocalizedFrameGroup({
           localizedLabel={translationState}
           figmaRemote={figmaRemote}
           localisedLabelManager={localisedLabelManager}
-          selected={selectionByFrame[translationState.rootFrameId]?.indexOf(translationState.nodeId) !== -1}
+          selected={selectedNodes.indexOf(translationState.nodeId) !== -1}
         />
       ))}
 

@@ -5,9 +5,13 @@ import { Language } from '../base/Language';
 import { KeyState, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../base/Plural';
 import { BaseTranslationKeyStore } from '../keystore/BaseTranslationKeyStore';
+import ChangeEvent from './ChangeEvent';
+import { FigmaFileTranslationKeyStore } from '../keystore/FigmaFileTranslationKeyStore';
 
 export default class LocalizedLabelManager {
-  translationKeyStore?: BaseTranslationKeyStore;
+  translationKeyStore?: FigmaFileTranslationKeyStore;
+
+  private containerSizeThreashold = 3000;
 
   public proxClassName = 'LocalizedLabelManager';
 
@@ -33,7 +37,7 @@ export default class LocalizedLabelManager {
 
   public labelIdDataKey = 'olid'; // we store the orginal label id (the id of the node when the plugin changed properties the first time) to detect a copy
 
-  constructor(translationKeyStore: BaseTranslationKeyStore | undefined) {
+  constructor(translationKeyStore: FigmaFileTranslationKeyStore | undefined) {
     this.translationKeyStore = translationKeyStore;
 
     if (translationKeyStore === undefined) {
@@ -44,50 +48,80 @@ export default class LocalizedLabelManager {
   }
 
   forwardDocumentChanges(event: any) {
-    const figmaUtil = new FigmaUtil();
-
-    const changedNodesById = [] as string[];
-    const rootFrameIdsToReload = [] as string[];
-    const deletedNodeIds = [] as string[];
+    const removedHighestLevelParentId = [] as string[];
     const changedLabels = [] as LocalizedLabel[];
+    const createdLabels = [] as LocalizedLabel[];
     for (const change of event.documentChanges) {
       // eslint-disable-next-line default-case
       switch (change.type) {
         case 'CREATE': {
-          const rootFrame = figmaUtil.getRootFrame(figma.getNodeById(change.id));
-          if (rootFrame && rootFrameIdsToReload.indexOf(rootFrame?.id) === -1) {
-            rootFrameIdsToReload.push(rootFrame.id);
+          if (change.node.removed) {
+            // we skip changes of removed nodes
+            break;
+          }
+          const createdNode = figma.getNodeById(change.id);
+          if (createdNode?.type === 'TEXT') {
+            const localizedLabel = this.toLocalizedLabelOrUndefined(createdNode as TextNode);
+            if (localizedLabel) {
+              createdLabels.push(localizedLabel);
+            }
+          } else if ((createdNode as FrameNode).children) {
+            const skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
+            figma.skipInvisibleInstanceChildren = true;
+            const createdTextNodes = (createdNode as FrameNode).findAllWithCriteria({ types: ['TEXT'] });
+            for (const createdTextNode of createdTextNodes) {
+              const localizedLabel = this.toLocalizedLabelOrUndefined(createdTextNode);
+              if (localizedLabel) {
+                createdLabels.push(localizedLabel);
+                // lokalizedLabel.parentIds.forEach((parentId) => frameData.refreshTriggerIds.add(parentId));
+              }
+            }
+            figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
           }
           break;
         }
         case 'DELETE': {
-          if (deletedNodeIds.indexOf(change.id) === -1) {
-            deletedNodeIds.push(change.id);
+          // in case of a deletion we propagate the deleted node id - we don't have more information
+          // about this node from figma :-/ The ui layer will know what this change affects
+          if (removedHighestLevelParentId.indexOf(change.id) === -1) {
+            removedHighestLevelParentId.push(change.id);
           }
           break;
         }
         case 'PROPERTY_CHANGE': {
+          if (change.node.removed) {
+            // we skip changes of removed nodes
+            break;
+          }
           const changedNode = figma.getNodeById(change.id);
 
-          if (change.properties.indexOf('parent') !== -1) {
-            // ask to invalidate current and new frame
-            const rootFrame = figmaUtil.getRootFrame(figma.getNodeById(change.id));
-            if (rootFrame && rootFrameIdsToReload.indexOf(rootFrame?.id) === -1) {
-              rootFrameIdsToReload.push(rootFrame.id);
+          if (changedNode?.type === 'DOCUMENT') {
+            break;
+          }
+
+          if (changedNode?.type === 'PAGE') {
+            break;
+          }
+
+          if (changedNode?.type === 'TEXT') {
+            const localizedLabel = this.toLocalizedLabelOrUndefined(changedNode as TextNode);
+            if (localizedLabel) {
+              changedLabels.push(localizedLabel);
             }
-          } else {
-            // refresh single node
-            // check if change did appear on a localized label
-            // TODO what about a localized label that turns into a normal label again? is this possible?
-            // eslint-disable-next-line no-lonely-if
-            if (changedNode?.type === 'TEXT') {
-              const localizedLabel = this.toLocalizedLabelOrUndefined(changedNode as TextNode);
+          } else if ((changedNode as FrameNode).children
+                 && (change.properties.indexOf('parent') !== -1
+                    || change.properties.indexOf('name'))) {
+            const skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
+            figma.skipInvisibleInstanceChildren = true;
+            const textNodes = (changedNode as FrameNode).findAllWithCriteria({ types: ['TEXT'] });
+            for (const textNode of textNodes) {
+              const localizedLabel = this.toLocalizedLabelOrUndefined(textNode);
               if (localizedLabel) {
-                changedLabels.push(localizedLabel.localizedLabel);
+                changedLabels.push(localizedLabel);
+                // lokalizedLabel.parentIds.forEach((parentId) => frameData.refreshTriggerIds.add(parentId));
               }
-            } else if (changedNodesById.indexOf(change.id) === -1) {
-              changedNodesById.push(change.id);
             }
+            figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
           }
           break;
         }
@@ -98,21 +132,214 @@ export default class LocalizedLabelManager {
       }
     }
 
-    figma.ui.postMessage({
+    const message = {
       target: 'LocalizedLabelManager',
       type: 'cacheUpdate',
-      changedNodesById,
-      rootFrameIdsToReload,
-      deletedNodeIds,
-      changedLabels,
-    });
+      removedHighestLevelParentId,
+      changedLabels: changedLabels.filter((node) => !createdLabels.some((createdNode) => createdNode.nodeId === node.nodeId)),
+      createdLabels,
+    } as ChangeEvent;
+    // console.log(JSON.stringify(event));
+    // console.log(message);
+    figma.ui.postMessage(message);
+  }
+
+  async startFillupCache() {
+    // we start the async process here - this will load frame by frame and intercept each load with a tick
+    this.fillUpCache().catch((e) => console.log(e));
+  }
+
+  async fillUpCache() {
+    let start = Date.now();
+    const containers = [];
+    let textNodesToPrcoess = [] as TextNode[];
+    console.log(`fillUpCache - enter ${Date.now() - start}`);
+
+    const pages = figma.root.children;
+    for (const page of pages) {
+      //console.log('fillUpCache - page...' + page.name);
+      for (const pageChild of page.children) {
+        //console.log('fillUpCache - pageChilde...' + pageChild.name);
+        if (pageChild.type === 'TEXT') {
+          textNodesToPrcoess.push(pageChild);
+        } else if (pageChild.type === 'COMPONENT'
+          || pageChild.type === 'COMPONENT_SET'
+          || pageChild.type === 'INSTANCE') {
+          // we add it as container to collect
+          containers.push(pageChild);
+        } else if (pageChild.type === 'SECTION'
+          || pageChild.type === 'GROUP'
+          || pageChild.type === 'FRAME') {
+
+          if (pageChild.width < this.containerSizeThreashold) {
+            containers.push(pageChild);
+          } else {
+            for (const sectionChild of pageChild.children) {
+             // console.log('fillUpCache - sectionChild...' + sectionChild.name);
+              if (sectionChild.type === 'TEXT') {
+                textNodesToPrcoess.push(sectionChild);
+              } else if (sectionChild.type === 'COMPONENT'
+                || sectionChild.type === 'COMPONENT_SET'
+                || sectionChild.type === 'FRAME'
+                || sectionChild.type === 'GROUP'
+                || sectionChild.type === 'SECTION'
+                || sectionChild.type === 'INSTANCE') {
+                // we add it as container to collect
+                containers.push(sectionChild);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // console.log(`fillUpCache - containers ${containers.length} collected ${Date.now() - start}`);
+    let lastInterception = Date.now();
+
+    const outerStart = Date.now();
+    // collect missing textNodesToProcess
+    for (const container of containers) {
+      start = Date.now();
+      // find all textNodes in the container
+      const skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
+      const foundtextNodes = container.findAllWithCriteria({ types: ['TEXT'] });
+      if (foundtextNodes.filter(node => node.id.indexOf(';') !== -1).length > 0) {
+      // debugger;
+      }
+      textNodesToPrcoess = textNodesToPrcoess.concat(foundtextNodes);
+      figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
+      const blockedExecutionTime = Date.now() - lastInterception;
+      if (blockedExecutionTime > 30) {
+        //console.log(`fillUpCache - ${container.name} textNodes ${foundtextNodes.length} collected ${Date.now() - start}`);
+        //console.log(`fillUpCache - break because of blockage of ${blockedExecutionTime}`);
+        lastInterception = Date.now();
+        await new Promise(resolve => setTimeout(resolve, 2));
+      }
+    }
+
+    // console.log(`fillUpCache - collection of textNodes took ${Date.now() - outerStart}`);
+    const localizedLabels = [];
+
+    for (const textNode of textNodesToPrcoess) {
+      const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode);
+      if (lokalizedLabel) {
+        localizedLabels.push(lokalizedLabel);
+      }
+      const blockedExecutionTime = Date.now() - lastInterception;
+      if (blockedExecutionTime > 30) {
+        //console.log(`fillUpCache - ${container.name} textNodes ${foundtextNodes.length} collected ${Date.now() - start}`);
+        //console.log(`fillUpCache - break because of blockage of ${blockedExecutionTime}`);
+        lastInterception = Date.now();
+      await new Promise(resolve => setTimeout(resolve, 2  ));
+      }
+    }
+
+
+    console.log(`fillUpCache - creating localizedLabels took ${Date.now() - outerStart}`);
+
+    const message = {
+      target: 'LocalizedLabelManager',
+      type: 'cacheUpdate',
+      removedHighestLevelParentId: [],
+      createdLabels: [],
+      changedLabels: localizedLabels,
+    } as ChangeEvent;
+    
+    // console.log(JSON.stringify(event));
+    // console.log(message);
+    figma.ui.postMessage(message);
+
+
+    // console.log(`fillUpCache - creating localizedLabels took plus message of ${localizedLabels.length} labels ${Date.now() - outerStart}`);
+
+    // TODO process all text Nodes in batches
+  }
+
+  /*async getFrameIds(): Promise<string[]> {
+    const skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
+    figma.skipInvisibleInstanceChildren = true;
+
+    let start = Date.now();
+
+    // getting all text nodes ~ 1 - 2 seconds on a huge document :-/
+    // we may splitt this by page
+    const textNodes = figma.root.findAllWithCriteria({ types: ['TEXT'] });
+    console.log(`all labels found ${Date.now() - start}`);
+
+    const lastBreak = Date.now();
+    const breakAfterMs = 30;
+    console.log(`creating ${textNodes.length} labels`);
+    for (const textNode of textNodes) {
+      const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode);
+       if (Date.now() - lastBreak > breakAfterMs) {
+        // eslint-disable-next-line no-promise-executor-return
+        await new Promise((resolve) => setTimeout(resolve, 1));
+        lastBreak = Date.now();
+      } 
+    }
+
+    console.log(` labels created ------ ${Date.now() - start}`);
+
+    const frameIds = figma.root.findAllWithCriteria({ types: ['FRAME'] }).map((frame) => frame.id);
+    console.log(`all frames found ${Date.now() - start}`);
+
+    start = Date.now();
+    for (const frameId of frameIds) {
+      const frameLabels = this.getFrameById(frameId);
+    }
+
+    console.log(`all frames loaded ${Date.now() - start}`);
+    figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
+
+    return frameIds;
+  }
+*/
+
+  async getSelection() {
+    const selections = [];
+    for (const node of figma.currentPage.selection) {
+      const rootFrame = this.getRootFrame(node);
+      if (rootFrame) {
+        selections.push({ rootFrameId: rootFrame.id, selectedNodeId: node.id });
+      }
+    }
+    return selections;
+  }
+
+  /**
+   * Walks up the tree and returns the frame closest to the root node
+   *
+   * @param node the node to extract the root frame from
+   * @returns the root frame (The last parent of type frame)
+   */
+  // eslint-disable-next-line class-methods-use-this
+  getRootFrame(node: any): FrameNode | undefined { // TODO move to label manager
+    if (!node.parent) {
+      throw new Error('given node has no parent');
+    }
+    let parent = node;
+
+    let rootFrame: FrameNode | undefined;
+
+    while (parent) {
+      const parentType = parent.type;
+      if ((parentType === 'COMPONENT'
+        || parentType === 'COMPONENT_SET'
+        || parentType === 'FRAME'
+        || parentType === 'GROUP'
+        || parentType === 'INSTANCE') && parent.width < this.containerSizeThreashold) {
+        rootFrame = parent;
+      }
+      parent = parent.parent;
+    }
+
+    return rootFrame;
   }
 
   async getFrameById(frameId: string): Promise<{
     id: string,
     name: string,
-    localizedLabelsInFrame: LocalizedLabel[],
-    refreshTriggerIds: Set<string>
+    localizedLabelsInFrame: LocalizedLabel[]
   }> {
     const frame = figma.getNodeById(frameId) as FrameNode;
     return this.getFrame(frame);
@@ -121,8 +348,7 @@ export default class LocalizedLabelManager {
   private async getFrame(frame: FrameNode): Promise<{
     id: string,
     name: string,
-    localizedLabelsInFrame: LocalizedLabel[],
-    refreshTriggerIds: Set<string>
+    localizedLabelsInFrame: LocalizedLabel[]
   }> {
     const skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
     figma.skipInvisibleInstanceChildren = true;
@@ -130,7 +356,6 @@ export default class LocalizedLabelManager {
     const frameData = {
       id: frame.id,
       name: frame.name,
-      refreshTriggerIds: new Set<string>(),
       localizedLabelsInFrame: [] as LocalizedLabel[],
     };
 
@@ -139,26 +364,14 @@ export default class LocalizedLabelManager {
     for (const textNode of textNodes) {
       const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode);
       if (lokalizedLabel) {
-        frameData.localizedLabelsInFrame.push(lokalizedLabel.localizedLabel);
-        lokalizedLabel.parentIds.forEach((parentId) => frameData.refreshTriggerIds.add(parentId));
+        frameData.localizedLabelsInFrame.push(lokalizedLabel);
+        // lokalizedLabel.parentIds.forEach((parentId) => frameData.refreshTriggerIds.add(parentId));
       }
     }
 
     figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
 
     return frameData;
-  }
-
-  async setBaseLanguage(baseLanguage: Language) {
-    figma.root.setPluginData(this.languageDataKey, baseLanguage);
-  }
-
-  async getBaseLanguage() {
-    return this.getBaseLanguageSync();
-  }
-
-  getBaseLanguageSync() {
-    return figma.root.getPluginData(this.languageDataKey) === '' ? Language.EN : figma.root.getPluginData(this.languageDataKey) as Language;
   }
 
   async setLinkStyle(linkStyle: string) {
@@ -205,7 +418,7 @@ export default class LocalizedLabelManager {
     return true;
   }
 
-  async updateLocalisedLabelProperties(nodeId: string, changedProperties:
+  async updateLabelProperties(nodeId: string, changedProperties:
   {
     labelName?: string,
     keyType?: KeyState,
@@ -278,7 +491,7 @@ export default class LocalizedLabelManager {
       textNode.setPluginData(this.languageDataKey, changedProperties.language ? changedProperties.language : '');
     }
 
-    return this.toLocalizedLabelOrUndefined(textNode)!.localizedLabel;
+    return this.toLocalizedLabelOrUndefined(textNode)!;
   }
 
   async commitUndo() {
@@ -396,10 +609,9 @@ export default class LocalizedLabelManager {
     return textChunks.join('');
   }
 
-  private toLocalizedLabelOrUndefined(node: TextNode): { parentIds: Set<string>, localizedLabel: LocalizedLabel } | undefined {
+  private toLocalizedLabelOrUndefined(node: TextNode): LocalizedLabel | undefined {
     let derivable = true;
 
-    // we only take labels with "autoRename" active into account
     if (node.autoRename) {
       derivable = false;
     }
@@ -417,7 +629,7 @@ export default class LocalizedLabelManager {
 
     let page: PageNode | null = null;
     let rootFrame: FrameNode | null = null;
-    const parentIds = new Set<string>();
+    const parentIds = [] as string[];
 
     let { x } = node;
     let { y } = node;
@@ -428,7 +640,13 @@ export default class LocalizedLabelManager {
         return;
       }
 
-      if (parent.type === 'FRAME') {
+      const parentType = parent.type;
+
+      if ((parentType === 'COMPONENT'
+                || parentType === 'COMPONENT_SET'
+                || parentType === 'FRAME'
+                || parentType === 'GROUP'
+                || parentType === 'INSTANCE') && parent.width < this.containerSizeThreashold) {
         rootFrame = parent as FrameNode;
       } else if (parent.type === 'PAGE') {
         page = parent as PageNode;
@@ -441,7 +659,7 @@ export default class LocalizedLabelManager {
         y += parent.y;
       }
 
-      parentIds.add(parent.id);
+      parentIds.push(parent.id);
 
       parent = parent.parent;
     }
@@ -456,12 +674,12 @@ export default class LocalizedLabelManager {
 
     // if no plural id is specified than we fall back to "other" - the default plural
     const pluralId = node.getPluginData(this.keyPluralDataKey) === '' ? Plural.OTHER : node.getPluginData(this.keyPluralDataKey);
-    const language = node.getPluginData(this.languageDataKey) === '' ? this.getBaseLanguageSync() : node.getPluginData(this.languageDataKey) as Language;
+    const language = node.getPluginData(this.languageDataKey) === '' ? this.translationKeyStore!.getConfigSync().baseLanguage! : node.getPluginData(this.languageDataKey) as Language;
     const keyVersion = node.getPluginData(this.keyVersionDataKey) === '' ? -1 : parseInt(node.getPluginData(this.keyVersionDataKey), 10);
 
     const keyType = node.getPluginData(this.keyTypeDataKey) === '' || node.getPluginData(this.keyTypeDataKey) === undefined ? KeyState.Unset : node.getPluginData(this.keyTypeDataKey) as KeyState;
     const key = node.getPluginData(this.keyDataKey) === '' ? undefined : node.getPluginData(this.keyDataKey);
-    const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === '' ? this.getBaseLanguageSync() : rootFrame.getPluginData(this.languageDataKey) as Language;
+    const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === '' ? this.translationKeyStore!.getConfigSync().baseLanguage! : rootFrame.getPluginData(this.languageDataKey) as Language;
     const rootFrameUseSampleValues = rootFrame.getPluginData(this.sampleValuesDataKey) !== '';
     const useSampleValues = node.getPluginData(this.sampleValuesDataKey) !== '';
 
@@ -469,31 +687,29 @@ export default class LocalizedLabelManager {
 
     // eslint-disable-next-line consistent-return
     return {
-      parentIds,
-      localizedLabel: {
-        pageId: page.id,
-        pageName: page.name,
-        rootFrameId: rootFrame.id,
-        rootFrameName: rootFrame.name,
-        rootFrameLanguage,
-        language,
-        rootFrameUseSampleValues,
-        textChangedAfterGeneration: false,
-        filledTemplateHash,
-        useSampleValues,
-        nodeId: node.id,
-        name: node.name,
-        height: node.height,
-        width: node.width,
-        x,
-        y,
-        keyType,
-        key,
-        keyVersion,
-        derivedKey: derivable ? derivedName : undefined,
-        pluralId: pluralId as Plural,
-        text,
-      },
+      parentIds: parentIds.reverse(),
+      pageId: page.id,
+      pageName: page.name,
+      rootFrameId: rootFrame.id,
+      rootFrameName: rootFrame.name,
+      rootFrameLanguage,
+      language,
+      rootFrameUseSampleValues,
+      textChangedAfterGeneration: false,
+      filledTemplateHash,
+      useSampleValues,
+      nodeId: node.id,
+      name: node.name,
+      height: node.height,
+      width: node.width,
+      x,
+      y,
+      keyType,
+      key,
+      keyVersion,
+      derivedKey: derivable ? derivedName : undefined,
+      pluralId: pluralId as Plural,
+      text,
 
     };
   }

@@ -5,104 +5,249 @@ import LocalizedLabelManager from './LocalizedLabelManager';
 import { Language } from '../base/Language';
 import MemoryTranslationKeyStore from '../keystore/MemoryTranslationKeyStore';
 import { BaseTranslationKeyStore } from '../keystore/BaseTranslationKeyStore';
+import ChangeEvent from './ChangeEvent';
 
 export default class LocalizedLabelManagerUI extends EventTarget {
+  // mapping from nodeId to localizied label instance
   private cachedLokalisedLabels = {} as {
     [labelId: string]: LocalizedLabel
   };
 
+  // mapping from a translationKey to labelId - used to get references of a translation key in design
   private cachedKeysToLabels = {} as {
     [keyId: string]: Set<string>
   };
 
-  private cacheInvalidationIds = {} as { [nodeId: string]: Set<string> };
-
+  // cached root frames containing localized labels
   private cachedFrames = {} as { [rootFrameId: string]: {
     frameId: string,
     frameName: string,
-    lokalizedLabelIds: string[]
+    localizedLabelIds: string[]
   } };
 
-  private localisedLabelMangerSandbox: LocalizedLabelManager;
+  // maps parent to children allows to lookup all children by a change up the branch
+  private cachedBranches = {} as { [parentId: string]: Set<string> };
+
+  private removeCachedLabel(labelId: string) {
+    const cachedLabel = this.cachedLokalisedLabels[labelId];
+
+    if (!cachedLabel) {
+      return false;
+    }
+
+    delete this.cachedLokalisedLabels[labelId];
+
+    if (this.cachedFrames[cachedLabel.rootFrameId]) {
+      this.cachedFrames[cachedLabel.rootFrameId].localizedLabelIds = this.cachedFrames[cachedLabel.rootFrameId].localizedLabelIds.filter((nodeId) => nodeId !== labelId);
+    }
+
+    if (cachedLabel.key && this.cachedKeysToLabels[cachedLabel.key]) {
+      this.cachedKeysToLabels[cachedLabel.key].delete(cachedLabel.nodeId);
+    }
+
+    // cleanup leafs
+    // eslint-disable-next-line no-plusplus
+    for (let i = cachedLabel.parentIds.length - 1; i >= 0; i--) {
+      const parentId = cachedLabel.parentIds[i];
+      if (i === cachedLabel.parentIds.length - 1) {
+        this.cachedBranches[parentId].delete(cachedLabel.nodeId);
+      } else {
+        this.cachedBranches[parentId].delete(cachedLabel.parentIds[i + 1]);
+      }
+
+      if (this.cachedBranches[parentId].size === 0) {
+        delete this.cachedBranches[parentId];
+      }
+    }
+
+    return true;
+  }
+
+  private refreshCachedLabel(label: LocalizedLabel) {
+    let parentsDiffer = true;
+    const textChangedAfterGeneration = label.filledTemplateHash === undefined || blake.blake2sHex(label.text!) !== label.filledTemplateHash;
+    // TODO check if we see relevant changes - if not skip, if remove old label from cache and add new one
+    const cachedLabel = this.cachedLokalisedLabels[label.nodeId];
+    if (cachedLabel) {
+      parentsDiffer = false;
+
+      if (cachedLabel.parentIds.length !== label.parentIds.length) {
+        parentsDiffer = true;
+      } else {
+        cachedLabel.parentIds.forEach((parentId, i) => { if (label.parentIds[i] !== parentId) parentsDiffer = true; });
+      }
+
+      if (label.key !== cachedLabel.key && cachedLabel.key) {
+        if (this.cachedKeysToLabels[cachedLabel.key]) {
+          this.cachedKeysToLabels[cachedLabel.key].delete(cachedLabel.nodeId);
+        }
+      }
+
+      if (parentsDiffer) {
+        this.removeCachedLabel(label.nodeId);
+      } else if (cachedLabel.derivedKey === label.derivedKey
+          && cachedLabel.filledTemplateHash === label.filledTemplateHash
+          && cachedLabel.height === label.height
+          && cachedLabel.key === label.key
+          && cachedLabel.keyType === label.keyType
+          && cachedLabel.keyVersion === label.keyVersion
+          && cachedLabel.language === label.language
+          && cachedLabel.name === label.name
+          && cachedLabel.nodeId === label.nodeId
+          && cachedLabel.pageId === label.pageId
+          && cachedLabel.pageName === label.pageName
+          && cachedLabel.pluralId === label.pluralId
+          && cachedLabel.rootFrameId === label.rootFrameId
+          && cachedLabel.rootFrameLanguage === label.rootFrameLanguage
+          && cachedLabel.rootFrameName === label.rootFrameName
+          && cachedLabel.rootFrameUseSampleValues === label.rootFrameUseSampleValues
+          && cachedLabel.text === label.text
+          && cachedLabel.useSampleValues === label.useSampleValues
+          && cachedLabel.width === label.width
+          && cachedLabel.x === label.x
+          && cachedLabel.y === label.y
+          && cachedLabel.textChangedAfterGeneration === textChangedAfterGeneration) {
+        return false;
+      }
+    }
+
+    this.cachedLokalisedLabels[label.nodeId] = label;
+
+    // enrich hash state (we cant do this in the sandbox layer - since 'TextEncoder' is not defined there)
+    this.cachedLokalisedLabels[label.nodeId].textChangedAfterGeneration = label.filledTemplateHash === undefined || blake.blake2sHex(label.text!) !== label.filledTemplateHash;
+
+    if (label.key !== undefined) {
+      if (!this.cachedKeysToLabels[label.key]) {
+        this.cachedKeysToLabels[label.key] = new Set<string>();
+      }
+      this.cachedKeysToLabels[label.key].add(label.nodeId);
+    }
+
+    if (parentsDiffer) {
+      // eslint-disable-next-line no-plusplus
+      for (let i = 0; i < label.parentIds.length; i++) {
+        const currentParentId = label.parentIds[i];
+
+        if (!this.cachedBranches[currentParentId]) {
+          this.cachedBranches[currentParentId] = new Set<string>();
+        }
+
+        // last parent points to the node it self
+        if (i === (label.parentIds.length - 1)) {
+          this.cachedBranches[currentParentId].add(label.nodeId);
+        } else {
+          this.cachedBranches[currentParentId].add(label.parentIds[i + 1]);
+        }
+      }
+
+      if (this.cachedFrames[label.rootFrameId]) {
+        this.cachedFrames[label.rootFrameId].localizedLabelIds.push(label.nodeId);
+      }
+    }
+
+    return true;
+  }
+
+  private getLeaveIdsById(parentId: string) {
+    const children = this.cachedBranches[parentId];
+    if (!children) {
+      if (this.cachedLokalisedLabels[parentId]) {
+        return [parentId];
+      }
+      return []; // No children found for the specified parentId
+    }
+    const leafNodes: string[] = [];
+    // Check each child node
+    children.forEach((childId) => {
+      // If this child has no children of its own, it is a leaf node
+      if (!this.cachedBranches[childId]) {
+        leafNodes.push(childId);
+      } else {
+        // Recursively find leaf nodes of this child
+        const childLeafNodes = this.getLeaveIdsById(childId);
+        leafNodes.push(...childLeafNodes);
+      }
+    });
+    return leafNodes;
+  }
+
+  private localizedLabelMangerSandbox: LocalizedLabelManager;
 
   keyStore: MemoryTranslationKeyStore;
 
   constructor(localisedLabelMangerSandbox: LocalizedLabelManager, keyStore: MemoryTranslationKeyStore) {
     super();
-    this.localisedLabelMangerSandbox = localisedLabelMangerSandbox;
+    this.localizedLabelMangerSandbox = localisedLabelMangerSandbox;
     this.keyStore = keyStore;
 
     window.addEventListener('message', (event : MessageEvent) => {
       if (event.data.pluginMessage.target === 'LocalizedLabelManager') {
         if (event.data.pluginMessage.type === 'cacheUpdate') {
-          this.processCacheUpdate(event.data.pluginMessage);
+          this.processCacheUpdate(event.data.pluginMessage as ChangeEvent);
         }
       }
     });
+
+    this.startFillupCache();
   }
 
-  private invalidateFrame(frameId: string) {
-    //  console.log('invalidating frame');
-    if (this.cachedFrames[frameId] !== undefined) {
-      this.cachedFrames[frameId].lokalizedLabelIds.forEach((labelId) => {
-        if (this.cachedLokalisedLabels[labelId]) {
-          this.invalidateCacheIfNeeded(this.cachedLokalisedLabels[labelId]!, true);
-        }
-      });
-      delete this.cachedFrames[frameId];
+  framesIdToLoad = [] as string[];
+
+  async startFillupCache() {
+    /* let start = Date.now();
+    console.log('getting frame ids');
+    this.framesIdToLoad = await this.localizedLabelMangerSandbox.getFrameIds();
+    console.log(`finished frame ids ${Date.now() - start}`);
+
+    start = Date.now();
+    for (const frameIdToLoad of this.framesIdToLoad) {
+      // eslint-disable-next-line no-await-in-loop
+      await this.getLocalizedLabelsByFrame(frameIdToLoad);
     }
+
+    console.log(`finished caching all frames ${Date.now() - start}`);
+  } */
+    this.localizedLabelMangerSandbox.startFillupCache();
   }
 
-  private processCacheUpdate(cacheUpdateMessage: any) {
+  private processCacheUpdate(cacheUpdateMessage: ChangeEvent) {
+    let cacheUpdated = false;
+    // TODO check if we need to invalidate the frame
     // console.log('processCacheUpdate');
-    for (const frameIdToInvalidate of cacheUpdateMessage.rootFrameIdsToReload) {
-    //  console.log(`invalidating frame ${frameIdToInvalidate}`);
-      this.invalidateFrame(frameIdToInvalidate);
-    }
-
-    for (const changedNodeById of cacheUpdateMessage.changedNodesById) {
-      const frameIdsToInvalidate = this.cacheInvalidationIds[changedNodeById];
-      if (frameIdsToInvalidate) {
-        for (const frameIdToInvalidate of frameIdsToInvalidate) {
-          // console.log(`invalidating frame ${frameIdToInvalidate} - changed child`);
-          this.invalidateFrame(frameIdToInvalidate);
+    // console.log(JSON.stringify(cacheUpdateMessage));
+    for (const removedHighestLevelId of cacheUpdateMessage.removedHighestLevelParentId) {
+      // console.log(removedHighestLevelId);
+      const leafIds = this.getLeaveIdsById(removedHighestLevelId);
+      // console.log(leafIds);
+      for (const labelId of leafIds) {
+        const deleted = this.cachedLokalisedLabels[labelId];
+        if (this.removeCachedLabel(labelId)) {
+          // console.log(`label removed: ${JSON.stringify(deleted)}`);
+          cacheUpdated = true;
         }
       }
     }
 
-    for (const deletedNodeId of cacheUpdateMessage.deletedNodeIds) {
-      const frameIdsToInvalidate = this.cacheInvalidationIds[deletedNodeId];
-      if (frameIdsToInvalidate) {
-        for (const frameIdToInvalidate of frameIdsToInvalidate) {
-          // console.log(`invalidating frame ${frameIdToInvalidate} - deleted child`);
-          this.invalidateFrame(frameIdToInvalidate);
-        }
-      }
-
-      if (this.cachedLokalisedLabels[deletedNodeId] !== undefined) {
-        // console.log('removing the cache');
-        this.invalidateCacheIfNeeded(this.cachedLokalisedLabels[deletedNodeId], true);
+    // console.log('processing created');
+    for (const createdLabel of cacheUpdateMessage.createdLabels) {
+      if (this.refreshCachedLabel(createdLabel)) {
+        // console.log(`label created: ${JSON.stringify(createdLabel)}`);
+        cacheUpdated = true;
       }
     }
 
+    // console.log('processing changed');
     for (const changedLabel of cacheUpdateMessage.changedLabels) {
-      // enrich hash state (we cant do this in the sandbox layer - since 'TextEncoder' is not defined there)
-      changedLabel.textChangedAfterGeneration = changedLabel.filledTemplateHash === undefined || blake.blake2sHex(changedLabel.text) !== changedLabel.filledTemplateHash;
-
-      // console.log(`invalidating node${changedLabel.nodeId}`);
-      this.invalidateCacheIfNeeded(changedLabel);
-
-      this.cachedLokalisedLabels[changedLabel.nodeId] = changedLabel;
-      if (changedLabel.key !== undefined) {
-        if (this.cachedKeysToLabels[changedLabel.key] === undefined) {
-          this.cachedKeysToLabels[changedLabel.key] = new Set<string>();
-        }
-        this.cachedKeysToLabels[changedLabel.key].add(changedLabel.nodeId);
+      if (this.refreshCachedLabel(changedLabel)) {
+        // console.log(`label changed: ${JSON.stringify(changedLabel)}`);
+        cacheUpdated = true;
       }
     }
 
-    const event = new CustomEvent('updated', { });
-    this.dispatchEvent(event);
+    if (cacheUpdated) {
+      const event = new CustomEvent('updated', { });
+      this.dispatchEvent(event);
+    }
   }
 
   getLabelsWithKey(key: string) {
@@ -116,6 +261,10 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     }
 
     return referencingLabels;
+  }
+
+  getLabelByNodeId(nodeId: string) {
+    return this.cachedLokalisedLabels[nodeId];
   }
 
   /**
@@ -153,10 +302,44 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     return state;
   }
 
+  async getLocalizedLabelsByFrame(frameId: string) {
+    // console.log('getLocalizedLabelsByFrame');
+    if (this.cachedFrames[frameId]) {
+      return this.cachedFrames[frameId].localizedLabelIds.map((labelId) => this.cachedLokalisedLabels[labelId]!);
+    }
+
+    // console.log(`refreshing frame with id ${frameId}`);
+    const frameData = await this.localizedLabelMangerSandbox.getFrameById(frameId);
+
+    this.cachedFrames[frameId] = {
+      frameId,
+      frameName: frameData.name,
+      localizedLabelIds: frameData.localizedLabelsInFrame.map((node) => node.nodeId),
+    };
+
+    for (const freshLocalizedLabel of frameData.localizedLabelsInFrame) {
+      this.refreshCachedLabel(freshLocalizedLabel);
+    }
+
+    return this.cachedFrames[frameId].localizedLabelIds.map((labelId) => this.cachedLokalisedLabels[labelId]!);
+  }
+
+  private invalidateCacheIfNeeded(updatedLocalizedLabel: LocalizedLabel, force: boolean = false) {
+    const cachedLabel = this.cachedLokalisedLabels[updatedLocalizedLabel.nodeId];
+
+    if (cachedLabel && (cachedLabel.rootFrameId !== updatedLocalizedLabel.rootFrameId || force)) {
+      delete this.cachedFrames[cachedLabel.rootFrameId];
+    }
+
+    if (cachedLabel && cachedLabel.key !== undefined && (cachedLabel.key !== updatedLocalizedLabel.key || force)) {
+      this.cachedKeysToLabels[cachedLabel.key].delete(cachedLabel.nodeId);
+    }
+  }
+
   async setFrameUseSampleValues(frameId: string, useSampleValues: boolean) {
     // we don't have a property on the frame directly - we will derive it from the child labels
     // no need to change the frame it self
-    for (const localizedLabelId of this.cachedFrames[frameId].lokalizedLabelIds) {
+    for (const localizedLabelId of this.cachedFrames[frameId].localizedLabelIds) {
       // eslint-disable-next-line no-await-in-loop
       this.setLabelUseSampleValues(localizedLabelId, useSampleValues);
     }
@@ -185,11 +368,11 @@ export default class LocalizedLabelManagerUI extends EventTarget {
   }
 
   async setFrameLanguage(frameId: string, targetLanguage: Language, missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | undefined>) {
-    await this.localisedLabelMangerSandbox.updateFrameProperties(frameId, {
+    await this.localizedLabelMangerSandbox.updateFrameProperties(frameId, {
       language: targetLanguage,
     });
 
-    for (const localizedLabelId of this.cachedFrames[frameId].lokalizedLabelIds) {
+    for (const localizedLabelId of this.cachedFrames[frameId].localizedLabelIds) {
       const localisedLabel = this.cachedLokalisedLabels[localizedLabelId]!;
       // eslint-disable-next-line no-await-in-loop
       await this.setLabelLanguage(localisedLabel, targetLanguage, missingTranslationProvider);
@@ -285,12 +468,11 @@ export default class LocalizedLabelManagerUI extends EventTarget {
       language: localizedLabel.language as Language, plural: localizedLabel.pluralId as Plural, text: localizedLabel.text, skip: false,
     }]);
 
-    console.log(`setting key v to ${localizedKey.latestVersion}`);
     await this.updateLabelProperties(localizedLabel.nodeId, {
       keyVersion: localizedKey.latestVersion,
     });
 
-    await this.localisedLabelMangerSandbox.commitUndo();
+    await this.localizedLabelMangerSandbox.commitUndo();
   }
 
   async updateToLatestKeyVersion(localizedLabel: LocalizedLabel) {
@@ -304,7 +486,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
       text: historyEntryForVersion!.translations?.[localizedLabel.language]?.[localizedLabel.pluralId]?.text,
     });
 
-    await this.localisedLabelMangerSandbox.commitUndo();
+    await this.localizedLabelMangerSandbox.commitUndo();
   }
 
   async revertDesignChanges(localizedLabel: LocalizedLabel) {
@@ -316,7 +498,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
       text: currentLabelVersion!.translations?.[localizedLabel.language]?.[localizedLabel.pluralId]?.text,
     });
 
-    await this.localisedLabelMangerSandbox.commitUndo();
+    await this.localizedLabelMangerSandbox.commitUndo();
   }
 
   async linkKey(localizedLabel: LocalizedLabel, keyToLinkTo: string) {
@@ -351,7 +533,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
       });
     }
 
-    await this.localisedLabelMangerSandbox.commitUndo();
+    await this.localizedLabelMangerSandbox.commitUndo();
   }
 
   async unlinkKey(localizedLabel: LocalizedLabel, keyName?: string) {
@@ -360,7 +542,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
       keyType: KeyState.Unlinked,
     });
 
-    await this.localisedLabelMangerSandbox.commitUndo();
+    await this.localizedLabelMangerSandbox.commitUndo();
   }
 
   async updateLabelName(localizedLabel: LocalizedLabel, labelName: string) {
@@ -368,7 +550,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
       labelName,
     });
 
-    await this.localisedLabelMangerSandbox.commitUndo();
+    await this.localizedLabelMangerSandbox.commitUndo();
   }
 
   /**
@@ -399,59 +581,19 @@ export default class LocalizedLabelManagerUI extends EventTarget {
       changedPropertiesToForwared.filledTemplateHash = blake.blake2sHex(changedPropertiesToForwared.text);
     }
 
-    const localisedLabel = await this.localisedLabelMangerSandbox.updateLocalisedLabelProperties(nodeId, changedPropertiesToForwared);
+    const localisedLabel = await this.localizedLabelMangerSandbox.updateLabelProperties(nodeId, changedPropertiesToForwared);
 
     // enrich hash state (we cant do this in the sandbox layer - since 'TextEncoder' is not defined there)
     localisedLabel.textChangedAfterGeneration = localisedLabel.filledTemplateHash === undefined || blake.blake2sHex(localisedLabel.text!) !== localisedLabel.filledTemplateHash;
 
-    console.log('updated label:');
-    console.log(localisedLabel);
-
     this.cachedLokalisedLabels[nodeId] = localisedLabel;
+
+    const event = new CustomEvent('updated', { });
+    this.dispatchEvent(event);
   }
 
-  async getLocalizedLabelsByFrame(frameId: string) {
-    if (this.cachedFrames[frameId]) {
-      return this.cachedFrames[frameId].lokalizedLabelIds.map((labelId) => this.cachedLokalisedLabels[labelId]!);
-    }
-
-    // console.log(`refreshing frame with id ${frameId}`);
-    const frameData = await this.localisedLabelMangerSandbox.getFrameById(frameId);
-
-    this.cachedFrames[frameId] = {
-      frameId,
-      frameName: frameData.name,
-      lokalizedLabelIds: [],
-    };
-
-    for (const freshLocalizedLabel of frameData.localizedLabelsInFrame) {
-      // enrich hash state (we cant do this in the sandbox layer - since 'TextEncoder' is not defined there)
-      freshLocalizedLabel.textChangedAfterGeneration = freshLocalizedLabel.filledTemplateHash === undefined || blake.blake2sHex(freshLocalizedLabel.text!) !== freshLocalizedLabel.filledTemplateHash;
-
-      this.cachedFrames[frameId].lokalizedLabelIds.push(freshLocalizedLabel.nodeId);
-      this.invalidateCacheIfNeeded(freshLocalizedLabel);
-      this.cachedLokalisedLabels[freshLocalizedLabel.nodeId] = freshLocalizedLabel;
-      if (freshLocalizedLabel.key !== undefined) {
-        if (this.cachedKeysToLabels[freshLocalizedLabel.key] === undefined) {
-          this.cachedKeysToLabels[freshLocalizedLabel.key] = new Set<string>();
-        }
-        this.cachedKeysToLabels[freshLocalizedLabel.key].add(freshLocalizedLabel.nodeId);
-      }
-    }
-
-    return this.cachedFrames[frameId].lokalizedLabelIds.map((labelId) => this.cachedLokalisedLabels[labelId]!);
-  }
-
-  private invalidateCacheIfNeeded(updatedLocalizedLabel: LocalizedLabel, force: boolean = false) {
-    const cachedLabel = this.cachedLokalisedLabels[updatedLocalizedLabel.nodeId];
-
-    if (cachedLabel && (cachedLabel.rootFrameId !== updatedLocalizedLabel.rootFrameId || force)) {
-      delete this.cachedFrames[cachedLabel.rootFrameId];
-    }
-
-    if (cachedLabel && cachedLabel.key !== undefined && (cachedLabel.key !== updatedLocalizedLabel.key || force)) {
-      this.cachedKeysToLabels[cachedLabel.key].delete(cachedLabel.nodeId);
-    }
+  async getSelection() {
+    return this.localizedLabelMangerSandbox.getSelection();
   }
 
   // eslint-disable-next-line class-methods-use-this --  TODO remove when all todos are mimplemtned

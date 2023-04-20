@@ -1,3 +1,4 @@
+import { debug } from 'console';
 import { FigmaFileTranslationKeyStore } from '../keystore/FigmaFileTranslationKeyStore';
 
 const titleBarHeight = 40;
@@ -18,6 +19,8 @@ export class WindowManagerSandbox {
   bottomSheetHeight = 300;
 
   viewportResizeCheckInterval: any;
+
+  handledViewportZoom = -1;
 
   handledViewportWidth = -1;
 
@@ -81,11 +84,21 @@ export class WindowManagerSandbox {
       });
 
       this.viewportResizeCheckInterval = setInterval(() => {
+
+
         if (this.handledViewportWidth !== figma.viewport.bounds.width
                     || this.handledViewportHeight !== figma.viewport.bounds.height) {
-          // set flag to signal the user is currently changing the viewport this can be zooming or parent window size change
-          this.viewPortResizing = true;
+          // if we have a change in zoom we don't have a resize
+          if (this.handledViewportZoom !== -1 && this.handledViewportZoom !== figma.viewport.zoom) {
+            this.handledViewportWidth = figma.viewport.bounds.width;
+            this.handledViewportHeight = figma.viewport.bounds.height;
+            this.handledViewportZoom = figma.viewport.zoom;
+            return;
+          }
+          // set flag to signal the user is currently changing the viewport (window size change)
+          // this.viewPortResizing = true;
 
+          // we debounce this call since reposition can only be done by hiding and showing the window
           if (this.viewPortResizeSettleTimeout) {
             clearTimeout(this.viewPortResizeSettleTimeout);
           }
@@ -100,6 +113,7 @@ export class WindowManagerSandbox {
 
           this.handledViewportWidth = figma.viewport.bounds.width;
           this.handledViewportHeight = figma.viewport.bounds.height;
+          this.handledViewportZoom = figma.viewport.zoom;
         }
       }, 1);
 
@@ -159,7 +173,7 @@ export class WindowManagerSandbox {
     } else if (this.windowMode === WindowMode.BottomSheet) {
       console.log('BottomSheet');
       width = figma.viewport.bounds.width * figma.viewport.zoom;
-      height = figma.viewport.bounds.height * figma.viewport.zoom;
+      // height = figma.viewport.bounds.height * figma.viewport.zoom;
 
       x = figma.viewport.bounds.x;
       y = figma.viewport.bounds.y + figma.viewport.bounds.height - ((this.bottomSheetHeight + titleBarHeight) / figma.viewport.zoom);
@@ -172,14 +186,11 @@ export class WindowManagerSandbox {
       }
     }
 
-    let reshow = false;
+    
     if (x !== undefined && y !== undefined && !this.windowResizing) {
-      reshow = true;
       console.log(`hiding to reposition${y} ${x}`);
       // figma doesn't allow reposition after the user has moved the window manual once - by hiding and showing the ui it looses its corresponding state
-      figma.ui.hide();
-      // @ts-ignore
-      figma.ui.reposition(x, y);
+      this.repositionThrottled(x, y);
     }
 
     // eslint-disable-next-line no-bitwise
@@ -187,12 +198,34 @@ export class WindowManagerSandbox {
 
     this.currentMode = this.windowMode;
 
-    if (reshow) {
+    /* if (reshow) {
       setTimeout(() => {
         figma.ui.show();
       }, 1);
-    } 
-  
+    } */
+  }
+
+  lastReposition: any;
+
+  repositionThrottled(x: number, y: number) {
+    if (this.lastReposition && this.lastReposition.x === x && this.lastReposition.y === y && (Date.now() - this.lastReposition.time) > 30) {
+      console.log('skipped');
+      return;
+    }
+
+    this.lastReposition = {
+      x,
+      y,
+      time: Date.now(),
+    };
+
+    figma.ui.hide();
+    // @ts-ignore
+    figma.ui.reposition(x, y);
+    setTimeout(() => {
+      console.log('showing again');
+      figma.ui.show();
+    }, 1);
   }
 
   setWindowMode(mode: WindowMode) {
@@ -204,3 +237,27 @@ export class WindowManagerSandbox {
     this.repositionWindow();
   }
 }
+
+/* snippet to zoom to a specific posistion if plugin overlaps selection */
+
+/*
+// Define the X and Y coordinates that you want to scroll to
+const scrollToX = 100;
+const scrollToY = 200;
+
+// Define the width and height of the area that you want to zoom in on
+const zoomWidth = 500;
+const zoomHeight = 500;
+
+// Create a new rectangle object
+const zoomRect = figma.createRectangle();
+zoomRect.x = scrollToX;
+zoomRect.y = scrollToY;
+zoomRect.resize(zoomWidth, zoomHeight);
+
+// Call the scrollAndZoomIntoView method to scroll and zoom to the specified position
+figma.viewport.scrollAndZoomIntoView([zoomRect]);
+
+// Remove the rectangle from the page
+zoomRect.remove();
+*/

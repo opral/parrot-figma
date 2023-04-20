@@ -13,6 +13,7 @@ import { Plural } from '../../../lib/base/Plural';
 
 import './TranslationKeyView.css';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
+import { KeyState, LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
 
 type TranslationKeyListViewProps = {
   keys: TranslationKeys,
@@ -37,19 +38,48 @@ export default function TranslationKeyListView({
   const [, setTrigger] = useState(0);
   const [renderEntries, setRenderEntries] = useState(200);
   const [searchText, setSearchText] = useState('');
+  const [selectedLabels, setSelectedLabels] = useState<LocalizedLabel[]>([]);
 
-  function refreshSelection() {
+  async function refreshSelection() {
+    const selectedNodes = await localizedLabelManager.getSelection();
+
+    const labels = [] as LocalizedLabel[];
+    for (const selectedElement of selectedNodes) {
+      const label = localizedLabelManager.getLabelByNodeId(selectedElement.selectedNodeId);
+      if (label && label.keyType === KeyState.Linked) {
+        labels.push(label);
+      }
+    }
+
+    setSelectedLabels(labels);
     refreshKeys();
     setTrigger((v) => v + 1);
   }
 
+  function messageHandler(event: any) {
+    if (event.data.pluginMessage.type === 'event') {
+      if (event.data.pluginMessage.name === 'selectionchange') {
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
+        refreshSelection();
+      }
+    }
+  }
+
   useEffect(() => {
+    // asynchronous fetch the state from figma helper
+    (async () => {
+      // eslint-disable-next-line @typescript-eslint/no-use-before-define
+      await refreshSelection();
+    })();
+
     localizedLabelManager.addEventListener('updated', refreshSelection);
     translationKeyStore.addEventListener('updated', refreshSelection);
+    window.addEventListener('message', messageHandler);
 
     return () => {
       localizedLabelManager.removeEventListener('updated', refreshSelection);
       translationKeyStore.removeEventListener('updated', refreshSelection);
+      window.removeEventListener('message', messageHandler);
     };
   }, []);
 
@@ -84,6 +114,10 @@ export default function TranslationKeyListView({
   let rendered = 0;
 
   const filteredKeys: any = Object.keys(keys).reduce((matchingKeys, key) => {
+    if (selectedLabels.length > 0 && selectedLabels.filter((label) => label.key === key).length === 0) {
+      return matchingKeys;
+    }
+
     if (searchText === '') {
       return matchingKeys.concat({ key });
     }

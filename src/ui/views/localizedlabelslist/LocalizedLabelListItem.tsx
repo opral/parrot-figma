@@ -250,39 +250,6 @@ export default function LocalizedLabelListItem({
               </div>
             </div>
 
-            <TranslationEditor
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars, func-names -- TODO remove after refactor
-              onSave={async (text: any) => {
-              /* let translationKey;
-                            if (keyExists === true) {
-                                translationKey = await translationKeyStore.updateKey(localizedLabel.key!, [{
-                                    language: localizedLabel.rootFrameLanguage,
-                                    plural: localizedLabel.pluralId,
-                                    text: text,
-
-                                }]);
-                            } else {
-                               // TODO  await translationKeyStore.createKey(localizedLabel.key, [{ language: localizedLabel.rootFrameLanguage, plural: localizedLabel.pluralId, text: text}]);
-                            }
-
-                            let textToApplyToDesign = localizedLabel.useSampleValues || localizedLabel.rootFrameUseSampleValues ?
-                                translationKeyStore.fillPlaceholdersWithSampleData(text, localizedLabel.rootFrameLanguage, localizedLabel.pluralId) :
-                                text;
-
-                            await localisedLabelManager.updateLocalisedLabelProperties(localizedLabel.nodeId, {
-                                plural: localizedLabel.pluralId,
-                                showSampleValues: localizedLabel.useSampleValues,
-                                showSampleValuesInherited: localizedLabel.rootFrameUseSampleValues,
-                                text: textToApplyToDesign,
-                                keyVersion: translationKey?.latestVersion
-                            }); */
-                // eslint-disable-next-line no-console -- TODO remove when implemented
-                console.warn('TODO onSave back prob not implemented');
-              }}
-              text={localizedLabel.text}
-              match={undefined}
-              editable={false}
-            />
           </div>
           <div className="row-actions">
             { ((localizedLabel.rootFrameLanguage !== localizedLabel.language)) && (

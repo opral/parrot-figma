@@ -62,7 +62,7 @@ export default function TranslationEditor({
 
   let textToUse;
 
-  if (textState === undefined) {
+  if (textState === undefined || textState === '') {
     textToUse = '<no translation>';
   } else if (textState.charAt(textState.length - 1) === '\n') {
     textToUse = `${textState}\n`;

@@ -29,7 +29,7 @@ export default function LocalizedLabelsListView({
   });
 
   async function refreshSelection() {
-    const selectedNodes = await figmaRemote.getSelection();
+    const selectedNodes = await localizedLabelManager.getSelection();
 
     const selectedByFrame = {} as {
       [rootFrameId: string]: string[]
@@ -58,11 +58,16 @@ export default function LocalizedLabelsListView({
     setSelection(selectedByFrame);
   }
 
-  useEffect(() => {
-    // connect figmas plugin message to the apps onMessage handler
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    onmessage = messageHandler;
+  function messageHandler(event: any) {
+    if (event.data.pluginMessage.type === 'event') {
+      if (event.data.pluginMessage.name === 'selectionchange') {
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
+        refreshSelection();
+      }
+    }
+  }
 
+  useEffect(() => {
     // asynchronous fetch the state from figma helper
     (async () => {
       // eslint-disable-next-line @typescript-eslint/no-use-before-define
@@ -72,22 +77,15 @@ export default function LocalizedLabelsListView({
     // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
     localizedLabelManager.addEventListener('updated', refreshSelection);
     translationKeyStore.addEventListener('updated', refreshSelection);
+    window.addEventListener('message', messageHandler);
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
     return () => {
       localizedLabelManager.removeEventListener('updated', refreshSelection);
       translationKeyStore.removeEventListener('updated', refreshSelection);
+      window.removeEventListener('message', messageHandler);
     };
   }, []);
-
-  function messageHandler(event: any) {
-    if (event.data.pluginMessage.type === 'event') {
-      if (event.data.pluginMessage.name === 'selectionchange') {
-        // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
-        refreshSelection();
-      }
-    }
-  }
 
   if (localizedLabels.length === 0) {
     return (
@@ -111,7 +109,7 @@ export default function LocalizedLabelsListView({
         {Object.keys(selection).map((mainFrameId) => (
           <LocalizedFrameGroup
             localizedLabels={localizedLabels.filter((l) => l.rootFrameId === mainFrameId).reverse()}
-            selectionByFrame={selection}
+            selectedNodes={selection[mainFrameId]}
             translationKeyStore={translationKeyStore}
             figmaRemote={figmaRemote}
             localisedLabelManager={localizedLabelManager}

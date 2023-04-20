@@ -118,7 +118,15 @@ export default function Onboarding({
           {
             // TODO deactivate if baseLanguageState === undefined && selectedLanguages.length === 0
           }
-          <button className="button button--buttonSecondary" type="button" onClick={() => { if (baseLanguageState !== undefined) { onFinishSetup(baseLanguageState, selectedLanguages); } }}>
+          <button
+            className="button button--buttonSecondary"
+            type="button"
+            onClick={() => {
+              if (baseLanguageState !== undefined) {
+                onFinishSetup(baseLanguageState, selectedLanguages);
+              }
+            }}
+          >
             <span data-tooltip-type="text">
               {t('file_onboarding__finish_setup_button')}
             </span>

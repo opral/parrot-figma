@@ -89,8 +89,6 @@ function App() {
     (async () => {
       // console.log('load - keys');
       await memoryTranslationKeyStore.load();
-      // console.log('load - keys done');
-      await localizedLabelManager.loadAll();
 
       setDefaultLinkStyle(await remoteLocalizedLabelManager.getLinkStyle());
 

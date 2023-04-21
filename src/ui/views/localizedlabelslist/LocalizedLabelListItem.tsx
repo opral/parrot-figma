@@ -58,7 +58,7 @@ export default function LocalizedLabelListItem({
 
   async function updateToLatestKeyVersion() {
     // TODO set labels text to the latest key version
-    await localisedLabelManager.updateToLatestKeyVersion(localizedLabel);
+    await localisedLabelManager.updateToLatestKeyVersion([localizedLabel]);
   }
 
   async function revertDesignChanges() {
@@ -76,7 +76,7 @@ export default function LocalizedLabelListItem({
 
   async function onNodeSelect(nodeId: string) {
     await figmaRemote.scrollIntoViewIfNeeded(nodeId);
-    await figmaRemote.selectNode(nodeId);
+    await figmaRemote.selectNodes([nodeId]);
   }
 
   async function linkKey(keyToLinkTo: string) {
@@ -272,7 +272,7 @@ export default function LocalizedLabelListItem({
             <span
               className="row-action-icon"
               data-tooltip-trigger="span"
-              data-tooltip-content={localizedLabel.useSampleValues === false ? "Use Sample values" : "Show placeholders" }
+              data-tooltip-content={localizedLabel.useSampleValues === false ? 'Use Sample values' : 'Show placeholders'}
             >
               <span
                 className={`svg-container ${localizedLabel.useSampleValues === false ? 'placeholder-svg' : 'placeholder-filled-svg'}`}

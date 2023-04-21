@@ -248,52 +248,7 @@ export default class LocalizedLabelManager {
     // console.log(JSON.stringify(event));
     // console.log(message);
     figma.ui.postMessage(message);
-
-
-    // console.log(`fillUpCache - creating localizedLabels took plus message of ${localizedLabels.length} labels ${Date.now() - outerStart}`);
-
-    // TODO process all text Nodes in batches
   }
-
-  /*async getFrameIds(): Promise<string[]> {
-    const skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
-    figma.skipInvisibleInstanceChildren = true;
-
-    let start = Date.now();
-
-    // getting all text nodes ~ 1 - 2 seconds on a huge document :-/
-    // we may splitt this by page
-    const textNodes = figma.root.findAllWithCriteria({ types: ['TEXT'] });
-    console.log(`all labels found ${Date.now() - start}`);
-
-    const lastBreak = Date.now();
-    const breakAfterMs = 30;
-    console.log(`creating ${textNodes.length} labels`);
-    for (const textNode of textNodes) {
-      const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode);
-       if (Date.now() - lastBreak > breakAfterMs) {
-        // eslint-disable-next-line no-promise-executor-return
-        await new Promise((resolve) => setTimeout(resolve, 1));
-        lastBreak = Date.now();
-      } 
-    }
-
-    console.log(` labels created ------ ${Date.now() - start}`);
-
-    const frameIds = figma.root.findAllWithCriteria({ types: ['FRAME'] }).map((frame) => frame.id);
-    console.log(`all frames found ${Date.now() - start}`);
-
-    start = Date.now();
-    for (const frameId of frameIds) {
-      const frameLabels = this.getFrameById(frameId);
-    }
-
-    console.log(`all frames loaded ${Date.now() - start}`);
-    figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
-
-    return frameIds;
-  }
-*/
 
   async getSelection() {
     const selections = [];
@@ -407,15 +362,6 @@ export default class LocalizedLabelManager {
     }
 
     // console.log((new Date()).getTime() + 'execution finished - puting result into message');
-  }
-
-  private getUseSampleValues(node: FrameNode | TextNode) {
-    const useSampleValues = node.getPluginData(this.sampleValuesDataKey);
-    if (useSampleValues === undefined || useSampleValues !== '') {
-      return false;
-    }
-
-    return true;
   }
 
   async updateLabelProperties(nodeId: string, changedProperties:

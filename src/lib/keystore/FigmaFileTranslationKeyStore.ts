@@ -19,7 +19,10 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
 
   keyHistoryPrefix = 'aar_h__';
 
-  keyState = { } as any;
+  // contains a map from key to state index from the last cache propagation
+  keyState = { } as {
+    [keyId: string]: number
+  };
 
   constructor(asProxy: boolean) {
     if (!asProxy) {

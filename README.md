@@ -245,7 +245,7 @@ What we want from ui point of view:
  - [x] fix flicker on zoom
 
   
- - [ ] localize tool using the tool :-)
+ - [x] localize tool using the tool :-) POC
  - [x] Add tooltips 
 
  - [ ] polish mouse pointer styles

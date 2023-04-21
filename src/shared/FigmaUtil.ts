@@ -20,13 +20,13 @@ export default class FigmaUtil {
     const fileKey = this.getFileKey();
     const value = await figma.clientStorage.getAsync(`${fileKey}__${key}`);
 
-    console.log(`${fileKey}__${key} - ${value} GET LOCALFILE` );
+    console.log(`${fileKey}__${key} - ${value} GET LOCALFILE`);
     return value !== '' ? value : undefined;
   }
 
   async setLocalFileConfig(key: string, value: any) {
     const fileKey = this.getFileKey();
-    console.log(`${fileKey}__${key} - ${value} SET LOCALFILE` );
+    console.log(`${fileKey}__${key} - ${value} SET LOCALFILE`);
     return figma.clientStorage.setAsync(`${fileKey}__${key}`, value);
   }
 
@@ -55,11 +55,41 @@ export default class FigmaUtil {
     }
   }
 
-  async selectNode(nodeId: string) {
-    const nodeToSelect = figma.getNodeById(nodeId) as SceneNode;
+  async getSelectedNodeIds() {
+    return figma.currentPage.selection.map(node => node.id)
+  }
 
-    if (nodeToSelect) {
-      figma.currentPage.selection = [nodeToSelect!];
+  async selectNodes(nodeIds: string[]) {
+    const nodesToSelect = [] as SceneNode[];
+
+    for (const nodeId of nodeIds) {
+      const node = figma.getNodeById(nodeId) as SceneNode;
+      if (!node) {
+        console.log(`WARNING: node with id ${nodeId} not found in select nodes`);
+        continue;
+      }
+      nodesToSelect.push(node);
+    }
+
+    if (nodesToSelect.length > 0) {
+      figma.currentPage.selection = nodesToSelect;
+    }
+  }
+
+  async scrollAndZoomNodesIntoView(nodeIds: string[]) {
+    const nodesToSelect = [] as SceneNode[];
+
+    for (const nodeId of nodeIds) {
+      const node = figma.getNodeById(nodeId) as SceneNode;
+      if (!node) {
+        console.log(`WARNING: node with id ${nodeId} not found in select nodes`);
+        continue;
+      }
+      nodesToSelect.push(node);
+    }
+
+    if (nodesToSelect.length > 0) {
+      figma.viewport.scrollAndZoomIntoView(nodesToSelect);
     }
   }
 

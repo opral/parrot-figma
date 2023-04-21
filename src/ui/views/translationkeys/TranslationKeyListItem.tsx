@@ -50,7 +50,52 @@ export default function TranslationKeyListItem({
 
   async function onNodeSelect(nodeId: string) {
     await figmaRemote.scrollIntoViewIfNeeded(nodeId);
-    await figmaRemote.selectNode(nodeId);
+    await figmaRemote.selectNodes([nodeId]);
+  }
+  
+  async function showAll() {
+    // TODO check in which page the label is in
+    let nodeIds = referencingLabels.map(l => l.nodeId);
+    
+    await figmaRemote.selectNodes(nodeIds);
+
+    await figmaRemote.scrollAndZoomNodesIntoView(nodeIds);
+  }
+
+  async function showNext(backward: boolean) {
+    // TODO check in which page the label is in
+    if (referencingLabels.length === 0) {
+      return;
+    }
+
+    const selectedNodeIds = await figmaRemote.getSelectedNodeIds();
+    let nodeIdToSelect: string;
+
+    let indexToSelect = -1;
+    if (selectedNodeIds.length == 1) {
+      indexToSelect = referencingLabels.findIndex(localizedLabel => localizedLabel.nodeId === selectedNodeIds[0]);
+
+      if (indexToSelect !== -1) {
+        if (backward) {
+          indexToSelect = (indexToSelect - 1) % referencingLabels.length;
+        } else {
+          indexToSelect = (indexToSelect + 1) % referencingLabels.length;
+        }
+      }
+    } 
+    
+    if (indexToSelect === -1) {
+      if (backward) {
+        indexToSelect = referencingLabels.length - 1;
+      } else {
+        indexToSelect = 0;
+      }
+    }
+
+    await figmaRemote.selectNodes([referencingLabels[indexToSelect].nodeId]);
+
+    await figmaRemote.scrollAndZoomNodesIntoView([referencingLabels[indexToSelect].nodeId]);
+    
   }
 
   const baseLang = translationKeyStore.getBaseLanugage();
@@ -125,9 +170,12 @@ export default function TranslationKeyListItem({
         { select === undefined && (
         <div className="key-usage">
           { /* TODO add references to keys */ }
-          {false && referencingLabels.length === 0 && <div>no usage</div>}
-          {false && referencingLabels.length > 0 && (
+          { referencingLabels.length === 0 && <div>no usage</div>}
+          {referencingLabels.length > 0 && (
             <>
+              <div onClick={showAll}>showAll</div>
+              <div onClick={() => showNext(true)}>previous</div>
+              <div onClick={() => showNext(true)}>next</div>
               <div className="collapsible-header" onClick={() => setShowUsage((value) => !value)}>
                 <div className={`svg-container${showUsage ? 'expand-svg' : 'collapse-svg'}`} />
                 <div className="title">Usage</div>
@@ -185,6 +233,8 @@ export default function TranslationKeyListItem({
                         await translationKeyStore.updateKey(translationKey.keyName!, [{
                           language, plural: plural as Plural, text, skip,
                         }]);
+
+                        await localizedLabelManager.updateUnmodifiedLabelsWithKey(translationKey.keyName!);
                         await translationKeyStore.parentKeyStore.commitUndo();
                       }}
                       text={translationKey.translations[language as Language]?.[plural as Plural]?.text}
@@ -197,6 +247,7 @@ export default function TranslationKeyListItem({
                       <span
                         className="layerIcon iconWrapper button"
                         onClick={async () => {
+                          // disable a translation
                           // debugger;
                           await translationKeyStore.updateKey(translationKey.keyName!, [{
                             language,

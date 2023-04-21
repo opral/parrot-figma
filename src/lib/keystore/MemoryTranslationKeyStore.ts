@@ -6,7 +6,6 @@ import { TranslationKeyStore } from './BaseTranslationKeyStore';
 import { Config, FigmaFileTranslationKeyStore } from './FigmaFileTranslationKeyStore';
 
 export default class MemoryTranslationKeyStore extends EventTarget implements TranslationKeyStore {
-  
   parentKeyStore: FigmaFileTranslationKeyStore;
 
   config: Config | undefined;
@@ -27,8 +26,17 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
   }
 
   private async processCacheUpdate(changedKeys: { deleted: string[], added: string[], updated: string[] }) {
+    const changes = {
+      deleted: [] as string[],
+      updated: [] as string[],
+      added: [] as string[],
+      changedKeys: [] as string[],
+    };
+
     for (const deltedKey of changedKeys.deleted) {
       this.removeCache(deltedKey);
+      changes.deleted.push(deltedKey);
+      changes.changedKeys.push(deltedKey);
     }
 
     for (const updatedKey of changedKeys.updated) {
@@ -38,6 +46,8 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
       }
 
       this.upsertCache(freshKey);
+      changes.updated.push(updatedKey);
+      changes.changedKeys.push(updatedKey);
     }
 
     for (const addedKey of changedKeys.added) {
@@ -47,9 +57,11 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
       }
 
       this.upsertCache(freshKey);
+      changes.added.push(addedKey);
+      changes.changedKeys.push(addedKey);
     }
 
-    const event = new CustomEvent('updated', { });
+    const event = new CustomEvent<any>('updated', { detail: changes });
     this.dispatchEvent(event);
   }
 

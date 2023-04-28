@@ -10,7 +10,6 @@ export interface TranslationKeyStore {
   deleteKey(keyName: string) : Promise<void>
   getHistory(translationKeyName: string) : Promise<HistoryEntry[]>
   load(): Promise<TranslationKeys>
-  importFromLocalise() : Promise<void>
 }
 
 export class BaseTranslationKeyStore {

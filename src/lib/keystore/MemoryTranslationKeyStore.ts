@@ -1,7 +1,10 @@
+/* eslint-disable no-plusplus */
 /* eslint-disable no-await-in-loop */
 import { Language } from '../base/Language';
 import { Plural } from '../base/Plural';
-import { HistoryEntry, TranslationKey, TranslationKeys } from './TranslationKey';
+import {
+  HistoryEntry, HistoryTag, TranslationEntry, TranslationKey, TranslationKeys,
+} from './TranslationKey';
 import { TranslationKeyStore } from './BaseTranslationKeyStore';
 import { Config, FigmaFileTranslationKeyStore } from './FigmaFileTranslationKeyStore';
 
@@ -9,6 +12,8 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
   parentKeyStore: FigmaFileTranslationKeyStore;
 
   config: Config | undefined;
+
+  historyTags: HistoryTag[] = [];
 
   translationKeys: TranslationKeys = { };
 
@@ -19,19 +24,24 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     window.addEventListener('message', (event : MessageEvent) => {
       if (event.data.pluginMessage.target === 'TranslationKeyStore') {
         if (event.data.pluginMessage.type === 'cacheUpdate') {
-          this.processCacheUpdate(event.data.pluginMessage.changedKeys);
+          this.processCacheUpdate(event.data.pluginMessage.changedKeys, event.data.pluginMessag.updatedHistoryTags);
         }
       }
     });
   }
 
-  private async processCacheUpdate(changedKeys: { deleted: string[], added: string[], updated: string[] }) {
+  private async processCacheUpdate(changedKeys: { deleted: string[], added: string[], updated: string[] }, updatedHistoryTags: HistoryTag[] | undefined) {
     const changes = {
       deleted: [] as string[],
       updated: [] as string[],
       added: [] as string[],
-      changedKeys: [] as string[],
+      changedKeys: [] as string[],
+      historyTags: updatedHistoryTags,
     };
+
+    if (updatedHistoryTags) {
+      this.historyTags = updatedHistoryTags;
+    }
 
     for (const deltedKey of changedKeys.deleted) {
       this.removeCache(deltedKey);
@@ -101,8 +111,59 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     return this.parentKeyStore.getHistory(translationKeyName);
   }
 
+  getTranslations(language: Language, versionId: number | undefined): { [keyName: string]: TranslationEntry } {
+    const translationKeys = {} as { [keyName: string]: TranslationEntry };
+
+    for (const keyName of Object.keys(this.translationKeys)) {
+      const currentKey = this.translationKeys[keyName];
+      if (versionId) {
+        const keysHistoryEntryIndex = currentKey.historyTags[versionId];
+        if (keysHistoryEntryIndex) {
+          const transalationEntry = {
+            translations: {},
+          } as TranslationEntry;
+          for (let currentIndex = keysHistoryEntryIndex; currentIndex >= 0; currentIndex--) {
+            if (currentKey.history[currentIndex].translations?.[language]) {
+              for (const plural of (Object.keys(currentKey.history[currentIndex].translations![language]!) as Plural[])) {
+                if (currentKey.history[currentIndex].translations?.[language]?.[plural]?.text) {
+                  if (!transalationEntry.translations![language]) {
+                    transalationEntry.translations![language] = {};
+                  }
+                  if (!transalationEntry.translations![language]![plural]) {
+                    transalationEntry.translations![language]![plural] = {
+                      text: currentKey.history[currentIndex].translations![language]![plural]!.text!,
+                    };
+                  }
+                }
+              }
+            }
+          }
+
+          if (transalationEntry.translations?.[language]) {
+            transalationEntry.plural = Object.keys(transalationEntry.translations![language]!).length > 1;
+            translationKeys[keyName] = transalationEntry;
+          }
+        }
+      } else if (currentKey.translations[language]) {
+        translationKeys[keyName] = currentKey;
+      }
+    }
+
+    return translationKeys;
+  }
+
   getKey(keyName: string) : TranslationKey | undefined {
     return this.translationKeys[keyName];
+  }
+
+  async createTag(title: string, description: string | undefined) {
+    const tagId = this.historyTags.length;
+    for (const key of Object.keys(this.translationKeys)) {
+      this.translationKeys[key].historyTags[tagId] = this.translationKeys[key].latestVersion;
+    }
+
+    this.historyTags[tagId] = await this.parentKeyStore.createTag(tagId, title, description);
+    return this.historyTags[tagId];
   }
 
   async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean): Promise<TranslationKey> {
@@ -125,6 +186,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
 
   async load(): Promise<TranslationKeys> {
     this.config = await this.parentKeyStore.getConfig();
+    this.historyTags = await this.parentKeyStore.getHistoryTags();
     this.translationKeys = await this.parentKeyStore.load();
     return this.translationKeys;
   }
@@ -165,9 +227,5 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
       // not found
       return substring;
     });
-  }
-
-  importFromLocalise(): Promise<void> {
-    return this.parentKeyStore.importFromLocalise();
   }
 }

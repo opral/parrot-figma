@@ -111,7 +111,8 @@ export default function Filesetup({
           className="button button--buttonSecondary"
           type="button"
           onClick={() => {
-            translationKeyStore.importFromLocalise();
+            // translationKeyStore.importFromLocalise();
+            console.warn('not implemented')
           }}
         >
           <span data-tooltip-type="text">

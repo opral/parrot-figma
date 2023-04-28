@@ -4,7 +4,7 @@ body {
   margin: 0px;
   /* Body — 11 Regular */
 
-  font-family: 'Avenir';
+  font-family: Inter,sans-serif;
   font-style: normal;
   font-weight: 400;
   font-size: 11px;
@@ -12,7 +12,6 @@ body {
   /* identical to box height, or 117% */
 
   letter-spacing: 0.01em;
-  font-family: "Inter", sans-serif;
 
   /* OnColor/Surfaces/OnSurface */
   background-color: var(--figma-color-bg);
@@ -244,11 +243,6 @@ body {
 }
 
 
-button.button-primary {
-  font-weight: 500;
-  background-color: var(--figma-color-bg);
-}
-
 
 button.button {
   background-color: var(--figma-color-bg);
@@ -265,6 +259,7 @@ button.button {
   overflow: hidden;
   text-overflow: ellipsis;
   display: flex;
+  font-family: Inter,sans-serif;
   align-items: center;
   box-sizing: border-box;
   background-clip: border-box;
@@ -278,4 +273,24 @@ button.button {
   -ms-user-select: none;
   user-select: none;
   border-style: solid;
+  margin-left: 10px;
+}
+
+button.button-primary {
+  font-weight: 500;
+  background-color: var(--figma-color-bg-brand);
+  color: var(--figma-color-text-onbrand, #fff);
+}
+
+
+button:disabled {
+  color: var(--figma-color-text-ondisabled, #fff);
+  background-color: var(--figma-color-bg-disabled, rgba(0, 0, 0, .3));
+  border-color: transparent;
+}
+
+button:focus:not(:disabled), .basic_form--btn--t7Y67:active:not(:disabled) {
+  line-height: 28px;
+  padding: 0 10px;
+  border: 2px solid var(--figma-color-bg-brand);
 }

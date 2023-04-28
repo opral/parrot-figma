@@ -160,6 +160,9 @@ export default class LocalizedLabelManagerUI extends EventTarget {
       }
     }
 
+    console.log('chache renewed:');
+    console.log(JSON.stringify(label, null, 4));
+
     return true;
   }
 
@@ -229,7 +232,9 @@ export default class LocalizedLabelManagerUI extends EventTarget {
 
   private handleKeyUpdate(keyId: string) {
     let cacheUpdated = false;
-    for (const labelIdToUpdate of this.keysToCachedLabels[keyId]) {
+    if (!this.keysToCachedLabels[keyId]) return;
+    console.log('handling keyupdate event for ' + keyId);
+    for (const labelIdToUpdate of this.keysToCachedLabels[keyId]) {
       const labelToUpdate = this.cachedLocalisedLabels[labelIdToUpdate];
       if (this.refreshCachedLabel(labelToUpdate)) {
         cacheUpdated = true;
@@ -335,12 +340,15 @@ export default class LocalizedLabelManagerUI extends EventTarget {
       const currentVersion = BaseTranslationKeyStore.getHistoryEntry(translatedKey, localizedLabel.language, localizedLabel.pluralId, localizedLabel.keyVersion);
 
       if (currentVersion === undefined) {
+        console.log(translatedKey, localizedLabel.language, localizedLabel.pluralId, localizedLabel.keyVersion);
+        console.log(JSON.stringify(translatedKey, null, 3));
         throw new Error(`Illegal state on label ${localizedLabel.key} ${localizedLabel.keyVersion}`);
       }
 
       state.behind = BaseTranslationKeyStore.getChangesSince(translatedKey, localizedLabel.language, localizedLabel.pluralId, localizedLabel.keyVersion);
 
-      if (currentVersion.translations?.[localizedLabel.language]?.[localizedLabel.pluralId]?.text !== localizedLabel.text || (localizedLabel.useSampleValues && localizedLabel.textChangedAfterGeneration)) {
+      if ((!localizedLabel.useSampleValues && currentVersion.translations?.[localizedLabel.language]?.[localizedLabel.pluralId]?.text !== localizedLabel.text)
+        || (localizedLabel.useSampleValues && localizedLabel.textChangedAfterGeneration)) {
         state.modified = true;
         state.orginalText = currentVersion.translations?.[localizedLabel.language]?.[localizedLabel.pluralId]?.text;
       }
@@ -380,12 +388,12 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     }
   }
 
-  async setLabelUseSampleValues(localizedLabelId: string, useSampleValues: boolean) {
+  async setLabelUseSampleValues(localizedLabelId: string, showSampleValues: boolean) {
     const localizeLabel = this.cachedLocalisedLabels[localizedLabelId];
     const translationKey = this.keyStore.getKey(localizeLabel.key!);
 
     if (localizeLabel.keyType !== KeyState.Linked
-      || this.getLabelState(localizeLabel).modified
+      || localizeLabel.state!.modified
       || translationKey === undefined) {
       // we don't change any property also not on the parent - no need to update the label at all
       return;
@@ -396,7 +404,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     const text = versionToApply?.translations?.[localizeLabel.language]?.[localizeLabel.pluralId]?.text;
     if (text) {
       await this.updateLabelProperties(localizedLabelId, {
-        showSampleValues: useSampleValues,
+        showSampleValues,
         text,
       });
     }
@@ -422,7 +430,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | undefined>,
   ) {
     const translationKeyName = cachedLabel.key ?? cachedLabel.derivedKey;
-    const labelState = this.getLabelState(cachedLabel);
+    const labelState = cachedLabel.state!;
     let labelVersion = cachedLabel.keyVersion;
 
     if (cachedLabel.keyType === KeyState.Unlinked // we don't update unlinked labels
@@ -513,12 +521,13 @@ export default class LocalizedLabelManagerUI extends EventTarget {
   async updateToLatestKeyVersion(localizedLabels: LocalizedLabel[]) {
     for (const localizedLabel of localizedLabels) {
       const translationKey = this.keyStore.getKey(localizedLabel.key!)!;
-      const historyEntryForVersion = BaseTranslationKeyStore.getHistoryEntry(translationKey, localizedLabel.language, localizedLabel.pluralId, translationKey.latestVersion);
+      const historyEntryForVersion = BaseTranslationKeyStore.getHistoryEntry(translationKey, localizedLabel.rootFrameLanguage, localizedLabel.pluralId, translationKey.latestVersion);
 
       // eslint-disable-next-line no-await-in-loop
       await this.updateLabelProperties(localizedLabel.nodeId, {
         keyVersion: translationKey.latestVersion,
-        text: historyEntryForVersion!.translations?.[localizedLabel.language]?.[localizedLabel.pluralId]?.text,
+        text: historyEntryForVersion!.translations?.[localizedLabel.rootFrameLanguage]?.[localizedLabel.pluralId]?.text,
+        language: localizedLabel.rootFrameLanguage,
       });
     }
 
@@ -609,7 +618,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     const changedPropertiesToForwared = changedProperties;
 
     if (changedProperties.text !== undefined) {
-      if (changedProperties.showSampleValues === true || localizedLabelCached.useSampleValues) {
+      if (changedProperties.showSampleValues === true || (changedProperties.showSampleValues === undefined && localizedLabelCached.useSampleValues)) {
         const language = changedProperties.language ?? localizedLabelCached.language;
         const plural = changedProperties.plural ?? localizedLabelCached.pluralId;
         // eslint-disable-next-line no-param-reassign

@@ -36,7 +36,7 @@ export default function LocalizedLabelListItem({
 
   const rowRef = React.useRef<HTMLDivElement>(null);
 
-  const labelState = localisedLabelManager.getLabelState(localizedLabel);
+  const labelState = localizedLabel.state!;
 
   const [searchKey, setSearchKey] = useState(undefined as any);
 
@@ -207,7 +207,7 @@ export default function LocalizedLabelListItem({
                 <span
                   className="layerIcon iconWrapper button"
                   data-tooltip-trigger="span"
-                  data-tooltip-content="Update Label with latest version"
+                  data-tooltip-content={`Update Label with latest version${labelState.behind} ${localizedLabel.language} ${localizedLabel.rootFrameLanguage}`}
                   onClick={updateToLatestKeyVersion}
                 >
                   <span className="svg-container reset-instance-svg" />

@@ -31,6 +31,8 @@ import Filesetup from './views/filesetup/Filesetup';
 import Onboarding from './views/onboarding/Onboarding';
 import { Language } from '../lib/base/Language';
 import Tooltip from './compontents/tooltip/Tooltip';
+import Import from './views/import/Import';
+import Export from './views/export/Export';
 
 TimeAgo.addDefaultLocale(en);
 
@@ -134,7 +136,9 @@ function App() {
       </>
 
     );
-  } if (appScreen === 'keys') {
+  }
+
+  if (appScreen === 'keys') {
     view = (
       <TranslationKeyListView
         translationKeyStore={memoryTranslationKeyStore}
@@ -149,6 +153,32 @@ function App() {
       <Filesetup
         translationKeyStore={memoryTranslationKeyStore}
         showNextButton={false}
+      />
+    );
+  /* (
+      <ConfigView
+        linkStyle={defaultLinkStyle}
+        setLinkStyle={setLinkStyle}
+        translationKeyStore={memoryTranslationKeyStore}
+      />
+    ); */
+  } else if (appScreen === 'import') {
+    view = (
+      <Import
+        translationKeyStore={memoryTranslationKeyStore}
+      />
+    );
+  /* (
+      <ConfigView
+        linkStyle={defaultLinkStyle}
+        setLinkStyle={setLinkStyle}
+        translationKeyStore={memoryTranslationKeyStore}
+      />
+    ); */
+  } else if (appScreen === 'export') {
+    view = (
+      <Export
+        translationKeyStore={memoryTranslationKeyStore}
       />
     );
   /* (
@@ -176,7 +206,8 @@ function App() {
         <div className="tabHeader">
           <div className={`tab ${appScreen === 'design' ? 'active' : ''}`} onClick={() => setAppScreen('design')}>Design</div>
           <div className={`tab ${appScreen === 'keys' ? 'active' : ''}`} onClick={() => setAppScreen('keys')}>Keys</div>
-          <div className={`tab ${appScreen === 'version&export' ? 'active' : ''}`} style={{display: 'none'}} onClick={() => setAppScreen('keys')}>Versions & Export</div>
+          <div className={`tab ${appScreen === 'export' ? 'active' : ''}`} onClick={() => setAppScreen('export')}>Versions & Export</div>
+          <div className={`tab ${appScreen === 'import' ? 'active' : ''}`} onClick={() => setAppScreen('import')}>Import</div>
           <div className={`tab ${appScreen === 'settings' ? 'active' : ''}`} onClick={() => setAppScreen('settings')}>Settings</div>
         </div>
         <div className="window-control">

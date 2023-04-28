@@ -1,0 +1,12 @@
+.available-language {
+    display: flex;
+}
+
+.available-language .svg-container {
+    align-self: center;
+}
+
+.available-language .language {
+    align-self: center;
+    padding-left: 8px;
+}

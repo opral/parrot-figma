@@ -23,6 +23,12 @@ module.exports = (env, argv) => ({
         ],
       },
       {
+        test: /\.ejs$/,
+        use: [
+          'raw-loader',
+        ],
+      },
+      {
 
         test: /\.(png)$/,
         use: {
@@ -48,6 +54,10 @@ module.exports = (env, argv) => ({
 
   resolve: {
     extensions: ['.js', '.jsx', '.tsx', '.ts'],
+    alias: {
+      fs: false, // or any other value that makes sense for your project
+      path: false, // or any other value that makes sense for your project
+    }
   },
   output: {
     filename: '[name].js',

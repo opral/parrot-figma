@@ -84,9 +84,11 @@
   padding-right: 26px;
 }
 
+.text-field-text:hover .svg-container.right:hover {
+  background-color: red;
+}
 
-
-.text-field-text.editing .svg-container.right {
+.text-field-text:hover .svg-container.right {
   visibility: visible;
 }
 

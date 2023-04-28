@@ -418,9 +418,11 @@ export default function Select({
                         <div className="svg-container checkmark-svg" />
                       )}
                     </div>
+                    { icon && (
                     <div className="select-menu__item-icon">
                       <div className={`svg-container ${icon}`} />
                     </div>
+                    )}
                     <span className="select-menu__item-label">{label}</span>
                   </li>
                 )))}

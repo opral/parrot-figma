@@ -1,11 +1,32 @@
 import { Language } from '../base/Language';
 import { Plural } from '../base/Plural';
 
+export type HistoryTag = {
+  user: string,
+  date: number,
+  title: string,
+  description?: string,
+  versionId?: string,
+};
+
+export type TranslationEntry = {
+  plural: boolean,
+  translations?: {
+    [language in Language]? : {
+      [plural in Plural]? : {
+        text?: string,
+        // TODO verified
+        skip?: boolean
+      }
+    }
+  }
+};
+
 export type HistoryEntry = {
   user: string,
   date: number,
   plural?: boolean,
-  tags?: string[],
+  labels?: string[],
   translations?: {
     [language in Language]? : {
       [plural in Plural]? : {
@@ -28,8 +49,12 @@ export type HistoryEntry = {
 export interface SerializableTranslationKey {
   keyName: string
   latestVersion: number,
+  historyTags: {
+    // map a tag identifier (we use a number for size reasons) to a version index of a key
+    [tagId: number]: number,
+  },
   plural: boolean,
-  tags: string[],
+  labels: string[],
   translations: {
     [language in Language]? : {
       [plural in Plural]? : {

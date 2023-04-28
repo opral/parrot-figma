@@ -101,7 +101,6 @@ export default function Tooltip({ triggerAttribute, contentAttribute }: TooltipP
       }
 
       setTooltipPlacement(placement);
-      
     } else {
       // ok we have to put it on top
       const placement = {
@@ -118,7 +117,6 @@ export default function Tooltip({ triggerAttribute, contentAttribute }: TooltipP
         placement.transformX = parentRect.left - (tooltipSourceRect.left! + 16);
       }
       setTooltipPlacement(placement);
-      
     }
   }, [tooltipPlacement]);
 

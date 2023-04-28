@@ -24,7 +24,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     window.addEventListener('message', (event : MessageEvent) => {
       if (event.data.pluginMessage.target === 'TranslationKeyStore') {
         if (event.data.pluginMessage.type === 'cacheUpdate') {
-          this.processCacheUpdate(event.data.pluginMessage.changedKeys, event.data.pluginMessag.updatedHistoryTags);
+          this.processCacheUpdate(event.data.pluginMessage.changedKeys, event.data.pluginMessage.updatedHistoryTags);
         }
       }
     });

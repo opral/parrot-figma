@@ -287,6 +287,9 @@ export default class LocalizedLabelManagerUI extends EventTarget {
   }
 
   async updateUnmodifiedLabelsWithKey(key: string) {
+    if (!this.keysToCachedLabels[key]) {
+      return;
+    }
     const labelsToUpdate = [] as LocalizedLabel[];
     for (const labelId of this.keysToCachedLabels[key]) {
       const label = this.cachedLocalisedLabels[labelId];

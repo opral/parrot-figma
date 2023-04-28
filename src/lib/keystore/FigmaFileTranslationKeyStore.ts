@@ -149,6 +149,9 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
           if (!key.historyTags) {
             key.historyTags = [];
           }
+          if (!key.labels) {
+            key.labels = [];
+          }
           key.historyTags[tagId] = key.latestVersion;
           figma.root.setPluginData(keyWithPrefix, JSON.stringify(key));
         }
@@ -195,6 +198,9 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
     const key = JSON.parse(keyRaw) as TranslationKey;
     if (!key.historyTags) {
       key.historyTags = [];
+    }
+    if (!key.labels) {
+      key.labels = [];
     }
     const historyObj = this.getHistorySync(keyName);
     key.history = historyObj.keyHistory;
@@ -259,7 +265,7 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
 
       historyEntry.plural = translationKey.plural;
     }
-
+  
     if (!keyCurrentVersion || FigmaFileTranslationKeyStore.arraysAreEqual(translationKey.labels, keyCurrentVersion.labels)) {
       if (!historyEntry) {
         historyEntry = { user: userId, date: dateOfChange };

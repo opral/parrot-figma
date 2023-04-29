@@ -5,7 +5,7 @@ import { Language } from '../base/Language';
 import { Plural } from '../base/Plural';
 import MemoryTranslationKeyStore from '../keystore/MemoryTranslationKeyStore';
 
-import IOSImporter from './AppleStringsFileImporter';
+import AppleStringsFileImporter from './AppleStringsFileImporter';
 import AndroidXMLImporter from './AndroidXmlImporter';
 import { ImportTranslationKey } from './ImportTranslationKey';
 
@@ -51,7 +51,7 @@ export default class KeyImporter {
       keys: undefined as ImportTranslationKey[] | undefined,
     };
 
-    let importObject = IOSImporter.toImportObject(fileName, content);
+    let importObject = AppleStringsFileImporter.toImportObject(fileName, content);
     if (importObject) {
       results.type = 'ios-strings';
       results.keys = importObject;

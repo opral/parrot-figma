@@ -306,11 +306,13 @@ What we want from ui point of view:
         - match by content and add platform specific keys
  - [ ] import from lokalize
  
- #### Export
- - [ ] add export tab with versioning
+ #### Plugin Export
+ - [x] add export tab with versioning
     - a version will store a figma version - sadly we don't have access to the api from the plugin
         - this means if we want to export from the plugin we need to know the v numebr of each key
     - storing each version of a key will produce a lot of data we could persist the version in the key it self to save the name
+
+#### API Export
  - [ ] export tool for ios
  - [ ] export tool for android
  - [ ] export tool for react 

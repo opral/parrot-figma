@@ -13,7 +13,7 @@ export default class AppleStringsFileImporter {
   static toImportObject(filename: string, stringsFileContent: string): ImportTranslationKey[] | undefined {
     const fileNameParts = filename.split('.');
     const fileExtension = fileNameParts[fileNameParts.length - 1];
-    if (fileExtension !== 'dict') {
+    if (fileExtension !== 'strings') {
       return undefined;
     }
 

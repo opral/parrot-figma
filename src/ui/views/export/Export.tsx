@@ -43,7 +43,7 @@ export default function Export({
     divider: true,
   }] as SelectOption[];
 
-  const initTagOptions = defaultOptions.concat(translationKeyStore.historyTags.reverse().map((historyTag) => ({
+  const initTagOptions = defaultOptions.concat(translationKeyStore.historyTags.slice().reverse().map((historyTag) => ({
     label: historyTag.title,
     value: historyTag.versionId!,
   } as SelectOption)));
@@ -112,7 +112,7 @@ export default function Export({
 
   const onTagCurrentVersionClick = async () => {
     const newTag = await translationKeyStore.createTag(title, description);
-    const options = defaultOptions.concat(translationKeyStore.historyTags.reverse().map((historyTag) => ({
+    const options = defaultOptions.concat(translationKeyStore.historyTags.slice().reverse().map((historyTag) => ({
       label: historyTag.title,
       value: historyTag.versionId!,
     } as SelectOption)));
@@ -170,7 +170,7 @@ export default function Export({
             className="button button--buttonSecondary"
             type="button"
             onClick={async () => {
-              const exportedFile = KeyExporter.export(translationKeyStore, exportLanguage!, 'apple-strings', parseInt(selectedVersion, 10));
+              const exportedFile = KeyExporter.export(translationKeyStore, exportLanguage!, 'apple-strings', selectedVersion);
 
               if (exportedFile) {
                 downloadFile(exportedFile.fileName, exportedFile.fileType, exportedFile.content);
@@ -185,7 +185,7 @@ export default function Export({
             className="button button--buttonSecondary"
             type="button"
             onClick={async () => {
-              const exportedFile = KeyExporter.export(translationKeyStore, exportLanguage!, 'apple-dict', parseInt(selectedVersion, 10));
+              const exportedFile = KeyExporter.export(translationKeyStore, exportLanguage!, 'apple-dict', selectedVersion);
 
               if (exportedFile) {
                 downloadFile(exportedFile.fileName, exportedFile.fileType, exportedFile.content);
@@ -204,7 +204,7 @@ export default function Export({
           className="button button--buttonSecondary"
           type="button"
           onClick={async () => {
-            const exportedFile = KeyExporter.export(translationKeyStore, exportLanguage!, 'android-xml', parseInt(selectedVersion, 10));
+            const exportedFile = KeyExporter.export(translationKeyStore, exportLanguage!, 'android-xml', selectedVersion);
 
             if (exportedFile) {
               downloadFile(exportedFile.fileName, exportedFile.fileType, exportedFile.content);

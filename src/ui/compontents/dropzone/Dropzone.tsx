@@ -2,15 +2,14 @@
 /* eslint-disable no-plusplus */
 /* eslint-disable no-continue */
 import React, { useState, ReactNode } from 'react';
+import './Dropzone.css';
 
 type FileDropZoneProps = {
-  onFilesDroped: Function,
-  children: ReactNode;
+  onFilesReceived: Function
 };
 
 export default function FileDropZone({
-  onFilesDroped,
-  children,
+  onFilesReceived,
 }: FileDropZoneProps) {
   const [showOverlay, setShowOverlay] = useState(false);
 
@@ -24,53 +23,45 @@ export default function FileDropZone({
     setShowOverlay(false);
   };
 
-  const readFileContents = async (file: File) => new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        resolve(reader.result);
-      } else {
-        reject(new Error('Failed to read file contents.'));
-      }
-    };
-    reader.readAsText(file);
-  });
+  const handleFiles = async function (files : FileList) {
+    
+    const filesReceived = {} as any;
+
+    const contentPromises = [] as Promise<void>[];
+    for (const file of files) {
+      contentPromises.push((async () => {
+        filesReceived[file.name] = await file.text();
+      })());
+    }
+
+    await Promise.all(contentPromises);
+
+    onFilesReceived(filesReceived);
+  };
 
   const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
 
-    const droppedFiles = {} as any;
+    const { files } = event.dataTransfer;
 
-    const { items } = event.dataTransfer;
-
-    const contentPromises = [] as Promise<void>[];
-
-    for (const item of items) {
-      const entry = item.webkitGetAsEntry();
-      if (entry?.isFile) {
-        contentPromises.push((async () => {
-          droppedFiles[entry.fullPath] = await readFileContents(item.getAsFile()!);
-        })());
-      } else if (entry?.isDirectory) {
-        /* let r = new FileSystemDirectoryReader()
-        
-        let dirReader = (entry as FileSystemDirectoryEntry)!.createReader();
-        dirReader.readEntries(console.log, console.log);
-        */
-      }
-    }
-    console.log(contentPromises);
-
-    await Promise.all(contentPromises);
+    handleFiles(files);
 
     setShowOverlay(false);
-    onFilesDroped(droppedFiles);
+  };
+
+  // triggers when file is selected with click
+  const handleChange = (e : React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    if (e.target.files && e.target.files[0]) {
+      handleFiles(e.target.files);
+    }
   };
 
   const handleOverlayDragOver = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     return false;
   };
+  // accept=".csv,.xlsx,.json,.xliff"
 
   return (
     <div
@@ -79,7 +70,38 @@ export default function FileDropZone({
       onDrop={handleDrop}
       style={{ position: 'relative' }}
     >
-      {children}
+
+      <div>
+        <div className="dropzone-container">
+          <div className="dropzone-file-wrapper">
+            <input type="file" name="file-input" multiple={false} onChange={handleChange} />
+            <div className="dropzone-info onboarding-tip onboarding-tip--normal">
+              <div className="dropzone-icon">
+                <div className="icon icon-import" />
+              </div>
+              <div className="dropzone-info-msg">
+                <b>
+                  Click or drag &amp; drop to import a .stringsdict, .strings, .xml file
+                </b>
+                <br />
+                Supported are Apple's
+                {' '}
+                <b>.stringsdict</b>
+                ,
+                {' '}
+                <b>.strings</b>
+                {' '}
+                and Android's
+                {' '}
+                <b>.xml</b>
+                {' '}
+                file.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {showOverlay
         && (
         <div

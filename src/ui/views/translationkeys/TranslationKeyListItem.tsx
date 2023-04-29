@@ -52,13 +52,12 @@ export default function TranslationKeyListItem({
     await figmaRemote.scrollIntoViewIfNeeded(nodeId);
     await figmaRemote.selectNodes([nodeId]);
   }
-  
+
   async function showAll() {
     // TODO check in which page the label is in
-    let nodeIds = referencingLabels.map(l => l.nodeId);
-    
-    await figmaRemote.selectNodes(nodeIds);
+    const nodeIds = referencingLabels.map((l) => l.nodeId);
 
+    await figmaRemote.selectNodes(nodeIds);
     await figmaRemote.scrollAndZoomNodesIntoView(nodeIds);
   }
 
@@ -73,7 +72,7 @@ export default function TranslationKeyListItem({
 
     let indexToSelect = -1;
     if (selectedNodeIds.length == 1) {
-      indexToSelect = referencingLabels.findIndex(localizedLabel => localizedLabel.nodeId === selectedNodeIds[0]);
+      indexToSelect = referencingLabels.findIndex((localizedLabel) => localizedLabel.nodeId === selectedNodeIds[0]);
 
       if (indexToSelect !== -1) {
         if (backward) {
@@ -82,8 +81,8 @@ export default function TranslationKeyListItem({
           indexToSelect = (indexToSelect + 1) % referencingLabels.length;
         }
       }
-    } 
-    
+    }
+
     if (indexToSelect === -1) {
       if (backward) {
         indexToSelect = referencingLabels.length - 1;
@@ -95,7 +94,6 @@ export default function TranslationKeyListItem({
     await figmaRemote.selectNodes([referencingLabels[indexToSelect].nodeId]);
 
     await figmaRemote.scrollAndZoomNodesIntoView([referencingLabels[indexToSelect].nodeId]);
-    
   }
 
   const baseLang = translationKeyStore.getBaseLanugage();
@@ -104,19 +102,17 @@ export default function TranslationKeyListItem({
   const languages = [baseLang, ...translationKeyStore.getLanugages()!.filter((l) => l !== baseLang)] as Language[];
 
   const onShowHistoryClick = (language: Language, plural: Plural) => {
-    translationKeyStore.parentKeyStore.getHistory(translationKey.keyName).then((historyEntries) => {
-      const specificHistory = [] as HistoryEntry[];
+    const specificHistory = [] as HistoryEntry[];
 
-      // filter relevant history changes for the given key
-      for (const keyHistoryEntry of historyEntries) {
-        if (keyHistoryEntry.translations?.[language]?.[plural] !== undefined) {
-          specificHistory.push(keyHistoryEntry);
-        }
+    // filter relevant history changes for the given key
+    for (const keyHistoryEntry of translationKey.history) {
+      if (keyHistoryEntry.translations?.[language]?.[plural] !== undefined) {
+        specificHistory.push(keyHistoryEntry);
       }
+    }
 
-      setHistory(specificHistory.reverse());
-      setShowHistory({ language, plural });
-    });
+    setHistory(specificHistory.reverse());
+    setShowHistory({ language, plural });
   };
 
   return (
@@ -303,6 +299,7 @@ export default function TranslationKeyListItem({
           {showHistory?.language && history?.map((entry, i, array) => (
             <HistoryEntryView
               key={i}
+              tag='test v1'
               text={entry.translations?.[showHistory!.language]?.[showHistory!.plural]?.text}
               time={entry.date ?? 0}
               userName={entry.user}

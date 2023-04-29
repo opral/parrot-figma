@@ -111,13 +111,27 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     return this.parentKeyStore.getHistory(translationKeyName);
   }
 
-  getTranslations(language: Language, versionId: number | undefined): { [keyName: string]: TranslationEntry } {
+  getTagIndexByVersionId(versionId: string) {
+    let tagIndex = -1;
+    for (let i = 0; i < this.historyTags.length; i++) {
+      if (this.historyTags[i].versionId === versionId) {
+        tagIndex = i;
+      }
+    }
+    return tagIndex;
+  }
+
+  getTranslations(language: Language, versionId: string | undefined): { [keyName: string]: TranslationEntry } {
     const translationKeys = {} as { [keyName: string]: TranslationEntry };
 
+    
+    const tagIndex = versionId ? this.getTagIndexByVersionId(versionId) : -1;
+    
     for (const keyName of Object.keys(this.translationKeys)) {
       const currentKey = this.translationKeys[keyName];
-      if (versionId) {
-        const keysHistoryEntryIndex = currentKey.historyTags[versionId];
+      if (tagIndex >= 0) {
+        
+        const keysHistoryEntryIndex = currentKey.historyTags[tagIndex];
         if (keysHistoryEntryIndex) {
           const transalationEntry = {
             translations: {},

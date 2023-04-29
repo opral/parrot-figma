@@ -10,79 +10,65 @@ export default class AppleDictFileImporter {
     return text; // TODO map all ios placeholders to plugin format
   }
 
-  static toImportObject(filename: string, stringsFileContent: string): ImportTranslationKey[] | undefined {
+  static toImportObject(filename: string, stringsdictFileContent: string): ImportTranslationKey[] | undefined {
     const fileNameParts = filename.split('.');
     const fileExtension = fileNameParts[fileNameParts.length - 1];
-    if (fileExtension !== 'strings') {
+    if (fileExtension !== 'dict') {
       return undefined;
     }
 
-    // split the file contents into an array of lines
-    const lines = stringsFileContent.split('\n');
+    try {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(stringsdictFileContent, 'text/xml');
 
-    // create an empty object to hold our key-value pairs
-    const importedKeys = [] as ImportTranslationKey[];
+      const translationKeys: ImportTranslationKey[] = [];
 
-    // iterate over each line of the file
-    // eslint-disable-next-line no-plusplus
-    let inComment = false;
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
+      // get all the dict elements in the document
+      const dictElements = xmlDoc.getElementsByTagName('dict');
 
-      // handle the start of a /* */ comment
-      if (line.startsWith('/*')) {
-        inComment = true;
-        // handle oneliner comments
-        if (line.endsWith('*/')) {
-          inComment = false;
+      // loop through each dict element
+      for (let i = 0; i < dictElements.length; i++) {
+        const dictElement = dictElements[i];
+
+        // get the key name from the first child element
+        const keyName = dictElement.getElementsByTagName('key')[0].textContent!;
+
+        // check if the dict element contains a plural rule type
+        const pluralRulesElement = dictElement.querySelector(
+          'key:contains("NSStringPluralRuleType")',
+        );
+        if (pluralRulesElement) {
+          const pluralRules = pluralRulesElement.nextElementSibling;
+
+          // extract the translations for each plural rule
+          for (let j = 0; j < pluralRules!.children.length; j++) {
+            const rule = pluralRules!.children[j];
+            const plural = rule.tagName as Plural;
+            const text = rule.textContent ?? undefined;
+
+            translationKeys.push({
+              keyName,
+              plural,
+              text,
+            });
+          }
+        } else {
+          // the dict element does not contain a plural rule type
+          // add the key to the translation keys with the 'other' plural rule
+          const valueElement = dictElement.querySelector('dict > string');
+          const text = valueElement && valueElement.textContent ? valueElement.textContent : undefined;
+          translationKeys.push({
+            keyName,
+            plural: Plural.OTHER,
+            text,
+          });
         }
-        continue;
       }
 
-      // handle the end of a /* */ comment
-      if (line.endsWith('*/')) {
-        inComment = false;
-        continue;
-      }
-
-      // skip any comments or empty lines
-      if (line.startsWith('//') || line.length === 0 || inComment) {
-        continue;
-      }
-
-      // split the line into a key and value pair
-      const parts = line.split('=');
-      let key = parts[0].trim();
-      let value = parts[1].trim();
-      let quoteWrapped = false;
-
-      // remove any surrounding quotes from the key and value
-      if (key.startsWith('"') && key.endsWith('"')) {
-        key = key.slice(1, -1);
-      }
-      if (value.startsWith('"') && value.endsWith('"')) {
-        value = value.slice(1, -1);
-        quoteWrapped = true;
-      }
-
-      if (value.startsWith('"') && value.endsWith('";')) {
-        value = value.slice(1, -2);
-        quoteWrapped = true;
-      }
-
-      if (quoteWrapped) {
-        value = value.split('\\"').join('"');
-      }
-      value = value.replace(/\\n/g, '\n');
-
-      // add the key-value pair to our result object
-      importedKeys.push({
-        keyName: key,
-        plural: Plural.OTHER,
-        text: value,
-      });
+      return translationKeys;
+    } catch (error) {
+      console.error('Failed to parse strings file content:', error);
+      return undefined;
     }
-
-    return importedKeys;
   }
 }

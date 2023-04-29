@@ -13,7 +13,7 @@ import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKe
 import FileDropZone from '../../compontents/dropzone/Dropzone';
 import KeyImporter from '../../../lib/import/KeyImporter';
 import { ImportTranslationKey } from '../../../lib/import/ImportTranslationKey';
-import KeyExporter from '../../../lib/export/KeyExporter';
+
 
 type ImportProps = {
   translationKeyStore: MemoryTranslationKeyStore
@@ -65,24 +65,14 @@ export default function Import({
       { (!fileType || fileType === 'unsupported') && (
       <div>
         <FileDropZone
-          onFilesDroped={(files: any) => {
+          onFilesReceived={(files: any) => {
             for (const filename of Object.keys(files)) {
               const importResult = KeyImporter.processFile(filename, files[filename]);
               setFileType(importResult.type);
               setImportKeys(importResult.keys);
             }
           }}
-        >
-          <div>
-            { fileType === 'unsupported' && (
-              <div>
-                Dropped file unsupported.
-              </div>
-            )}
-            Drop a Localization file here
-            <br />
-          </div>
-        </FileDropZone>
+        />
       </div>
       )}
 

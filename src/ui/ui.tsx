@@ -79,6 +79,7 @@ function App() {
   const [appScreen, setAppScreen] = useState(undefined as String | undefined);
 
   const [translatedKeys, setTranslatedKeys] = useState({} as TranslationKeys);
+  const [windowMode, setWindowMode] = useState(WindowManagerUi.instance!.windowMode);
 
   const [, setDefaultLinkStyle] = useState('' as string);
 
@@ -109,6 +110,20 @@ function App() {
       figmaRemote.setLocalFileConfig('lastView', appScreen);
     }
   }, [appScreen]);
+
+  useEffect(() => {
+    function windowModeUpdated() {
+      setWindowMode(WindowManagerUi.instance!.windowMode);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
+    WindowManagerUi.instance!.addEventListener('changed', windowModeUpdated);
+
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
+    return () => {
+      WindowManagerUi.instance!.removeEventListener('changed', windowModeUpdated);
+    };
+  }, []);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO implement this
   const setLinkStyle = async (linkStyle: string) => {
@@ -225,8 +240,8 @@ function App() {
               value: WindowMode.BottomSheet,
               tooltip: 'Dock to bottom',
             }]}
-            selectedSegment={WindowMode.Window}
-            onChoose={(windowMode: WindowMode) => { WindowManagerUi.instance?.setWindowMode(windowMode); }}
+            selectedSegment={windowMode}
+            onChoose={(choosenWindowMode: WindowMode) => { WindowManagerUi.instance?.setWindowMode(choosenWindowMode); }}
           />
 
         </div>

@@ -84,8 +84,6 @@ export class WindowManagerSandbox {
       });
 
       this.viewportResizeCheckInterval = setInterval(() => {
-
-
         if (this.handledViewportWidth !== figma.viewport.bounds.width
                     || this.handledViewportHeight !== figma.viewport.bounds.height) {
           // if we have a change in zoom we don't have a resize
@@ -123,6 +121,12 @@ export class WindowManagerSandbox {
             this.handleSizeMessage(message);
           } else if (message.windowMode !== undefined) {
             this.setWindowMode(message.windowMode);
+          } else if (message.uiInit) {
+            // while the ui is leading changes in the window mode - it needs to get informed about initial state
+            figma.ui.postMessage({
+              target: 'WindowManager',
+              windowMode: this.windowMode,
+            });
           }
         }
       });
@@ -155,8 +159,7 @@ export class WindowManagerSandbox {
 
   repositionWindow() {
     console.log('repositionWindow');
-    let { height } = this.size;
-    let { width } = this.size;
+    let { height, width } = this.size;
     let x = undefined as number | undefined;
     let y = undefined as number | undefined;
 
@@ -173,7 +176,7 @@ export class WindowManagerSandbox {
     } else if (this.windowMode === WindowMode.BottomSheet) {
       console.log('BottomSheet');
       width = figma.viewport.bounds.width * figma.viewport.zoom;
-      // height = figma.viewport.bounds.height * figma.viewport.zoom;
+      height = figma.viewport.bounds.height * figma.viewport.zoom;
 
       x = figma.viewport.bounds.x;
       y = figma.viewport.bounds.y + figma.viewport.bounds.height - ((this.bottomSheetHeight + titleBarHeight) / figma.viewport.zoom);
@@ -186,7 +189,6 @@ export class WindowManagerSandbox {
       }
     }
 
-    
     if (x !== undefined && y !== undefined && !this.windowResizing) {
       console.log(`hiding to reposition${y} ${x}`);
       // figma doesn't allow reposition after the user has moved the window manual once - by hiding and showing the ui it looses its corresponding state
@@ -238,7 +240,10 @@ export class WindowManagerSandbox {
   }
 }
 
-/* snippet to zoom to a specific posistion if plugin overlaps selection */
+/*
+useful if plugin overlaps selection:
+- snippet to zoom to a specific posistion using a short living rectangle
+*/
 
 /*
 // Define the X and Y coordinates that you want to scroll to

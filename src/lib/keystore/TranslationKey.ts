@@ -51,7 +51,7 @@ export interface SerializableTranslationKey {
   latestVersion: number,
   historyTags: {
     // map a tag identifier (we use a number for size reasons) to a version index of a key
-    [tagId: number]: number,
+    [tagIndex: number]: number,
   },
   plural: boolean,
   labels: string[],

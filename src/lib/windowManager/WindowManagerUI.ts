@@ -1,7 +1,7 @@
 /* eslint-disable class-methods-use-this */
 import { WindowMode } from './WindowManagerSandbox';
 
-export default class WindowManagerUi {
+export default class WindowManagerUi extends EventTarget {
   sizeWrapper: HTMLElement;
 
   contentEl: HTMLElement;
@@ -14,6 +14,8 @@ export default class WindowManagerUi {
 
   static instance: WindowManagerUi | undefined;
 
+  windowMode = WindowMode.Window;
+
   static init(sizeWrapperEl: HTMLElement, contentEl: HTMLElement, resizeHandelEl: HTMLElement) {
     if (this.instance) {
       throw Error('WindowManagerUi initialized twice');
@@ -22,10 +24,10 @@ export default class WindowManagerUi {
   }
 
   private constructor(sizeWrapperEl: HTMLElement, contentEl: HTMLElement, resizeHandelEl: HTMLElement) {
+    super();
     this.sizeWrapper = sizeWrapperEl;
     this.contentEl = contentEl;
     this.resizeHandelEl = resizeHandelEl;
-
 
     const threshol = [];
     for (let i = 0; i <= 1.0; i += 0.01) {
@@ -66,6 +68,17 @@ export default class WindowManagerUi {
 
     this.resizeHandelEl.onpointerdown = this.onResizeHandlePointerDown.bind(this);
     this.resizeHandelEl.onpointerup = this.onResizeHandlePointerUp.bind(this);
+
+    window.addEventListener('message', (event : MessageEvent) => {
+      if (event.data.pluginMessage.target === 'WindowManager') {
+        if (event.data.pluginMessage.windowMode) {
+          this.setWindowMode(event.data.pluginMessage.windowMode);
+        }
+      }
+    });
+
+    // eslint-disable-next-line no-restricted-globals
+    parent.postMessage({ pluginMessage: { target: 'WindowManager', uiInit: true } }, '*');
   }
 
   onResizeHandleDrag(e: any) {
@@ -88,7 +101,12 @@ export default class WindowManagerUi {
   }
 
   setWindowMode(mode: WindowMode) {
-    // eslint-disable-next-line no-restricted-globals
-    parent.postMessage({ pluginMessage: { target: 'WindowManager', windowMode: mode } }, '*');
+    if (this.windowMode !== mode) {
+      this.windowMode = mode;
+      const event = new CustomEvent<any>('changed');
+      this.dispatchEvent(event);
+      // eslint-disable-next-line no-restricted-globals
+      parent.postMessage({ pluginMessage: { target: 'WindowManager', windowMode: mode } }, '*');
+    }
   }
 }

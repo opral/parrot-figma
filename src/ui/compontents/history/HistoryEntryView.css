@@ -44,12 +44,23 @@
     border: 1px solid transparent;
 }
 
+
 .history_view--verticalLineRow {
     width: 1px;
     background-color: var(--figma-color-border, rgba(0, 0, 0, .1));
     height: 100%;
     position: absolute;
     margin-left: 18px;
+}
+
+
+.history_view--firstVerticalLineRow {
+    margin-top: 22px;
+}
+
+
+.history_view--lastVerticalLineRow {
+    height: 22px;
 }
 
 .history_view--itemInfo {
@@ -87,6 +98,10 @@
     fill: var(--figma-color-icon, #000);
 }
 
+.history_view--baseIcon-fill {
+    fill: transparent;
+}
+
 .history_view--description {
     display: flex;
     margin-left: 29px;
@@ -96,7 +111,7 @@
     font-style: normal;
     font-family: Inter,sans-serif;
     max-height: 100%;
-    color: var(--figma-color-text-secondary, #333333);
+    color: var(--figma-color-text, #333333);
     word-wrap: break-word;
     visibility: visible;
 }
@@ -113,13 +128,6 @@
 .history_view--avatarNameRow {
     display: flex;
     padding-top: 0;
-}
-
-.history_view--timeRevised {
-    color: var(--figma-color-text-secondary, rgba(0, 0, 0, .3));
-    flex-shrink: 0;
-    padding-top: 4px;
-    margin-left: 29px;
 }
 
 .history_view--avatarNameRow>* {
@@ -164,6 +172,7 @@
 }
 
 .history_view--editsByEntryRevised {
+    color: var(--figma-color-text-secondary, rgba(0, 0, 0, .3));
     margin-left: 4px;
     max-width: 12em;
 }
@@ -192,7 +201,7 @@
     color: var(--figma-color-text-tertiary, rgba(0, 0, 0, .3));
 }
 .history_view--timeRevised {
-    color: var(--figma-color-text-secondary, rgba(0, 0, 0, .3));
+    color: var(--figma-color-text-tertiary);
     flex-shrink: 0;
     padding-top: 4px;
     margin-left: 29px;

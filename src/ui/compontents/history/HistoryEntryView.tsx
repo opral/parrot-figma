@@ -5,11 +5,15 @@ import { useTranslation } from 'react-i18next';
 import ReactTimeAgo from 'react-time-ago';
 import StringDiff from './DiffView';
 import './HistoryEntryView.css';
+import { HistoryTag } from '../../../lib/keystore/TranslationKey';
 
 interface HistoryEntryViewProps {
-  tag?: string;
+  first: boolean,
+  last: boolean,
+  tag?: HistoryTag;
   text?: string;
   time: number;
+  currentVersion: boolean,
   userName: string;
   userIconUrl: string;
   previousText?: string;
@@ -17,9 +21,12 @@ interface HistoryEntryViewProps {
 }
 
 export default function HistoryEntryView({
+  first,
+  last,
   tag,
   text,
   time,
+  currentVersion,
   userName,
   userIconUrl,
   previousText,
@@ -28,9 +35,14 @@ export default function HistoryEntryView({
   const { t } = useTranslation();
   return (
     <div className="history_view">
-      <div className="history_view--verticalLineRow" />
+      <div className={`history_view--verticalLineRow ${first ? 'history_view--firstVerticalLineRow' : ''} ${last ? 'history_view--lastVerticalLineRow' : ''}`} />
       <div className="history_view--itemInfo">
-        <div className="history_view--versionInfo">
+        <div
+          className="history_view--versionInfo"
+          style={{
+            visibility: tag || currentVersion  || last ? 'inherit' : 'hidden',
+          }}
+        >
           <div className="history_view--userInfo">
             <svg
               width="5"
@@ -46,26 +58,45 @@ export default function HistoryEntryView({
                 d="M2.5 4.5C3.32843 4.5 4 3.82843 4 3C4 2.17157 3.32843 1.5 2.5 1.5C1.67157 1.5 1 2.17157 1 3C1 3.82843 1.67157 4.5 2.5 4.5ZM2.5 5.5C3.88071 5.5 5 4.38071 5 3C5 1.61929 3.88071 0.5 2.5 0.5C1.11929 0.5 0 1.61929 0 3C0 4.38071 1.11929 5.5 2.5 5.5Z"
                 className="history_view--bulletBorder---TL00"
               />
-              <circle cx="2.5" cy="3" r="1.5" className="history_view--bulletFill--8J34y" />
+              <circle
+                style={{
+                  fill: !currentVersion ? 'transparent' : 'var(--color-bg, #fff);',
+                }}
+                cx="2.5"
+                cy="3"
+                r="1.5"
+                className="history_view--bulletFill--8J34y"
+              />
             </svg>
-            <div
-              className="history_view--label ellipsis--ellipsis--70pHK text--fontPos11--rO47d text--_fontBase--VaHfk"
-              dir="auto"
-              style={{ maxWidth: '165px' }}
-            >
-              {tag}
-            </div>
+            {!tag && currentVersion && (
+              <div
+                className="history_view--label ellipsis--ellipsis--70pHK text--fontPos11--rO47d text--_fontBase--VaHfk"
+                dir="auto"
+                style={{ maxWidth: '165px' }}
+              >
+                Current Version
+              </div>
+            )}
+            {tag && (
+              <div
+                className="history_view--label ellipsis--ellipsis--70pHK text--fontPos11--rO47d text--_fontBase--VaHfk"
+                dir="auto"
+                data-tooltip-trigger="div"
+                data-tooltip-content="Created by ... at... "
+                style={{ maxWidth: '165px' }}
+              >
+                {tag.title}
+              </div>
+            )}
+
           </div>
         </div>
         <div
           className="history_view--description"
           dir="auto"
-          style={{ marginTop: tag ? '-8px' : '-24px' }}
+          style={{ marginTop: tag || currentVersion ? '-8px' : '-24px' }}
         >
-          <StringDiff
-            oldValue={previousText || ''}
-            newValue={text || ''}
-          />
+          <span>{text}</span>
           { onReuse !== undefined && (
           <button className="button button--buttonSecondary" type="button" onClick={() => { onReuse(text); }}>
             <span data-tooltip-type="text">
@@ -109,8 +140,6 @@ export default function HistoryEntryView({
           </div>
           <span
             className="history_view--editsByList history_view--timeRevised"
-            data-tooltip-type="text"
-            data-tooltip="Mar 5, 11:18 PM"
           >
             {' '}
             <span className="">

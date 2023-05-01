@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import OutsideClickHandler from 'react-outside-click-handler';
 import { Language } from '../../../lib/base/Language';
 import { Plural, pluralArrayByLanguage } from '../../../lib/base/Plural';
-import { HistoryEntry, TranslationKey } from '../../../lib/keystore/TranslationKey';
+import { HistoryEntry, HistoryTag, TranslationKey } from '../../../lib/keystore/TranslationKey';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
 
 import FigmaUtil from '../../../shared/FigmaUtil';
@@ -29,6 +29,17 @@ type TranslationKeyListItemProps = {
   select?: Function
 };
 
+interface VersionEntry {
+  versionTag: HistoryTag | undefined
+  text: string | undefined
+  previousText: string | undefined
+  date: number,
+  userName: string
+  userIconUrl: string
+  skip: boolean
+  reviewed: boolean
+}
+
 export default function TranslationKeyListItem({
   translationKey,
   figmaRemote,
@@ -40,7 +51,7 @@ export default function TranslationKeyListItem({
   const { t } = useTranslation();
   const [selected, setSelected] = useState(false);
   const [showUsage, setShowUsage] = useState(false);
-  const [history, setHistory] = useState<undefined | HistoryEntry[]>(undefined);
+  const [history, setHistory] = useState<undefined | VersionEntry[]>(undefined);
 
   const [showHistory, setShowHistory] = useState<undefined | { language: Language, plural: Plural }>(undefined);
 
@@ -71,7 +82,7 @@ export default function TranslationKeyListItem({
     let nodeIdToSelect: string;
 
     let indexToSelect = -1;
-    if (selectedNodeIds.length == 1) {
+    if (selectedNodeIds.length === 1) {
       indexToSelect = referencingLabels.findIndex((localizedLabel) => localizedLabel.nodeId === selectedNodeIds[0]);
 
       if (indexToSelect !== -1) {
@@ -102,13 +113,65 @@ export default function TranslationKeyListItem({
   const languages = [baseLang, ...translationKeyStore.getLanugages()!.filter((l) => l !== baseLang)] as Language[];
 
   const onShowHistoryClick = (language: Language, plural: Plural) => {
-    const specificHistory = [] as HistoryEntry[];
+    const specificHistory = [] as VersionEntry[];
+
+    let lastRelevantVersion = undefined as VersionEntry | undefined;
+
+    let currentVersion = 0;
+
+    const taggedVersions = [] as number[];
+
+    for (const tagIndex of Object.keys(translationKey.historyTags)) {
+      if (translationKey.historyTags[parseInt(tagIndex, 10)]) {
+        taggedVersions.push(parseInt(tagIndex, 10));
+      }
+    }
+
+    // historyTags maps from the tag index to a key version
+    // a key may no exist in every tag ->
+    let currentTagIndex = 0;
+    let currentVersionTagIndex = taggedVersions[currentTagIndex] as number | undefined;
+    let currentTaggedKeyVersion = currentVersionTagIndex && translationKey.historyTags[currentVersionTagIndex] ? translationKey.historyTags[currentVersionTagIndex] : -1;
+    let currentTag = currentVersionTagIndex ? translationKeyStore.historyTags[currentVersionTagIndex] : undefined;
+
+    console.log('taqgs');
+    console.log(translationKeyStore.historyTags);
+    console.log('key');
+    console.log(translationKey);
 
     // filter relevant history changes for the given key
     for (const keyHistoryEntry of translationKey.history) {
       if (keyHistoryEntry.translations?.[language]?.[plural] !== undefined) {
-        specificHistory.push(keyHistoryEntry);
+        if (currentTaggedKeyVersion < currentVersion) {
+          currentTagIndex += 1;
+          currentVersionTagIndex = taggedVersions[currentTagIndex] as number | undefined;
+          currentTaggedKeyVersion = currentVersionTagIndex && translationKey.historyTags[currentVersionTagIndex] ? translationKey.historyTags[currentVersionTagIndex] : -1;
+          currentTag = currentVersionTagIndex ? translationKeyStore.historyTags[currentVersionTagIndex] : undefined;
+        }
+
+        const currentRelevantVersion = {
+          versionTag: currentTag,
+          text: keyHistoryEntry.translations?.[language]?.[plural]?.text ?? lastRelevantVersion?.text,
+          previousText: lastRelevantVersion?.text,
+          userName: keyHistoryEntry.user,
+          date: keyHistoryEntry.date,
+          userIconUrl: keyHistoryEntry.user,
+          skip: keyHistoryEntry.translations?.[language]?.[plural]?.skip ?? false,
+          reviewed: false,
+        };
+
+        // relevant historyEntry
+        specificHistory.push(currentRelevantVersion);
+
+        if (currentTaggedKeyVersion >= currentVersion && lastRelevantVersion && currentRelevantVersion.versionTag === lastRelevantVersion.versionTag) {
+          // remove tag from last entry since this one is a better candidate
+          lastRelevantVersion.versionTag = undefined;
+        }
+        lastRelevantVersion = currentRelevantVersion;
+
       }
+
+      currentVersion += 1;
     }
 
     setHistory(specificHistory.reverse());
@@ -298,13 +361,17 @@ export default function TranslationKeyListItem({
           </div>
           {showHistory?.language && history?.map((entry, i, array) => (
             <HistoryEntryView
+              // eslint-disable-next-line react/no-array-index-key
               key={i}
-              tag='test v1'
-              text={entry.translations?.[showHistory!.language]?.[showHistory!.plural]?.text}
+              first={i === 0}
+              last={i === array.length - 1}
+              tag={entry.versionTag}
+              currentVersion={i === 0}
+              text={entry.text}
               time={entry.date ?? 0}
-              userName={entry.user}
-              userIconUrl={entry.user}
-              previousText={i < (array.length - 1) ? array[i + 1].translations?.[showHistory!.language]?.[showHistory!.plural]?.text : undefined}
+              userName={entry.userName}
+              userIconUrl={entry.userIconUrl}
+              previousText={entry.previousText}
               onReuse={i === 0 ? undefined : async (text: string) => {
                 if (showHistory === undefined) return;
 

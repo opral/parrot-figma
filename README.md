@@ -251,8 +251,7 @@ What we want from ui point of view:
  - [ ] polish mouse pointer styles
  - [ ] check keyname for at least one visible character
  - [ ] focus key field on link click if no derviation is posible
- - [ ] last character bug in key editor
- - [ ] add show difference toggle to history view
+ - [x] last character bug in key editor
  - [ ] plural select
  - [ ] UX key select
     - [ ] search by key "key:keyname or other"
@@ -288,6 +287,7 @@ What we want from ui point of view:
 
  - [ ] use base language for translation if possible
  - [ ] handle selection for keys as well (provide an option to only show keys of current selection)
+ - [ ] add show difference toggle to history view
 
 #### import
  - [ ] import of ios dict
@@ -311,6 +311,7 @@ What we want from ui point of view:
     - a version will store a figma version - sadly we don't have access to the api from the plugin
         - this means if we want to export from the plugin we need to know the v numebr of each key
     - storing each version of a key will produce a lot of data we could persist the version in the key it self to save the name
+    - SOLUTION - we implemented in space consuming version - lets optimize with a lot of data later on
 
 #### API Export
  - [ ] export tool for ios
@@ -323,7 +324,10 @@ What we want from ui point of view:
  - [ ] blog
 
  - [ ] add platforms (ios/android/web/other)
- - [ ] allow each key to select plattforms
+    - [x] ios strings file
+    - [ ] ios stingsdict file
+    - [x] android xml
+ - [ ] allow each key to select plattforms (tags?)
  - [ ] darkmode
 
  ### After MVP

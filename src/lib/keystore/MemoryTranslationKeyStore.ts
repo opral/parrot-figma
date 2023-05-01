@@ -124,7 +124,6 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
   getTranslations(language: Language, versionId: string | undefined): { [keyName: string]: TranslationEntry } {
     const translationKeys = {} as { [keyName: string]: TranslationEntry };
 
-    
     const tagIndex = versionId ? this.getTagIndexByVersionId(versionId) : -1;
     
     for (const keyName of Object.keys(this.translationKeys)) {

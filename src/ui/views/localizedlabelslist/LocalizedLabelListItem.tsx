@@ -252,7 +252,7 @@ export default function LocalizedLabelListItem({
 
           </div>
           <div className="row-actions">
-            { ((localizedLabel.rootFrameLanguage !== localizedLabel.language)) && (
+            { ((localizedLabel.keyType === KeyState.Linked && localizedLabel.rootFrameLanguage !== localizedLabel.language)) && (
             <span
               className="row-action-icon"
               data-tooltip-trigger="span"

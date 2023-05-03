@@ -40,7 +40,7 @@ const Strings = {
             "key_choice__title": "Select Key",
             "file_onboarding__finish_setup_button": "Complete the installation",
             "file_onboarding__baselang_cta_detail": "Please select the source language.",
-            "l_de": "German2",
+            "l_de": "German",
             "design__tooltip__link": "Untranslated Label (click to link)",
             "keys__empty_list_detail_msg": "Localized Keys\nwill show up here.",
             "key_view__search_hint": "Search",

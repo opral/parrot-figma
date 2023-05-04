@@ -9,7 +9,7 @@ import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
 import OutsideClickHandler from 'react-outside-click-handler';
 import { Language } from '../../../lib/base/Language';
-import { Plural, pluralArrayByLanguage } from '../../../lib/base/Plural';
+import { Plural, getPluralFormsByLanguage } from '../../../lib/base/Plural';
 import { HistoryEntry, HistoryTag, TranslationKey } from '../../../lib/keystore/TranslationKey';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
 
@@ -271,7 +271,7 @@ export default function TranslationKeyListItem({
         return (
           <div className={`languageWrapper${languageSkipped ? ' skipped ' : ''}`} key={language}>
             <div className="grid-item-language"><span className="rowText">{language}</span></div>
-            {pluralArrayByLanguage[language].map((plural) => {
+            {getPluralFormsByLanguage(language).map((plural) => {
               if (!translationKey.plural && plural !== Plural.OTHER) {
                 return null;
               }

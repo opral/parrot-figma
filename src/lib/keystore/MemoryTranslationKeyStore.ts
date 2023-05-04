@@ -1,7 +1,7 @@
 /* eslint-disable no-plusplus */
 /* eslint-disable no-await-in-loop */
 import { Language } from '../base/Language';
-import { Plural, pluralArrayByLanguage } from '../base/Plural';
+import { Plural, getPluralFormsByLanguage } from '../base/Plural';
 import {
   HistoryEntry, HistoryTag, TranslationEntry, TranslationKey, TranslationKeys,
 } from './TranslationKey';
@@ -363,9 +363,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
 
     for (const key of Object.values(this.translationKeys)) {
       for (const [language, languages] of Object.entries(key.translations)) {
-        console.log(language)
-        console.log(pluralArrayByLanguage[language as Language])
-        for (const plural of pluralArrayByLanguage[language as Language]) {
+        for (const plural of getPluralFormsByLanguage(language as Language)) {
           if (query.text === '') {
             results.matchingKeys.add(key.keyName);
           } else if (languages[plural]?.text !== undefined) {

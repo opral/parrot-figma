@@ -11,7 +11,7 @@ export enum Plural {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const pluralArrayByLanguage: { [key in Language]: Plural[] } = {
+const pluralArrayByLanguage: { [key in Language]: Plural[] } = {
   [Language.AF]: [Plural.OTHER, Plural.ONE],
   [Language.AM]: [Plural.OTHER, Plural.ONE],
   [Language.AR]: [Plural.OTHER, Plural.ZERO, Plural.ONE, Plural.TWO, Plural.FEW, Plural.MANY],
@@ -132,3 +132,12 @@ export const pluralArrayByLanguage: { [key in Language]: Plural[] } = {
   [Language.YO]: [Plural.OTHER, Plural.ZERO, Plural.ONE],
   [Language.ZH]: [Plural.OTHER],
 };
+
+export function getPluralFormsByLanguage(language: Language) {
+  const pluralForms = pluralArrayByLanguage[language];
+  if (!pluralForms) {
+    console.warn('plural forms for ' + language + ' not defined - retruning default (one, other)');
+    return [Plural.OTHER, Plural.ONE];
+  }
+  return pluralForms;
+}

@@ -167,9 +167,6 @@ export default class LocalizedLabelManagerUI extends EventTarget {
       }
     }
 
-    console.log('chache renewed:');
-    console.log(JSON.stringify(label, null, 4));
-
     return true;
   }
 

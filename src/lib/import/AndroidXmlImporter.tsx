@@ -3,7 +3,7 @@
 /* eslint-disable no-plusplus */
 
 import { Language } from '../base/Language';
-import { Plural, pluralArrayByLanguage } from '../base/Plural';
+import { Plural } from '../base/Plural';
 import { ImportTranslationKey } from './ImportTranslationKey';
 
 export default class AndroidXmlImporter {

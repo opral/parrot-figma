@@ -1,12 +1,25 @@
 /* eslint-disable no-plusplus */
 /* eslint-disable no-await-in-loop */
 import { Language } from '../base/Language';
-import { Plural } from '../base/Plural';
+import { Plural, pluralArrayByLanguage } from '../base/Plural';
 import {
   HistoryEntry, HistoryTag, TranslationEntry, TranslationKey, TranslationKeys,
 } from './TranslationKey';
 import { TranslationKeyStore } from './BaseTranslationKeyStore';
 import { Config, FigmaFileTranslationKeyStore } from './FigmaFileTranslationKeyStore';
+
+export type SearchQuery = {
+  selected: boolean,
+  hasLabel: string[],
+  oneLabelOf: string[],
+  unverified?: boolean,
+  missingTranslation?: boolean,
+  key?: string, // suggestion n with key
+  keyAtEnd: boolean,
+  text: string,
+  exactText: boolean,
+  searchString: string,
+};
 
 export default class MemoryTranslationKeyStore extends EventTarget implements TranslationKeyStore {
   parentKeyStore: FigmaFileTranslationKeyStore;
@@ -125,11 +138,10 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     const translationKeys = {} as { [keyName: string]: TranslationEntry };
 
     const tagIndex = versionId ? this.getTagIndexByVersionId(versionId) : -1;
-    
+
     for (const keyName of Object.keys(this.translationKeys)) {
       const currentKey = this.translationKeys[keyName];
       if (tagIndex >= 0) {
-        
         const keysHistoryEntryIndex = currentKey.historyTags[tagIndex];
         if (keysHistoryEntryIndex) {
           const transalationEntry = {
@@ -167,6 +179,273 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
 
   getKey(keyName: string) : TranslationKey | undefined {
     return this.translationKeys[keyName];
+  }
+
+  getKeysByText(text: string) : TranslationKey[] {
+    const matchingKeys = [] as TranslationKey[];
+    for (const key of Object.values(this.translationKeys)) {
+      for (const translation of Object.values(key.translations)) {
+        for (const pluralForm of Object.values(translation)) {
+          if (pluralForm.text === text) {
+            matchingKeys.push(key);
+          }
+        }
+      }
+    }
+    return matchingKeys;
+  }
+
+  toSearchString(searchQuery: SearchQuery): string {
+    let searchString = '';
+    if (searchQuery.selected) {
+      searchString += 'selected:true ';
+    }
+    if (searchQuery.hasLabel.length > 0) {
+      searchString += 'label:' + searchQuery.hasLabel.join(' label:') + ' ';
+    }
+
+    if (searchQuery.oneLabelOf.length > 0) {
+      searchString += 'one_label_of:' + searchQuery.hasLabel.join(',') + ' ';
+    }
+
+    if (searchQuery.unverified !== undefined) {
+      searchString += 'unverified:' + (searchQuery.unverified ? 'true' : 'false') + ' ';
+    }
+
+    if (searchQuery.missingTranslation !== undefined) {
+      searchString += 'missing_translation:' + (searchQuery.missingTranslation ? 'true' : 'false') + ' ';
+    }
+
+    if (searchQuery.exactText === true) {
+      searchString += 'exact_text:true ';
+    }
+
+    if (searchQuery.key !== undefined) {
+      searchString += 'key:' + searchQuery.key;
+      if (!searchQuery.keyAtEnd) {
+        searchString += ' ';
+      }
+    }
+
+    searchString += searchQuery.text;
+
+    return searchString;
+  }
+
+  toQueryObject(searchString: string): SearchQuery {
+    const searchQueryObj = {
+      selected: false,
+      hasLabel: [],
+      oneLabelOf: [],
+      verified: undefined,
+      key: undefined, // suggestion n with key
+      keyAtEnd: false,
+      text: '',
+      exactText: false,
+      searchString,
+    } as SearchQuery;
+
+    let processedInputString = searchString;
+
+    // extract the text surrounded by quotest first:
+    const textInQuotesRe = /"((?:[^"\\]|\\.)*)"(?![^\\]*\\)/g;
+    const quotedTextMatches = processedInputString.match(textInQuotesRe);
+
+    if (quotedTextMatches) {
+      for (const quotedTextMatch of quotedTextMatches) {
+        searchQueryObj.text += quotedTextMatch;
+        processedInputString = searchString.split(quotedTextMatch).join('');
+      }
+    }
+
+    // extract and remove all filters
+    const filterRe = /((\b\w+:[\w,*:]+))\s/g;
+    const filterMatches = processedInputString.match(filterRe);
+    const filters = [] as string[];
+
+    if (filterMatches) {
+      for (const filterMatch of filterMatches!.sort((match) => match.length)) {
+        const filterParts = filterMatch.split(' ').join('').split(':');
+        if (filterParts[0] === 'selected' && filterParts[1] === 'true') {
+          searchQueryObj.selected = true;
+        } else if (filterParts[0] === 'label' && filterParts.length > 1) {
+          searchQueryObj.hasLabel.push(filterParts[1]);
+        } else if (filterParts[0] === 'one_label_of' && filterParts.length > 1) {
+          searchQueryObj.oneLabelOf = searchQueryObj.oneLabelOf.concat(filterParts[1].split(','));
+        } else if (filterParts[0] === 'missing_translation' && filterParts.length > 1) {
+          searchQueryObj.missingTranslation = filterParts[1] === 'true';
+        } else if (filterParts[0] === 'unverified' && filterParts.length > 1) {
+          searchQueryObj.unverified = filterParts[1] === 'true';
+        } else if (filterParts[0] === 'exact_text' && filterParts.length > 1) {
+          searchQueryObj.exactText = filterParts[1] === 'true';
+        } else if (filterParts[0] === 'key' && filterParts.length > 1) {
+          console.log(filterParts);
+          // eslint-disable-next-line prefer-destructuring
+          searchQueryObj.key = filterParts[1];
+        } else {
+          continue;
+        }
+
+        filters.push(filterMatch.split(' ').join(''));
+        processedInputString = processedInputString.split(filterMatch).join('');
+      }
+    }
+
+    if (!searchQueryObj.key) {
+      // the regex expects a leading space - if we haven't found the key filter yet - try to find it at 
+      // the very end
+
+      const keyAtTheEnd = /key:([\w,*:]+)$/g;
+      const matches = processedInputString.match(keyAtTheEnd);
+      if (matches) {
+        // eslint-disable-next-line prefer-destructuring
+        searchQueryObj.key = matches[0].split(':')[1];
+        processedInputString = processedInputString.split(matches[0]).join('');
+        searchQueryObj.keyAtEnd = true;
+      }
+    }
+
+    // extract the rest as text if none was found previously
+    if (searchQueryObj.text === '') {
+      searchQueryObj.text = processedInputString;
+    }
+
+    return searchQueryObj;
+  }
+
+  /**
+   * what do we want to search
+   * "emission"
+   *  - all keys with "emission" in their name
+   * or
+   *  - all keys with "emission" in their text
+   * or
+   *  - all keys with a tag called "emmission"
+   *
+   * key:emision
+   *  - all keys with emmision in their name
+   *    - asterix not adding a lot of value
+   *
+   * text:"emision"
+   *  - all keys with emmision in thair text
+   *
+   * "translation:missing:de"
+   * "translation:complete"
+   *
+   * "one_tag_of:tag_a,tag_b,"
+   * "tag:tag_a"
+   *
+   * "verified:true"
+   *
+   *
+   * " verified:true "
+   *
+   * key:asdasd_asdasd_asd
+   *
+   * all filter but text have no space, and a leading no space name spearated by colon
+   *
+   *
+   */
+  findKeys(query: SearchQuery) {
+    const results = {
+      inKeys: new Set<string>(),
+      inText: new Set<string>(),
+      withMissingTranslations: new Set<string>(),
+      withMissingReview: new Set<string>(),
+      matchingKeys: new Set<string>(),
+      matches: {} as { [key:string] : {
+        keyMatch: { start: number, length: number } | undefined,
+        textMatches: {
+          [language in Language]?: { [plural in Plural]?: { start: number, length: number } }
+        }
+      } },
+    };
+
+    for (const key of Object.values(this.translationKeys)) {
+      for (const [language, languages] of Object.entries(key.translations)) {
+        console.log(language)
+        console.log(pluralArrayByLanguage[language as Language])
+        for (const plural of pluralArrayByLanguage[language as Language]) {
+          if (query.text === '') {
+            results.matchingKeys.add(key.keyName);
+          } else if (languages[plural]?.text !== undefined) {
+            const matchStartText = languages[plural]!.text!.toLowerCase().indexOf(query.text.toLowerCase());
+            if ((query.exactText && matchStartText === 0 && languages[plural]!.text!.length === query.text.length)
+              || (!query.exactText && matchStartText !== -1)) {
+              if (!results.matches[key.keyName]) {
+                results.matches[key.keyName] = { textMatches: {}, keyMatch: undefined };
+              }
+
+              if (!results.matches[key.keyName].textMatches![language as Language]) {
+                results.matches[key.keyName].textMatches![language as Language]! = {};
+              }
+              results.matches[key.keyName].textMatches![language as Language]![plural as Plural] = { start: matchStartText, length: query.text.length };
+              results.matchingKeys.add(key.keyName);
+              results.inText.add(key.keyName);
+            }
+          }
+
+          if (
+            (key.plural || plural === Plural.OTHER)
+            && (languages[plural] === undefined || (!languages[plural]?.skip && (!languages[plural]?.text || languages[plural]?.text === '')))) {
+            results.withMissingTranslations.add(key.keyName);
+          }
+
+          const reviewed = false; // languages[plural]!.reviewed;
+          if (!reviewed) {
+            results.withMissingReview.add(key.keyName);
+          }
+        }
+      }
+
+      if (query.key) {
+        if (query.key !== '*') {
+          const keyMatchStart = key.keyName.toLowerCase().indexOf(query.key.toLowerCase());
+
+          if (keyMatchStart === -1) {
+            // eslint-disable-next-line no-continue
+            results.matchingKeys.delete(key.keyName);
+          } else {
+            if (!results.matches[key.keyName]) {
+              results.matches[key.keyName] = { textMatches: {}, keyMatch: undefined };
+            }
+            results.matches[key.keyName].keyMatch = { start: keyMatchStart, length: query.key.length };
+            results.inKeys.add(key.keyName);
+          }
+        }
+      } else if (query.text !== '') {
+        const keyMatchStart = key.keyName.toLowerCase().indexOf(query.text.toLowerCase());
+        if (keyMatchStart !== -1) {
+          if (!results.matches[key.keyName]) {
+            results.matches[key.keyName] = { textMatches: {}, keyMatch: undefined };
+          }
+          results.matches[key.keyName].keyMatch = { start: keyMatchStart, length: query.text.length };
+          results.inKeys.add(key.keyName);
+          results.matchingKeys.add(key.keyName);
+        }
+      }
+    }
+
+    results.withMissingReview = new Set([...results.withMissingReview].filter((x) => results.matchingKeys.has(x)));
+    results.withMissingTranslations = new Set([...results.withMissingTranslations].filter((x) => results.matchingKeys.has(x)));
+
+    if (query.missingTranslation === true) {
+      results.matchingKeys = new Set([...results.matchingKeys].filter((x) => results.withMissingTranslations.has(x)));
+    } else if (query.missingTranslation === false) {
+      results.matchingKeys = new Set([...results.matchingKeys].filter((x) => !results.withMissingTranslations.has(x)));
+    }
+
+    if (query.unverified === true) {
+      results.matchingKeys = new Set([...results.matchingKeys].filter((x) => results.withMissingReview.has(x)));
+    } else if (query.unverified === false) {
+      results.matchingKeys = new Set([...results.matchingKeys].filter((x) => !results.withMissingReview.has(x)));
+    }
+    // in case we have no specific we want to suggest specific like
+    // - matches in keys (n)
+    // - matches in text (n)
+    // - with missing translations (n)
+    // - with missing review (n)
+    return results;
   }
 
   async createTag(title: string, description: string | undefined) {

@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 /* eslint-disable jsx-a11y/interactive-supports-focus */
 import * as React from 'react';
@@ -6,7 +7,7 @@ import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
 import { Language } from '../../../lib/base/Language';
 import { TranslationKeys } from '../../../lib/keystore/TranslationKey';
-import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
+import MemoryTranslationKeyStore, { SearchQuery } from '../../../lib/keystore/MemoryTranslationKeyStore';
 import FigmaUtil from '../../../shared/FigmaUtil';
 import TranslationKeyListItem from './TranslationKeyListItem';
 import { Plural } from '../../../lib/base/Plural';
@@ -17,7 +18,7 @@ import { KeyState, LocalizedLabel } from '../../../lib/localizedlabels/Localized
 
 type TranslationKeyListViewProps = {
   keys: TranslationKeys,
-
+  searchQuery: SearchQuery,
   translationKeyStore: MemoryTranslationKeyStore
   localizedLabelManager: LocalizedLabelManagerUI
 
@@ -28,17 +29,19 @@ type TranslationKeyListViewProps = {
 
 export default function TranslationKeyListView({
   keys,
+  searchQuery,
   translationKeyStore,
   localizedLabelManager,
   figmaRemote,
   refreshKeys,
   select,
 }: TranslationKeyListViewProps) {
+  
   const { t } = useTranslation();
   const [, setTrigger] = useState(0);
   const [renderEntries, setRenderEntries] = useState(200);
-  const [searchText, setSearchText] = useState('');
-  const [selectedLabels, setSelectedLabels] = useState<LocalizedLabel[]>([]);
+  const [filteredKeys, setFilteredKeys] = useState(translationKeyStore.findKeys(searchQuery));
+  const [query, setQuery] = useState<SearchQuery>(searchQuery);
 
   async function refreshSelection() {
     const selectedNodes = await localizedLabelManager.getSelection();
@@ -51,7 +54,7 @@ export default function TranslationKeyListView({
       }
     }
 
-    setSelectedLabels(labels);
+    // setSelectedLabels(labels);
     refreshKeys();
     setTrigger((v) => v + 1);
   }
@@ -109,44 +112,19 @@ export default function TranslationKeyListView({
     );
   }
 
+  const updateQuery = (newQuery: SearchQuery) => {
+    const newFilteredKeys = translationKeyStore.findKeys(newQuery);
+    setQuery(newQuery);
+    setFilteredKeys(newFilteredKeys);
+  };
+
+  const onSearchChange = (searchString: string) => {
+    updateQuery(translationKeyStore.toQueryObject(searchString));
+  };
+
   const longestKey = Object.keys(keys).reduce((acc, key) => (key.length > acc.length ? key : acc), '');
 
   let rendered = 0;
-
-  const filteredKeys: any = Object.keys(keys).reduce((matchingKeys, key) => {
-    if (selectedLabels.length > 0 && selectedLabels.filter((label) => label.key === key).length === 0) {
-      return matchingKeys;
-    }
-
-    if (searchText === '') {
-      return matchingKeys.concat({ key });
-    }
-
-    const keyPosition = key.toLowerCase().indexOf(searchText.toLowerCase());
-    if (keyPosition !== -1) {
-      return matchingKeys.concat({
-        key,
-        match: { key: { start: keyPosition, length: searchText.length } },
-      });
-    }
-
-    for (const language of Object.keys(keys[key].translations)) {
-      for (const plural of Object.keys(keys[key].translations[language as Language]!)) {
-        const { text } = keys[key].translations[language as Language]![plural as Plural]!;
-        if (text !== undefined) {
-          const matchStart = text.toLowerCase().indexOf(searchText.toLowerCase());
-          if (matchStart !== -1) {
-            return matchingKeys.concat({
-              key,
-              match: { [language]: { [plural]: { start: matchStart, length: searchText.length } } },
-            });
-          }
-        }
-      }
-    }
-
-    return matchingKeys;
-  }, [] as any[]);
 
   return (
     <div>
@@ -158,16 +136,73 @@ export default function TranslationKeyListView({
           className="search--searchInput"
           spellCheck="false"
           dir="auto"
-          value={searchText}
+          value={translationKeyStore.toSearchString(query)}
           onChange={(e) => {
-            setSearchText(e.target.value);
+            onSearchChange(e.target.value);
+
             setRenderEntries(100);
           }}
         />
       </div>
-      { searchText && (
+      { true && (
         <div className="searchResults">
-          { t('keys__search_result_hint', { count: filteredKeys.length })}
+          <div className="searchResults-suggestion">
+            results:
+            {' '}
+            {filteredKeys.matchingKeys.size}
+            {' '}
+          </div>
+          {!query.key && filteredKeys.inKeys.size > 0 && (
+          <div
+            className="searchResults-suggestion"
+            onClick={() => {
+              const newQuery = JSON.parse(JSON.stringify(query)) as SearchQuery;
+              newQuery.key = query.text;
+              newQuery.keyAtEnd = false;
+              newQuery.text = '';
+
+              updateQuery(newQuery);
+            }}
+          >
+            {`key:${query.text} ${filteredKeys.inKeys.size}`}
+          </div>
+          )}
+          {!query.key && filteredKeys.inText.size > 0 && (
+          <div
+            className="searchResults-suggestion"
+            onClick={() => {
+              const newQuery = JSON.parse(JSON.stringify(query)) as SearchQuery;
+              newQuery.key = '*';
+              updateQuery(newQuery);
+            }}
+          >
+            {`Results in Text ${filteredKeys.inText.size}`}
+          </div>
+          )}
+          {query.unverified !== true && (
+          <div
+            className="searchResults-suggestion"
+            onClick={() => {
+              const newQuery = JSON.parse(JSON.stringify(query)) as SearchQuery;
+              newQuery.unverified = true;
+              updateQuery(newQuery);
+            }}
+          >
+            {`unverified:true ${filteredKeys.withMissingReview.size}`}
+          </div>
+          )}
+          {query.missingTranslation === undefined && (
+          <div
+            className="searchResults-suggestion"
+            onClick={() => {
+              const newQuery = JSON.parse(JSON.stringify(query)) as SearchQuery;
+              newQuery.missingTranslation = true;
+              updateQuery(newQuery);
+            }}
+          >
+            {`missing_translation:true ${filteredKeys.withMissingTranslations.size}`}
+          </div>
+          )}
         </div>
       )}
       <div className="grid">
@@ -182,7 +217,7 @@ export default function TranslationKeyListView({
             select={select}
           />
         </div>
-        {filteredKeys.map((matching: any) => {
+        {[...filteredKeys.matchingKeys].map((keyName) => {
           if (rendered > renderEntries) {
             return;
           }
@@ -191,11 +226,11 @@ export default function TranslationKeyListView({
           // eslint-disable-next-line consistent-return
           return (
             <TranslationKeyListItem
-              key={matching.key}
+              key={keyName}
               translationKeyStore={translationKeyStore}
               localizedLabelManager={localizedLabelManager}
-              searchMatch={matching.match}
-              translationKey={keys[matching.key]}
+              searchMatch={filteredKeys.matches[keyName]}
+              translationKey={keys[keyName]}
               figmaRemote={figmaRemote}
               select={select}
             />

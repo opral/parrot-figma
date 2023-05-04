@@ -143,6 +143,7 @@ export default function LocalizedLabelListItem({
             keys={translationKeyStore.translationKeys}
             figmaRemote={figmaRemote}
             refreshKeys={() => {}}
+            searchQuery={translationKeyStore.toQueryObject('exact_text:true key:*' + searchKey.search)}
             select={(key: string) => {
               linkKey(key);
               setSearchKey(undefined);
@@ -190,7 +191,7 @@ export default function LocalizedLabelListItem({
                   placeholder="Keyname..."
                   onSearchClick={(key: any) => {
                     setSearchKey({
-                      seach: key,
+                      search: localizedLabel.text,
                     });
                   }}
                 />

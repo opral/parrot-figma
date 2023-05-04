@@ -201,7 +201,7 @@ export default function TranslationKeyListItem({
           <span className="layerIcon iconWrapper">
             <span className="svg-container key-svg" />
           </span>
-          <span className="rowText"><MatchView text={translationKey.keyName} match={searchMatch?.key} /></span>
+          <span className="rowText"><MatchView text={translationKey.keyName} match={searchMatch?.keyMatch} /></span>
         </div>
         <div className="grid-item-actions">
           { select === undefined && (
@@ -282,7 +282,7 @@ export default function TranslationKeyListItem({
                   <div className="grid-item-translation translation-container translation">
                     <TranslationEditor
                       editable={select === undefined}
-                      match={searchMatch?.[language]?.[plural as Plural]}
+                      match={searchMatch?.textMatches[language]?.[plural as Plural]}
                       onSave={async (text: any) => {
                         let skip = translationKey.translations[language as Language]?.[plural as Plural]?.skip ?? false;
 

@@ -530,6 +530,9 @@ export default class LocalizedLabelManagerUI extends EventTarget {
       keyVersion: localizedKey.latestVersion,
     });
 
+    await this.updateUnmodifiedLabelsWithKey(localizedLabel.key!);
+    
+
     await this.localizedLabelMangerSandbox.commitUndo();
   }
 

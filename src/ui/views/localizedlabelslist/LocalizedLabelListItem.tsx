@@ -19,7 +19,7 @@ type LocalizedLabelListItemProps = {
   localizedLabel: LocalizedLabel,
   figmaRemote: FigmaUtil,
   localisedLabelManager: LocalizedLabelManagerUI,
-
+  scrollIntoView: boolean,
   translationKeyStore: MemoryTranslationKeyStore,
   selected: boolean
 };
@@ -28,7 +28,7 @@ export default function LocalizedLabelListItem({
   localizedLabel,
   figmaRemote,
   localisedLabelManager,
-
+  scrollIntoView,
   translationKeyStore,
   selected,
 }: LocalizedLabelListItemProps) {
@@ -39,6 +39,7 @@ export default function LocalizedLabelListItem({
   const labelState = localizedLabel.state!;
 
   const [searchKey, setSearchKey] = useState(undefined as any);
+
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO remove when we implemented the design != keystore resolution
   const translations = translatedKey?.translations[localizedLabel.language];
@@ -71,10 +72,10 @@ export default function LocalizedLabelListItem({
       language: language as Language, plural: plural as Plural, text: figmaText, skip: false,
     }]);
     // eslint-disable-next-line no-console -- TODO remove when implemented
-    console.warn('onSaveFigmaVersionClick back prob not implemented');
   }
 
   async function onNodeSelect(nodeId: string) {
+    console.log('jo')
     await figmaRemote.scrollIntoViewIfNeeded(nodeId);
     await figmaRemote.selectNodes([nodeId]);
   }
@@ -118,11 +119,11 @@ export default function LocalizedLabelListItem({
   }
 
   React.useEffect(() => {
-    if (selected && rowRef.current) {
+    if (scrollIntoView && rowRef.current) {
       // tslint:disable-next-line
       (rowRef.current as any).scrollIntoViewIfNeeded(true);
     }
-  }, [selected]);
+  }, [scrollIntoView]);
 
   return (
     <>
@@ -153,7 +154,7 @@ export default function LocalizedLabelListItem({
         </div>
       </OutsideClickHandler>
 
-      <div ref={rowRef} className={`row${selected ? ' selected ' : ''}${localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? ' key-set ' : ' key-unset '}`} onClick={() => { onNodeSelect(localizedLabel.nodeId); }}>
+      <div className={`row${selected ? ' selected ' : ''}${localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? ' key-set ' : ' key-unset '}`} onClick={() => { onNodeSelect(localizedLabel.nodeId); }}>
         <div className="column-1">
           <div className="localized-label">
             <div className="spacer" />
@@ -174,9 +175,17 @@ export default function LocalizedLabelListItem({
         </div>
         <div className="column localized-text column-2">
 
-          <div className="translation-container">
+          <div className="translation-container" ref={rowRef}>
             <div className="localized-label-details">
               <div className="key-panel">
+              <span
+                  className="layerIcon iconWrapper button"
+                  data-tooltip-trigger="span"
+                  data-tooltip-content={localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? 'Linked Label (click to remove link)' : 'Unlinked Label (click to link)'}
+                  onClick={linkToggle}
+                >
+                  <span className={`svg-container ${localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? 'linked-svg' : 'unlinked-svg'}`} />
+                </span>
                 <TextField
                   icon="key-svg"
                   singleClick
@@ -195,14 +204,7 @@ export default function LocalizedLabelListItem({
                     });
                   }}
                 />
-                <span
-                  className="layerIcon iconWrapper button"
-                  data-tooltip-trigger="span"
-                  data-tooltip-content={localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? 'Linked Label (click to remove link)' : 'Unlinked Label (click to link)'}
-                  onClick={linkToggle}
-                >
-                  <span className={`svg-container ${localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? 'linked-svg' : 'unlinked-svg'}`} />
-                </span>
+                
                 { false && `localizedLabel.keyType: ${localizedLabel.keyType} lang: ${localizedLabel.rootFrameLanguage}/${localizedLabel.language} version: ${localizedLabel.keyVersion} behind: ${labelState.behind} modified: ${labelState.modified}` }
                 { (localizedLabel.keyType === KeyState.Linked && (labelState.behind > 0 || localizedLabel.language !== localizedLabel.rootFrameLanguage)) && ( // allow the user to catch up with the keys version
                 <span

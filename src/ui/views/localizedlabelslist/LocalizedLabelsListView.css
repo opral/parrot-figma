@@ -183,13 +183,19 @@
     height: 10px;
 }
 
-.key-unset .text-field-text input {
+.key-unset .key-panel .text-field-text input {
     color: var(--color-text-disabled, #b3b3b3);
 }
 
-.key-unset .text-field-text p {
+.key-unset .key-panel .text-field-text p {
     color: var(--color-text-disabled, #b3b3b3);
 }
+
+.key-unset .key-panel .text-field .svg-container.key-svg {
+    background-color: var(--color-text-disabled, #b3b3b3);
+}
+
+
 
 .localized-label .text-field-text p {
     text-overflow: ellipsis;

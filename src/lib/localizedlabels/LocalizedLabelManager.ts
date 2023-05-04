@@ -4,7 +4,6 @@ import FigmaUtil from '../../shared/FigmaUtil';
 import { Language } from '../base/Language';
 import { KeyState, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../base/Plural';
-import { BaseTranslationKeyStore } from '../keystore/BaseTranslationKeyStore';
 import ChangeEvent from './ChangeEvent';
 import { FigmaFileTranslationKeyStore } from '../keystore/FigmaFileTranslationKeyStore';
 
@@ -157,9 +156,9 @@ export default class LocalizedLabelManager {
 
     const pages = figma.root.children;
     for (const page of pages) {
-      //console.log('fillUpCache - page...' + page.name);
+      // console.log('fillUpCache - page...' + page.name);
       for (const pageChild of page.children) {
-        //console.log('fillUpCache - pageChilde...' + pageChild.name);
+        // console.log('fillUpCache - pageChilde...' + pageChild.name);
         if (pageChild.type === 'TEXT') {
           textNodesToPrcoess.push(pageChild);
         } else if (pageChild.type === 'COMPONENT'
@@ -170,12 +169,11 @@ export default class LocalizedLabelManager {
         } else if (pageChild.type === 'SECTION'
           || pageChild.type === 'GROUP'
           || pageChild.type === 'FRAME') {
-
           if (pageChild.width < this.containerSizeThreashold) {
             containers.push(pageChild);
           } else {
             for (const sectionChild of pageChild.children) {
-             // console.log('fillUpCache - sectionChild...' + sectionChild.name);
+              // console.log('fillUpCache - sectionChild...' + sectionChild.name);
               if (sectionChild.type === 'TEXT') {
                 textNodesToPrcoess.push(sectionChild);
               } else if (sectionChild.type === 'COMPONENT'
@@ -203,17 +201,18 @@ export default class LocalizedLabelManager {
       // find all textNodes in the container
       const skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
       const foundtextNodes = container.findAllWithCriteria({ types: ['TEXT'] });
-      if (foundtextNodes.filter(node => node.id.indexOf(';') !== -1).length > 0) {
+      if (foundtextNodes.filter((node) => node.id.indexOf(';') !== -1).length > 0) {
       // debugger;
       }
       textNodesToPrcoess = textNodesToPrcoess.concat(foundtextNodes);
       figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
       const blockedExecutionTime = Date.now() - lastInterception;
       if (blockedExecutionTime > 30) {
-        //console.log(`fillUpCache - ${container.name} textNodes ${foundtextNodes.length} collected ${Date.now() - start}`);
-        //console.log(`fillUpCache - break because of blockage of ${blockedExecutionTime}`);
+        // console.log(`fillUpCache - ${container.name} textNodes ${foundtextNodes.length} collected ${Date.now() - start}`);
+        // console.log(`fillUpCache - break because of blockage of ${blockedExecutionTime}`);
         lastInterception = Date.now();
-        await new Promise(resolve => setTimeout(resolve, 2));
+        // eslint-disable-next-line no-promise-executor-return
+        await new Promise((resolve) => setTimeout(resolve, 2));
       }
     }
 
@@ -227,13 +226,13 @@ export default class LocalizedLabelManager {
       }
       const blockedExecutionTime = Date.now() - lastInterception;
       if (blockedExecutionTime > 30) {
-        //console.log(`fillUpCache - ${container.name} textNodes ${foundtextNodes.length} collected ${Date.now() - start}`);
-        //console.log(`fillUpCache - break because of blockage of ${blockedExecutionTime}`);
+        // console.log(`fillUpCache - ${container.name} textNodes ${foundtextNodes.length} collected ${Date.now() - start}`);
+        // console.log(`fillUpCache - break because of blockage of ${blockedExecutionTime}`);
         lastInterception = Date.now();
-      await new Promise(resolve => setTimeout(resolve, 2  ));
+        // eslint-disable-next-line no-promise-executor-return
+        await new Promise((resolve) => setTimeout(resolve, 2));
       }
     }
-
 
     console.log(`fillUpCache - creating localizedLabels took ${Date.now() - outerStart}`);
 
@@ -244,7 +243,7 @@ export default class LocalizedLabelManager {
       createdLabels: [],
       changedLabels: localizedLabels,
     } as ChangeEvent;
-    
+
     // console.log(JSON.stringify(event));
     // console.log(message);
     figma.ui.postMessage(message);

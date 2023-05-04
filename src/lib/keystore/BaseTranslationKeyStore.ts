@@ -11,30 +11,3 @@ export interface TranslationKeyStore {
   getHistory(translationKeyName: string) : Promise<HistoryEntry[]>
   load(): Promise<TranslationKeys>
 }
-
-export class BaseTranslationKeyStore {
-  static getHistoryEntry(key: TranslationKey, language: Language, plural: Plural, version: number) : HistoryEntry | undefined {
-    // iterate backward until we have a match
-    let currentVersion = version;
-    while (currentVersion >= 0) {
-      if (key.history[currentVersion]?.translations?.[language]?.[plural]) {
-        return key.history[currentVersion];
-      }
-      currentVersion -= 1;
-    }
-    return undefined;
-  }
-
-  static getChangesSince(key: TranslationKey, language: Language, plural: Plural, version: number) {
-    let changeCounter = 0;
-
-    let currentVersion = key.latestVersion;
-    while (currentVersion >= 0 && currentVersion > version) {
-      if (key.history[currentVersion]?.translations?.[language]?.[plural]) {
-        changeCounter += 1;
-      }
-      currentVersion -= 1;
-    }
-    return changeCounter;
-  }
-}

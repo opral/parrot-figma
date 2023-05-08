@@ -179,7 +179,7 @@ export default function TranslationKeyListView({
             {`Results in Text ${filteredKeys.inText.size}`}
           </div>
           )}
-          {query.unverified !== true && (
+          { false && query.unverified !== true && ( // TODO #9 activate again as soon as verification is in place
           <div
             className="searchResults-suggestion"
             onClick={() => {

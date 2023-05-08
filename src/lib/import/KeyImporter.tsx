@@ -68,14 +68,13 @@ export default class KeyImporter {
 
   static async import(keyStore: MemoryTranslationKeyStore, keysToImport: ImportTranslationKey[], language: Language) {
     for (const keyToImport of keysToImport) {
-      
       const currentKey = keyStore.getKey(keyToImport.keyName);
       if (!currentKey) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        console.log('creating key' + keyToImport.keyName);
+        console.log(`creating key${keyToImport.keyName}`);
         const createdKey = await keyStore.createKey(keyToImport.keyName, toChangeArray(keyToImport, language), false);
       } else {
-        console.log('updateing key' + keyToImport.keyName);
+        console.log(`updateing key${keyToImport.keyName}`);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const updatedKey = await keyStore.updateKey(keyToImport.keyName, toChangeArray(keyToImport, language));
       }

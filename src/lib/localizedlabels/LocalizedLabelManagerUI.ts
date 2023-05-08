@@ -520,8 +520,8 @@ export default class LocalizedLabelManagerUI extends EventTarget {
   }
 
   async createNewVersionFromLabelState(localizedLabel: LocalizedLabel) {
-    // TODO #4 ensure that we are NOT in replace var mode when running this?
-    // TODO update key (lang, plural, text, skiped) with text frin design
+    // TODO #4 ensure that we are NOT in replace var mode when running this? -> if the string in figma contains replaced placeholder the information would be lost
+    // TODO update key (lang, plural, text, skiped) with text fron design
     const localizedKey = await this.keyStore.updateKey(localizedLabel.key!, [{
       language: localizedLabel.language as Language, plural: localizedLabel.pluralId as Plural, text: localizedLabel.text, skip: false,
     }]);
@@ -531,7 +531,6 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     });
 
     await this.updateUnmodifiedLabelsWithKey(localizedLabel.key!);
-    
 
     await this.localizedLabelMangerSandbox.commitUndo();
   }

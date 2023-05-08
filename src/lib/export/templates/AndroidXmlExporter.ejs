@@ -13,7 +13,7 @@ plurals = [];
 function mask(value, quoteWrapped) {
 	let stringValue = value;
 	
-	// TODO replace all placeholders - stringValue = stringValue.replace(/%@/g, "%s"); // TODO replace all placeholders
+	// TODO replace all placeholders - stringValue = stringValue.replace(/%@/g, "%s"); ...
 	stringValue = stringValue.replace(/&/g, "&amp;");
 	if (quoteWrapped) {
 		stringValue = stringValue.replace(/"/g, '\\"');

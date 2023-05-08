@@ -267,7 +267,7 @@ export default class LocalizedLabelManager {
    * @returns the root frame (The last parent of type frame)
    */
   // eslint-disable-next-line class-methods-use-this
-  getRootFrame(node: any): FrameNode | undefined { // TODO move to label manager
+  getRootFrame(node: any): FrameNode | undefined {
     if (!node.parent) {
       throw new Error('given node has no parent');
     }
@@ -567,6 +567,7 @@ export default class LocalizedLabelManager {
     }
 
     let derivedName = this.extractKeyName(node.name);
+    derivable = false;
 
     if (derivable && derivedName === '') {
       derivable = false;
@@ -616,6 +617,10 @@ export default class LocalizedLabelManager {
     derivedName = this.extractKeyName(rootFrame.name) + this.separator + derivedName;
 
     const text = this.toTokenizedText(node);
+
+    if (text.length === 1 || !/[a-zA-Z]/.test(text)) {
+      return;
+    }
 
     // if no plural id is specified than we fall back to "other" - the default plural
     const pluralId = node.getPluginData(this.keyPluralDataKey) === '' ? Plural.OTHER : node.getPluginData(this.keyPluralDataKey);

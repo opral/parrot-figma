@@ -97,15 +97,6 @@ export default function Export({
   };
 
   const onVersionSelect = (version: string) => {
-    if (version === 'head') {
-      // do nothing
-
-    } else if (version === 'tag-current') {
-      // TODO ask for title and description
-    } else {
-      // set the export version
-    }
-
     setSelectedVersion(version);
   };
   // const [baseLanguage, setBaseLanguages] = useState(translationKeyStore.getBaseLanugages());

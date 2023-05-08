@@ -363,6 +363,7 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
           other: {
             version: -1,
             skip: false,
+            verified: false, // TODO #9 - check if false is correct
           },
         };
       }
@@ -372,6 +373,7 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
         keyToUpdate.translations[translation.language]![translation.plural] = {
           version: -1,
           skip: false,
+          verified: false, // TODO #9 - check if false is correct
         };
       }
 

@@ -16,7 +16,7 @@ export default class AndroidXmlImporter {
     const plurals = {} as {
       [plural in Plural]? : {
         text?: string,
-        // TODO verified
+        // TODO #9 verified
         skip?: boolean
       }
     };

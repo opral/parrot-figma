@@ -58,12 +58,10 @@ export default function LocalizedLabelListItem({
   }
 
   async function updateToLatestKeyVersion() {
-    // TODO set labels text to the latest key version
     await localisedLabelManager.updateToLatestKeyVersion([localizedLabel]);
   }
 
   async function revertDesignChanges() {
-    // TODO set labels text to the latest key version
     await localisedLabelManager.revertDesignChanges(localizedLabel);
   }
 
@@ -127,7 +125,6 @@ export default function LocalizedLabelListItem({
 
   return (
     <>
-
       <OutsideClickHandler
         onOutsideClick={() => { setSearchKey(undefined); }}
         disabled={searchKey === undefined}
@@ -144,7 +141,7 @@ export default function LocalizedLabelListItem({
             keys={translationKeyStore.translationKeys}
             figmaRemote={figmaRemote}
             refreshKeys={() => {}}
-            searchQuery={translationKeyStore.toQueryObject('exact_text:true key:*' + searchKey.search)}
+            searchQuery={translationKeyStore.toQueryObject('exact_text:true key:* ' + searchKey.search)}
             select={(key: string) => {
               linkKey(key);
               setSearchKey(undefined);

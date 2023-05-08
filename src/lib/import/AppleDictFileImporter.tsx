@@ -7,7 +7,7 @@ import { ImportTranslationKey } from './ImportTranslationKey';
 
 export default class AppleDictFileImporter {
   static reformatPlaceholders(text: string) {
-    return text; // TODO map all ios placeholders to plugin format
+    return text; // TODO #8 map all ios placeholders to plugin format
   }
 
   static toImportObject(filename: string, stringsdictFileContent: string): ImportTranslationKey[] | undefined {

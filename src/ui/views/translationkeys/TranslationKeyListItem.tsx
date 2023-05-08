@@ -37,7 +37,7 @@ interface VersionEntry {
   userName: string
   userIconUrl: string
   skip: boolean
-  reviewed: boolean
+  verified: boolean
 }
 
 export default function TranslationKeyListItem({
@@ -157,7 +157,7 @@ export default function TranslationKeyListItem({
           date: keyHistoryEntry.date,
           userIconUrl: keyHistoryEntry.user,
           skip: keyHistoryEntry.translations?.[language]?.[plural]?.skip ?? false,
-          reviewed: false,
+          verified: keyHistoryEntry.translations?.[language]?.[plural]?.verified ?? false, // TODO #9 check correct state for history view
         };
 
         // relevant historyEntry

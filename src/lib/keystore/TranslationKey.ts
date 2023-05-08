@@ -15,7 +15,7 @@ export type TranslationEntry = {
     [language in Language]? : {
       [plural in Plural]? : {
         text?: string,
-        // TODO verified
+        verified: boolean,
         skip?: boolean
       }
     }
@@ -31,7 +31,7 @@ export type HistoryEntry = {
     [language in Language]? : {
       [plural in Plural]? : {
         text?: string,
-        // TODO verified
+        verified?: boolean,
         skip?: boolean
       }
     }
@@ -60,7 +60,7 @@ export interface SerializableTranslationKey {
       [plural in Plural]? : {
         version: number,
         text?: string,
-        // TODO verified
+        verified: boolean,
         skip: boolean
       }
     }

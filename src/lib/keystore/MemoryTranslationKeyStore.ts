@@ -157,6 +157,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
                   if (!transalationEntry.translations![language]![plural]) {
                     transalationEntry.translations![language]![plural] = {
                       text: currentKey.history[currentIndex].translations![language]![plural]!.text!,
+                      verified: false, // TODO #9 also collect this info! check when text appeared in history last time (change) and that verfied followed afer - but also check the base language chage
                     };
                   }
                 }
@@ -170,7 +171,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
           }
         }
       } else if (currentKey.translations[language]) {
-        translationKeys[keyName] = currentKey;
+         translationKeys[keyName] = currentKey;
       }
     }
 
@@ -389,8 +390,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
             results.withMissingTranslations.add(key.keyName);
           }
 
-          const reviewed = false; // languages[plural]!.reviewed;
-          if (!reviewed) {
+          if (languages[plural] && !languages[plural]!.verified) {
             results.withMissingReview.add(key.keyName);
           }
         }

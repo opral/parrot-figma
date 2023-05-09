@@ -161,10 +161,12 @@
 }
 
 .grid-item-language {
+  width: 30px;
   grid-column-start: language;
 }
 
 .grid-item-plural {
+  width: 72px;
   grid-column-start: plural;
 }
 

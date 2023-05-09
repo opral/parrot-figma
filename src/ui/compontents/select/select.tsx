@@ -5,10 +5,15 @@ import React, {
 } from 'react';
 import OutsideClickHandler from 'react-outside-click-handler';
 import './select.css';
+import { Plural } from '../../../lib/base/Plural';
+import { Language } from '../../../lib/base/Language';
 
 export interface SelectOption {
   divider?: string | boolean;
   value: string | number | boolean;
+  plural?: Plural,
+  language?: Language,
+  type?: string;
   label: string;
   icon?: string;
   title?: string;
@@ -16,17 +21,17 @@ export interface SelectOption {
 
 export interface SelectProps {
   className?: string;
-  options: SelectOption[];
+  getOptions: () => SelectOption[];
   placeholder: string;
   isDisabled?: boolean;
-  defaultValue?: string | number | boolean;
+  defaultValue?: SelectOption;
   onExpand?: (state: boolean) => void;
   onChange?: (option: SelectOption) => void;
 }
 
 export default function Select({
   className = '',
-  options,
+  getOptions,
   placeholder,
   isDisabled,
   defaultValue,
@@ -43,9 +48,8 @@ export default function Select({
   const [canScrollUp, setCanScrollUp] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [isExpanded, onExpandedStateChange] = useState(false);
-  const [selectedOption, onSelectOption] = useState(
-    options.find(({ value }) => defaultValue === value),
-  );
+  const [selectedOption, onSelectOption] = useState(defaultValue);
+  const [options, setOptions] = useState<SelectOption[]>([] as SelectOption[]);
 
   const [wrapperMaxHeight, setWrapperMaxHeigth] = useState(30);
   const [containerBox, setContainerBox] = useState({
@@ -54,8 +58,6 @@ export default function Select({
   });
   const [wrapperScrollTop, setWrapperScrollTop] = useState({ scrollTop: 30 });
   const [viewPortHeight, setViewPortHeight] = useState(0);
-
-  const menuPositionIndex = options.findIndex((selectOption) => selectedOption !== undefined && selectOption.value === selectedOption?.value);
 
   let initialPositioning = false;
 
@@ -95,6 +97,12 @@ export default function Select({
       onExpand(isExpanded);
     }
 
+    if (isExpanded) {
+      setOptions(getOptions);
+    }
+  }, [isExpanded]);
+
+  useEffect(() => {
     if (isExpanded && menuWrapperRef.current !== undefined) {
       // on expand calculate starting position
       const rect = buttonRef.current!.getBoundingClientRect();
@@ -104,6 +112,8 @@ export default function Select({
       const menuEntryHeight = 24;
       const maxSpaceToTop = rect.top;
       const maxSpaceToBottom = viewPortHeight - rect.top - menuEntryHeight;
+
+      const menuPositionIndex = options.findIndex((selectOption) => selectedOption !== undefined && selectOption.value === selectedOption?.value);
 
       const selectedDiv = menuWrapperRef.current!.childNodes[0].childNodes[menuPositionIndex] as HTMLDivElement;
 
@@ -124,7 +134,7 @@ export default function Select({
       setWrapperMaxHeigth(maxSpaceToTop + menuEntryHeight + maxSpaceToBottom);
       setWrapperScrollTop({ scrollTop: scroll });
     }
-  }, [isExpanded, viewPortHeight, menuWrapperRef]);
+  }, [options, isExpanded, viewPortHeight, menuWrapperRef]);
 
   useEffect(() => {
     if (menuWrapperRef.current !== undefined) {
@@ -175,10 +185,7 @@ export default function Select({
   }, [selectedOption]);
 
   useEffect(() => {
-    const newSelectedOption = options.find(
-      ({ value }) => defaultValue === value,
-    );
-    onSelectOption(newSelectedOption);
+    onSelectOption(defaultValue);
   }, [defaultValue]);
 
   let lastScrollPos = 0;
@@ -332,6 +339,17 @@ export default function Select({
   const expandButtonClass = isExpanded ? 'select-menu__button--active' : '';
   const expanListClass = isExpanded ? 'select-menu__menu--active' : '';
   const disabledColorClass = isDisabled ? 'icon--black-3' : '';
+  
+  const label = (selectedOption && selectedOption.label) || placeholder;
+  const labelParts = label.split('_');
+
+  let labelPart1 = labelParts[0];
+  let labelPart2 = '';
+
+  if (labelParts.length > 1) {
+    labelPart2 = `_${labelParts.pop()}`;
+    labelPart1 = labelParts.join('_');
+  }
 
   return (
     <OutsideClickHandler
@@ -347,8 +365,11 @@ export default function Select({
           title={selectedOption?.title}
           type="button"
         >
-          <span className="select-menu__label">
-            {(selectedOption && selectedOption.label) || placeholder}
+          <span className="select-menu__label select-menu__label-part1">
+            {labelPart1}
+          </span>
+          <span className="select-menu__label select-menu__label-part2">
+            {labelPart2}
           </span>
           <span className="select-menu__caret" />
         </button>
@@ -388,7 +409,7 @@ export default function Select({
             >
               {options
                 && options.map(({
-                  value, label, divider, title, icon,
+                  value, label: optionLabel, divider, title, icon,
                 }, i) => (divider ? (
                   // eslint-disable-next-line react/no-array-index-key  -- options are static and dont change - using the index is fine here
                   <React.Fragment key={`select-option-divider--${i}`}>
@@ -423,7 +444,7 @@ export default function Select({
                       <div className={`svg-container ${icon}`} />
                     </div>
                     )}
-                    <span className="select-menu__item-label">{label}</span>
+                    <span className="select-menu__item-label">{optionLabel}</span>
                   </li>
                 )))}
             </ul>

@@ -3,7 +3,7 @@ import { Plural } from '../base/Plural';
 
 export enum KeyState {
   Unset = 'unset', // label has not yet modified by the plugin
-  Unlinked = 'unlinked', // state when the label has not been translated by the plugin yet
+  NoKey = 'nokey', // state when the label has not been translated by the plugin yet
   Linked = 'linked', // key was set to a fixed key
 }
 

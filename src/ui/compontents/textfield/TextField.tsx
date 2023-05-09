@@ -14,6 +14,7 @@ type TextFieldProps = {
   placeholder?: string
   icon?: string
   onSearchClick?: Function
+  onNoKeyClick?: Function
   text?: string
   onSave: Function
 };
@@ -24,6 +25,7 @@ export default function TextField({
   placeholder,
   icon,
   onSearchClick,
+  onNoKeyClick,
   text,
   onSave,
 }: TextFieldProps) {
@@ -124,6 +126,9 @@ export default function TextField({
           )}
           { onSearchClick !== undefined && (
           <span className="svg-container right search-svg" onClick={(() => { if (onSearchClick !== undefined) onSearchClick(text); })} />
+          )}
+          { onNoKeyClick !== undefined && (
+          <span className="svg-container right unlinked-svg" onClick={(() => { if (onNoKeyClick !== undefined) onNoKeyClick(text); })} />
           )}
         </div>
       </div>

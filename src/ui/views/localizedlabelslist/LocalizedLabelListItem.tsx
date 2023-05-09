@@ -40,7 +40,6 @@ export default function LocalizedLabelListItem({
 
   const [searchKey, setSearchKey] = useState(undefined as any);
 
-
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO remove when we implemented the design != keystore resolution
   const translations = translatedKey?.translations[localizedLabel.language];
 
@@ -65,25 +64,9 @@ export default function LocalizedLabelListItem({
     await localisedLabelManager.revertDesignChanges(localizedLabel);
   }
 
-  async function onSaveFigmaVersionClick(key: string, language: string, plural: string, figmaText: string) {
-    await translationKeyStore.updateKey(key, [{
-      language: language as Language, plural: plural as Plural, text: figmaText, skip: false,
-    }]);
-    // eslint-disable-next-line no-console -- TODO remove when implemented
-  }
-
   async function onNodeSelect(nodeId: string) {
-    console.log('jo')
     await figmaRemote.scrollIntoViewIfNeeded(nodeId);
     await figmaRemote.selectNodes([nodeId]);
-  }
-
-  async function linkKey(keyToLinkTo: string) {
-    await localisedLabelManager.linkKey(localizedLabel, keyToLinkTo);
-  }
-
-  async function unlinkKey(keyName?: string) {
-    await localisedLabelManager.unlinkKey(localizedLabel, keyName);
   }
 
   if (translations) {
@@ -99,29 +82,24 @@ export default function LocalizedLabelListItem({
     });
   }
 
-  async function linkToggle() {
-    const keyToSet = localizedLabel.key !== undefined ? localizedLabel.key : localizedLabel.derivedKey;
-
-    if (keyToSet !== undefined) {
-      if (localizedLabel.keyType === KeyState.Unlinked) {
-        await linkKey(keyToSet);
-      } else {
-        await unlinkKey(localizedLabel.key);
-      }
-    } else {
-      // eslint-disable-next-line no-console -- TODO remove when implemented
-      // TODO focus key input since we have no key we can use for link
-      // eslint-disable-next-line no-console -- TODO remove when implemented
-      console.warn(' TOOD focus key input! ');
-    }
-  }
-
   React.useEffect(() => {
     if (scrollIntoView && rowRef.current) {
       // tslint:disable-next-line
       (rowRef.current as any).scrollIntoViewIfNeeded(true);
     }
   }, [scrollIntoView]);
+
+  let keyValue;
+
+  if (localizedLabel.keyType === KeyState.Linked && localizedLabel.key) {
+    keyValue = { icon: 'key-svg', label: localizedLabel.key, value: localizedLabel.key };
+  } else if (localizedLabel.keyType === KeyState.NoKey) {
+    keyValue = {
+      label: 'no Translation',
+      value: 'no-translation',
+      type: 'action',
+    };
+  }
 
   return (
     <>
@@ -141,9 +119,9 @@ export default function LocalizedLabelListItem({
             keys={translationKeyStore.translationKeys}
             figmaRemote={figmaRemote}
             refreshKeys={() => {}}
-            searchQuery={translationKeyStore.toQueryObject('exact_text:true key:* ' + searchKey.search)}
-            select={(key: string) => {
-              linkKey(key);
+            searchQuery={translationKeyStore.toQueryObject(`exact_text:true key:* ${searchKey.search}`)}
+            select={(key: string, language: Language, plural: Plural) => {
+              localisedLabelManager.linkKey(localizedLabel, key, language, plural);
               setSearchKey(undefined);
             }}
           />
@@ -171,38 +149,147 @@ export default function LocalizedLabelListItem({
 
         </div>
         <div className="column localized-text column-2">
-
           <div className="translation-container" ref={rowRef}>
             <div className="localized-label-details">
               <div className="key-panel">
-              <span
-                  className="layerIcon iconWrapper button"
-                  data-tooltip-trigger="span"
-                  data-tooltip-content={localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? 'Linked Label (click to remove link)' : 'Unlinked Label (click to link)'}
-                  onClick={linkToggle}
-                >
-                  <span className={`svg-container ${localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? 'linked-svg' : 'unlinked-svg'}`} />
-                </span>
-                <TextField
-                  icon="key-svg"
-                  singleClick
-                  onSave={async (key: string) => {
-                    if (key === '') {
-                      unlinkKey(undefined);
-                    } else {
-                      linkKey(key);
+                <Select
+                  className="key-select"
+                  placeholder="Select Key"
+                  onChange={(selectedOption) => {
+                    if (selectedOption.type === 'action') {
+                      if (selectedOption.value === 'no-translation') {
+                        localisedLabelManager.setNoKey(localizedLabel);
+                      } else if (selectedOption.value === 'select-key') {
+                        setSearchKey({
+                          search: localizedLabel.text,
+                        });
+                      } else if (selectedOption.value === 'create-key') {
+                        console.log('need create key screen');
+                      }
+                    } else if (selectedOption.type === 'key') {
+                      localisedLabelManager.linkKey(localizedLabel, selectedOption.value as string, selectedOption.language!, selectedOption.plural!);
                     }
                   }}
-                  text={localizedLabel.key !== undefined ? localizedLabel.key : localizedLabel.derivedKey}
-                  placeholder="Keyname..."
-                  onSearchClick={(key: any) => {
-                    setSearchKey({
-                      search: localizedLabel.text,
+                  defaultValue={keyValue}
+                  getOptions={() => {
+                    const options = [{
+                      label: 'no Translation',
+                      value: 'no-translation',
+                      type: 'action',
+                    }, {
+                      divider: true,
+                    }] as SelectOption[];
+
+                    let noMatch = true;
+                    const defaulValueFound = false;
+
+                    const query = translationKeyStore.toQueryObject(`exact_text:true key:* ${localizedLabel.text}`);
+                    const { matches } = translationKeyStore.findKeys(query);
+                    for (const key of Object.keys(matches)) {
+                      // try to use the language of the root frame
+                      if (matches[key].textMatches[localizedLabel.rootFrameLanguage]) {
+                        const language = localizedLabel.rootFrameLanguage as Language;
+                        let plural = Object.keys(matches[key].textMatches[language]!)[0]! as Plural;
+                        if (matches[key].textMatches[language]![Plural.OTHER]) {
+                          plural = Plural.OTHER;
+                        }
+                        options.push({
+                          icon: 'key-svg',
+                          label: `${key} (${language} - ${plural})`,
+                          value: key,
+                          language,
+                          plural,
+                          type: 'key',
+                        });
+                        noMatch = false;
+                        // eslint-disable-next-line no-continue
+                        continue;
+                      }
+
+                      // use first match
+                      const langs = Object.keys(matches[key].textMatches);
+                      if (langs.length > 0) {
+                        const language = langs[0] as Language;
+                        const plural = Object.keys(matches[key].textMatches[language]!)[0]! as Plural;
+                        options.push({
+                          icon: 'key-svg',
+                          label: `${key} (${language} - ${plural})`,
+                          value: key,
+                          language,
+                          plural,
+                          type: 'key',
+                        });
+                        noMatch = false;
+                      }
+                    }
+
+                    if (!defaulValueFound && localizedLabel.key) {
+                      options.push({ label: localizedLabel.key, value: localizedLabel.key, type: 'key' });
+                    }
+
+                    if (!noMatch || !defaulValueFound) {
+                      options.push({
+                        divider: true,
+                        value: '',
+                        label: '',
+                      });
+                    }
+
+                    options.push({
+                      label: 'select key...',
+                      value: 'select-key',
+                      type: 'action',
                     });
+
+                    options.push({
+                      label: 'create key...',
+                      value: 'create-key',
+                      type: 'action',
+                    });
+
+                    return options;
                   }}
                 />
-                
-                { false && `localizedLabel.keyType: ${localizedLabel.keyType} lang: ${localizedLabel.rootFrameLanguage}/${localizedLabel.language} version: ${localizedLabel.keyVersion} behind: ${labelState.behind} modified: ${labelState.modified}` }
+
+                <div className="grid">
+
+                  <div className="languageWrapper" key={localizedLabel.language}>
+                    <div className="grid-item-language"><span className="rowText">{localizedLabel.keyType === KeyState.Linked && localizedLabel.language}</span></div>
+                    <div key={localizedLabel.pluralId} className={`keyPluralWrapper ${translatedKey?.plural ? 'onePlural' : ' multiplePlurals'}`}>
+                      <div className="grid-item-plural">
+                        {localizedLabel.keyType === KeyState.Linked && (
+                          <>
+                            {pluralsAvailable.length > 1 && (
+                            <Select
+                              onChange={(value) => {
+                                localisedLabelManager.updateLabelPlural(localizedLabel, value.value! as Plural);
+                              }}
+                              defaultValue={pluralsAvailable.find((opt) => opt.value === localizedLabel.pluralId)}
+                              getOptions={() => pluralsAvailable}
+                              placeholder=""
+                            />
+                            )}
+                            {pluralsAvailable.length <= 1 && (
+                              <span className="rowText">{localizedLabel.pluralId}</span>
+                            )}
+                          </>
+                        )}
+
+                      </div>
+                      <div className="grid-item-translation translation-container translation">
+                        <TranslationEditor
+                          editable
+                          match={undefined}
+                          onSave={async (text: any) => {
+                            // TODO
+                          }}
+                          text={localizedLabel.text}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 { (localizedLabel.keyType === KeyState.Linked && (labelState.behind > 0 || localizedLabel.language !== localizedLabel.rootFrameLanguage)) && ( // allow the user to catch up with the keys version
                 <span
                   className="layerIcon iconWrapper button"
@@ -234,17 +321,6 @@ export default function LocalizedLabelListItem({
                 >
                   <span className="svg-container use-label-svg" />
                 </span>
-                )}
-
-                {localizedLabel.keyType === KeyState.Linked && pluralsAvailable.length > 1 && (
-                <Select
-                  onChange={(value) => {
-                    onSaveFigmaVersionClick(localizedLabel.key!, localizedLabel.language, value.value as string, localizedLabel.text!);
-                  }}
-                  defaultValue={localizedLabel.pluralId}
-                  options={pluralsAvailable}
-                  placeholder=""
-                />
                 )}
 
               </div>

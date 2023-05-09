@@ -120,12 +120,16 @@ export default function LocalizedFrameGroup({
           <div className="element-name font-body-24-bold">{rootFrameName}</div>
         </div>
         <div className="column-2">
+          
           <div className="row-actions">
+          <div style={{width: '240px'}}>
+            
+            </div>
             <Select
               placeholder="Select item"
               onChange={(value) => { onLanguageSelectionClick(firstTranslationState, value.value as Language); }}
-              defaultValue={rootFrameLanguage?.value}
-              options={languageOptiones}
+              defaultValue={languageOptiones.find(opt => opt.value === rootFrameLanguage?.value)}
+              getOptions={() => languageOptiones}
             />
             <div
               className="row-action-icon"

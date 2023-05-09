@@ -237,7 +237,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
   private handleKeyUpdate(keyId: string) {
     let cacheUpdated = false;
     if (!this.keysToCachedLabels[keyId]) return;
-    console.log('handling keyupdate event for ' + keyId);
+    console.log(`handling keyupdate event for ${keyId}`);
     for (const labelIdToUpdate of this.keysToCachedLabels[keyId]) {
       const labelToUpdate = this.cachedLocalisedLabels[labelIdToUpdate];
       if (this.refreshCachedLabel(labelToUpdate)) {
@@ -448,7 +448,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     const labelState = cachedLabel.state!;
     let labelVersion = cachedLabel.keyVersion;
 
-    if (cachedLabel.keyType === KeyState.Unlinked // we don't update unlinked labels
+    if (cachedLabel.keyType === KeyState.NoKey // we don't update unlinked labels
       || translationKeyName === undefined // or labels where we cant derive or get the key
       || labelState.modified) { // or that are modified
       // root language has changed - trigger cache update
@@ -563,15 +563,15 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     await this.localizedLabelMangerSandbox.commitUndo();
   }
 
-  async linkKey(localizedLabel: LocalizedLabel, keyToLinkTo: string) {
+  async linkKey(localizedLabel: LocalizedLabel, keyToLinkTo: string, language: Language, plural: Plural) {
     let translationKey = this.keyStore.getKey(keyToLinkTo);
 
     if (translationKey !== undefined) {
       await this.updateLabelProperties(localizedLabel.nodeId, {
         key: keyToLinkTo,
         keyType: KeyState.Linked,
-        plural: Plural.OTHER,
-        language: localizedLabel.rootFrameLanguage,
+        plural,
+        language,
         keyVersion: translationKey.latestVersion,
         showSampleValues: localizedLabel.rootFrameUseSampleValues,
         text: localizedLabel.text,
@@ -580,16 +580,17 @@ export default class LocalizedLabelManagerUI extends EventTarget {
       // TODO check if design is sync with translation - if not offer update with prompt
     } else {
       translationKey = await this.keyStore.createKey(keyToLinkTo, [{
-        language: localizedLabel.rootFrameLanguage,
-        plural: localizedLabel.pluralId,
+        language,
+        plural,
         text: localizedLabel.text,
         skip: false,
-      }], localizedLabel.pluralId !== Plural.OTHER);
+      }], plural !== Plural.OTHER);
       await this.updateLabelProperties(localizedLabel.nodeId, {
         key: keyToLinkTo,
         keyType: KeyState.Linked,
         keyVersion: translationKey.latestVersion, // its save to use latest version here since we created a whole new key here.
-        language: localizedLabel.rootFrameLanguage,
+        language,
+        plural,
         showSampleValues: localizedLabel.rootFrameUseSampleValues,
         text: localizedLabel.text,
       });
@@ -598,10 +599,18 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     await this.localizedLabelMangerSandbox.commitUndo();
   }
 
-  async unlinkKey(localizedLabel: LocalizedLabel, keyName?: string) {
+  async setNoKey(localizedLabel: LocalizedLabel, keyName?: string) {
     await this.updateLabelProperties(localizedLabel.nodeId, {
       key: keyName,
-      keyType: KeyState.Unlinked,
+      keyType: KeyState.NoKey,
+    });
+
+    await this.localizedLabelMangerSandbox.commitUndo();
+  }
+
+  async resetLabel(localizedLabel: LocalizedLabel) {
+    await this.updateLabelProperties(localizedLabel.nodeId, {
+      keyType: KeyState.Unset,
     });
 
     await this.localizedLabelMangerSandbox.commitUndo();
@@ -614,6 +623,16 @@ export default class LocalizedLabelManagerUI extends EventTarget {
 
     await this.localizedLabelMangerSandbox.commitUndo();
   }
+
+
+  async updateLabelPlural(localizedLabel: LocalizedLabel, plural: Plural) {
+    await this.updateLabelProperties(localizedLabel.nodeId, {
+      plural,
+    });
+
+    await this.localizedLabelMangerSandbox.commitUndo();
+  }
+
 
   /**
    * Updates the label with the given nodeId with provided changes and updates the cache
@@ -634,15 +653,24 @@ export default class LocalizedLabelManagerUI extends EventTarget {
     const localizedLabelCached = this.cachedLocalisedLabels[nodeId]!;
     const changedPropertiesToForwared = changedProperties;
 
-    if (changedProperties.text !== undefined) {
+    if (changedProperties.text !== undefined
+      || changedProperties.language !== undefined
+      || changedProperties.plural !== undefined
+      || changedProperties.showSampleValues !== undefined
+      || changedProperties.keyVersion !== undefined) {
+
+      const language = changedProperties.language ?? localizedLabelCached.language;
+      const plural = changedProperties.plural ?? localizedLabelCached.pluralId;
+      // const version = changedProperties.keyVersion ?? localizedLabelCached.keyVersion; // TODO handle version
+      const key = changedProperties.key ?? localizedLabelCached.key!; // TODO check if label has a key
+      const text = changedProperties.text ?? this.keyStore.getKey(key)!.translations[language]?.[plural]?.text!;
+
       if (changedProperties.showSampleValues === true || (changedProperties.showSampleValues === undefined && localizedLabelCached.useSampleValues)) {
-        const language = changedProperties.language ?? localizedLabelCached.language;
-        const plural = changedProperties.plural ?? localizedLabelCached.pluralId;
         // eslint-disable-next-line no-param-reassign
-        changedPropertiesToForwared.text = this.keyStore.fillPlaceholdersWithSampleData(changedProperties.text!, language, plural);
+        changedPropertiesToForwared.text = this.keyStore.fillPlaceholdersWithSampleData(text, language, plural);
         changedPropertiesToForwared.filledTemplateHash = blake.blake2sHex(changedPropertiesToForwared.text);
       } else {
-        changedPropertiesToForwared.text = changedProperties.text;
+        changedPropertiesToForwared.text = text;
       }
     }
 

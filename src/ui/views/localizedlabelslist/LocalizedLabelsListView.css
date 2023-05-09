@@ -171,6 +171,11 @@
     align-content: center;
 }
 
+.key-panel .select-menu.key-select {
+    min-width: 240px;
+    max-width: 240px;
+}
+
 .key-panel .key-panel-icon {
     width: 32px;
     display: flex;

@@ -254,18 +254,18 @@ What we want from ui point of view:
  - [x] last character bug in key editor
  - [ ] plural select
  - [ ] UX key select
-    - [ ] search by key "key:keyname or other"
-    - [ ] show only base language and current frame language
+    - [x] search by key "key:keyname or other"
+    - [x] show only base language and current frame language
     - [ ] add single line action button "use key"
  
  - [ ] fix localized label row design
-    - [ ] do we need to edit or even show the complete text inline in the designs tab?
+    - [x] do we need to edit or even show the complete text inline in the designs tab?
     - [ ] plural select (should it be visible if there is only the other option?)
     - [ ] distinct visual style for base language like bold
 
  - [ ] allow to add a key manually using drawer? Currently one can only create a key form a lable 
 
- - [ ] add automatic design update for labels with state modified == false && behind == 0 - feedback?
+ - [x] add automatic design update for labels with state modified == false && behind == 0 - feedback?
  - [ ] translation editor ux - we should be able to hide skipped values from option in toolbar
  
  - [ ] delete selection (multi select)
@@ -283,7 +283,7 @@ What we want from ui point of view:
  - [ ] allow to rename keys
     - [ ] think about edgecases here 
  - [ ] qa handling of translation
- - [ ] filter - match case, need review etc based on figmas search design
+ - [x] filter - match case, need review etc based on figmas search design
 
  - [ ] use base language for translation if possible
  - [ ] handle selection for keys as well (provide an option to only show keys of current selection)

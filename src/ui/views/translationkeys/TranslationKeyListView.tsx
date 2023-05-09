@@ -24,7 +24,7 @@ type TranslationKeyListViewProps = {
 
   figmaRemote: FigmaUtil
   refreshKeys: Function
-  select?: Function
+  select?: (key: string, language: Language, plural: Plural) => void
 };
 
 export default function TranslationKeyListView({

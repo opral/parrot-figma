@@ -8,7 +8,6 @@ import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
 import OutsideClickHandler from 'react-outside-click-handler';
 
-import { platform, version } from 'os';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
 import Select, { SelectOption } from '../../compontents/select/select';
 import './Export.css';
@@ -118,8 +117,8 @@ export default function Export({
         <Select
           placeholder="Select Version"
           onChange={(value) => { onVersionSelect(value.value as string); }}
-          options={tagOptions}
-          defaultValue={selectedVersion}
+          getOptions={() => tagOptions}
+          defaultValue={tagOptions.find((option) => option.value === selectedVersion)!}
         />
       </div>
       <div>

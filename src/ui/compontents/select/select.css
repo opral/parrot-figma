@@ -156,13 +156,22 @@ select.select-menu {
   color: var(--black3);
 }
 
+
+.select-menu__label.select-menu__label-part1 {
+  margin-right: 0px;
+}
+
+.select-menu__label.select-menu__label-part2 {
+  overflow-x: visible;
+  
+}
+
 .select-menu__label {
   font-size: var(--font-size-xsmall);
   font-weight: var(--font-weight-normal);
   letter-spacing: var(--font-letter-spacing-neg-xsmall);
   line-height: var(--line-height);
   color: var(--black8);
-  margin-right: 6px;
   white-space: nowrap;
   overflow-x: hidden;
   text-overflow: ellipsis;
@@ -177,7 +186,6 @@ select.select-menu {
   height: 30px;
   display: block;
   margin-top: -1px;
-  margin-left: -12px;
   background-image: url("data:image/svg+xml;utf8,%3Csvg%20fill%3D%22none%22%20height%3D%2230%22%20viewBox%3D%220%200%2030%2030%22%20width%3D%2230%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20clip-rule%3D%22evenodd%22%20d%3D%22m15%2016.7071-3-3%20.7071-.7071%202.6465%202.6464%202.6464-2.6464.7071.7071-3%203-.3535.3536z%22%20fill%3D%22%23000%22%20fill-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E");
   background-repeat: no-repeat;
   background-position: center center;

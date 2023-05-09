@@ -181,21 +181,13 @@ export default function TranslationKeyListItem({
   return (
     <div
       ref={rowRef}
-      className={`keyWrapper${selected ? ' selected' : ''}`}
+      className={`keyWrapper ${selected ? 'selected' : ''}`}
       onClick={() => {
         if (select) {
           select(translationKey.keyName);
         }
       }}
     >
-      { select === undefined && false && (
-      <div className="grid-item-selector">
-        <label className="checkboxHitbox">
-          <input id="fix-position-when-scrolling" type="checkbox" className="checkboxInput" onChange={(e) => { setSelected(e.target.checked); }} />
-          <span className={`svg-container checkbox-svg checkbox--checkmark checkbox--checkmark mixed_checkbox--checkmark${selected ? ' checkbox--checked' : ''}`} />
-        </label>
-      </div>
-      )}
       <div className="grid-item-key">
         <div className="grid-item-key-header">
           <span className="layerIcon iconWrapper">
@@ -230,7 +222,7 @@ export default function TranslationKeyListItem({
         <div className="key-usage">
           { /* TODO add references to keys */ }
           { referencingLabels.length === 0 && <div>no usage</div>}
-          {referencingLabels.length > 0 && (
+          { referencingLabels.length > 0 && (
             <>
               <div onClick={showAll}>showAll</div>
               <div onClick={() => showNext(true)}>previous</div>

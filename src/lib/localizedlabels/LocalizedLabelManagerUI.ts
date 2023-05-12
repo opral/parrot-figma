@@ -171,7 +171,7 @@ export default class LocalizedLabelManagerUI extends EventTarget {
   }
 
   /**
-   * deletion events in figma only provide the node that was deleted - no child node infomation.
+   * deletion events in figma only provide the node that was deleted - *NO* child node infomation.
    * to detect the deletion of a node we have in cache we store the parent ids. this method provides all leaf nodes
    * for a parent that has been deleted.
    *
@@ -632,7 +632,6 @@ export default class LocalizedLabelManagerUI extends EventTarget {
 
     await this.localizedLabelMangerSandbox.commitUndo();
   }
-
 
   /**
    * Updates the label with the given nodeId with provided changes and updates the cache

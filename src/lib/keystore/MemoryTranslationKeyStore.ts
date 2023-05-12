@@ -171,7 +171,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
           }
         }
       } else if (currentKey.translations[language]) {
-         translationKeys[keyName] = currentKey;
+        translationKeys[keyName] = currentKey;
       }
     }
 
@@ -202,19 +202,19 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
       searchString += 'selected:true ';
     }
     if (searchQuery.hasLabel.length > 0) {
-      searchString += 'label:' + searchQuery.hasLabel.join(' label:') + ' ';
+      searchString += `label:${searchQuery.hasLabel.join(' label:')} `;
     }
 
     if (searchQuery.oneLabelOf.length > 0) {
-      searchString += 'one_label_of:' + searchQuery.hasLabel.join(',') + ' ';
+      searchString += `one_label_of:${searchQuery.hasLabel.join(',')} `;
     }
 
     if (searchQuery.unverified !== undefined) {
-      searchString += 'unverified:' + (searchQuery.unverified ? 'true' : 'false') + ' ';
+      searchString += `unverified:${searchQuery.unverified ? 'true' : 'false'} `;
     }
 
     if (searchQuery.missingTranslation !== undefined) {
-      searchString += 'missing_translation:' + (searchQuery.missingTranslation ? 'true' : 'false') + ' ';
+      searchString += `missing_translation:${searchQuery.missingTranslation ? 'true' : 'false'} `;
     }
 
     if (searchQuery.exactText === true) {
@@ -222,7 +222,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     }
 
     if (searchQuery.key !== undefined) {
-      searchString += 'key:' + searchQuery.key;
+      searchString += `key:${searchQuery.key}`;
       if (!searchQuery.keyAtEnd) {
         searchString += ' ';
       }
@@ -293,7 +293,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     }
 
     if (!searchQueryObj.key) {
-      // the regex expects a leading space - if we haven't found the key filter yet - try to find it at 
+      // the regex expects a leading space - if we haven't found the key filter yet - try to find it at
       // the very end
 
       const keyAtTheEnd = /key:([\w,*:]+)$/g;
@@ -446,6 +446,11 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     return results;
   }
 
+  getSampleKeyNames() {
+    const prefix = 'sample_values__';
+    return Object.keys(this.translationKeys).filter((keyName) => keyName.indexOf(prefix) === 0).map((keyName) => keyName.substring(prefix.length));
+  }
+
   async createTag(title: string, description: string | undefined) {
     const tagId = this.historyTags.length;
     for (const key of Object.keys(this.translationKeys)) {
@@ -482,7 +487,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
   }
 
   fillPlaceholdersWithSampleData(text: string, language: Language, plural: Plural) {
-    const placeholders = /\[%(s|n|i):(\w+)\]/g;
+    const placeholders = /\[%(s|n|i):(\w+)\]/g; // TODO #8 this is also the current format - needs to be changed if we don't like it
     return text.replace(placeholders, (substring, type, key) => {
       // exact match
       let matchingTranslation = this.getKey(`sample_values__${type}:${key}`);

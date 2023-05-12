@@ -20,17 +20,56 @@
   border-color: var(--figma-color-border);
 }
 
-.translation {
+.translation p {
   padding-left: 8px;
-  padding-top: 5px;
-  padding-bottom: 5px;
+  padding-top: 4px;
+  padding-bottom: 3px;
+  padding-right: 4px;
   display: inherit;
-    margin-block-start: inherit;
-    margin-block-end: inherit;
-    margin-inline-start: inherit;
-    margin-inline-end: inherit;
+  margin-block-start: inherit;
+  margin-block-end: inherit;
+  margin-inline-start: inherit;
+  margin-inline-end: inherit;
 }
 
+
+
+.cm-theme .cm-editor {
+  outline: none !important;
+  padding-left: 8px;
+  padding-right: 4px;
+  
+}
+
+.cm-line {
+  padding: 0px !important;
+}
+
+
+.translation-editor-text  * {
+  color:  var(--figma-color-text);
+  background-color: var(--figma-color-bg);
+  font-family: "Inter", sans-serif;
+  font-style: normal;
+    font-weight: 400;
+    font-size: 11px;
+    line-height: 14px;
+    letter-spacing: 0.01em;
+  }
+
+  .cm-theme {
+    top:0px;
+    position: absolute;
+    z-index: 3000;
+    bottom: 1px;
+
+    right: 0px;
+    left: 0px;
+  }
+  .translation-editor-text .cm-theme * {
+    background-color: transparent;
+  
+}
 
 .translation-editor-text textarea {
   position:absolute;

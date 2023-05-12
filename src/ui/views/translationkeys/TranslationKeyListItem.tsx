@@ -289,6 +289,7 @@ export default function TranslationKeyListItem({
                         await translationKeyStore.parentKeyStore.commitUndo();
                       }}
                       text={translationKey.translations[language as Language]?.[plural as Plural]?.text}
+                      translationKeyStore={translationKeyStore}
                     />
 
                   </div>

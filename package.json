@@ -36,11 +36,18 @@
     "webpack-cli": "^4.8.0"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.6.1",
+    "@codemirror/basic-setup": "^0.20.0",
+    "@codemirror/commands": "^6.2.4",
+    "@codemirror/state": "^6.2.0",
+    "@codemirror/view": "^6.11.1",
     "@figma-plugin/helpers": "^0.15.2",
     "@types/diff": "^5.0.2",
     "@types/ejs": "^3.1.2",
     "@types/react": "^17.0.19",
     "@types/react-dom": "^17.0.9",
+    "@uiw/codemirror-themes": "^4.19.16",
+    "@uiw/react-codemirror": "^4.19.16",
     "blakejs": "^1.2.1",
     "diff": "^5.1.0",
     "ejs": "^3.1.9",

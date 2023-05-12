@@ -39,6 +39,7 @@ export default function LocalizedLabelListItem({
   const labelState = localizedLabel.state!;
 
   const [searchKey, setSearchKey] = useState(undefined as any);
+  const [newKey, setNewKey] = useState<string | undefined>(undefined);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO remove when we implemented the design != keystore resolution
   const translations = translatedKey?.translations[localizedLabel.language];
@@ -129,6 +130,26 @@ export default function LocalizedLabelListItem({
         </div>
       </OutsideClickHandler>
 
+      <OutsideClickHandler
+        onOutsideClick={() => { setSearchKey(undefined); }}
+        disabled={searchKey === undefined}
+        display="contents"
+      >
+        <div className={`top-drawer${newKey !== undefined ? ' open' : ' '}`}>
+          <div className="history_view--topHeader">
+            Choose Key Name
+          </div>
+          <TextField
+            singleClick={false}
+            onSave={async (labelName: string) => {
+              localisedLabelManager.linkKey(localizedLabel, labelName, localizedLabel.rootFrameLanguage!, Plural.OTHER);
+              setNewKey(undefined);
+            }}
+            text={localizedLabel.name}
+          />
+        </div>
+      </OutsideClickHandler>
+
       <div className={`row${selected ? ' selected ' : ''}${localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? ' key-set ' : ' key-unset '}`} onClick={() => { onNodeSelect(localizedLabel.nodeId); }}>
         <div className="column-1">
           <div className="localized-label">
@@ -164,7 +185,7 @@ export default function LocalizedLabelListItem({
                           search: localizedLabel.text,
                         });
                       } else if (selectedOption.value === 'create-key') {
-                        console.log('need create key screen');
+                        setNewKey(localizedLabel.derivedKey ?? '');
                       }
                     } else if (selectedOption.type === 'key') {
                       localisedLabelManager.linkKey(localizedLabel, selectedOption.value as string, selectedOption.language!, selectedOption.plural!);
@@ -284,6 +305,7 @@ export default function LocalizedLabelListItem({
                             // TODO
                           }}
                           text={localizedLabel.text}
+                          translationKeyStore={translationKeyStore}
                         />
                       </div>
                     </div>

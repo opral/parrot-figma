@@ -403,7 +403,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   async updateToLatestKeyVersion(localizedLabels: LocalizedLabel[]) {
     for (const localizedLabel of localizedLabels) {
       const translationKey = this.keyStore.getKey(localizedLabel.key!)!;
-      const historyEntryForVersion = MemoryTranslationKeyStore.getHistoryEntry(translationKey, localizedLabel.rootFrameLanguage, localizedLabel.pluralId, translationKey.latestVersion);
+      const historyEntryForVersion = translationKey.getHistoryEntry(localizedLabel.rootFrameLanguage, localizedLabel.pluralId, translationKey.latestVersion);
 
       // eslint-disable-next-line no-await-in-loop
       await this.updateLabelProperties(localizedLabel.nodeId, {
@@ -419,7 +419,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   async revertDesignChanges(localizedLabel: LocalizedLabel) {
     const translationKey = this.keyStore.getKey(localizedLabel.key!)!;
 
-    const currentLabelVersion = MemoryTranslationKeyStore.getHistoryEntry(translationKey, localizedLabel.language, localizedLabel.pluralId, localizedLabel.keyVersion);
+    const currentLabelVersion = translationKey.getHistoryEntry(localizedLabel.language, localizedLabel.pluralId, localizedLabel.keyVersion);
     await this.updateLabelProperties(localizedLabel.nodeId, {
       keyVersion: localizedLabel.keyVersion,
       text: currentLabelVersion!.translations?.[localizedLabel.language]?.[localizedLabel.pluralId]?.text,

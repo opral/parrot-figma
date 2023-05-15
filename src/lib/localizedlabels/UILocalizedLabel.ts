@@ -124,12 +124,12 @@ export class UILocalizedLabel implements LocalizedLabel {
     const translatedKey = this.keyType !== KeyState.Unset ? this.manager.keyStore.getKey(this.key!) : undefined;
 
     if (translatedKey) {
-      const currentVersion = MemoryTranslationKeyStore.getHistoryEntry(translatedKey, this.language, this.pluralId, this.keyVersion);
+      const currentVersion = translatedKey.getHistoryEntry(this.language, this.pluralId, this.keyVersion);
 
       if (currentVersion === undefined) {
         state.translationDeleted = true;
       } else {
-        state.behind = MemoryTranslationKeyStore.getChangesSince(translatedKey, this.language, this.pluralId, this.keyVersion);
+        state.behind = translatedKey.getChangesSince(this.language, this.pluralId, this.keyVersion);
 
         if ((!this.useSampleValues && currentVersion.translations?.[this.language]?.[this.pluralId]?.text !== this.text)
           || (this.useSampleValues && this.textChangedAfterGeneration)) {
@@ -156,7 +156,7 @@ export class UILocalizedLabel implements LocalizedLabel {
       return;
     }
 
-    const versionToApply = MemoryTranslationKeyStore.getHistoryEntry(translationKey, this.language, this.pluralId, this.keyVersion);
+    const versionToApply = translationKey.getHistoryEntry(this.language, this.pluralId, this.keyVersion);
 
     const text = versionToApply?.translations?.[this.language]?.[this.pluralId]?.text;
     if (text) {
@@ -238,7 +238,7 @@ export class UILocalizedLabel implements LocalizedLabel {
         labelVersion = translationKey.latestVersion;
       }
 
-      const versionToApply = MemoryTranslationKeyStore.getHistoryEntry(translationKey, targetLanguage, this.pluralId, labelVersion);
+      const versionToApply = translationKey.getHistoryEntry(targetLanguage, this.pluralId, labelVersion);
 
       await this.manager.updateLabelProperties(this.nodeId, {
         key: translationKeyName,

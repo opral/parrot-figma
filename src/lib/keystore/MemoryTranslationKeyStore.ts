@@ -94,9 +94,9 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     this.dispatchEvent(event);
   }
 
-  private async upsertCache(translationKey: TranslationKey): Promise<TranslationKey> {
+  private async upsertCache(translationKey: TranslationKey): Promise<UITranslationKey> {
     this.translationKeys[translationKey.keyName] = new UITranslationKey(this, translationKey);
-    return translationKey;
+    return this.translationKeys[translationKey.keyName];
   }
 
   private removeCache(keyName: string) {
@@ -180,7 +180,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     return translationKeys;
   }
 
-  getKey(keyName: string) : TranslationKey | undefined {
+  getKey(keyName: string) : UITranslationKey | undefined {
     return this.translationKeys[keyName];
   }
 
@@ -449,7 +449,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     return this.historyTags[tagId];
   }
 
-  async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean): Promise<TranslationKey> {
+  async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean): Promise<UITranslationKey> {
     if (keyName === '') {
       throw new Error('keys mus have at least one character');
     }
@@ -514,13 +514,5 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
       // not found
       return substring;
     });
-  }
-
-  static getHistoryEntry(key: TranslationKey, language: Language, plural: Plural, version: number) : HistoryEntry | undefined {
-    return (new UITranslationKey(this, key)).getHistoryEntry(language, plural, version);
-  }
-
-  static getChangesSince(key: TranslationKey, language: Language, plural: Plural, version: number) {
-    return (new UITranslationKey(this, key)).getChangesSince(language, plural, version);
   }
 }

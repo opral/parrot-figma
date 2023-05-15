@@ -119,7 +119,7 @@ export default function TranslationKeyListView({
   };
 
   const onSearchChange = (searchString: string) => {
-    updateQuery(translationKeyStore.toQueryObject(searchString));
+    updateQuery(MemoryTranslationKeyStore.toQueryObject(searchString));
   };
 
   const longestKey = Object.keys(keys).reduce((acc, key) => (key.length > acc.length ? key : acc), '');
@@ -136,7 +136,7 @@ export default function TranslationKeyListView({
           className="search--searchInput"
           spellCheck="false"
           dir="auto"
-          value={translationKeyStore.toSearchString(query)}
+          value={MemoryTranslationKeyStore.toSearchString(query)}
           onChange={(e) => {
             onSearchChange(e.target.value);
 

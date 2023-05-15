@@ -120,7 +120,7 @@ export default function LocalizedLabelListItem({
             keys={translationKeyStore.translationKeys}
             figmaRemote={figmaRemote}
             refreshKeys={() => {}}
-            searchQuery={translationKeyStore.toQueryObject(`exact_text:true key:* ${searchKey.search}`)}
+            searchQuery={MemoryTranslationKeyStore.toQueryObject(`exact_text:true key:* ${searchKey.search}`)}
             select={(key: string, language: Language, plural: Plural) => {
               localisedLabelManager.linkKey(localizedLabel, key, language, plural);
               setSearchKey(undefined);
@@ -204,7 +204,7 @@ export default function LocalizedLabelListItem({
                     let noMatch = true;
                     const defaulValueFound = false;
 
-                    const query = translationKeyStore.toQueryObject(`exact_text:true key:* ${localizedLabel.text}`);
+                    const query = MemoryTranslationKeyStore.toQueryObject(`exact_text:true key:* ${localizedLabel.text}`);
                     const { matches } = translationKeyStore.findKeys(query);
                     for (const key of Object.keys(matches)) {
                       // try to use the language of the root frame

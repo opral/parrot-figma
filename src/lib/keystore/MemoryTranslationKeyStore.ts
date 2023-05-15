@@ -7,6 +7,8 @@ import {
 } from './TranslationKey';
 import { TranslationKeyStore } from './BaseTranslationKeyStore';
 import { Config, FigmaFileTranslationKeyStore } from './FigmaFileTranslationKeyStore';
+import { UITranslationKey } from './UITranslationKey';
+import { t } from 'i18next';
 
 export type SearchQuery = {
   selected: boolean,
@@ -21,6 +23,10 @@ export type SearchQuery = {
   searchString: string,
 };
 
+interface UITranslationKeys {
+  [keyName: string]: UITranslationKey
+}
+
 export default class MemoryTranslationKeyStore extends EventTarget implements TranslationKeyStore {
   parentKeyStore: FigmaFileTranslationKeyStore;
 
@@ -28,7 +34,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
 
   historyTags: HistoryTag[] = [];
 
-  translationKeys: TranslationKeys = { };
+  translationKeys: UITranslationKeys = { };
 
   constructor(parentKeyStore: FigmaFileTranslationKeyStore) {
     super();
@@ -89,7 +95,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
   }
 
   private async upsertCache(translationKey: TranslationKey): Promise<TranslationKey> {
-    this.translationKeys[translationKey.keyName] = translationKey;
+    this.translationKeys[translationKey.keyName] = new UITranslationKey(this, translationKey);
     return translationKey;
   }
 
@@ -118,10 +124,6 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     const parentConfig = await this.parentKeyStore.getConfig();
     parentConfig.baseLanguage = language;
     await this.parentKeyStore.setConfig(parentConfig);
-  }
-
-  async getHistory(translationKeyName: string): Promise<HistoryEntry[]> {
-    return this.parentKeyStore.getHistory(translationKeyName);
   }
 
   getTagIndexByVersionId(versionId: string) {
@@ -182,21 +184,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     return this.translationKeys[keyName];
   }
 
-  getKeysByText(text: string) : TranslationKey[] {
-    const matchingKeys = [] as TranslationKey[];
-    for (const key of Object.values(this.translationKeys)) {
-      for (const translation of Object.values(key.translations)) {
-        for (const pluralForm of Object.values(translation)) {
-          if (pluralForm.text === text) {
-            matchingKeys.push(key);
-          }
-        }
-      }
-    }
-    return matchingKeys;
-  }
-
-  toSearchString(searchQuery: SearchQuery): string {
+  static toSearchString(searchQuery: SearchQuery): string {
     let searchString = '';
     if (searchQuery.selected) {
       searchString += 'selected:true ';
@@ -233,7 +221,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     return searchString;
   }
 
-  toQueryObject(searchString: string): SearchQuery {
+  static toQueryObject(searchString: string): SearchQuery {
     const searchQueryObj = {
       selected: false,
       hasLabel: [],
@@ -446,7 +434,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     return results;
   }
 
-  getSampleKeyNames() {
+  getSampleKeyNames(): string[] {
     const prefix = 'sample_values__';
     return Object.keys(this.translationKeys).filter((keyName) => keyName.indexOf(prefix) === 0).map((keyName) => keyName.substring(prefix.length));
   }
@@ -482,7 +470,11 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
   async load(): Promise<TranslationKeys> {
     this.config = await this.parentKeyStore.getConfig();
     this.historyTags = await this.parentKeyStore.getHistoryTags();
-    this.translationKeys = await this.parentKeyStore.load();
+    this.translationKeys = {} as UITranslationKeys;
+    const allTranslationKeys = await this.parentKeyStore.load();
+    for (const key of Object.values(allTranslationKeys)) {
+      this.translationKeys[key.keyName] = new UITranslationKey(this, key);
+    }
     return this.translationKeys;
   }
 
@@ -525,27 +517,10 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
   }
 
   static getHistoryEntry(key: TranslationKey, language: Language, plural: Plural, version: number) : HistoryEntry | undefined {
-    // iterate backward until we have a match
-    let currentVersion = version;
-    while (currentVersion >= 0) {
-      if (key.history[currentVersion]?.translations?.[language]?.[plural]) {
-        return key.history[currentVersion];
-      }
-      currentVersion -= 1;
-    }
-    return undefined;
+    return (new UITranslationKey(this, key)).getHistoryEntry(language, plural, version);
   }
 
   static getChangesSince(key: TranslationKey, language: Language, plural: Plural, version: number) {
-    let changeCounter = 0;
-
-    let currentVersion = key.latestVersion;
-    while (currentVersion >= 0 && currentVersion > version) {
-      if (key.history[currentVersion]?.translations?.[language]?.[plural]) {
-        changeCounter += 1;
-      }
-      currentVersion -= 1;
-    }
-    return changeCounter;
+    return (new UITranslationKey(this, key)).getChangesSince(language, plural, version);
   }
 }

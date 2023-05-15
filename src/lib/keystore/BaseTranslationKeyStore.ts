@@ -8,6 +8,5 @@ export interface TranslationKeyStore {
   getKey(keyName: string) : TranslationKey | undefined
   updateKey(keyName: string, translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[], plural?: boolean) : Promise<TranslationKey>
   deleteKey(keyName: string) : Promise<void>
-  getHistory(translationKeyName: string) : Promise<HistoryEntry[]>
   load(): Promise<TranslationKeys>
 }

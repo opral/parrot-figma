@@ -6,9 +6,9 @@ import { Language } from '../base/Language';
 import MemoryTranslationKeyStore from '../keystore/MemoryTranslationKeyStore';
 import ChangeEvent from './ChangeEvent';
 
-import { UILocalizedLabel } from './UILocalizedLabel';
+import { ILocalizedLabelManagerUI, UILocalizedLabel } from './UILocalizedLabel';
 
-export default class LocalizedLabelManagerUI extends EventTarget {
+export default class LocalizedLabelManagerUI extends EventTarget implements ILocalizedLabelManagerUI {
   // mapping from nodeId to localizied label instance
   private cachedLocalisedLabels = {} as {
     [labelId: string]: LocalizedLabel

@@ -156,7 +156,7 @@ function App() {
   if (appScreen === 'keys') {
     view = (
       <TranslationKeyListView
-        searchQuery={memoryTranslationKeyStore.toQueryObject('')}
+        searchQuery={MemoryTranslationKeyStore.toQueryObject('')}
         translationKeyStore={memoryTranslationKeyStore}
         localizedLabelManager={localizedLabelManager}
         keys={translatedKeys}

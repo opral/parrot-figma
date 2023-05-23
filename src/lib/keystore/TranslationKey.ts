@@ -53,8 +53,8 @@ export interface SerializableTranslationKey {
     // map a tag identifier (we use a number for size reasons) to a version index of a key
     [tagIndex: number]: number,
   },
-  plural: boolean,
   labels: string[],
+  plural: boolean,
   translations: {
     [language in Language]? : {
       [plural in Plural]? : {

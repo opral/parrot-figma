@@ -1,5 +1,6 @@
 /* eslint-disable no-plusplus */
 /* eslint-disable no-await-in-loop */
+import { t } from 'i18next';
 import { Language } from '../base/Language';
 import { Plural, getPluralFormsByLanguage } from '../base/Plural';
 import {
@@ -8,7 +9,6 @@ import {
 import { TranslationKeyStore } from './BaseTranslationKeyStore';
 import { Config, FigmaFileTranslationKeyStore } from './FigmaFileTranslationKeyStore';
 import { UITranslationKey } from './UITranslationKey';
-import { t } from 'i18next';
 
 export type SearchQuery = {
   selected: boolean,
@@ -23,7 +23,7 @@ export type SearchQuery = {
   searchString: string,
 };
 
-interface UITranslationKeys {
+export interface UITranslationKeys {
   [keyName: string]: UITranslationKey
 }
 
@@ -137,40 +137,16 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
   }
 
   getTranslations(language: Language, versionId: string | undefined): { [keyName: string]: TranslationEntry } {
-    const translationKeys = {} as { [keyName: string]: TranslationEntry };
+    const translationKeys = {} as { [keyName: string]: TranslationKey };
 
     const tagIndex = versionId ? this.getTagIndexByVersionId(versionId) : -1;
 
     for (const keyName of Object.keys(this.translationKeys)) {
       const currentKey = this.translationKeys[keyName];
       if (tagIndex >= 0) {
-        const keysHistoryEntryIndex = currentKey.historyTags[tagIndex];
-        if (keysHistoryEntryIndex) {
-          const transalationEntry = {
-            translations: {},
-          } as TranslationEntry;
-          for (let currentIndex = keysHistoryEntryIndex; currentIndex >= 0; currentIndex--) {
-            if (currentKey.history[currentIndex].translations?.[language]) {
-              for (const plural of (Object.keys(currentKey.history[currentIndex].translations![language]!) as Plural[])) {
-                if (currentKey.history[currentIndex].translations?.[language]?.[plural]?.text) {
-                  if (!transalationEntry.translations![language]) {
-                    transalationEntry.translations![language] = {};
-                  }
-                  if (!transalationEntry.translations![language]![plural]) {
-                    transalationEntry.translations![language]![plural] = {
-                      text: currentKey.history[currentIndex].translations![language]![plural]!.text!,
-                      verified: false, // TODO #9 also collect this info! check when text appeared in history last time (change) and that verfied followed afer - but also check the base language chage
-                    };
-                  }
-                }
-              }
-            }
-          }
-
-          if (transalationEntry.translations?.[language]) {
-            transalationEntry.plural = Object.keys(transalationEntry.translations![language]!).length > 1;
-            translationKeys[keyName] = transalationEntry;
-          }
+        const keyVerson = currentKey.getKeyVersionByTagIndex(tagIndex);
+        if (keyVerson !== undefined) {
+          translationKeys[keyName] = currentKey.getInVersion(keyVerson);
         }
       } else if (currentKey.translations[language]) {
         translationKeys[keyName] = currentKey;

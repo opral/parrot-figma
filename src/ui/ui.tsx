@@ -18,7 +18,7 @@ import { WindowMode } from '../lib/windowManager/WindowManagerSandbox';
 import { TranslationKeys } from '../lib/keystore/TranslationKey';
 import TranslationKeyListView from './views/translationkeys/TranslationKeyListView';
 
-import MemoryTranslationKeyStore from '../lib/keystore/MemoryTranslationKeyStore';
+import MemoryTranslationKeyStore, { UITranslationKeys } from '../lib/keystore/MemoryTranslationKeyStore';
 import { FigmaFileTranslationKeyStore } from '../lib/keystore/FigmaFileTranslationKeyStore';
 
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
@@ -78,7 +78,7 @@ function App() {
   // initial app screen is startup until we initialy loaded the data
   const [appScreen, setAppScreen] = useState(undefined as String | undefined);
 
-  const [translatedKeys, setTranslatedKeys] = useState({} as TranslationKeys);
+  const [translatedKeys, setTranslatedKeys] = useState({} as UITranslationKeys);
   const [windowMode, setWindowMode] = useState(WindowManagerUi.instance!.windowMode);
 
   const [, setDefaultLinkStyle] = useState('' as string);

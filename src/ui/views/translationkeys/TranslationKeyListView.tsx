@@ -6,8 +6,8 @@ import { useEffect, useState } from 'react';
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
 import { Language } from '../../../lib/base/Language';
-import { TranslationKeys } from '../../../lib/keystore/TranslationKey';
-import MemoryTranslationKeyStore, { SearchQuery } from '../../../lib/keystore/MemoryTranslationKeyStore';
+
+import MemoryTranslationKeyStore, { SearchQuery, UITranslationKeys } from '../../../lib/keystore/MemoryTranslationKeyStore';
 import FigmaUtil from '../../../shared/FigmaUtil';
 import TranslationKeyListItem from './TranslationKeyListItem';
 import { Plural } from '../../../lib/base/Plural';
@@ -17,7 +17,7 @@ import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabel
 import { KeyState, LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
 
 type TranslationKeyListViewProps = {
-  keys: TranslationKeys,
+  keys: UITranslationKeys,
   searchQuery: SearchQuery,
   translationKeyStore: MemoryTranslationKeyStore
   localizedLabelManager: LocalizedLabelManagerUI
@@ -36,7 +36,6 @@ export default function TranslationKeyListView({
   refreshKeys,
   select,
 }: TranslationKeyListViewProps) {
-  
   const { t } = useTranslation();
   const [, setTrigger] = useState(0);
   const [renderEntries, setRenderEntries] = useState(200);

@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import OutsideClickHandler from 'react-outside-click-handler';
 import { Language } from '../../../lib/base/Language';
 import { Plural, getPluralFormsByLanguage } from '../../../lib/base/Plural';
-import { HistoryEntry, HistoryTag, TranslationKey } from '../../../lib/keystore/TranslationKey';
+import { HistoryTag } from '../../../lib/keystore/TranslationKey';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
 
 import FigmaUtil from '../../../shared/FigmaUtil';
@@ -19,9 +19,10 @@ import TranslationEditor from '../../compontents/translationEditor/TranslationEd
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import MatchView from '../../compontents/matchview/MatchView';
 import HistoryEntryView from '../../compontents/history/HistoryEntryView';
+import { UITranslationKey } from '../../../lib/keystore/UITranslationKey';
 
 type TranslationKeyListItemProps = {
-  translationKey: TranslationKey,
+  translationKey: UITranslationKey,
   figmaRemote: FigmaUtil,
   searchMatch: any,
   translationKeyStore: MemoryTranslationKeyStore,
@@ -79,7 +80,6 @@ export default function TranslationKeyListItem({
     }
 
     const selectedNodeIds = await figmaRemote.getSelectedNodeIds();
-    let nodeIdToSelect: string;
 
     let indexToSelect = -1;
     if (selectedNodeIds.length === 1) {
@@ -168,7 +168,6 @@ export default function TranslationKeyListItem({
           lastRelevantVersion.versionTag = undefined;
         }
         lastRelevantVersion = currentRelevantVersion;
-
       }
 
       currentVersion += 1;
@@ -217,6 +216,13 @@ export default function TranslationKeyListItem({
 
           </>
           )}
+        </div>
+        <div>
+          { translationKey.getPlaceholders().map((placeholder, i) => (
+            <div>
+              {placeholder.name + ' ' + (i) + ' ' + (placeholder.argumentPosition ? placeholder.argumentPosition : '-') + ' ' + placeholder.named }
+            </div>
+          )) }
         </div>
         { select === undefined && (
         <div className="key-usage">

@@ -19,6 +19,7 @@ import {
 import MatchView from '../matchview/MatchView';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
 import LanguageContextProvider from '../../LanguageContext';
+import { PlaceholderType } from '../../../lib/keystore/UITranslationKey';
 
 const myTheme = createTheme({
   theme: 'light',
@@ -35,7 +36,7 @@ const myTheme = createTheme({
     lineHighlight: 'var(--figma-color-bg)',
   },
   styles: [
-    
+
   ],
 });
 
@@ -49,20 +50,18 @@ type TranslationEditorProps = {
 
 function createCompletion(keyProvider: MemoryTranslationKeyStore) {
   return function myCompletions(context: CompletionContext) {
-    const word = context.matchBefore(/\[|\[%|\[%[si]*/);
+    const word = context.matchBefore(/\[\[|\[\[*/);
     if (!word || (word.from === word.to && !context.explicit)) {
       return null;
     }
 
-    let options = [snippetCompletion('[%s:#{1}]', {
-      label: '[%s:',
+    let options = [snippetCompletion('[[{1}]]', {
+      label: '[[',
       detail: 'Text Placeholder',
     })] as any[];
 
-    options = options.concat(keyProvider.getSampleKeyNames().map((keyName) => ({ label: `[%s:${keyName}]` })));
+    options = options.concat(keyProvider.getSampleKeyNames().map((keyName) => ({ label: `[[${keyName}]]` })));
 
-    console.log('options:');
-    console.log(options);
     return {
       from: word.from,
       options,
@@ -81,47 +80,30 @@ function createCompletion(keyProvider: MemoryTranslationKeyStore) {
   };
 }
 
-class PlaceholderWidget extends WidgetType {
-  name: string;
 
-  constructor(name: string) {
-    super();
-    this.name = name;
-  }
-
-  eq(other: any) {
-    return this.name === other.name;
-  }
-
-  toDOM() {
-    const elt = document.createElement('span');
-    elt.style.cssText = `
-    border: 1px solid blue;
-    border-radius: 4px;
-    padding: 0 3px;
-    background: lightblue;`;
-    elt.textContent = this.name;
-    return elt;
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  ignoreEvent() {
-    return false;
-  }
-}
 
 const placeholderMatcher = new MatchDecorator({
-  regexp: /\[%[si]:(\w+)\]/g, // TODO #8 this is what lokalise uses - to nerdy? think about [[]] for example
+  regexp: /\[\[(?:(\d+):)?([A-Za-z_]{2,})?(?::*([sdf])(?:\.(\d+))?)?\]\]/g, // TODO #8 this is what lokalise uses - to nerdy? think about [[]] for example
 
-  decoration(match, editorView) {
+  decoration(match, editorView, position) {
     const cursorPos = editorView.state.selection.ranges[0].from;
     if (cursorPos > match.index && cursorPos < (match.index + match[0].length)) {
-      // we do no decorate if the curser is placed within the atomic
+      // we don't decorate if the curser is placed within the atomic
       return null;
     }
 
+    const argumentPosition = position; //match[1] ? parseInt(match[1], 10) : undefined;
+    let name = match[2];
+    
+    if (!name) {
+      name = '?';
+    }
+
+    const type = (match[3] || 's') as PlaceholderType;
+    const decimalPlaces = match[4] ? parseInt(match[4], 10) : undefined;
+
     return Decoration.replace({
-      widget: new PlaceholderWidget(match[1]),
+      widget: new PlaceholderWidget(name, argumentPosition, argumentPosition ?? 0, type, decimalPlaces),
     });
   },
 });

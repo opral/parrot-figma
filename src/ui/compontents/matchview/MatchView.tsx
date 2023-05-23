@@ -9,7 +9,7 @@ export default function MatchView({
   match,
   text,
 }: MatchViewProps) {
-  const regex = /\[%[si]:(\w+)\]/g; // TODO #8 this is what lokalise uses - to nerdy? think about [[]] for example
+  const regex = /\[\[(?:(\d+):)?([A-Za-z_]{2,})?(?::*([sdf])(?:\.(\d+))?)?\]\]/g; // TODO #8 this is what lokalise uses - to nerdy? think about [[]] for example
 
   const result = [];
   let lastEnd = 0;
@@ -18,7 +18,8 @@ export default function MatchView({
   // eslint-disable-next-line no-cond-assign
   while (paramMatch = regex.exec(text)) {
     const wholeMatch = paramMatch[0];
-    const value = paramMatch[1];
+    const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
+    const name = paramMatch[2];
 
     const paramsRendered = (
       <React.Fragment key={key}>
@@ -30,7 +31,7 @@ export default function MatchView({
           background: 'lightblue',
         }}
         >
-          {value}
+          { argumentPosition ? (`${argumentPosition}:${name}`) : name}
         </span>
       </React.Fragment>
     );

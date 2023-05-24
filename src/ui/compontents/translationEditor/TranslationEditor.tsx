@@ -13,13 +13,13 @@ import CodeMirror from '@uiw/react-codemirror';
 import createTheme from '@uiw/codemirror-themes';
 import './TranslationEditor.css';
 import {
-  Decoration, DecorationSet, EditorView, MatchDecorator, ViewPlugin, ViewUpdate, WidgetType,
+  EditorView,
 } from '@codemirror/view';
 
 import MatchView from '../matchview/MatchView';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
-import LanguageContextProvider from '../../LanguageContext';
-import { PlaceholderType } from '../../../lib/keystore/UITranslationKey';
+import placeholderDecorator from './PlaceholderDecorator';
+
 
 const myTheme = createTheme({
   theme: 'light',
@@ -41,6 +41,7 @@ const myTheme = createTheme({
 });
 
 type TranslationEditorProps = {
+  keyName?: string,
   text?: string,
   onSave: Function
   match: { start: number, length: number } | undefined
@@ -80,59 +81,12 @@ function createCompletion(keyProvider: MemoryTranslationKeyStore) {
   };
 }
 
-
-
-const placeholderMatcher = new MatchDecorator({
-  regexp: /\[\[(?:(\d+):)?([A-Za-z_]{2,})?(?::*([sdf])(?:\.(\d+))?)?\]\]/g, // TODO #8 this is what lokalise uses - to nerdy? think about [[]] for example
-
-  decoration(match, editorView, position) {
-    const cursorPos = editorView.state.selection.ranges[0].from;
-    if (cursorPos > match.index && cursorPos < (match.index + match[0].length)) {
-      // we don't decorate if the curser is placed within the atomic
-      return null;
-    }
-
-    const argumentPosition = position; //match[1] ? parseInt(match[1], 10) : undefined;
-    let name = match[2];
-    
-    if (!name) {
-      name = '?';
-    }
-
-    const type = (match[3] || 's') as PlaceholderType;
-    const decimalPlaces = match[4] ? parseInt(match[4], 10) : undefined;
-
-    return Decoration.replace({
-      widget: new PlaceholderWidget(name, argumentPosition, argumentPosition ?? 0, type, decimalPlaces),
-    });
-  },
-});
-
-// XXX we monkey patch the update Deco to redraw the decoratores also on cursor move - this is ugly but it works for now
-const orgUpdateDeco = placeholderMatcher.updateDeco as Function;
-
-placeholderMatcher.updateDeco = function (update, deco) {
-  return placeholderMatcher.createDeco(update.view);
-  // return orgUpdateDeco.apply(placeholderMatcher, [update, deco]);
-};
-
-const placeholders = ViewPlugin.fromClass(class {
-  placeholders: DecorationSet;
-
-  constructor(view: EditorView) {
-    this.placeholders = placeholderMatcher.createDeco(view);
-  }
-
-  update(update: ViewUpdate) {
-    this.placeholders = placeholderMatcher.updateDeco(update, this.placeholders);
-  }
-}, {
-  decorations: (instance) => instance.placeholders,
-  // provide: (plugin) => EditorView.atomicRanges.of((view) => view.plugin(plugin)?.placeholders || Decoration.none),
-});
+// We use this view in two ocations:
+//  - key editor placeholders no fillins
+//  - label editor - text should contain the placeholders but the editor needs to know the fillins?
 
 export default function TranslationEditor({
-  text, onSave, match, editable = true, translationKeyStore,
+  text, keyName, onSave, match, editable = true, translationKeyStore,
 }: TranslationEditorProps) {
   const [textState, setTextState] = useState(text);
   const [editingState, setEditingState] = useState(false);
@@ -149,13 +103,6 @@ export default function TranslationEditor({
   useEffect(() => {
     setTextState(text);
   }, [text]);
-
-  useEffect(() => {
-    if (editingState) {
-      // textAreaRef.current?.focus();
-      // textAreaRef.current?.select();
-    }
-  }, [editingState]);
 
   let textToUse;
 
@@ -208,7 +155,9 @@ export default function TranslationEditor({
               searchKeymap: false,
             }}
             extensions={[
-              autocompletion({ override: [createCompletion(translationKeyStore)] }), placeholders, EditorView.lineWrapping,
+              autocompletion({ override: [createCompletion(translationKeyStore)] }),
+              placeholderDecorator(translationKeyStore, keyName),
+              EditorView.lineWrapping,
             ]}
             onFocus={() => setEditingState(true)}
           />

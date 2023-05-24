@@ -18,7 +18,8 @@ export interface Placeholder {
   named: boolean, // false if no name provided
   type: PlaceholderType, // s: string | f: float | d: decimal
   decimalPlaces: undefined | number, // in case of type float this gives the number of decimal places after the .
-  argumentPosition: undefined | number, // if defined the position to provide the argument at when using printf for example
+  specifiedArgumentPosition: undefined | number, // if defined the position to provide the argument at when using printf for example
+  derivedArgumentPosition: undefined | number, // the argument position derived by analyzing all translations
   parameterNumber: number // the 0-based position the parameter apeared. in a string like "Hello [[first_name]] [[last_name]]" first_name would get 0, last_name would get 1.
 
   // the argumentPosition is fixed by the first apearance - this can lead to conflicts like same parameter has different arumentPostions set or multiple placeholders block the same position
@@ -132,10 +133,11 @@ export class UITranslationKey implements TranslationKey {
         named,
         name,
         type,
+        derivedArgumentPosition: undefined,
         parameterNumber,
         decimalPlaces,
-        argumentPosition,
-        index: match.index,
+        specifiedArgumentPosition: argumentPosition,
+        positionInString: match.index,
         length: match[0].length,
       });
       parameterNumber++;
@@ -207,7 +209,9 @@ export class UITranslationKey implements TranslationKey {
    * - how shall we flag false positives - parameters that are not needed in a specific language?
    *
    */
-  extractParameters() : Placeholder[] {
+  extractParameters() : {
+    [placeholderName: string] : Placeholder
+  } {
     const baseLang = this.keyStore.getBaseLanugage();
 
     if (!baseLang) {
@@ -228,6 +232,9 @@ export class UITranslationKey implements TranslationKey {
     };
     const placeholdersWithoutArgumentPosition = [] as Placeholder[];
     const placeholdersWithArgumentPosition = [] as Placeholder[];
+    const placeholders = {} as {
+      [placeholderName: string] : Placeholder
+    };
 
     // base lang has priority
     if (this.translations[baseLang]) {
@@ -242,21 +249,24 @@ export class UITranslationKey implements TranslationKey {
       }
     }
 
-    // Okay we should have to arrays now. one with fixed positions and one that should fill up empty spaces so lets try to fill it up
-    for (let currentPosition = 0; currentPosition < placeholdersWithArgumentPosition.length; currentPosition++) {
+    // Okay we have two arrays now. one with fixed positions and one that should fill up the empty spaces - so lets try to fill it up
+    for (let currentPosition = 1; currentPosition < placeholdersWithArgumentPosition.length; currentPosition++) {
       if (placeholdersWithArgumentPosition[currentPosition] === undefined) {
-        const nextFillinPlaceholder = placeholdersWithoutArgumentPosition.shift();
-        if (nextFillinPlaceholder) {
-          placeholdersWithArgumentPosition[currentPosition] = nextFillinPlaceholder;
+        const nextFillInPlaceholder = placeholdersWithoutArgumentPosition.shift();
+        if (nextFillInPlaceholder) {
+          placeholdersWithArgumentPosition[currentPosition] = nextFillInPlaceholder;
+          nextFillInPlaceholder.derivedArgumentPosition = currentPosition;
+          placeholders[placeholdersWithArgumentPosition[currentPosition].name] = placeholdersWithArgumentPosition[currentPosition];
         } else {
           // ok lets remove this element from the array
           placeholdersWithArgumentPosition.splice(currentPosition, 1);
           // we got to step back one step to hit the next element correctly
           currentPosition--;
         }
-      } else if (placeholdersWithArgumentPosition[currentPosition].argumentPosition !== currentPosition) {
-        // ok slot is already taken - ensure the position still matches if not reset it for the placeholder
-        placeholdersWithArgumentPosition[currentPosition].argumentPosition = undefined;
+      } else {
+        // ok slot is already taken - set derived argument Position  for the placeholder
+        placeholdersWithArgumentPosition[currentPosition].derivedArgumentPosition = currentPosition;
+        placeholders[placeholdersWithArgumentPosition[currentPosition].name] = placeholdersWithArgumentPosition[currentPosition];
       }
     }
 
@@ -264,10 +274,12 @@ export class UITranslationKey implements TranslationKey {
     let nextFillinPlaceholder;
     // eslint-disable-next-line no-cond-assign
     while (nextFillinPlaceholder = placeholdersWithoutArgumentPosition.shift()) {
+      nextFillinPlaceholder.derivedArgumentPosition = placeholdersWithArgumentPosition.length;
       placeholdersWithArgumentPosition.push(nextFillinPlaceholder);
+      placeholders[nextFillinPlaceholder.name] = nextFillinPlaceholder;
     }
 
-    return placeholdersWithArgumentPosition;
+    return placeholders;
   }
 
   private extractPlaceholdersInLanguage(language: Language, processedPlaceholders: { [placeholderName: string]: boolean; }, placeholdersWithArgumentPosition: Placeholder[], placeholdersWithoutArgumentPosition: Placeholder[]) {
@@ -279,21 +291,21 @@ export class UITranslationKey implements TranslationKey {
           if (processedPlaceholders[placeHolderInText.name] === true) {
             // NOTHING TO DO - placeholder got a fixed position already;
           } else if (processedPlaceholders[placeHolderInText.name] === false) {
-            if (placeHolderInText.argumentPosition !== undefined && !placeholdersWithArgumentPosition[placeHolderInText.argumentPosition]) {
+            if (placeHolderInText.specifiedArgumentPosition !== undefined && !placeholdersWithArgumentPosition[placeHolderInText.specifiedArgumentPosition]) {
               // placeholder has a fixed argument position and the slot is available
               const previosIndex = placeholdersWithoutArgumentPosition.findIndex((placeholder) => placeholder.name === placeHolderInText.name);
               placeholdersWithoutArgumentPosition.splice(previosIndex, 1);
               // eslint-disable-next-line no-param-reassign -- we explicetly call by reference here
-              placeholdersWithArgumentPosition[placeHolderInText.argumentPosition] = placeHolderInText;
+              placeholdersWithArgumentPosition[placeHolderInText.specifiedArgumentPosition] = placeHolderInText;
               // eslint-disable-next-line no-param-reassign
               processedPlaceholders[placeHolderInText.name] = true;
             } else {
               // NOTHING TO DO - was already processed and the additional information - argument position doesn't change anything since the slot is not free anymore
             }
-          } else if (placeHolderInText.argumentPosition !== undefined && !placeholdersWithArgumentPosition[placeHolderInText.argumentPosition]) {
+          } else if (placeHolderInText.specifiedArgumentPosition !== undefined && !placeholdersWithArgumentPosition[placeHolderInText.specifiedArgumentPosition]) {
             // the placeholder has not yet proccessed, it has a fixed argument position that is still available
             // eslint-disable-next-line no-param-reassign -- we explicetly call by reference here
-            placeholdersWithArgumentPosition[placeHolderInText.argumentPosition] = placeHolderInText;
+            placeholdersWithArgumentPosition[placeHolderInText.specifiedArgumentPosition] = placeHolderInText;
             // eslint-disable-next-line no-param-reassign -- we explicetly call by reference here
             processedPlaceholders[placeHolderInText.name] = true;
           } else {
@@ -307,10 +319,8 @@ export class UITranslationKey implements TranslationKey {
     }
   }
 
-  getPlaceholders(): Placeholder[] {
-    let placholders = [] as Placeholder[];
-    placholders = this.extractParameters();
-    return placholders;
+  getPlaceholders() {
+    return this.extractParameters();
   }
 
   getKeyVersionByTagIndex(tagIndex: number) {

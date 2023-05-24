@@ -218,9 +218,9 @@ export default function TranslationKeyListItem({
           )}
         </div>
         <div>
-          { translationKey.getPlaceholders().map((placeholder, i) => (
+          { false && Object.values(translationKey.getPlaceholders()).map((placeholder) => (
             <div>
-              {placeholder.name + ' ' + (i) + ' ' + (placeholder.argumentPosition ? placeholder.argumentPosition : '-') + ' ' + placeholder.named }
+              {placeholder.name + ' ' + (placeholder.derivedArgumentPosition) + ' ' + (placeholder.specifiedArgumentPosition ? placeholder.specifiedArgumentPosition : '-') + ' ' + placeholder.named }
             </div>
           )) }
         </div>
@@ -279,6 +279,7 @@ export default function TranslationKeyListItem({
                   { translationKey.plural && <div className="grid-item-plural"><span className="rowText">{plural}</span></div>}
                   <div className="grid-item-translation translation-container translation">
                     <TranslationEditor
+                      keyName={translationKey.keyName}
                       editable={select === undefined}
                       match={searchMatch?.textMatches[language]?.[plural as Plural]}
                       onSave={async (text: any) => {

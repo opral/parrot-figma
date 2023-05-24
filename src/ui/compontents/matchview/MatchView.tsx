@@ -31,7 +31,10 @@ export default function MatchView({
           background: 'lightblue',
         }}
         >
-          { argumentPosition ? (`${argumentPosition}:${name}`) : name}
+          <span>
+            { argumentPosition ? (`${argumentPosition}:`) : null }
+          </span>
+          { name }
         </span>
       </React.Fragment>
     );

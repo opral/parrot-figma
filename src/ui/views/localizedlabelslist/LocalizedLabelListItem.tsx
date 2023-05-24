@@ -305,6 +305,7 @@ export default function LocalizedLabelListItem({
                             // TODO
                           }}
                           text={localizedLabel.text}
+                          keyName={localizedLabel.key}
                           translationKeyStore={translationKeyStore}
                         />
                       </div>

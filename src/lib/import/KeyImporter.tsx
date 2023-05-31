@@ -7,7 +7,10 @@ import MemoryTranslationKeyStore from '../keystore/MemoryTranslationKeyStore';
 
 import AppleStringsFileImporter from './AppleStringsFileImporter';
 import AndroidXMLImporter from './AndroidXmlImporter';
+
 import { ImportTranslationKey } from './ImportTranslationKey';
+import LocalizedLabelManagerUI from '../localizedlabels/LocalizedLabelManagerUI';
+import JsonKeyValueImporter from './JsonKeyValueImporter';
 
 function toChangeArray(importKey: ImportTranslationKey, language: Language) {
   return [{
@@ -60,23 +63,28 @@ export default class KeyImporter {
       if (importObject) {
         results.type = 'android-xml';
         results.keys = importObject;
+      } else {
+        importObject = JsonKeyValueImporter.toImportObject(fileName, content);
+        results.type = 'keyvalue-json';
+        results.keys = importObject;
       }
     }
 
     return results;
   }
 
-  static async import(keyStore: MemoryTranslationKeyStore, keysToImport: ImportTranslationKey[], language: Language) {
+  static async import(labelManager: LocalizedLabelManagerUI, keysToImport: ImportTranslationKey[], language: Language) {
     for (const keyToImport of keysToImport) {
-      const currentKey = keyStore.getKey(keyToImport.keyName);
+      const currentKey = labelManager.keyStore.getKey(keyToImport.keyName);
       if (!currentKey) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         console.log(`creating key${keyToImport.keyName}`);
-        const createdKey = await keyStore.createKey(keyToImport.keyName, toChangeArray(keyToImport, language), false);
+        // TODO #8 implement import logic for placeholders and quantities
+        const createdKey = await labelManager.keyStore.createKey(keyToImport.keyName, toChangeArray(keyToImport, language), false);
       } else {
         console.log(`updateing key${keyToImport.keyName}`);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const updatedKey = await keyStore.updateKey(keyToImport.keyName, toChangeArray(keyToImport, language));
+        const updatedKey = await labelManager.updateKey(keyToImport.keyName, toChangeArray(keyToImport, language));
       }
     }
     // TODO keyStore.commit();

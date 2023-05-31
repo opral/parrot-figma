@@ -1,12 +1,11 @@
 /* eslint-disable no-plusplus */
 /* eslint-disable no-await-in-loop */
-import { t } from 'i18next';
 import { Language } from '../base/Language';
 import { Plural, getPluralFormsByLanguage } from '../base/Plural';
 import {
-  HistoryEntry, HistoryTag, TranslationEntry, TranslationKey, TranslationKeys,
+  Fillins,
+  HistoryEntry, HistoryTag, PlaceholdersByName, TranslationEntry, TranslationKey, TranslationKeys,
 } from './TranslationKey';
-import { TranslationKeyStore } from './BaseTranslationKeyStore';
 import { Config, FigmaFileTranslationKeyStore } from './FigmaFileTranslationKeyStore';
 import { UITranslationKey } from './UITranslationKey';
 
@@ -27,7 +26,7 @@ export interface UITranslationKeys {
   [keyName: string]: UITranslationKey
 }
 
-export default class MemoryTranslationKeyStore extends EventTarget implements TranslationKeyStore {
+export default class MemoryTranslationKeyStore extends EventTarget {
   parentKeyStore: FigmaFileTranslationKeyStore;
 
   config: Config | undefined;
@@ -248,6 +247,7 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
           // eslint-disable-next-line prefer-destructuring
           searchQueryObj.key = filterParts[1];
         } else {
+          // eslint-disable-next-line no-continue
           continue;
         }
 
@@ -410,11 +410,6 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     return results;
   }
 
-  getSampleKeyNames(): string[] {
-    const prefix = 'sample_values__';
-    return Object.keys(this.translationKeys).filter((keyName) => keyName.indexOf(prefix) === 0).map((keyName) => keyName.substring(prefix.length));
-  }
-
   async createTag(title: string, description: string | undefined) {
     const tagId = this.historyTags.length;
     for (const key of Object.keys(this.translationKeys)) {
@@ -425,16 +420,16 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     return this.historyTags[tagId];
   }
 
-  async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean): Promise<UITranslationKey> {
+  async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean, fillins?: Fillins, quantity?: { value: number } | { placeholder: string }): Promise<UITranslationKey> {
     if (keyName === '') {
       throw new Error('keys mus have at least one character');
     }
-    const createdKey = await this.parentKeyStore.createKey(keyName, translations, plural);
+    const createdKey = await this.parentKeyStore.createKey(keyName, translations, plural, quantity, fillins);
     return this.upsertCache(createdKey);
   }
 
-  async updateKey(keyName: string, translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[], plural?: boolean) {
-    const updatedKey = await this.parentKeyStore.updateKey(keyName, translations, plural);
+  async updateKey(keyName: string, translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[], plural?: boolean, fillins?: Fillins, quantity?: { value: number } | { placeholder: string }) {
+    const updatedKey = await this.parentKeyStore.updateKey(keyName, translations, plural, quantity, fillins);
     return this.upsertCache(updatedKey);
   }
 
@@ -443,52 +438,16 @@ export default class MemoryTranslationKeyStore extends EventTarget implements Tr
     this.removeCache(keyName);
   }
 
-  async load(): Promise<TranslationKeys> {
+  async load(): Promise<UITranslationKeys> {
     this.config = await this.parentKeyStore.getConfig();
     this.historyTags = await this.parentKeyStore.getHistoryTags();
     this.translationKeys = {} as UITranslationKeys;
+
     const allTranslationKeys = await this.parentKeyStore.load();
+
     for (const key of Object.values(allTranslationKeys)) {
       this.translationKeys[key.keyName] = new UITranslationKey(this, key);
     }
     return this.translationKeys;
-  }
-
-  fillPlaceholdersWithSampleData(text: string, language: Language, plural: Plural) {
-    const placeholders = /\[%(s|n|i):(\w+)\]/g; // TODO #8 this is also the current format - needs to be changed if we don't like it
-    return text.replace(placeholders, (substring, type, key) => {
-      // exact match
-      let matchingTranslation = this.getKey(`sample_values__${type}:${key}`);
-
-      // name match in samples
-      if (matchingTranslation === undefined) {
-        matchingTranslation = this.getKey(`sample_values__${key}`);
-      }
-
-      // key match
-      if (!matchingTranslation === undefined) {
-        matchingTranslation = this.getKey(key);
-      }
-
-      if (!matchingTranslation === undefined) {
-        return substring;
-      }
-
-      // exact language/plural match
-      const matchingLangugae = matchingTranslation!.translations[language]?.[plural]?.text;
-      if (matchingLangugae !== undefined) {
-        return matchingLangugae;
-      }
-
-      const baseLanguage = Object.keys(matchingTranslation!.translations)[0]! as Language;
-      if (matchingTranslation!.translations[baseLanguage]![plural]?.text !== undefined) {
-        return matchingTranslation!.translations[baseLanguage]![plural]!.text!;
-      } if (matchingTranslation!.translations[baseLanguage]![Plural.OTHER]?.text !== undefined) {
-        return matchingTranslation!.translations[baseLanguage]![Plural.OTHER]?.text!;
-      }
-
-      // not found
-      return substring;
-    });
   }
 }

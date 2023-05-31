@@ -92,6 +92,7 @@ function App() {
     (async () => {
       // console.log('load - keys');
       await memoryTranslationKeyStore.load();
+      localizedLabelManager.startFillupCache();
 
       setDefaultLinkStyle(await remoteLocalizedLabelManager.getLinkStyle());
 
@@ -181,7 +182,7 @@ function App() {
   } else if (appScreen === 'import') {
     view = (
       <Import
-        translationKeyStore={memoryTranslationKeyStore}
+        labelManager={localizedLabelManager}
       />
     );
   /* (

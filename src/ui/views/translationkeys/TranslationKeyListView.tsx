@@ -86,7 +86,8 @@ export default function TranslationKeyListView({
   }, []);
 
   useEffect(() => {
-    let renderStepTimeout : number | undefined;
+    // we use any here since NodeJS.Timout - the suggested type by the ide is not correct
+    let renderStepTimeout : any | undefined;
     if (Object.keys(keys).length > renderEntries) {
       renderStepTimeout = setTimeout(() => {
         // console.log(`rending next portion ${renderEntries + 100}`);

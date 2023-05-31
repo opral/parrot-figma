@@ -13,10 +13,12 @@ import TranslationEditor from '../../compontents/translationEditor/TranslationEd
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import TextField from '../../compontents/textfield/TextField';
 import TranslationKeyListView from '../translationkeys/TranslationKeyListView';
+import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
+import PlaceholderEditorListItem from '../../compontents/placeholder/PlaceholderEditor';
 
 type LocalizedLabelListItemProps = {
 
-  localizedLabel: LocalizedLabel,
+  localizedLabel: UILocalizedLabel,
   figmaRemote: FigmaUtil,
   localisedLabelManager: LocalizedLabelManagerUI,
   scrollIntoView: boolean,
@@ -43,13 +45,6 @@ export default function LocalizedLabelListItem({
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO remove when we implemented the design != keystore resolution
   const translations = translatedKey?.translations[localizedLabel.language];
-
-  /* let localizedTextToApply = localizedText;
-
-  if (localizedText !== undefined && localizedLabel.useSampleValues) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO remove when we implemented the design != keystore resolution
-    localizedTextToApply = translationKeyStore.fillPlaceholdersWithSampleData(localizedTextToApply!, localizedLabel.rootFrameLanguage, localizedLabel.pluralId);
-  } */
 
   const pluralsAvailable = [] as SelectOption[];
 
@@ -131,8 +126,8 @@ export default function LocalizedLabelListItem({
       </OutsideClickHandler>
 
       <OutsideClickHandler
-        onOutsideClick={() => { setSearchKey(undefined); }}
-        disabled={searchKey === undefined}
+        onOutsideClick={() => { setNewKey(undefined); }}
+        disabled={newKey === undefined}
         display="contents"
       >
         <div className={`top-drawer${newKey !== undefined ? ' open' : ' '}`}>
@@ -280,7 +275,7 @@ export default function LocalizedLabelListItem({
                       <div className="grid-item-plural">
                         {localizedLabel.keyType === KeyState.Linked && (
                           <>
-                            {pluralsAvailable.length > 1 && (
+                            {translatedKey?.plural && (
                             <Select
                               onChange={(value) => {
                                 localisedLabelManager.updateLabelPlural(localizedLabel, value.value! as Plural);
@@ -290,7 +285,7 @@ export default function LocalizedLabelListItem({
                               placeholder=""
                             />
                             )}
-                            {pluralsAvailable.length <= 1 && (
+                            {!translatedKey?.plural && (
                               <span className="rowText">{localizedLabel.pluralId}</span>
                             )}
                           </>
@@ -304,10 +299,29 @@ export default function LocalizedLabelListItem({
                           onSave={async (text: any) => {
                             // TODO
                           }}
-                          text={localizedLabel.text}
+                          text={localizedLabel.translation}
                           keyName={localizedLabel.key}
                           translationKeyStore={translationKeyStore}
                         />
+                        <div className="placeholder-view-grid" style={{ display: localizedLabel.keyType === KeyState.Linked && translatedKey && translatedKey.placeholders && Object.keys(translatedKey.placeholders).length > 0 ? undefined : 'none' }}>
+
+                          <div />
+                          <div />
+                          <div>Name</div>
+                          <div>Value</div>
+                          <div />
+                          {translatedKey && translatedKey.placeholders && Object.entries(translatedKey.placeholders).map((entry, i, array) => (
+                            <PlaceholderEditorListItem
+                              key={entry[0]}
+                              placeholder={entry[1]}
+                              fillin={localizedLabel.fillins?.[entry[0]]?.value ? localizedLabel.fillins?.[entry[0]]?.value : 'unset'}
+                              onValueChange={(placeholderName, fillinValue) => {
+                                localisedLabelManager.updateLabelFillin(localizedLabel, placeholderName, fillinValue);
+                              }}
+                            />
+
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -360,25 +374,6 @@ export default function LocalizedLabelListItem({
               <span className="svg-container warning-svg" />
             </span>
             )}
-            { ((localizedLabel.rootFrameLanguage === localizedLabel.language)) && (
-            <span
-              className="row-action-icon"
-            >
-              <span className="svg-container dot-svg" />
-            </span>
-            )}
-
-            <span
-              className="row-action-icon"
-              data-tooltip-trigger="span"
-              data-tooltip-content={localizedLabel.useSampleValues === false ? 'Use Sample values' : 'Show placeholders'}
-            >
-              <span
-                className={`svg-container ${localizedLabel.useSampleValues === false ? 'placeholder-svg' : 'placeholder-filled-svg'}`}
-                onClick={() => { localisedLabelManager.setLabelUseSampleValues(localizedLabel.nodeId, !localizedLabel.useSampleValues); }}
-              />
-            </span>
-
           </div>
         </div>
 

@@ -1,34 +1,12 @@
 /* eslint-disable no-plusplus */
 import { Language } from '../base/Language';
 import { Plural, getPluralFormsByLanguage } from '../base/Plural';
-import { HistoryEntry, TranslationKey } from './TranslationKey';
+import {
+  Fillins, HistoryEntry, Placeholder, PlaceholderType, PlaceholdersByName, TranslationKey, Translations,
+} from './TranslationKey';
 
 export interface UITranslationKeyStore {
   getBaseLanugage(): Language | undefined
-}
-
-export enum PlaceholderType {
-  string = 's',
-  float = 'f',
-  integer = 'd',
-}
-
-export interface Placeholder {
-  name: string, // name of the placeholder - always preferred to have one but optional as some imports do not provide this
-  named: boolean, // false if no name provided
-  type: PlaceholderType, // s: string | f: float | d: decimal
-  decimalPlaces: undefined | number, // in case of type float this gives the number of decimal places after the .
-  specifiedArgumentPosition: undefined | number, // if defined the position to provide the argument at when using printf for example
-  derivedArgumentPosition: undefined | number, // the argument position derived by analyzing all translations
-  parameterNumber: number // the 0-based position the parameter apeared. in a string like "Hello [[first_name]] [[last_name]]" first_name would get 0, last_name would get 1.
-
-  // the argumentPosition is fixed by the first apearance - this can lead to conflicts like same parameter has different arumentPostions set or multiple placeholders block the same position
-  // in such cases it will be ignored
-  positionSpecifiedByLanguage?: Language,
-  positionSpecifiedInPlural?: Plural,
-
-  positionInString: number,
-  length: number,
 }
 
 export class UITranslationKey implements TranslationKey {
@@ -56,6 +34,12 @@ export class UITranslationKey implements TranslationKey {
     }
   };
 
+  quantity: { value: number } | { placeholder: string };
+
+  placeholders: PlaceholdersByName;
+
+  defaultFillins: Fillins;
+
   history: HistoryEntry[];
 
   keyStore: UITranslationKeyStore;
@@ -70,6 +54,9 @@ export class UITranslationKey implements TranslationKey {
     this.labels = key.labels;
     this.translations = key.translations;
     this.history = key.history;
+    this.quantity = key.quantity;
+    this.placeholders = key.placeholders;
+    this.defaultFillins = key.defaultFillins ? key.defaultFillins : {};
   }
 
   getHistoryEntry(language: Language, plural: Plural, version: number) : HistoryEntry | undefined {
@@ -108,7 +95,7 @@ export class UITranslationKey implements TranslationKey {
     // (?:\.(\d+))?        Non-capturing group for optional decimalPlaces preceded by a dot
     //                     (\d+) captures one or more digits as decimalPlaces
     // \]\]                Matches the closing double square brackets
-    const pattern = /\[\[(?:(\d+):)?([A-Za-z_]{2,})?(?::*([sdf])(?:\.(\d+))?)?\]\]/g;
+    const pattern = /\[\[([A-Za-z_]{2,})?(?:#(\d+))?(?::*([df])(?:\.(\d+))?)?\]\]/g;
 
     const parameters = [] as Placeholder[];
     let parameterNumber = 0;
@@ -117,8 +104,8 @@ export class UITranslationKey implements TranslationKey {
     let match;
     // eslint-disable-next-line no-cond-assign
     while ((match = pattern.exec(text)) !== null) {
-      const argumentPosition = match[1] ? parseInt(match[1], 10) : undefined;
-      let name = match[2];
+      let name = match[1];
+      const argumentPosition = match[2] ? parseInt(match[2], 10) : undefined;
       let named = true;
       if (!name) {
         unnamedIndex += 1;
@@ -209,15 +196,7 @@ export class UITranslationKey implements TranslationKey {
    * - how shall we flag false positives - parameters that are not needed in a specific language?
    *
    */
-  extractParameters() : {
-    [placeholderName: string] : Placeholder
-  } {
-    const baseLang = this.keyStore.getBaseLanugage();
-
-    if (!baseLang) {
-      throw new Error('extractParameters expects a baselanguage configured');
-    }
-
+  static extractParameters(translations: Translations, baseLanguage: Language, includePluralForms: boolean) : PlaceholdersByName {
     // a placeholder can be processed in two ways:
     // 1. with a argument postion [[1:...]]
     // - the first placeholder with a specific argument postion wins
@@ -237,15 +216,15 @@ export class UITranslationKey implements TranslationKey {
     };
 
     // base lang has priority
-    if (this.translations[baseLang]) {
-      console.log('extracting baselanguage');
-      this.extractPlaceholdersInLanguage(baseLang, processedPlaceholders, placeholdersWithArgumentPosition, placeholdersWithoutArgumentPosition);
+    if (translations[baseLanguage]) {
+      // console.log('extracting baselanguage');
+      UITranslationKey.extractPlaceholdersInLanguage(translations, baseLanguage, includePluralForms, processedPlaceholders, placeholdersWithArgumentPosition, placeholdersWithoutArgumentPosition);
     }
 
-    for (const [language] of Object.entries(this.translations)) {
-      if (language !== baseLang) {
-        console.log(`extracting language${baseLang}`);
-        this.extractPlaceholdersInLanguage(language as Language, processedPlaceholders, placeholdersWithArgumentPosition, placeholdersWithoutArgumentPosition);
+    for (const [language] of Object.entries(translations)) {
+      if (language !== baseLanguage) {
+        // console.log(`extracting language${baseLang}`);
+        UITranslationKey.extractPlaceholdersInLanguage(translations, language as Language, includePluralForms, processedPlaceholders, placeholdersWithArgumentPosition, placeholdersWithoutArgumentPosition);
       }
     }
 
@@ -282,11 +261,15 @@ export class UITranslationKey implements TranslationKey {
     return placeholders;
   }
 
-  private extractPlaceholdersInLanguage(language: Language, processedPlaceholders: { [placeholderName: string]: boolean; }, placeholdersWithArgumentPosition: Placeholder[], placeholdersWithoutArgumentPosition: Placeholder[]) {
+  private static extractPlaceholdersInLanguage(translations: Translations, language: Language, plurals: boolean, processedPlaceholders: { [placeholderName: string]: boolean; }, placeholdersWithArgumentPosition: Placeholder[], placeholdersWithoutArgumentPosition: Placeholder[]) {
     // plural priority is defined by the PluralFormsByLanguage map
     for (const plural of getPluralFormsByLanguage(language)) {
-      if (this.translations[language]![plural]?.text) {
-        const placeHoldersInText = UITranslationKey.extractPlaceholdersInText(this.translations[language]![plural]!.text!);
+      if (!plurals && plural !== Plural.OTHER) {
+        // eslint-disable-next-line no-continue
+        continue;
+      }
+      if (translations[language]![plural]?.text) {
+        const placeHoldersInText = UITranslationKey.extractPlaceholdersInText(translations[language]![plural]!.text!);
         for (const placeHolderInText of placeHoldersInText) {
           if (processedPlaceholders[placeHolderInText.name] === true) {
             // NOTHING TO DO - placeholder got a fixed position already;
@@ -319,10 +302,6 @@ export class UITranslationKey implements TranslationKey {
     }
   }
 
-  getPlaceholders() {
-    return this.extractParameters();
-  }
-
   getKeyVersionByTagIndex(tagIndex: number) {
     return this.historyTags[tagIndex];
   }
@@ -342,6 +321,9 @@ export class UITranslationKey implements TranslationKey {
       plural: false,
       history: [],
       translations: {},
+      quantity: this.quantity,
+      defaultFillins: this.defaultFillins,
+      placeholders: this.placeholders,
     } as TranslationKey;
 
     for (let versionI = 0; versionI < version; versionI++) {

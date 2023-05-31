@@ -6,6 +6,7 @@ import { KeyState, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../base/Plural';
 import ChangeEvent from './ChangeEvent';
 import { FigmaFileTranslationKeyStore } from '../keystore/FigmaFileTranslationKeyStore';
+import { Fillins } from '../keystore/TranslationKey';
 
 export default class LocalizedLabelManager {
   translationKeyStore?: FigmaFileTranslationKeyStore;
@@ -16,13 +17,15 @@ export default class LocalizedLabelManager {
 
   public samplesPrefix = 'sample_values';
 
-  public linkStilyDataKey = 'linkstyle';
+  public linkStyleDataKey = 'linkstyle';
 
   public separator = '__';
 
   public filledTemplateHashDataKey = 'fth';
 
   public sampleValuesDataKey = 'sv';
+
+  public fillinsKey = 'fi';
 
   public languageDataKey = 'l';
 
@@ -234,7 +237,7 @@ export default class LocalizedLabelManager {
       }
     }
 
-    console.log(`fillUpCache - creating localizedLabels took ${Date.now() - outerStart}`);
+    console.log(`fillUpCache - creating localizedLabels took ${Date.now() - outerStart}ms for ${localizedLabels.length} labels`);
 
     const message = {
       target: 'LocalizedLabelManager',
@@ -329,11 +332,11 @@ export default class LocalizedLabelManager {
   }
 
   async setLinkStyle(linkStyle: string) {
-    figma.root.setPluginData(this.linkStilyDataKey, linkStyle);
+    figma.root.setPluginData(this.linkStyleDataKey, linkStyle);
   }
 
   async getLinkStyle() {
-    const linkStyleRaw = figma.root.getPluginData(this.linkStilyDataKey);
+    const linkStyleRaw = figma.root.getPluginData(this.linkStyleDataKey);
     try {
       JSON.parse(linkStyleRaw);
       return linkStyleRaw;
@@ -372,7 +375,8 @@ export default class LocalizedLabelManager {
     plural?: Plural,
     keyVersion?: number,
     filledTemplateHash?: string,
-    text?: string,
+    translation?: string,
+    fillins?: Fillins,
     showSampleValues?: boolean,
   }) {
     const textNode = figma.getNodeById(nodeId)! as TextNode;
@@ -399,21 +403,18 @@ export default class LocalizedLabelManager {
       textNode.setPluginData(this.sampleValuesDataKey, changedProperties.showSampleValues ? `${true}` : '');
     }
 
-    if (changedProperties.text !== undefined) {
+    if (changedProperties.fillins !== undefined) {
+      textNode.setPluginData(this.fillinsKey, JSON.stringify(changedProperties.fillins));
+    }
+
+    if (changedProperties.translation !== undefined) {
       const linkStyle = await this.getLinkStyle();
 
       await this.loadFontsForTextNodes([textNode]);
 
-      const textWithDecorators = this.toTextRangeObject(changedProperties.text);
+      const textWithDecorators = this.toTextRangeObject(changedProperties.translation);
 
-      const useSampleValues = textNode.getPluginData(this.sampleValuesDataKey) !== '';
-
-      if (useSampleValues) {
-        textNode.setPluginData(this.filledTemplateHashDataKey, changedProperties.filledTemplateHash ? changedProperties.filledTemplateHash : '');
-      } else {
-        textNode.setPluginData(this.filledTemplateHashDataKey, '');
-      }
-
+      textNode.setPluginData(this.filledTemplateHashDataKey, changedProperties.filledTemplateHash ? changedProperties.filledTemplateHash : '');
       textNode.characters = textWithDecorators.text;
 
       for (const rangeStyle of textWithDecorators.textDecorations) {
@@ -555,6 +556,7 @@ export default class LocalizedLabelManager {
   }
 
   private toLocalizedLabelOrUndefined(node: TextNode): LocalizedLabel | undefined {
+
     let derivable = true;
 
     if (node.autoRename) {
@@ -618,7 +620,7 @@ export default class LocalizedLabelManager {
 
     const text = this.toTokenizedText(node);
 
-    if (text.length === 1 || !/[a-zA-Z]/.test(text)) {
+    if (text.length === 1 && !/[0-9a-zA-Z\n\s]/.test(text)) {
       return;
     }
 
@@ -626,6 +628,7 @@ export default class LocalizedLabelManager {
     const pluralId = node.getPluginData(this.keyPluralDataKey) === '' ? Plural.OTHER : node.getPluginData(this.keyPluralDataKey);
     const language = node.getPluginData(this.languageDataKey) === '' ? this.translationKeyStore!.getConfigSync().baseLanguage! : node.getPluginData(this.languageDataKey) as Language;
     const keyVersion = node.getPluginData(this.keyVersionDataKey) === '' ? -1 : parseInt(node.getPluginData(this.keyVersionDataKey), 10);
+    const fillins = node.getPluginData(this.fillinsKey) === '' ? {} : JSON.parse(node.getPluginData(this.fillinsKey));
 
     const keyType = node.getPluginData(this.keyTypeDataKey) === '' || node.getPluginData(this.keyTypeDataKey) === undefined ? KeyState.Unset : node.getPluginData(this.keyTypeDataKey) as KeyState;
     const key = node.getPluginData(this.keyDataKey) === '' ? undefined : node.getPluginData(this.keyDataKey);
@@ -657,10 +660,10 @@ export default class LocalizedLabelManager {
       keyType,
       key,
       keyVersion,
+      fillins,
       derivedKey: derivable ? derivedName : undefined,
       pluralId: pluralId as Plural,
       text,
-
     };
   }
 }

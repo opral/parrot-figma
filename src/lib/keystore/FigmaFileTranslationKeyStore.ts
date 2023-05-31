@@ -3,16 +3,20 @@
 import { Language } from '../base/Language';
 import { Plural } from '../base/Plural';
 import {
-  HistoryTag, HistoryEntry, TranslationKey, TranslationKeys,
+  HistoryTag, HistoryEntry, TranslationKey, TranslationKeys, PlaceholdersByName, Fillins, PlaceholderType,
 } from './TranslationKey';
-import { TranslationKeyStore } from './BaseTranslationKeyStore';
+import { UITranslationKey } from './UITranslationKey';
 
 export interface Config {
   baseLanguage?: Language,
   enabledLanguages?: Language[]
 }
 
-export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
+const defaultStringFillinValue = 'Loren Impsum';
+const defaultDecimalFillinValue = 7;
+const defaultFloatFillinValue = Math.PI;
+
+export class FigmaFileTranslationKeyStore {
   public proxClassName = 'FigmaFileTranslationKeyStore';
 
   public static configDataKey = 'aar_c';
@@ -25,8 +29,14 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
    */
   public static tagsDataKey = 'aar_t';
 
+  /**
+   * Prefix for keys - the head version of a key ist stored withing a key of the root node of the document prefixed with the keyPrefix followed by the keyname
+   */
   keyPrefix = 'aar_k__';
 
+  /**
+   * Prefix for keys version history. Each change of a key is stored in the keys history array - found in keyHistoryPrefix followed by the keyname
+   */
   keyHistoryPrefix = 'aar_h__';
 
   // contains a map from key to state index from the last cache propagation
@@ -196,6 +206,29 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
     }
 
     const key = JSON.parse(keyRaw) as TranslationKey;
+
+    const defaultFillins = {} as Fillins;
+    const placeholders = key.placeholders ?? {};
+
+    for (const placeholderName of Object.keys(placeholders)) {
+      // if the placeholder does not exist or is flagged as default value, enrich with default value
+      const defaultValue = !(key.defaultFillins?.[placeholderName]?.default === false);
+      if (defaultValue) {
+        const placehodlder = key.placeholders[placeholderName];
+        let fillinDefaultValue = defaultStringFillinValue as string | number;
+        if (placehodlder.type === PlaceholderType.float) {
+          fillinDefaultValue = defaultFloatFillinValue;
+        } else if (placehodlder.type === PlaceholderType.integer) {
+          fillinDefaultValue = defaultDecimalFillinValue;
+        }
+        defaultFillins[placeholderName] = { default: true, value: fillinDefaultValue };
+      } else {
+        defaultFillins[placeholderName] = key.defaultFillins?.[placeholderName];
+      }
+    }
+
+    key.defaultFillins = defaultFillins;
+
     if (!key.historyTags) {
       key.historyTags = [];
     }
@@ -265,7 +298,7 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
 
       historyEntry.plural = translationKey.plural;
     }
-  
+
     if (!keyCurrentVersion || FigmaFileTranslationKeyStore.arraysAreEqual(translationKey.labels, keyCurrentVersion.labels)) {
       if (!historyEntry) {
         historyEntry = { user: userId, date: dateOfChange };
@@ -298,6 +331,7 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
     figma.root.setPluginData(this.keyPrefix + translationKey.keyName, JSON.stringify(serializableTranslationKey));
     figma.root.setPluginData(this.keyHistoryPrefix + translationKey.keyName, JSON.stringify(history));
 
+    // TODO #8 handle history for placeholder, fillins and quantity!
     // TODO key history: pause event event handling using a flag;
 
     translationKey.history = history;
@@ -318,7 +352,7 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
     return true;
   }
 
-  async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean): Promise<TranslationKey> {
+  async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean, quantity?: { value: number } | { placeholder: string }, defaultFillins?: Fillins): Promise<TranslationKey> {
     const existingKey = this.getKey(keyName);
     if (existingKey) {
       throw Error('tried to create a key that already existed');
@@ -337,19 +371,25 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
       translationsObj[translation.language][translation.plural].text = translation.text;
     }
 
+    const placeholders = UITranslationKey.extractParameters(translationsObj, this.getConfigSync().baseLanguage!, plural);
+
     const createdKey = {
       latestVersion: 0,
       keyName,
       labels: [],
       plural,
       translations: translationsObj,
+      placeholders,
+      quantity,
+      defaultFillins,
       history: [], // first history entry will be added in persistKey method...
       historyTags: [],
     } as TranslationKey;
     return this.persistKey(createdKey);
   }
 
-  async updateKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], plural?: boolean): Promise<TranslationKey> {
+  async updateKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], plural?: boolean, quantity?: { value: number } | { placeholder: string }, defaultFillins?: Fillins): Promise<TranslationKey> {
+    // this one gets a deep clone of the key
     const keyToUpdate = this.getKey(keyName);
 
     if (keyToUpdate === undefined) {
@@ -387,6 +427,18 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
       keyToUpdate.plural = plural;
     }
 
+    const placeholders = UITranslationKey.extractParameters(keyToUpdate.translations, this.getConfigSync().baseLanguage!, keyToUpdate.plural);
+
+    keyToUpdate.placeholders = placeholders;
+
+    if (quantity !== undefined && quantity !== null) {
+      keyToUpdate.quantity = quantity;
+    }
+
+    if (defaultFillins !== undefined && defaultFillins !== null) {
+      keyToUpdate.defaultFillins = defaultFillins;
+    }
+
     return this.persistKey(keyToUpdate);
   }
 
@@ -400,10 +452,7 @@ export class FigmaFileTranslationKeyStore implements TranslationKeyStore {
     for (const keyWithPrefix of figma.root.getPluginDataKeys()) {
       if (keyWithPrefix.startsWith(this.keyPrefix)) {
         const key = keyWithPrefix.substring(this.keyPrefix.length, keyWithPrefix.length);
-        const keyData = figma.root.getPluginData(keyWithPrefix);
-        if (keyData && keyData !== '') {
-          translationKeys[key] = this.getKey(key)!;
-        }
+        translationKeys[key] = this.getKey(key)!;
       }
     }
     return translationKeys;

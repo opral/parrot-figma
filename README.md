@@ -248,6 +248,13 @@ What we want from ui point of view:
  - [x] localize tool using the tool :-) POC
  - [x] Add tooltips 
 
+ - [ ] add anotation page
+ - [ ] allow to save from key translation editor
+ - [x] fix selection
+ - [x] allow to edit sample data on a label - allow to add default sample data
+ - [ ] allow to show all translations
+ - [ ] allow to specify the quantity param in the key (first number by default)
+ - [ ] highlight key of the currently selected label
  - [ ] polish mouse pointer styles
  - [ ] check keyname for at least one visible character
  - [ ] focus key field on link click if no derviation is posible
@@ -288,6 +295,12 @@ What we want from ui point of view:
  - [ ] use base language for translation if possible
  - [ ] handle selection for keys as well (provide an option to only show keys of current selection)
  - [ ] add show difference toggle to history view
+
+#### Placeholder logic
+
+##### Key Matching
+If we have a label with the text "Hello Martin how are you today?" and a key "Hello [[firstname]] how are you today?",
+we can match it with a regex like "Hello "
 
 #### import
  - [ ] import of ios dict

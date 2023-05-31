@@ -8,9 +8,10 @@ import { useState } from 'react';
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
 import OutsideClickHandler from 'react-outside-click-handler';
+import { fileLoader } from 'ejs';
 import { Language } from '../../../lib/base/Language';
 import { Plural, getPluralFormsByLanguage } from '../../../lib/base/Plural';
-import { HistoryTag } from '../../../lib/keystore/TranslationKey';
+import { HistoryTag, Placeholder } from '../../../lib/keystore/TranslationKey';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
 
 import FigmaUtil from '../../../shared/FigmaUtil';
@@ -20,6 +21,8 @@ import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabel
 import MatchView from '../../compontents/matchview/MatchView';
 import HistoryEntryView from '../../compontents/history/HistoryEntryView';
 import { UITranslationKey } from '../../../lib/keystore/UITranslationKey';
+import { PlaceholderView } from '../../compontents/translationEditor/PlaceholderView';
+import PlaceholderEditorListItem from '../../compontents/placeholder/PlaceholderEditor';
 
 type TranslationKeyListItemProps = {
   translationKey: UITranslationKey,
@@ -52,6 +55,8 @@ export default function TranslationKeyListItem({
   const { t } = useTranslation();
   const [selected, setSelected] = useState(false);
   const [showUsage, setShowUsage] = useState(false);
+  const [showPlaceholderEditor, setShowPlaceholderEditor] = useState(false);
+  const [defaultFillins, setDefaultFillins] = useState(translationKey.defaultFillins);
   const [history, setHistory] = useState<undefined | VersionEntry[]>(undefined);
 
   const [showHistory, setShowHistory] = useState<undefined | { language: Language, plural: Plural }>(undefined);
@@ -208,7 +213,7 @@ export default function TranslationKeyListItem({
             <span
               className="layerIcon iconWrapper button"
               onClick={() => {
-                translationKeyStore.updateKey(translationKey.keyName, [], !translationKey.plural);
+                localizedLabelManager.updateKey(translationKey.keyName, [], !translationKey.plural);
               }}
             >
               <span className={'svg-container ' + (translationKey.plural ? 'plural-svg' : 'no-plural-svg')} />
@@ -218,7 +223,7 @@ export default function TranslationKeyListItem({
           )}
         </div>
         <div>
-          { false && Object.values(translationKey.getPlaceholders()).map((placeholder) => (
+          { false && Object.values(translationKey.placeholders).map((placeholder: Placeholder) => (
             <div>
               {placeholder.name + ' ' + (placeholder.derivedArgumentPosition) + ' ' + (placeholder.specifiedArgumentPosition ? placeholder.specifiedArgumentPosition : '-') + ' ' + placeholder.named }
             </div>
@@ -288,12 +293,9 @@ export default function TranslationKeyListItem({
                         if (text !== undefined && text !== '') {
                           skip = false;
                         }
-                        await translationKeyStore.updateKey(translationKey.keyName!, [{
+                        await localizedLabelManager.updateKey(translationKey.keyName!, [{
                           language, plural: plural as Plural, text, skip,
                         }]);
-
-                        await localizedLabelManager.updateUnmodifiedLabelsWithKey(translationKey.keyName!);
-                        await translationKeyStore.parentKeyStore.commitUndo();
                       }}
                       text={translationKey.translations[language as Language]?.[plural as Plural]?.text}
                       translationKeyStore={translationKeyStore}
@@ -308,13 +310,12 @@ export default function TranslationKeyListItem({
                         onClick={async () => {
                           // disable a translation
                           // debugger;
-                          await translationKeyStore.updateKey(translationKey.keyName!, [{
+                          await localizedLabelManager.updateKey(translationKey.keyName!, [{
                             language,
                             plural,
                             text: translationKey.translations[language as Language]?.[plural as Plural]?.text,
                             skip: translationKey.translations[language as Language]?.[plural as Plural]?.skip === undefined ? true : !translationKey.translations[language as Language]![plural as Plural]!.skip,
                           }]);
-                          await translationKeyStore.parentKeyStore.commitUndo();
                         }}
                       >
                         <span className={'svg-container' + (translationKey.translations[language as Language]?.[plural as Plural]?.skip === true ? ' eye-closed-svg' : ' eye-svg')} />
@@ -327,7 +328,14 @@ export default function TranslationKeyListItem({
                       >
                         <span className="svg-container history-svg" />
                       </span>
-
+                      <span
+                        className="layerIcon iconWrapper button"
+                        onClick={async () => {
+                          setShowPlaceholderEditor(true);
+                        }}
+                      >
+                        <span className="svg-container placeholder-svg" />
+                      </span>
                     </>
                     )}
                   </div>
@@ -375,14 +383,68 @@ export default function TranslationKeyListItem({
               onReuse={i === 0 ? undefined : async (text: string) => {
                 if (showHistory === undefined) return;
 
-                await translationKeyStore.updateKey(translationKey.keyName!, [{
+                await localizedLabelManager.updateKey(translationKey.keyName!, [{
                   language: showHistory.language, plural: showHistory.plural as Plural, text, skip: false,
                 }]);
-                await translationKeyStore.parentKeyStore.commitUndo();
                 setShowHistory(undefined);
               }}
             />
           ))}
+        </div>
+      </OutsideClickHandler>
+      <OutsideClickHandler
+        onOutsideClick={() => { setShowPlaceholderEditor(false); }}
+        disabled={showPlaceholderEditor === false}
+        display="contents"
+      >
+        <div className={`side-drawer${showPlaceholderEditor !== false ? ' open' : ' '}`}>
+          <div className="history_view--topHeader">
+            Placeholders
+            <span
+              role="button"
+              onClick={() => { setShowPlaceholderEditor(false); }}
+              className="svg-container raw_components--iconButtonEnabled raw_components--_iconButton history_view--headerButton"
+              data-tooltip-type="text"
+              data-tooltip="Close"
+              aria-label="Close"
+            >
+              <svg className="svg" width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 5.71l3.646 3.647.707-.707-3.646-3.647 3.646-3.646L8.646.65 5 4.296 1.353.65l-.707.707 3.646 3.646L.646 8.65l.707.707L5 5.71z" fillRule="nonzero" fillOpacity="1" fill="#000" stroke="none" />
+              </svg>
+            </span>
+          </div>
+          <div className="placeholder-view-grid">
+
+            <div />
+            <div />
+            <div>Name</div>
+            <div>Value</div>
+            <div />
+
+            {translationKey.placeholders && Object.entries(translationKey.placeholders).map((entry, i, array) => (
+              <PlaceholderEditorListItem
+                placeholder={entry[1]}
+                fillin={translationKey.defaultFillins![entry[0]]!.value}
+                onValueChange={(placeholderName, fillinValue) => {
+                  const newFillins = {
+                    ...defaultFillins, // Copy the old fields
+                  };
+                  newFillins[placeholderName] = { value: fillinValue, default: fillinValue === '' };
+                  setDefaultFillins(newFillins);
+                }}
+              />
+
+            ))}
+          </div>
+          <input
+            type="button"
+            value="Save"
+            disabled={false}
+            onClick={() => {
+              debugger;
+              localizedLabelManager.updateKey(translationKey.keyName, [], undefined, defaultFillins, undefined);
+            }}
+          />
         </div>
       </OutsideClickHandler>
     </div>

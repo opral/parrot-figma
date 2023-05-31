@@ -18,8 +18,8 @@ export default function Tooltip({ triggerAttribute, contentAttribute }: TooltipP
   const tooltipVisibleRef = useRef(tooltipVisible);
   tooltipVisibleRef.current = tooltipVisible;
   const [tooltipContent, setTooltipContent] = useState('');
-  const hideTooltipTimeoutRef = useRef<number | undefined>(undefined);
-  const showTooltipTimeoutRef = useRef<number | undefined>(undefined);
+  const hideTooltipTimeoutRef = useRef<any | undefined>(undefined);
+  const showTooltipTimeoutRef = useRef<any | undefined>(undefined);
 
   const hideTimeout = 600;
   const showTimeout = 1000;

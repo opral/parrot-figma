@@ -339,7 +339,7 @@ export default function Select({
   const expandButtonClass = isExpanded ? 'select-menu__button--active' : '';
   const expanListClass = isExpanded ? 'select-menu__menu--active' : '';
   const disabledColorClass = isDisabled ? 'icon--black-3' : '';
-  
+
   const label = (selectedOption && selectedOption.label) || placeholder;
   const labelParts = label.split('_');
 
@@ -353,6 +353,7 @@ export default function Select({
 
   return (
     <OutsideClickHandler
+      display="contents"
       onOutsideClick={handleOutsideClick}
       disabled={!isExpanded}
     >

@@ -88,12 +88,12 @@
 .history_view--userInfo {
     display: inline-flex;
     align-items: center;
-    z-index: 1;
+    z-index: 2;
 }
 
 .history_view--baseIcon {
     margin-left: 4px;
-    z-index: 1;
+    z-index: 2;
     color: var(--figma-color-icon, #000);
     fill: var(--figma-color-icon, #000);
 }

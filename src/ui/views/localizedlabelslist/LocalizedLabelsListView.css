@@ -18,7 +18,7 @@
 .table {
 
     display: grid;
-    grid-template-columns: 25% 1fr;
+    grid-template-columns: 20% 1fr;
 }
 
 .header {
@@ -28,7 +28,7 @@
 .header>div {
     position: sticky;
     top: 0;
-    z-index: 1;
+    z-index: 200;
     background-color: var(--figma-color-bg);
 }
 
@@ -144,6 +144,7 @@
 }
 
 .localized-label-details {
+    width: 100%;
     min-height: 32px;
     display: flex;
     align-items: center;
@@ -166,14 +167,21 @@
 }
 
 .key-panel {
+    width: 100%;
     display: flex;
     align-items: center;
     align-content: center;
 }
 
+.key-panel .button.layerIcon {
+    align-self: self-start;
+}
+
 .key-panel .select-menu.key-select {
-    min-width: 240px;
-    max-width: 240px;
+    min-width: 160px;
+    max-width: 160px;
+    align-self: self-start;
+    display: flex;
 }
 
 .key-panel .key-panel-icon {
@@ -201,7 +209,6 @@
 }
 
 
-
 .localized-label .text-field-text p {
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -209,7 +216,14 @@
 }
 
 
+.localized-label .text-field {
+    
+    overflow: hidden;
+}
 
+.key-panel .grid {
+    flex-grow: 1;
+}
 
 .top-drawer {
     overflow: scroll;

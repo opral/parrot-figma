@@ -16,10 +16,9 @@ import {
   EditorView,
 } from '@codemirror/view';
 
-import MatchView from '../matchview/MatchView';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
 import placeholderDecorator from './PlaceholderDecorator';
-
+import TranslationView from './TranslationView';
 
 const myTheme = createTheme({
   theme: 'light',
@@ -33,7 +32,7 @@ const myTheme = createTheme({
     gutterForeground: 'var(--figma-color-bg)',
     gutterBorder: '#ddd',
     gutterActiveForeground: '',
-    lineHighlight: 'var(--figma-color-bg)',
+    lineHighlight: 'transparent',
   },
   styles: [
 
@@ -61,7 +60,7 @@ function createCompletion(keyProvider: MemoryTranslationKeyStore) {
       detail: 'Text Placeholder',
     })] as any[];
 
-    options = options.concat(keyProvider.getSampleKeyNames().map((keyName) => ({ label: `[[${keyName}]]` })));
+    // options = options.concat(keyProvider.getSampleKeyNames().map((keyName) => ({ label: `[[${keyName}]]` })));
 
     return {
       from: word.from,
@@ -125,7 +124,7 @@ export default function TranslationEditor({
       <div className={`translation-editor${editingState ? ' editing' : ''}`}>
         <div ref={textDivRef} onMouseOver={() => setMouseOver(true)} onMouseLeave={() => setMouseOver(false)} className={`translation-editor-text${editingState ? ' editing' : ''}`}>
 
-          <p
+          <div
             className={`translation${editingState ? ' editing ' : ''}${textState === undefined ? ' missing ' : ''}`}
             onClick={() => {
               if (!editingState && editable) {
@@ -133,12 +132,12 @@ export default function TranslationEditor({
               }
             }}
           >
-            <MatchView
+            <TranslationView
               match={match}
               text={textToUse}
             />
 
-          </p>
+          </div>
           { (isMouseOver || editingState) && (
 
           <CodeMirror

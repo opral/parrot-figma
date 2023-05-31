@@ -6,6 +6,7 @@ import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabel
 import FigmaUtil from '../../../shared/FigmaUtil';
 import LocalizedFrameGroup from './LocalizedFrameGroup';
 import './LocalizedLabelsListView.css';
+import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
 
 type LocalizedLabelsListViewProps = {
   translationKeyStore: MemoryTranslationKeyStore
@@ -13,16 +14,12 @@ type LocalizedLabelsListViewProps = {
   localizedLabelManager: LocalizedLabelManagerUI,
 };
 
-interface LocalizedLabelListItem extends LocalizedLabel {
-//    selected?: boolean
-}
-
 export default function LocalizedLabelsListView({
   translationKeyStore,
   figmaRemote,
   localizedLabelManager,
 }: LocalizedLabelsListViewProps) {
-  const [localizedLabels, setLocalizedLabels] = useState<LocalizedLabelListItem[]>([]);
+  const [localizedLabels, setLocalizedLabels] = useState<UILocalizedLabel[]>([]);
 
   const [selection, setSelection] = useState({} as {
     [rootFrameId: string]: string[]
@@ -35,7 +32,7 @@ export default function LocalizedLabelsListView({
       [rootFrameId: string]: string[]
     };
 
-    let selectedLabels = [] as LocalizedLabel[];
+    let selectedLabels = [] as UILocalizedLabel[];
 
     for (const selectedNode of selectedNodes) {
       if (!selectedByFrame[selectedNode.rootFrameId]) {

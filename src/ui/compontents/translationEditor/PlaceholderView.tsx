@@ -1,0 +1,62 @@
+import * as React from 'react';
+import { PlaceholderType } from '../../../lib/keystore/TranslationKey';
+
+export type PlaceholderViewProps = {
+  name: string,
+  type: PlaceholderType,
+  specifiedArgumentPositon?: number,
+  derivedArgumentPosition: number,
+  decimalPlaces?: number,
+  selected?: boolean,
+  fillIn?: string,
+};
+
+export function PlaceholderView({
+  name,
+  type,
+  specifiedArgumentPositon,
+  decimalPlaces,
+  derivedArgumentPosition,
+  selected,
+  fillIn,
+}: PlaceholderViewProps) {
+  return (
+    <span className={`placholder-container ${selected ? 'selected' : ''}`}>
+
+      <span className="placholder-placeholder-type">{ name }</span>
+      {specifiedArgumentPositon !== undefined && specifiedArgumentPositon !== derivedArgumentPosition && (
+        <span className="placholder-argument-position placholder-argument-position-missmatch" data-tooltip-trigger="span" data-tooltip-content={`Specified Position conflicts with postion ${derivedArgumentPosition}`}>
+          {specifiedArgumentPositon}
+        </span>
+      )}
+      {specifiedArgumentPositon !== undefined && specifiedArgumentPositon === derivedArgumentPosition && (
+        <span className="placholder-argument-position placholder-argument-position-match" data-tooltip-trigger="span" data-tooltip-content="Argument Position">
+          {specifiedArgumentPositon}
+        </span>
+      )}
+      {specifiedArgumentPositon === undefined && (
+        <span className="placholder-argument-position placholder-argument-position-derived" data-tooltip-trigger="span" data-tooltip-content="Argument Position defined in DE - other ...">
+          {derivedArgumentPosition}
+        </span>
+      )}
+      {type === PlaceholderType.float && decimalPlaces === undefined && (
+      <>
+        <span className="placholder-placeholder-type-spacer">:</span>
+        <span className="placholder-placeholder-type" data-tooltip-trigger="span" data-tooltip-content={`Placholder will expect a float as an argument. (example: ${Math.PI}`}>f</span>
+      </>
+      )}
+      {type === PlaceholderType.float && decimalPlaces !== undefined && (
+      <>
+        <span className="placholder-placeholder-type-spacer">:</span>
+        <span className="placholder-placeholder-type" data-tooltip-trigger="span" data-tooltip-content={`Placholder will expect a float as an argument. It will be printed with ${decimalPlaces} places. (example: ${Math.PI.toFixed(decimalPlaces)}`}>{`f${decimalPlaces ? `.${decimalPlaces}` : ''}`}</span>
+      </>
+      )}
+      {type === PlaceholderType.integer && (
+      <>
+        <span className="placholder-placeholder-type-spacer">:</span>
+        <span className="placholder-placeholder-type">d</span>
+      </>
+      )}
+    </span>
+  );
+}

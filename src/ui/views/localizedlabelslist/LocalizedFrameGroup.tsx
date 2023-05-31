@@ -8,9 +8,10 @@ import FigmaUtil from '../../../shared/FigmaUtil';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import { Language } from '../../../lib/base/Language';
+import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
 
 type LocalizedFrameGroupProps = {
-  localizedLabels: LocalizedLabel[],
+  localizedLabels: UILocalizedLabel[],
   translationKeyStore: MemoryTranslationKeyStore
   selectedNodes: string[]
   figmaRemote: FigmaUtil
@@ -48,8 +49,28 @@ export default function LocalizedFrameGroup({
   }
 
   async function onLanguageSelectionClick(firstLocalizedLabelInFrame: LocalizedLabel, language: Language) {
-    const deepLTranslationProvider = async (text: string, sourceLanguage: string, targetLanguage: string) => {
-      const sentences = text.split('. ');
+    const translationProvider = async (text: string, sourceLanguage: string, targetLanguage: string) => {
+      // replace placeholder with numbers to not translate them
+
+      const pattern = /\[\[([A-Za-z_]{2,})?(?:#(\d+))?(?::*([sdf])(?:\.(\d+))?)?\]\]/g;
+
+      const placeholderIndexMapping = [] as string[];
+      let currentIndex = 0;
+
+      // const wholeMatch = paramMatch[0];
+      // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
+      // const name = paramMatch[2];
+
+      const textWithMaskedPlaceholders = text.replace(pattern, (match, name, _argumentPosition) => {
+        const placeholderName = name;
+        placeholderIndexMapping[currentIndex] = placeholderName;
+        const placeholderReplacement = `[[${currentIndex}]]`;
+        // eslint-disable-next-line no-plusplus
+        currentIndex++;
+        return placeholderReplacement;
+      });
+
+      const sentences = textWithMaskedPlaceholders.split('. ');
       const translatedSentences = [] as string[];
       for (const sentence of sentences) {
         // eslint-disable-next-line no-await-in-loop
@@ -74,7 +95,17 @@ export default function LocalizedFrameGroup({
           .join('\n'));
       }
 
-      return translatedSentences.join('. ');
+      const translationWithMaskedPlaceholders = translatedSentences.join('. ');
+
+      const patternMaskedPlaceholders = /\[\[([0-9]+)\]\]/g;
+
+      // const wholeMatch = paramMatch[0];
+      // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
+      // const name = paramMatch[2];
+
+      const translationWithoutPlaceholders = translationWithMaskedPlaceholders.replace(patternMaskedPlaceholders, (match, placeholderIndex, _argumentPosition) => `[[${placeholderIndexMapping[placeholderIndex]}]]`);
+
+      return translationWithoutPlaceholders;
       /*
       // https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=fr&dt=t&q=Hello
       // origin-when-cross-origin
@@ -100,12 +131,7 @@ export default function LocalizedFrameGroup({
       return translationResults.translations[0].text; */
     };
 
-    localisedLabelManager.setFrameLanguage(firstLocalizedLabelInFrame.rootFrameId, language, deepLTranslationProvider);
-  }
-
-  async function onSampleValuesClick(firstLocalizedLabelInFrame: LocalizedLabel) {
-    // TODO #4 check how we want to handle the toggle on the frame
-    localisedLabelManager.setFrameUseSampleValues(firstLocalizedLabelInFrame.rootFrameId, firstLocalizedLabelInFrame.useSampleValues);
+    localisedLabelManager.setFrameLanguage(firstLocalizedLabelInFrame.rootFrameId, language, translationProvider);
   }
 
   return (
@@ -120,26 +146,15 @@ export default function LocalizedFrameGroup({
           <div className="element-name font-body-24-bold">{rootFrameName}</div>
         </div>
         <div className="column-2">
-          
+
           <div className="row-actions">
-          <div style={{width: '240px'}}>
-            
-            </div>
+            <div style={{ width: '240px' }} />
             <Select
               placeholder="Select item"
               onChange={(value) => { onLanguageSelectionClick(firstTranslationState, value.value as Language); }}
-              defaultValue={languageOptiones.find(opt => opt.value === rootFrameLanguage?.value)}
+              defaultValue={languageOptiones.find((opt) => opt.value === rootFrameLanguage?.value)}
               getOptions={() => languageOptiones}
             />
-            <div
-              className="row-action-icon"
-              onClick={(e) => {
-                e.preventDefault();
-                onSampleValuesClick(firstTranslationState);
-              }}
-            >
-              <div className={`svg-container ${sampleValues === true ? 'placeholder-svg' : 'placeholder-filled-svg'}`} />
-            </div>
 
           </div>
         </div>

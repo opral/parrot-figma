@@ -1,45 +1,40 @@
 // eslint-disable-next-line max-classes-per-file
+import * as React from 'react';
 import {
   Decoration,
   DecorationSet, EditorView, ViewPlugin, ViewUpdate, WidgetType,
 } from '@codemirror/view';
 import { RangeSetBuilder } from '@codemirror/state';
-import { Placeholder, PlaceholderType, UITranslationKey } from '../../../lib/keystore/UITranslationKey';
+import ReactDOMServer from 'react-dom/server';
+import { UITranslationKey } from '../../../lib/keystore/UITranslationKey';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
+import { PlaceholderView, PlaceholderViewProps } from './PlaceholderView';
+import { isVisibleNode } from '@figma-plugin/helpers';
 
 class PlaceholderWidget extends WidgetType {
-  placeholder: Placeholder;
+  contentHtml: string;
 
-  content: string;
-
-  constructor(inTextPlaceholder: Placeholder, derivedPlaceholder: Placeholder | undefined) {
+  constructor(placeholderProps: PlaceholderViewProps) {
     super();
-    this.placeholder = inTextPlaceholder;
-
-    const name = this.placeholder.named ? this.placeholder.name : '?';
-
-    if (this.placeholder.type === PlaceholderType.float) {
-      this.content = `${this.placeholder.specifiedArgumentPosition}:${this.placeholder.name}:f.${this.placeholder.decimalPlaces}`;
-    } else if (this.placeholder.type === PlaceholderType.integer) {
-      this.content = `${this.placeholder.specifiedArgumentPosition}:${name}:i`;
-    } else {
-      this.content = `${this.placeholder.specifiedArgumentPosition}:${name}`;
-    }
+    this.contentHtml = ReactDOMServer.renderToString(<PlaceholderView
+      name={placeholderProps.name}
+      type={placeholderProps.type}
+      specifiedArgumentPositon={placeholderProps.specifiedArgumentPositon}
+      decimalPlaces={placeholderProps.decimalPlaces}
+      derivedArgumentPosition={placeholderProps.derivedArgumentPosition}
+      fillIn={placeholderProps.fillIn}
+      selected={placeholderProps.selected}
+    />);
   }
 
   eq(other: any) {
-    return this.content === other.content;
+    return this.contentHtml === other.contentHtml;
   }
 
   toDOM() {
-    const elt = document.createElement('span');
-    elt.style.cssText = `
-      border: 1px solid blue;
-      border-radius: 4px;
-      padding: 0 3px;
-      background: lightblue;`;
-    elt.textContent = this.content;
-    return elt;
+    const helperContainer = document.createElement('span');
+    helperContainer.innerHTML = this.contentHtml;
+    return helperContainer.firstChild as HTMLElement;
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -76,7 +71,7 @@ export default function placeholderDecorator(keyStore: MemoryTranslationKeyStore
       const build = new RangeSetBuilder();
       const add = build.add.bind(build);
 
-      const derivedPlaceholders = keyName ? keyStore.getKey(keyName)?.getPlaceholders() : undefined;
+      const derivedPlaceholders = keyName ? keyStore.getKey(keyName)?.placeholders : undefined;
 
       // editors are always show the whole text - we optimze later if needed
       const text = view.state.doc.toString();
@@ -85,10 +80,30 @@ export default function placeholderDecorator(keyStore: MemoryTranslationKeyStore
 
       const placeholders = UITranslationKey.extractPlaceholdersInText(text);
       for (const placeholder of placeholders) {
+        const fixedPosition = 3; // TODO source this from the keys parameters instead
         // we do not mask if the cursor is placed within a placeholder
         if (!(cursorPos > placeholder.positionInString && cursorPos < (placeholder.positionInString + placeholder.length))) {
-          add(placeholder.positionInString, placeholder.positionInString + placeholder.length, Decoration.replace({
-            widget: new PlaceholderWidget(placeholder, derivedPlaceholders?.[placeholder.name]),
+          const placeHolderEnd = placeholder.positionInString + placeholder.length;
+          let selected = false;
+          for (const range of view.state.selection.ranges) {
+            if (range.to !== range.from && placeholder.positionInString <= range.to && placeHolderEnd >= range.from) {
+              console.log('placeholder.positionInString' + placeholder.positionInString);
+              console.log('placeHolderEnd' + placeHolderEnd);
+              console.log(range);
+              // Overlapping detected
+              selected = true;
+            }
+          }
+
+          add(placeholder.positionInString, placeHolderEnd, Decoration.replace({
+            widget: new PlaceholderWidget({
+              name: placeholder.name,
+              type: placeholder.type,
+              decimalPlaces: placeholder.decimalPlaces,
+              specifiedArgumentPositon: placeholder.specifiedArgumentPosition,
+              derivedArgumentPosition: fixedPosition,
+              selected,
+            }),
           }));
         }
       }

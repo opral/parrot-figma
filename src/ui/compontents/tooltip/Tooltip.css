@@ -13,7 +13,7 @@
   border-style: solid;
   border-color: transparent;
   border-width: 6px;
-  z-index: 240;
+  z-index: 400;
 }
 
 .tooltip--arrowInset {
@@ -41,7 +41,7 @@
   transform: translate(-50%, 0);
   background: var(--color-bg-tooltip, #050505);
   color: var(--color-text-tooltip, white);
-  z-index: 240;
+  z-index: 400;
   border-radius: 2px;
   white-space: nowrap;
   box-shadow: var(--elevation-300-tooltip, 0 2px 7px rgba(0, 0, 0, .15));

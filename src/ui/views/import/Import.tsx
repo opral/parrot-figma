@@ -9,18 +9,18 @@ import { SupportedLanguages, Language } from '../../../lib/base/Language';
 import TileSelect, { TileSelectOption } from '../../compontents/tileselect/tileselect';
 
 import './Import.css';
-import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
 import FileDropZone from '../../compontents/dropzone/Dropzone';
 import KeyImporter from '../../../lib/import/KeyImporter';
 import { ImportTranslationKey } from '../../../lib/import/ImportTranslationKey';
+import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 
 
 type ImportProps = {
-  translationKeyStore: MemoryTranslationKeyStore
+  labelManager: LocalizedLabelManagerUI
 };
 
 export default function Import({
-  translationKeyStore,
+  labelManager,
 }: ImportProps) {
   const { t } = useTranslation();
 
@@ -39,7 +39,7 @@ export default function Import({
   const setImportLanguage = (importLanguage: Language[]) => {
     if (importLanguage.length === 1) {
       setImportLanguageState(importLanguage[0]);
-      const importStats = KeyImporter.getImportStatistics(translationKeyStore, importKeys!, importLanguage[0]);
+      const importStats = KeyImporter.getImportStatistics(labelManager.keyStore, importKeys!, importLanguage[0]);
       setimportKeysByState(importStats);
     } else {
       setImportLanguageState(undefined);
@@ -113,14 +113,14 @@ export default function Import({
               {importKeysByState.updatedTranslations.map((value) => {
                 console.log('diff');
                 console.log(value.text);
-                console.log(translationKeyStore.getKey(value.keyName)!.translations[importLanguageState!]![value.plural]!.text);
+                console.log(labelManager.keyStore.getKey(value.keyName)!.translations[importLanguageState!]![value.plural]!.text);
 
                 return (
                   <>
                     <div>{value.keyName}</div>
                     <div>{value.plural}</div>
                     <div>{value.text}</div>
-                    <div>{translationKeyStore.getKey(value.keyName)!.translations[importLanguageState!]![value.plural]!.text}</div>
+                    <div>{labelManager.keyStore.getKey(value.keyName)!.translations[importLanguageState!]![value.plural]!.text}</div>
                   </>
                 );
               })}
@@ -135,7 +135,7 @@ export default function Import({
             className="button button--buttonSecondary"
             type="button"
             onClick={() => {
-              KeyImporter.import(translationKeyStore, importKeys!, importLanguageState!);
+              KeyImporter.import(labelManager, importKeys!, importLanguageState!);
             }}
           >
             <span data-tooltip-type="text">

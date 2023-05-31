@@ -4,6 +4,7 @@ import { TranslationKeyStore } from '../lib/keystore/BaseTranslationKeyStore';
 import FigmaUtil from './FigmaUtil';
 import { Language } from '../lib/base/Language';
 import { Plural } from '../lib/base/Plural';
+import { FigmaFileTranslationKeyStore } from '../lib/keystore/FigmaFileTranslationKeyStore';
 
 const defaultLinkStyleKey = 'defaultLinkStyle';
 
@@ -12,9 +13,9 @@ export default class FigmaHelper {
 
   figma: PluginAPI | undefined;
 
-  translationKeyStore: TranslationKeyStore | undefined;
+  translationKeyStore: FigmaFileTranslationKeyStore | undefined;
 
-  constructor(figma?: PluginAPI, keyStore?: TranslationKeyStore) {
+  constructor(figma?: PluginAPI, keyStore?: FigmaFileTranslationKeyStore) {
     this.figma = figma;
     this.translationKeyStore = keyStore;
   }

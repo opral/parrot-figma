@@ -1,6 +1,6 @@
 .grid {
   display: grid;
-  grid-template-columns: [selector] min-content [key] min-content [language] min-content [plural] min-content [translation] auto [actions] 100px;
+  grid-template-columns: [selector] min-content [key] min-content [language] min-content [plural] min-content [translation] auto [actions] min-content;
 
 }
 
@@ -428,4 +428,9 @@
 .searchResults-suggestion {
   padding: 5px;
 
+}
+
+.placeholder-view-grid {
+  display: grid;
+  grid-template-columns: [drag] auto [type] 12px [name] 1fr [value] 2fr [decimal] 0px;;
 }

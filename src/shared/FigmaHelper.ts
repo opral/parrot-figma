@@ -5,6 +5,8 @@ import FigmaUtil from './FigmaUtil';
 import { Language } from '../lib/base/Language';
 import { Plural } from '../lib/base/Plural';
 import { FigmaFileTranslationKeyStore } from '../lib/keystore/FigmaFileTranslationKeyStore';
+import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
+import { KeyState } from '../lib/localizedlabels/LocalizedLabel';
 
 const defaultLinkStyleKey = 'defaultLinkStyle';
 
@@ -37,28 +39,29 @@ export default class FigmaHelper {
             frame.setPluginData(FigmaLocaliziationKeyHelper.sampleValuesDataKey, 'true');
           }
           */
-    this.drawKeyFrame(frame);
+    // this.drawKeyFrame(frame);
     await this.updateFrame(frame);
   }
 
-  async drawKeyFrame(frame: BaseNode) {
-    /*
+  async drawKeyFrame(frameNodeId: string, labelManager: LocalizedLabelManager) {
+    
+        const frame = figma.getNodeById(frameNodeId);
         const MARGIN = 50;
 
-        let nodesWithKeys = FigmaLocaliziationHelper.extractAllKeysFromChildMixin(frame as ChildrenMixin, [])
+        let translatedFrame = labelManager.getFrameById(frameNodeId);
 
         let keyFrame: FrameNode | null = null
-        if (frame.getPluginData('keyFrameId')) {
+        /*if (frame.getPluginData('keyFrameId')) {
             let oldFrame = figma.getNodeById(frame.getPluginData('keyFrameId')) as FrameNode | null
             if (oldFrame) {
                 oldFrame.remove()
             }
-        }
+        }*/
 
         keyFrame = figma.createFrame();
         keyFrame.name = "Localized Keys"
 
-        frame.setPluginData('keyFrameId', keyFrame.id);
+        // frame.setPluginData('keyFrameId', keyFrame.id);
 
         let frameFrame = frame as FrameNode
 
@@ -76,7 +79,11 @@ export default class FigmaHelper {
         let maxRight = 0;
         let maxBottom = (frame as FrameNode).height;
         let i = 0;
-        for (let nodeWithKey of nodesWithKeys) {
+        for (let nodeWithKey of (await translatedFrame).localizedLabelsInFrame) {
+
+            if (nodeWithKey.keyType !== KeyState.Linked) {
+              continue;
+            }
 
             let textNode = figma.createText()
 
@@ -93,7 +100,7 @@ export default class FigmaHelper {
             // Set bigger font size and red color
             textNode.fontSize = 18
             textNode.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }]
-            textNode.characters = nodeWithKey.key;
+            textNode.characters = nodeWithKey.key!;
 
             maxRight = Math.max(textNode.x + textNode.width, maxRight);
             maxBottom = Math.max(textNode.y + textNode.height, maxBottom);
@@ -125,7 +132,7 @@ export default class FigmaHelper {
             let line = figma.createLine();
             line.x = x1;
             line.y = y1;
-            line.name = nodeWithKey.key
+            line.name = nodeWithKey.key!
 
             // Make line 200px long
             line.resize(length, 0);
@@ -182,7 +189,7 @@ export default class FigmaHelper {
         rectBottom.resize(frameFrame.width, maxBottom - frameFrame.height + MARGIN)
         rectBottom.fills = fills;
         keyFrame.insertChild(0, rectBottom);
-*/
+
   }
 
   async updateFrame(frame: BaseNode) {

@@ -573,4 +573,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   async getSelection() {
     return this.localizedLabelMangerSandbox.getSelection();
   }
+
+  
 }

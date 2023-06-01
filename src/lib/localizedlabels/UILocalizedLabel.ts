@@ -353,4 +353,12 @@ export class UILocalizedLabel implements LocalizedLabel {
       });
     }
   }
+
+  toJSON() {
+    const localizedObject = {
+      ...this,
+    } as any;
+    localizedObject.manager = undefined;
+    return localizedObject as LocalizedLabel;
+  }
 }

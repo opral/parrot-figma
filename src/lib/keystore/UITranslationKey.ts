@@ -364,4 +364,71 @@ export class UITranslationKey implements TranslationKey {
 
     return translationKeyInVersion;
   }
+
+  /*
+  fuzzyMatch(text: string) {
+    for (const [language, languages] of Object.entries(this.translations)) {
+      for (const plural of getPluralFormsByLanguage(language as Language)) {
+        if (languages[plural]?.text !== undefined) {
+          if (Math.abs(languages[plural]!.text!.length - text.length) > 30) { // TODO take parameters into account to define accepted difference in length
+            // we skip labels with length not matching with a buffer of x
+            continue;
+          }
+
+          // problem to solve: 
+          // the strings from the design and from the keys provided do not match:
+          // 1. a word is not starting with an upper case -> solved by comparing the lowercase version
+          // 2. some characters don't match like a . is used instead of a !
+          // 3. the key contains placeholders and the design contains fillins 
+          // fuzzy match uses the distance of two strings -
+
+          text
+          const matchStartText = languages[plural]!.text!.toLowerCase().indexOf(text.toLowerCase());
+          if ((query.exactText && matchStartText === 0 && languages[plural]!.text!.length === query.text.length)
+            || (!query.exactText && matchStartText !== -1)) {
+            if (!results.matches[key.keyName]) {
+              results.matches[key.keyName] = { textMatches: {}, keyMatch: undefined };
+            }
+
+            if (!results.matches[key.keyName].textMatches![language as Language]) {
+              results.matches[key.keyName].textMatches![language as Language]! = {};
+            }
+            results.matches[key.keyName].textMatches![language as Language]![plural as Plural] = { start: matchStartText, length: query.text.length };
+            results.matchingKeys.add(key.keyName);
+            results.inText.add(key.keyName);
+          }
+        }
+
+        if (
+          (key.plural || plural === Plural.OTHER)
+          && (languages[plural] === undefined || (!languages[plural]?.skip && (!languages[plural]?.text || languages[plural]?.text === '')))) {
+          results.withMissingTranslations.add(key.keyName);
+        }
+
+        if (languages[plural] && !languages[plural]!.verified) {
+          results.withMissingReview.add(key.keyName);
+        }
+      }
+    }
+  }
+  levenshteinDistance(text) => {
+    if (!s.length) return t.length;
+    if (!t.length) return s.length;
+    const arr = [];
+    for (let i = 0; i <= t.length; i++) {
+      arr[i] = [i];
+      for (let j = 1; j <= s.length; j++) {
+        arr[i][j] =
+          i === 0
+            ? j
+            : Math.min(
+                arr[i - 1][j] + 1,
+                arr[i][j - 1] + 1,
+                arr[i - 1][j - 1] + (s[j - 1] === t[i - 1] ? 0 : 1)
+              );
+      }
+    }
+    return arr[t.length][s.length];
+  };
+  **/
 }

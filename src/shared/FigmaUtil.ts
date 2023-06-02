@@ -2,7 +2,6 @@
 
 import { KeyState, LocalizedLabel } from '../lib/localizedlabels/LocalizedLabel';
 
-
 /**
  * Figma api wrapper that simplifies varios task.
  * All public async functions only accept and return primitives and can be proxied between sandbox and iframe
@@ -23,7 +22,6 @@ export default class FigmaUtil {
   async drawKeyFrame(frameNodeId: string, name: string, localizedLabelsInFrame: LocalizedLabel[]) {
     const frame = figma.getNodeById(frameNodeId);
     const MARGIN = 50;
-
 
     let keyFrame: FrameNode | null = null;
     /* if (frame.getPluginData('keyFrameId')) {
@@ -51,10 +49,14 @@ export default class FigmaUtil {
 
     let fontToLoad = null;
 
+    const containerRatio = 2; //(frame as FrameNode).height / (frame as FrameNode).width;
+
+    const sortedNodes = localizedLabelsInFrame.sort((a, b) => Math.hypot(a.x, a.y * containerRatio) - Math.hypot(b.x, b.y * containerRatio));
+
     let maxRight = 0;
     let maxBottom = (frame as FrameNode).height;
     let i = 0;
-    for (const nodeWithKey of localizedLabelsInFrame) {
+    for (const nodeWithKey of sortedNodes) {
       if (nodeWithKey.keyType !== KeyState.Linked) {
         // eslint-disable-next-line no-continue
         continue;

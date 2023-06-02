@@ -188,16 +188,10 @@ export default function LocalizedLabelListItem({
                   }}
                   defaultValue={keyValue}
                   getOptions={() => {
-                    const options = [{
-                      label: 'no Translation',
-                      value: 'no-translation',
-                      type: 'action',
-                    }, {
-                      divider: true,
-                    }] as SelectOption[];
+                    const options = [] as SelectOption[];
 
                     let noMatch = true;
-                    const defaulValueFound = false;
+                    let defaulValueFound = false;
 
                     const query = MemoryTranslationKeyStore.toQueryObject(`exact_text:true key:* ${localizedLabel.text}`);
                     const { matches } = translationKeyStore.findKeys(query);
@@ -218,6 +212,10 @@ export default function LocalizedLabelListItem({
                           type: 'key',
                         });
                         noMatch = false;
+
+                        if (localizedLabel.key === key) {
+                          defaulValueFound = true;
+                        }
                         // eslint-disable-next-line no-continue
                         continue;
                       }
@@ -252,7 +250,7 @@ export default function LocalizedLabelListItem({
                     }
 
                     options.push({
-                      label: 'select key...',
+                      label: 'search key...',
                       value: 'select-key',
                       type: 'action',
                     });
@@ -260,6 +258,12 @@ export default function LocalizedLabelListItem({
                     options.push({
                       label: 'create key...',
                       value: 'create-key',
+                      type: 'action',
+                    });
+
+                    options.push({
+                      label: 'No Translation',
+                      value: 'no-translation',
                       type: 'action',
                     });
 
@@ -303,25 +307,27 @@ export default function LocalizedLabelListItem({
                           keyName={localizedLabel.key}
                           translationKeyStore={translationKeyStore}
                         />
-                        <div className="placeholder-view-grid" style={{ display: localizedLabel.keyType === KeyState.Linked && translatedKey && translatedKey.placeholders && Object.keys(translatedKey.placeholders).length > 0 ? undefined : 'none' }}>
+                        { selected && (
+                          <div className="placeholder-view-grid" style={{ display: localizedLabel.keyType === KeyState.Linked && translatedKey && translatedKey.placeholders && Object.keys(translatedKey.placeholders).length > 0 ? undefined : 'none' }}>
 
-                          <div />
-                          <div />
-                          <div>Name</div>
-                          <div>Value</div>
-                          <div />
-                          {translatedKey && translatedKey.placeholders && Object.entries(translatedKey.placeholders).map((entry, i, array) => (
-                            <PlaceholderEditorListItem
-                              key={entry[0]}
-                              placeholder={entry[1]}
-                              fillin={localizedLabel.fillins?.[entry[0]]?.value ? localizedLabel.fillins?.[entry[0]]?.value : 'unset'}
-                              onValueChange={(placeholderName, fillinValue) => {
-                                localisedLabelManager.updateLabelFillin(localizedLabel, placeholderName, fillinValue);
-                              }}
-                            />
+                            <div />
+                            <div />
+                            <div>Placeholder</div>
+                            <div />
+                            <div />
+                            {translatedKey && translatedKey.placeholders && Object.entries(translatedKey.placeholders).map((entry, i, array) => (
+                              <PlaceholderEditorListItem
+                                key={entry[0]}
+                                placeholder={entry[1]}
+                                fillin={localizedLabel.fillins?.[entry[0]]?.value ? localizedLabel.fillins?.[entry[0]]?.value : 'unset'}
+                                onValueChange={(placeholderName, fillinValue) => {
+                                  localisedLabelManager.updateLabelFillin(localizedLabel, placeholderName, fillinValue);
+                                }}
+                              />
 
-                          ))}
-                        </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

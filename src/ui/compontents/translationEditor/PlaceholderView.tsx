@@ -34,11 +34,7 @@ export function PlaceholderView({
           {specifiedArgumentPositon}
         </span>
       )}
-      {specifiedArgumentPositon === undefined && (
-        <span className="placholder-argument-position placholder-argument-position-derived" data-tooltip-trigger="span" data-tooltip-content="Argument Position defined in DE - other ...">
-          {derivedArgumentPosition}
-        </span>
-      )}
+     
       {type === PlaceholderType.float && decimalPlaces === undefined && (
       <>
         <span className="placholder-placeholder-type-spacer">:</span>

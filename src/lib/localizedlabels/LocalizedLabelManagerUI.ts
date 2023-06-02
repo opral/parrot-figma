@@ -381,7 +381,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   }
 
   async createNewVersionFromLabelState(localizedLabel: UILocalizedLabel) {
-    // TODO #8 fix this action
     const localizedKey = await this.keyStore.updateKey(localizedLabel.key!, [{
       language: localizedLabel.language as Language, plural: localizedLabel.pluralId as Plural, text: localizedLabel.translation, skip: false,
     }]);

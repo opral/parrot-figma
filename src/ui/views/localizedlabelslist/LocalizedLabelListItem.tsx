@@ -41,7 +41,7 @@ export default function LocalizedLabelListItem({
   const labelState = localizedLabel.state!;
 
   const [searchKey, setSearchKey] = useState(undefined as any);
-  const [newKey, setNewKey] = useState<string | undefined>(undefined);
+  const [newKey, setNewKey] = useState<string | undefined>(undefined);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO remove when we implemented the design != keystore resolution
   const translations = translatedKey?.translations[localizedLabel.language];
@@ -130,18 +130,48 @@ export default function LocalizedLabelListItem({
         disabled={newKey === undefined}
         display="contents"
       >
-        <div className={`top-drawer${newKey !== undefined ? ' open' : ' '}`}>
+        <div className={`top-drawer${newKey !== undefined ? ' open' : ' '} create-key`}>
           <div className="history_view--topHeader">
-            Choose Key Name
+            Create a new Key
           </div>
-          <TextField
-            singleClick={false}
-            onSave={async (labelName: string) => {
-              localisedLabelManager.linkKey(localizedLabel, labelName, localizedLabel.rootFrameLanguage!, Plural.OTHER);
-              setNewKey(undefined);
-            }}
-            text={localizedLabel.name}
-          />
+          <div className="text-field-text editing ">
+            <input
+              style={{
+                position: 'inherit'
+              }}
+              defaultValue={localizedLabel.name}
+              onChange={(e) => { setNewKey(e.target.value); }}
+              placeholder="Keyname"
+            />
+          </div>
+
+          <div className="buttonGroup buttonGroup-reversed">
+            <button
+              className="button button-primary"
+              type="button"
+              onClick={() => {
+                localisedLabelManager.linkKey(localizedLabel, newKey!, localizedLabel.rootFrameLanguage!, Plural.OTHER);
+                setNewKey(undefined);
+              }}
+              disabled={false}
+            >
+              <span data-tooltip-type="text">
+                Create Key
+              </span>
+            </button>
+            <button
+              className="button button-secondary"
+              type="button"
+              onClick={() => {
+                // set back to head
+                setNewKey(undefined);
+              }}
+            >
+              <span data-tooltip-type="text">
+                Cancel
+              </span>
+            </button>
+          </div>
         </div>
       </OutsideClickHandler>
 

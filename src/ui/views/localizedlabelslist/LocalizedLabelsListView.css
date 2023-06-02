@@ -247,3 +247,9 @@
     transform: translateY(0);
     transition: box-shadow 0.3s ease-out, transform 0.3s ease-out;
   }
+
+  .top-drawer.create-key {
+    left: 40%;
+    width: 400px;
+    height: auto;
+  }

@@ -441,8 +441,15 @@ export default function TranslationKeyListItem({
             value="Save"
             disabled={false}
             onClick={() => {
-              debugger;
               localizedLabelManager.updateKey(translationKey.keyName, [], undefined, defaultFillins, undefined);
+            }}
+          />
+          <input
+            type="button"
+            value="Cancel"
+            disabled={false}
+            onClick={() => {
+              
             }}
           />
         </div>

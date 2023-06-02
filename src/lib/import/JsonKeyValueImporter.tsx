@@ -7,7 +7,7 @@ import { ImportTranslationKey } from './ImportTranslationKey';
 
 export default class JsonKeyValueImporter {
   static reformatPlaceholders(text: string) {
-    return text; // TODO map all ios placeholders to plugin format
+    return text; // TODO #8 map all ios placeholders to plugin format
   }
 
   private static getPluralItems(pluralNode: Element) {

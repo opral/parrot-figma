@@ -105,7 +105,7 @@ export default function LocalizedLabelsListView({
       <div className="table">
         {Object.keys(selection).map((mainFrameId) => (
           <LocalizedFrameGroup
-            localizedLabels={localizedLabels.filter((l) => l.rootFrameId === mainFrameId).reverse()}
+            localizedLabels={localizedLabels.filter((l) => l.rootFrameId === mainFrameId).sort((a, b) => Math.hypot(a.x, a.y * (2) - Math.hypot(b.x, b.y * 2)))}
             selectedNodes={selection[mainFrameId]}
             translationKeyStore={translationKeyStore}
             figmaRemote={figmaRemote}

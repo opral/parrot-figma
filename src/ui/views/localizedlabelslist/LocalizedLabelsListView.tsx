@@ -9,13 +9,11 @@ import './LocalizedLabelsListView.css';
 import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
 
 type LocalizedLabelsListViewProps = {
-  translationKeyStore: MemoryTranslationKeyStore
   figmaRemote: FigmaUtil
   localizedLabelManager: LocalizedLabelManagerUI,
 };
 
 export default function LocalizedLabelsListView({
-  translationKeyStore,
   figmaRemote,
   localizedLabelManager,
 }: LocalizedLabelsListViewProps) {
@@ -73,19 +71,20 @@ export default function LocalizedLabelsListView({
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
     localizedLabelManager.addEventListener('updated', refreshSelection);
-    translationKeyStore.addEventListener('updated', refreshSelection);
+    localizedLabelManager.keyStore.addEventListener('updated', refreshSelection);
     window.addEventListener('message', messageHandler);
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
     return () => {
       localizedLabelManager.removeEventListener('updated', refreshSelection);
-      translationKeyStore.removeEventListener('updated', refreshSelection);
+      localizedLabelManager.keyStore.removeEventListener('updated', refreshSelection);
       window.removeEventListener('message', messageHandler);
     };
   }, []);
 
-  if (localizedLabels.length === 0) {
-    return (
+  return (
+    <>
+      {localizedLabels.length === 0 && (
       <div className="emptyState">
         <div className="emptyStateTitle">No Frames selected</div>
         <div className="emptyStateSubtitle">
@@ -96,24 +95,23 @@ export default function LocalizedLabelsListView({
           </div>
         </div>
       </div>
-    );
-  }
+      )}
+      {localizedLabels.length >= 0 && (
+      <div>
 
-  return (
-    <div>
-
-      <div className="table">
-        {Object.keys(selection).map((mainFrameId) => (
-          <LocalizedFrameGroup
-            localizedLabels={localizedLabels.filter((l) => l.rootFrameId === mainFrameId).sort((a, b) => Math.hypot(a.x, a.y * (2) - Math.hypot(b.x, b.y * 2)))}
-            selectedNodes={selection[mainFrameId]}
-            translationKeyStore={translationKeyStore}
-            figmaRemote={figmaRemote}
-            localisedLabelManager={localizedLabelManager}
-            key={mainFrameId}
-          />
-        ))}
+        <div className="table">
+          {Object.keys(selection).map((mainFrameId) => (
+            <LocalizedFrameGroup
+              localizedLabels={localizedLabels.filter((l) => l.rootFrameId === mainFrameId).sort((a, b) => Math.hypot(a.x, a.y * (2) - Math.hypot(b.x, b.y * 2)))}
+              selectedNodes={selection[mainFrameId]}
+              figmaRemote={figmaRemote}
+              localizedLabelManager={localizedLabelManager}
+              key={mainFrameId}
+            />
+          ))}
+        </div>
       </div>
-    </div>
+      )}
+    </>
   );
 }

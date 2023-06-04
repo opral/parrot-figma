@@ -20,20 +20,20 @@ type LocalizedLabelListItemProps = {
 
   localizedLabel: UILocalizedLabel,
   figmaRemote: FigmaUtil,
-  localisedLabelManager: LocalizedLabelManagerUI,
+  localizedLabelManager: LocalizedLabelManagerUI,
   scrollIntoView: boolean,
-  translationKeyStore: MemoryTranslationKeyStore,
   selected: boolean
 };
 
 export default function LocalizedLabelListItem({
   localizedLabel,
   figmaRemote,
-  localisedLabelManager,
+  localizedLabelManager,
   scrollIntoView,
-  translationKeyStore,
   selected,
 }: LocalizedLabelListItemProps) {
+
+  const translationKeyStore = localizedLabelManager.keyStore;
   const translatedKey = localizedLabel.keyType !== KeyState.Unset ? translationKeyStore.getKey(localizedLabel.key!) : undefined;
 
   const rowRef = React.useRef<HTMLDivElement>(null);
@@ -49,15 +49,15 @@ export default function LocalizedLabelListItem({
   const pluralsAvailable = [] as SelectOption[];
 
   async function createNewVersionFromDesign() {
-    await localisedLabelManager.createNewVersionFromLabelState(localizedLabel);
+    await localizedLabelManager.createNewVersionFromLabelState(localizedLabel);
   }
 
   async function updateToLatestKeyVersion() {
-    await localisedLabelManager.updateToLatestKeyVersion([localizedLabel]);
+    await localizedLabelManager.updateToLatestKeyVersion([localizedLabel]);
   }
 
   async function revertDesignChanges() {
-    await localisedLabelManager.revertDesignChanges(localizedLabel);
+    await localizedLabelManager.revertDesignChanges(localizedLabel);
   }
 
   async function onNodeSelect(nodeId: string) {
@@ -111,13 +111,13 @@ export default function LocalizedLabelListItem({
           { searchKey !== undefined && (
           <TranslationKeyListView
             translationKeyStore={translationKeyStore}
-            localizedLabelManager={localisedLabelManager}
+            localizedLabelManager={localizedLabelManager}
             keys={translationKeyStore.translationKeys}
             figmaRemote={figmaRemote}
             refreshKeys={() => {}}
             searchQuery={MemoryTranslationKeyStore.toQueryObject(`exact_text:true key:* ${searchKey.search}`)}
             select={(key: string, language: Language, plural: Plural) => {
-              localisedLabelManager.linkKey(localizedLabel, key, language, plural);
+              localizedLabelManager.linkKey(localizedLabel, key, language, plural);
               setSearchKey(undefined);
             }}
           />
@@ -150,7 +150,7 @@ export default function LocalizedLabelListItem({
               className="button button-primary"
               type="button"
               onClick={() => {
-                localisedLabelManager.linkKey(localizedLabel, newKey!, localizedLabel.rootFrameLanguage!, Plural.OTHER);
+                localizedLabelManager.linkKey(localizedLabel, newKey!, localizedLabel.rootFrameLanguage!, Plural.OTHER);
                 setNewKey(undefined);
               }}
               disabled={false}
@@ -186,7 +186,7 @@ export default function LocalizedLabelListItem({
             <TextField
               singleClick={false}
               onSave={async (labelName: string) => {
-                await localisedLabelManager.updateLabelName(localizedLabel, labelName);
+                await localizedLabelManager.updateLabelName(localizedLabel, labelName);
               }}
               text={localizedLabel.name}
             />
@@ -204,7 +204,7 @@ export default function LocalizedLabelListItem({
                   onChange={(selectedOption) => {
                     if (selectedOption.type === 'action') {
                       if (selectedOption.value === 'no-translation') {
-                        localisedLabelManager.setNoKey(localizedLabel);
+                        localizedLabelManager.setNoKey(localizedLabel);
                       } else if (selectedOption.value === 'select-key') {
                         setSearchKey({
                           search: localizedLabel.text,
@@ -213,7 +213,7 @@ export default function LocalizedLabelListItem({
                         setNewKey(localizedLabel.derivedKey ?? '');
                       }
                     } else if (selectedOption.type === 'key') {
-                      localisedLabelManager.linkKey(localizedLabel, selectedOption.value as string, selectedOption.language!, selectedOption.plural!);
+                      localizedLabelManager.linkKey(localizedLabel, selectedOption.value as string, selectedOption.language!, selectedOption.plural!);
                     }
                   }}
                   defaultValue={keyValue}
@@ -312,7 +312,7 @@ export default function LocalizedLabelListItem({
                             {translatedKey?.plural && (
                             <Select
                               onChange={(value) => {
-                                localisedLabelManager.updateLabelPlural(localizedLabel, value.value! as Plural);
+                                localizedLabelManager.updateLabelPlural(localizedLabel, value.value! as Plural);
                               }}
                               defaultValue={pluralsAvailable.find((opt) => opt.value === localizedLabel.pluralId)}
                               getOptions={() => pluralsAvailable}
@@ -351,7 +351,7 @@ export default function LocalizedLabelListItem({
                                 placeholder={entry[1]}
                                 fillin={localizedLabel.fillins?.[entry[0]]?.value ? localizedLabel.fillins?.[entry[0]]?.value : 'unset'}
                                 onValueChange={(placeholderName, fillinValue) => {
-                                  localisedLabelManager.updateLabelFillin(localizedLabel, placeholderName, fillinValue);
+                                  localizedLabelManager.updateLabelFillin(localizedLabel, placeholderName, fillinValue);
                                 }}
                               />
 

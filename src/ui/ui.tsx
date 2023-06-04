@@ -208,7 +208,6 @@ function App() {
   } else {
     view = (
       <LocalizedLabelsListView
-        translationKeyStore={memoryTranslationKeyStore}
         localizedLabelManager={localizedLabelManager}
         figmaRemote={figmaRemote}
       />

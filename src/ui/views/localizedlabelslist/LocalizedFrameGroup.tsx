@@ -12,30 +12,26 @@ import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel'
 
 type LocalizedFrameGroupProps = {
   localizedLabels: UILocalizedLabel[],
-  translationKeyStore: MemoryTranslationKeyStore
   selectedNodes: string[]
   figmaRemote: FigmaUtil
-  localisedLabelManager: LocalizedLabelManagerUI
+  localizedLabelManager: LocalizedLabelManagerUI
 };
 
 export default function LocalizedFrameGroup({
   localizedLabels,
-  translationKeyStore,
   selectedNodes,
   figmaRemote,
-  localisedLabelManager,
+  localizedLabelManager,
 }: LocalizedFrameGroupProps) {
   if (localizedLabels.length === 0) return null;
 
   const firstTranslationState = localizedLabels[0];
   const { rootFrameName } = firstTranslationState;
 
-  const sampleValues = firstTranslationState.useSampleValues;
-
   let rootFrameLanguage: SelectOption | undefined;
   const languageOptiones = [] as SelectOption[];
 
-  const languages = translationKeyStore.getLanugages()!;
+  const languages = localizedLabelManager.keyStore.getLanugages()!;
 
   for (const language of languages) {
     const currentLanguageOption = {
@@ -131,7 +127,7 @@ export default function LocalizedFrameGroup({
       return translationResults.translations[0].text; */
     };
 
-    localisedLabelManager.setFrameLanguage(firstLocalizedLabelInFrame.rootFrameId, language, translationProvider);
+    localizedLabelManager.setFrameLanguage(firstLocalizedLabelInFrame.rootFrameId, language, translationProvider);
   }
 
   return (
@@ -159,8 +155,8 @@ export default function LocalizedFrameGroup({
               className="row-action-icon"
               onClick={async (e) => {
                 e.preventDefault();
-                const localizedFrames = await localisedLabelManager.getLocalizedLabelsByFrame(firstTranslationState.rootFrameId);
-                const temp = JSON.parse(JSON.stringify(localizedFrames))
+                const localizedFrames = await localizedLabelManager.getLocalizedLabelsByFrame(firstTranslationState.rootFrameId);
+                const temp = JSON.parse(JSON.stringify(localizedFrames));
                 figmaRemote.drawKeyFrame(firstTranslationState.rootFrameId, 'test', temp);
               }}
             >
@@ -174,12 +170,11 @@ export default function LocalizedFrameGroup({
       {rootFrameLanguage?.value && localizedLabels.map((translationState) => (
         <LocalizedLabelListItem
           key={translationState.nodeId}
-          translationKeyStore={translationKeyStore}
-          localizedLabel={translationState}
           figmaRemote={figmaRemote}
-          localisedLabelManager={localisedLabelManager}
+          localizedLabelManager={localizedLabelManager}
           scrollIntoView={selectedNodes[0] === translationState.nodeId}
-          selected={selectedNodes.indexOf(translationState.nodeId) !== -1}
+          selected={selectedNodes.some((item) => [translationState.nodeId, ...translationState.parentIds].includes(item))}
+          localizedLabel={translationState}
         />
       ))}
 

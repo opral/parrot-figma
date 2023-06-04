@@ -203,9 +203,9 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
   keyStore: MemoryTranslationKeyStore;
 
-  constructor(localisedLabelMangerSandbox: LocalizedLabelManager, keyStore: MemoryTranslationKeyStore) {
+  constructor(localizedLabelMangerSandbox: LocalizedLabelManager, keyStore: MemoryTranslationKeyStore) {
     super();
-    this.localizedLabelMangerSandbox = localisedLabelMangerSandbox;
+    this.localizedLabelMangerSandbox = localizedLabelMangerSandbox;
     this.keyStore = keyStore;
 
     window.addEventListener('message', (event : MessageEvent) => {
@@ -350,12 +350,12 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     });
 
     for (const localizedLabelId of this.cachedFrames[frameId].localizedLabelIds) {
-      const localisedLabel = this.cachedLocalisedLabels[localizedLabelId]!;
+      const localizedLabel = this.cachedLocalisedLabels[localizedLabelId]!;
       // eslint-disable-next-line no-await-in-loop
-      await this.setLabelLanguage(localisedLabel, targetLanguage, missingTranslationProvider);
+      await this.setLabelLanguage(localizedLabel, targetLanguage, missingTranslationProvider);
     }
 
-    // await this.localisedLabelMangerSandbox.updateFrameById(frameId);
+    // await this.localizedLabelMangerSandbox.updateFrameById(frameId);
   }
 
   async updateKey(
@@ -561,9 +561,9 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
       changedPropertiesToForwared.filledTemplateHash = blake.blake2sHex(changedPropertiesToForwared.translation);
     }
 
-    const localisedLabel = await this.localizedLabelMangerSandbox.updateLabelProperties(nodeId, changedPropertiesToForwared);
+    const localizedLabel = await this.localizedLabelMangerSandbox.updateLabelProperties(nodeId, changedPropertiesToForwared);
 
-    if (this.refreshCachedLabel(localisedLabel)) {
+    if (this.refreshCachedLabel(localizedLabel)) {
       const event = new CustomEvent('updated', { });
       this.dispatchEvent(event);
     }

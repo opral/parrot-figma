@@ -224,7 +224,7 @@ What we want from ui point of view:
 
  - [x] specify languages for file
  - [x] specfify base language 
- - [x] show baselanguage in localised key always on top 
+ - [x] show baselanguage in localized key always on top 
  - [x] make header columns fixed size based on maximum column content
  - [x] allow the user to resolve the apply conflicts 
  - [x] define language handling per label (if a lable is in state changed a language switch may not work for that label only)

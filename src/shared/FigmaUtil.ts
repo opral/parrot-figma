@@ -184,7 +184,34 @@ export default class FigmaUtil {
     return figma.clientStorage.setAsync(`${fileKey}__${key}`, value);
   }
 
+  async ensureZoomLevelShowsNode(nodeId: string) {
+    const nodeToScrollAndZoomIntoView = figma.getNodeById(nodeId) as SceneNode;
+
+    const viewportRect = figma.viewport.bounds;
+    const virtualViewportRect = { ...viewportRect };
+    const nodeRect = nodeToScrollAndZoomIntoView.absoluteBoundingBox!;
+
+    const zoomMarginLeft = 60; // we add another 30 for the ruler
+    const zoomMarginRight = 30;
+
+    const zoomMarginTop = 60; // we add another 30 for the ruler
+    const zoomMarginBottom = 30;
+
+    const normalizedViewportWidth = virtualViewportRect.width * figma.viewport.zoom;
+    const requiredZoomForWidth = normalizedViewportWidth / (nodeRect.width + zoomMarginLeft + zoomMarginRight);
+    const normalizedViewportHeight = virtualViewportRect.height * figma.viewport.zoom;
+    const requiredZoomForHeight = normalizedViewportHeight / (nodeRect.height + zoomMarginTop + zoomMarginBottom);
+    const zoomFactor = Math.min(requiredZoomForWidth, Math.min(requiredZoomForHeight, figma.viewport.zoom));
+
+    if (zoomFactor !== figma.viewport.zoom) {
+      figma.viewport.zoom = zoomFactor;
+    }
+  }
+
   async scrollIntoViewIfNeeded(nodeId: string, select: boolean) {
+
+    await this.ensureZoomLevelShowsNode(nodeId);
+
     // console.log('scrollIntoViewIfNeeded');
     const nodeToScrollAndZoomIntoView = figma.getNodeById(nodeId) as SceneNode;
     const nodeRect = nodeToScrollAndZoomIntoView.absoluteBoundingBox!;

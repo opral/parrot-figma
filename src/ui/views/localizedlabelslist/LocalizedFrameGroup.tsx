@@ -172,7 +172,6 @@ export default function LocalizedFrameGroup({
           key={translationState.nodeId}
           figmaRemote={figmaRemote}
           localizedLabelManager={localizedLabelManager}
-          scrollIntoView={selectedNodes[0] === translationState.nodeId}
           selected={selectedNodes.some((item) => [translationState.nodeId, ...translationState.parentIds].includes(item))}
           localizedLabel={translationState}
         />

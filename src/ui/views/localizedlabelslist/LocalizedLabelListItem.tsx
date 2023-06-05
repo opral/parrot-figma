@@ -21,7 +21,6 @@ type LocalizedLabelListItemProps = {
   localizedLabel: UILocalizedLabel,
   figmaRemote: FigmaUtil,
   localizedLabelManager: LocalizedLabelManagerUI,
-  scrollIntoView: boolean,
   selected: boolean
 };
 
@@ -29,7 +28,6 @@ export default function LocalizedLabelListItem({
   localizedLabel,
   figmaRemote,
   localizedLabelManager,
-  scrollIntoView,
   selected,
 }: LocalizedLabelListItemProps) {
 
@@ -77,13 +75,6 @@ export default function LocalizedLabelListItem({
       value: Plural.OTHER, label: Plural.OTHER,
     });
   }
-
-  React.useEffect(() => {
-    if (scrollIntoView && rowRef.current) {
-      // tslint:disable-next-line
-      (rowRef.current as any).scrollIntoViewIfNeeded(true);
-    }
-  }, [scrollIntoView]);
 
   let keyValue;
 

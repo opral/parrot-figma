@@ -82,6 +82,7 @@
 .row.selected  .column-1, .row.selected  .column-2  {
     border-color: transparent;
     background-color: var(--figma-color-bg-selected);
+    scroll-margin-top: 32px;
 }
 
 .row.selected:hover  .column-1, .row.selected:hover .column-2  {

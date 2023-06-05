@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
@@ -18,6 +18,8 @@ export default function LocalizedLabelsListView({
   localizedLabelManager,
 }: LocalizedLabelsListViewProps) {
   const [localizedLabels, setLocalizedLabels] = useState<UILocalizedLabel[]>([]);
+
+  const tableRef = useRef<HTMLDivElement>(null);
 
   const [selection, setSelection] = useState({} as {
     [rootFrameId: string]: string[]
@@ -41,8 +43,6 @@ export default function LocalizedLabelsListView({
         if (selectedLabelsByFrame) {
           selectedLabels = selectedLabels.concat(selectedLabelsByFrame);
         }
-
-        // console.log(selectedLabels);
 
         selectedByFrame[selectedNode.rootFrameId] = [selectedNode.selectedNodeId];
       } else {
@@ -82,6 +82,16 @@ export default function LocalizedLabelsListView({
     };
   }, []);
 
+  useEffect(() => {
+    console.log('SEARCH I would scroll into view...');
+    if (tableRef.current) {
+      const firstSelected = tableRef.current.querySelector('.selected') as HTMLElement;
+      if (firstSelected) {
+        (firstSelected.firstChild as any).scrollIntoViewIfNeeded({ block: 'center' });
+      }
+    }
+  }, [selection]);
+
   return (
     <>
       {localizedLabels.length === 0 && (
@@ -99,7 +109,7 @@ export default function LocalizedLabelsListView({
       {localizedLabels.length >= 0 && (
       <div>
 
-        <div className="table">
+        <div className="table" ref={tableRef}>
           {Object.keys(selection).map((mainFrameId) => (
             <LocalizedFrameGroup
               localizedLabels={localizedLabels.filter((l) => l.rootFrameId === mainFrameId).sort((a, b) => Math.hypot(a.x, a.y * (2) - Math.hypot(b.x, b.y * 2)))}

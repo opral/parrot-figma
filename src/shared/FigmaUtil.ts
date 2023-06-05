@@ -1,6 +1,7 @@
 /* eslint-disable class-methods-use-this -- this class gets proxied using the async proxy - this doesn't work with static methods for now :-/ */
 
 import { KeyState, LocalizedLabel } from '../lib/localizedlabels/LocalizedLabel';
+import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowManagerSandbox';
 
 /**
  * Figma api wrapper that simplifies varios task.
@@ -49,7 +50,7 @@ export default class FigmaUtil {
 
     let fontToLoad = null;
 
-    const containerRatio = 2; //(frame as FrameNode).height / (frame as FrameNode).width;
+    const containerRatio = 2; // (frame as FrameNode).height / (frame as FrameNode).width;
 
     const sortedNodes = localizedLabelsInFrame.sort((a, b) => Math.hypot(a.x, a.y * containerRatio) - Math.hypot(b.x, b.y * containerRatio));
 
@@ -183,28 +184,74 @@ export default class FigmaUtil {
     return figma.clientStorage.setAsync(`${fileKey}__${key}`, value);
   }
 
-  async scrollIntoViewIfNeeded(nodeId: string) {
+  async scrollIntoViewIfNeeded(nodeId: string, select: boolean) {
     // console.log('scrollIntoViewIfNeeded');
-    const nodeScrollAndZoomIntoView = figma.getNodeById(nodeId) as SceneNode;
-    const nodeRect = nodeScrollAndZoomIntoView.absoluteBoundingBox;
-    const viewportRect = figma.viewport.bounds;
+    const nodeToScrollAndZoomIntoView = figma.getNodeById(nodeId) as SceneNode;
+    const nodeRect = nodeToScrollAndZoomIntoView.absoluteBoundingBox!;
 
+    const nodeCenterX = nodeRect.x + nodeRect.width / 2;
+    const nodeCenterY = nodeRect.y + nodeRect.height / 2;
+
+    const viewportRect = figma.viewport.bounds;
+    const virtualViewportRect = { ...viewportRect };
+    const heightCorrection = WindowManagerSandbox.instance!.currentMode === WindowMode.BottomSheet ? (WindowManagerSandbox.instance!.bottomSheetHeight + WindowManagerSandbox.instance!.titleBarHeight) / figma.viewport.zoom : 0;
+    virtualViewportRect.height -= heightCorrection;
     // console.log(nodeRect);
     // console.log(viewportRect);
 
-    if (nodeRect && (nodeRect.x < viewportRect.x
+    if (select) {
+      await this.selectNodes([nodeId]);
+    }
+
+    const center = { ...figma.viewport.center };
+    const zoomMarginLeft = 60 / figma.viewport.zoom; // we add another 30 for the ruler
+    const zoomMarginRight = 30 / figma.viewport.zoom;
+
+    const zoomMarginTop = 60 / figma.viewport.zoom; // we add another 30 for the ruler
+    const zoomMarginBottom = 30 / figma.viewport.zoom;
+    if (nodeRect) {
+      if (nodeRect.x < virtualViewportRect.x) {
+        // node left to the viewport
+        center.x = nodeCenterX + virtualViewportRect.width / 2 - nodeRect.width / 2 - zoomMarginLeft;
+      } else if (nodeRect.x + nodeRect.width > virtualViewportRect.x + virtualViewportRect.width) {
+        // node right to the viewoport
+        center.x = nodeCenterX - virtualViewportRect.width / 2 + nodeRect.width / 2 + zoomMarginRight;
+      }
+
+      if (nodeRect.y < virtualViewportRect.y) {
+        // node above of the viewport
+        center.y = nodeCenterY + viewportRect.height / 2 - nodeRect.height / 2 - zoomMarginTop;
+      } else if (nodeRect.y + nodeRect.height > virtualViewportRect.y + virtualViewportRect.height) {
+        // node below the viewport
+        center.y = nodeCenterY - viewportRect.height / 2 + nodeRect.height / 2 + zoomMarginBottom + heightCorrection; // + nodeRect.height + zoomMargin + heightCorrection;
+      }
+    }
+
+    figma.viewport.center = center;
+
+    /* if (nodeRect && (nodeRect.x < viewportRect.x
             || nodeRect.x + nodeRect.width > viewportRect.x + viewportRect.width
             || nodeRect.y < viewportRect.y
-            || nodeRect.y + nodeRect.height > viewportRect.y + viewportRect.height)) {
-      figma.viewport.scrollAndZoomIntoView([nodeScrollAndZoomIntoView]);
-    }
-  }
+            || nodeRect.y + nodeRect.height > viewportRect.y + virtualViewportRect.height)) {
+      if (heightCorrection > 0) {
+        console.log(heightCorrection);
+        figma.viewport.center = {
+          x: nodeCenterX,
+          y: nodeCenterY + heightCorrection / 2,
+        }
 
-  async scrollAndZoomIntoView(nodeId: string) {
-    const nodeScrollAndZoomIntoView = figma.getNodeById(nodeId) as SceneNode;
+        // zoomRect.resize(nodeRect.width, nodeRect.height + heightCorrection);
 
-    if (nodeScrollAndZoomIntoView) {
-      figma.viewport.scrollAndZoomIntoView([nodeScrollAndZoomIntoView]);
+        // Call the scrollAndZoomIntoView method to scroll and zoom to the specified position
+        // figma.viewport.scrollAndZoomIntoView([zoomRect, zoomRect2]);
+
+      } else {
+        figma.viewport.scrollAndZoomIntoView([nodeToScrollAndZoomIntoView]);
+      }
+    } */
+
+    if (select) {
+      await this.selectNodes([nodeId]);
     }
   }
 
@@ -213,6 +260,7 @@ export default class FigmaUtil {
   }
 
   async selectNodes(nodeIds: string[]) {
+    console.log('update selection');
     const nodesToSelect = [] as SceneNode[];
 
     for (const nodeId of nodeIds) {
@@ -226,6 +274,7 @@ export default class FigmaUtil {
 
     if (nodesToSelect.length > 0) {
       figma.currentPage.selection = nodesToSelect;
+      console.log('update selection  - done');
     }
   }
 

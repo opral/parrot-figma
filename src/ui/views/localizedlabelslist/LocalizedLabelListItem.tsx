@@ -59,8 +59,7 @@ export default function LocalizedLabelListItem({
   }
 
   async function onNodeSelect(nodeId: string) {
-    await figmaRemote.scrollIntoViewIfNeeded(nodeId);
-    await figmaRemote.selectNodes([nodeId]);
+    await figmaRemote.scrollIntoViewIfNeeded(nodeId, true);
   }
 
   if (translations) {

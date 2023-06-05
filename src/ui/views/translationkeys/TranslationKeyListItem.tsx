@@ -66,8 +66,7 @@ export default function TranslationKeyListItem({
   const referencingLabels = localizedLabelManager.getLabelsWithKey(translationKey.keyName);
 
   async function onNodeSelect(nodeId: string) {
-    await figmaRemote.scrollIntoViewIfNeeded(nodeId);
-    await figmaRemote.selectNodes([nodeId]);
+    await figmaRemote.scrollIntoViewIfNeeded(nodeId, true);
   }
 
   async function showAll() {

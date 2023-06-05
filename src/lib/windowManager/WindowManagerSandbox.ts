@@ -1,7 +1,6 @@
 import { debug } from 'console';
 import { FigmaFileTranslationKeyStore } from '../keystore/FigmaFileTranslationKeyStore';
 
-const titleBarHeight = 40;
 
 export enum WindowMode {
   Window = 'window',
@@ -15,6 +14,8 @@ export class WindowManagerSandbox {
   windowMode: WindowMode;
 
   size: any;
+
+  titleBarHeight = 40;
 
   bottomSheetHeight = 300;
 
@@ -179,13 +180,13 @@ export class WindowManagerSandbox {
       height = figma.viewport.bounds.height * figma.viewport.zoom;
 
       x = figma.viewport.bounds.x;
-      y = figma.viewport.bounds.y + figma.viewport.bounds.height - ((this.bottomSheetHeight + titleBarHeight) / figma.viewport.zoom);
+      y = figma.viewport.bounds.y + figma.viewport.bounds.height - ((this.bottomSheetHeight + this.titleBarHeight) / figma.viewport.zoom);
     } else if (this.windowMode === WindowMode.Window) {
       console.log('Window');
       if (this.currentMode !== this.windowMode) {
         // center window on switch to window mode
         x = figma.viewport.bounds.x + ((figma.viewport.bounds.width / 2) - ((width / 2) / figma.viewport.zoom));
-        y = figma.viewport.bounds.y + ((figma.viewport.bounds.height / 2) - (((height + titleBarHeight) / 2) / figma.viewport.zoom));
+        y = figma.viewport.bounds.y + ((figma.viewport.bounds.height / 2) - (((height + this.titleBarHeight) / 2) / figma.viewport.zoom));
       }
     }
 

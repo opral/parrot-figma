@@ -209,7 +209,6 @@ export default class FigmaUtil {
   }
 
   async scrollIntoViewIfNeeded(nodeId: string, select: boolean) {
-
     await this.ensureZoomLevelShowsNode(nodeId);
 
     // console.log('scrollIntoViewIfNeeded');
@@ -255,27 +254,6 @@ export default class FigmaUtil {
     }
 
     figma.viewport.center = center;
-
-    /* if (nodeRect && (nodeRect.x < viewportRect.x
-            || nodeRect.x + nodeRect.width > viewportRect.x + viewportRect.width
-            || nodeRect.y < viewportRect.y
-            || nodeRect.y + nodeRect.height > viewportRect.y + virtualViewportRect.height)) {
-      if (heightCorrection > 0) {
-        console.log(heightCorrection);
-        figma.viewport.center = {
-          x: nodeCenterX,
-          y: nodeCenterY + heightCorrection / 2,
-        }
-
-        // zoomRect.resize(nodeRect.width, nodeRect.height + heightCorrection);
-
-        // Call the scrollAndZoomIntoView method to scroll and zoom to the specified position
-        // figma.viewport.scrollAndZoomIntoView([zoomRect, zoomRect2]);
-
-      } else {
-        figma.viewport.scrollAndZoomIntoView([nodeToScrollAndZoomIntoView]);
-      }
-    } */
 
     if (select) {
       await this.selectNodes([nodeId]);

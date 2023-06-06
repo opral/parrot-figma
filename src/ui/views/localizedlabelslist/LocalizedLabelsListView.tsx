@@ -83,7 +83,6 @@ export default function LocalizedLabelsListView({
   }, []);
 
   useEffect(() => {
-    console.log('SEARCH I would scroll into view...');
     if (tableRef.current) {
       const firstSelected = tableRef.current.querySelector('.selected') as HTMLElement;
       if (firstSelected) {

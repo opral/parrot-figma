@@ -92,12 +92,32 @@ body {
     width: 100%;
 }
 
-#corner {
+
+#resize-handle.window {
+  position: fixed;
+  right: 1px;
+  bottom: 2px;
+  cursor: nwse-resize;
+}
+
+#resize-handle.bottomSheet {
+  position: fixed;
+  right: 0px;
+  left: 0px;
+  top: 0px;
+  height: 5px;
+  cursor: ns-resize;
+}
+
+#resize-handle.bottomSheet svg {
+  visibility: hidden;
+}
+
+#resize-handle {
     position: fixed;
-    right: 1px;
-    bottom: 2px;
     cursor: nwse-resize;
 }
+
 
 .settings {
     right: 0px;

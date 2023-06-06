@@ -1,7 +1,6 @@
 import { debug } from 'console';
 import { FigmaFileTranslationKeyStore } from '../keystore/FigmaFileTranslationKeyStore';
 
-
 export enum WindowMode {
   Window = 'window',
   BottomSheet = 'bottomSheet',
@@ -20,6 +19,12 @@ export class WindowManagerSandbox {
   bottomSheetHeight = 300;
 
   viewportResizeCheckInterval: any;
+
+  pluginDragCheckInterval: any;
+
+  handlePluginX = -1;
+
+  handlePluginY = -1;
 
   handledViewportZoom = -1;
 
@@ -60,11 +65,10 @@ export class WindowManagerSandbox {
 
     Promise.all([
       figma.clientStorage.getAsync('windowSize'),
-      figma.clientStorage.getAsync('windowPosition'),
       figma.clientStorage.getAsync('windowBottomSheetHeight'),
       figma.clientStorage.getAsync('windowMode'),
     ]).then((values) => {
-      const [storedWindowSize, , storedWindowBottomSheetHeight, storedWindowMode] = values;
+      const [storedWindowSize, storedWindowBottomSheetHeight, storedWindowMode] = values;
 
       if (!enforceInitialConfig) {
         if (storedWindowSize) {
@@ -81,21 +85,22 @@ export class WindowManagerSandbox {
       }
 
       figma.showUI(__html__, {
-        themeColors: true, width: this.size.width, height: this.size.height, visible: false,
+        themeColors: true, width: this.size.width, height: this.size.height, visible: true,
       });
 
       this.viewportResizeCheckInterval = setInterval(() => {
         if (this.handledViewportWidth !== figma.viewport.bounds.width
                     || this.handledViewportHeight !== figma.viewport.bounds.height) {
-          // if we have a change in zoom we don't have a resize
-          if (this.handledViewportZoom !== -1 && this.handledViewportZoom !== figma.viewport.zoom) {
+          // if we have a change in zoom we don't have a resize of the viewport
+          if (this.handledViewportZoom !== -1 // if never checked - it is not a zoom
+            && this.handledViewportZoom !== figma.viewport.zoom) {
             this.handledViewportWidth = figma.viewport.bounds.width;
             this.handledViewportHeight = figma.viewport.bounds.height;
             this.handledViewportZoom = figma.viewport.zoom;
             return;
           }
           // set flag to signal the user is currently changing the viewport (window size change)
-          // this.viewPortResizing = true;
+          this.viewPortResizing = true;
 
           // we debounce this call since reposition can only be done by hiding and showing the window
           if (this.viewPortResizeSettleTimeout) {
@@ -103,12 +108,9 @@ export class WindowManagerSandbox {
           }
           this.viewPortResizeSettleTimeout = setTimeout(() => {
             this.viewPortResizing = false;
-            console.log('vieportChange -> repositionWindow (settled)');
-            this.repositionWindow();
           }, this.settleTime);
 
-          console.log('vieportChange -> repositionWindow ');
-          this.repositionWindow();
+          this.repositionWindow(false);
 
           this.handledViewportWidth = figma.viewport.bounds.width;
           this.handledViewportHeight = figma.viewport.bounds.height;
@@ -120,8 +122,16 @@ export class WindowManagerSandbox {
         if (message.target === 'WindowManager') {
           if (message.size) {
             this.handleSizeMessage(message);
-          } else if (message.windowMode !== undefined) {
-            this.setWindowMode(message.windowMode);
+          } else if (message.requestedWindowMode !== undefined) {
+            if (!this.viewPortResizing && this.windowMode !== message.requestedWindowMode) {
+              this.setWindowMode(message.requestedWindowMode, message.fromDrag);
+              setTimeout(() => {
+                figma.ui.postMessage({
+                  target: 'WindowManager',
+                  windowMode: this.windowMode,
+                });
+              }, 30);
+            }
           } else if (message.uiInit) {
             // while the ui is leading changes in the window mode - it needs to get informed about initial state
             figma.ui.postMessage({
@@ -134,38 +144,43 @@ export class WindowManagerSandbox {
     });
   }
 
-  handleSizeMessage(message: any) {
-    this.windowResizing = true;
+  setWindowMode(mode: WindowMode, fromDrag: boolean) {
+    if (this.windowMode === WindowMode.BottomSheet && mode === WindowMode.Window && fromDrag) {
+      const width = Math.ceil(figma.viewport.bounds.width * figma.viewport.zoom);
+      const height = this.bottomSheetHeight; // in case of the bottom sheet we always keep the windows size equal to the viewport size
+      this.size.width = width;
+      this.size.height = height;
 
+      figma.clientStorage.setAsync('windowSize', this.size);
+
+      this.windowMode = mode;
+      figma.clientStorage.setAsync('windowMode', mode);
+      // no resize needed
+    } else {
+      this.windowMode = mode;
+      figma.clientStorage.setAsync('windowMode', mode);
+      this.repositionWindow(true);
+    }
+  }
+
+  handleSizeMessage(message: any) {
     if (this.windowMode === WindowMode.Window && message.source === 'dragging') {
       this.size = message.size;
       figma.clientStorage.setAsync('windowSize', this.size);
-    } else if (this.windowMode === WindowMode.BottomSheet && !this.viewPortResizing) {
+    } else if (this.windowMode === WindowMode.BottomSheet) {
       this.bottomSheetHeight = message.size.height;
       figma.clientStorage.setAsync('windowBottomSheetHeight', message.size.height);
     }
 
-    console.log('handleSizeMessage -> repositionWindow');
-    this.repositionWindow();
-
-    if (this.windowResizeSettleTimeout) {
-      clearTimeout(this.windowResizeSettleTimeout);
-    }
-    this.windowResizeSettleTimeout = setTimeout(() => {
-      this.windowResizing = false;
-      console.log('handleSizeMessage -> repositionWindow (settled)');
-      this.repositionWindow();
-    }, 500);
+    this.repositionWindow(false);
   }
 
-  repositionWindow() {
-    console.log('repositionWindow');
+  repositionWindow(forceReshow: boolean) {
     let { height, width } = this.size;
     let x = undefined as number | undefined;
     let y = undefined as number | undefined;
 
     if (this.windowMode === WindowMode.Fullscreen) {
-      console.log('Fullscreen');
       const leftPanelWidth = 240;
       const rightPanelWidth = 240;
 
@@ -175,14 +190,12 @@ export class WindowManagerSandbox {
       x = figma.viewport.bounds.x - ((leftPanelWidth) / figma.viewport.zoom);
       y = figma.viewport.bounds.y;
     } else if (this.windowMode === WindowMode.BottomSheet) {
-      console.log('BottomSheet');
       width = figma.viewport.bounds.width * figma.viewport.zoom;
-      height = figma.viewport.bounds.height * figma.viewport.zoom;
+      height = this.bottomSheetHeight; // in case of the bottom sheet we always keep the windows size equal to the viewport size
 
       x = figma.viewport.bounds.x;
-      y = figma.viewport.bounds.y + figma.viewport.bounds.height - ((this.bottomSheetHeight + this.titleBarHeight) / figma.viewport.zoom);
+      y = figma.viewport.bounds.y + figma.viewport.bounds.height - ((this.bottomSheetHeight + this.titleBarHeight - 5) / figma.viewport.zoom);
     } else if (this.windowMode === WindowMode.Window) {
-      console.log('Window');
       if (this.currentMode !== this.windowMode) {
         // center window on switch to window mode
         x = figma.viewport.bounds.x + ((figma.viewport.bounds.width / 2) - ((width / 2) / figma.viewport.zoom));
@@ -191,79 +204,33 @@ export class WindowManagerSandbox {
     }
 
     if (x !== undefined && y !== undefined && !this.windowResizing) {
-      console.log(`hiding to reposition${y} ${x}`);
       // figma doesn't allow reposition after the user has moved the window manual once - by hiding and showing the ui it looses its corresponding state
-      this.repositionThrottled(x, y);
+      this.reposition(x, y, forceReshow);
     }
 
     // eslint-disable-next-line no-bitwise
     figma.ui.resize(width | 0, height | 0);
 
     this.currentMode = this.windowMode;
-
-    /* if (reshow) {
-      setTimeout(() => {
-        figma.ui.show();
-      }, 1);
-    } */
   }
 
   lastReposition: any;
 
-  repositionThrottled(x: number, y: number) {
-    if (this.lastReposition && this.lastReposition.x === x && this.lastReposition.y === y && (Date.now() - this.lastReposition.time) > 30) {
-      console.log('skipped');
-      return;
+  reshowing = false;
+
+  reposition(x: number, y: number, forceReshow: boolean) {
+    if ((forceReshow) && !this.reshowing) {
+      figma.ui.hide();
+      this.reshowing = true;
+      setTimeout(() => {
+        figma.ui.show();
+        setTimeout(() => {
+          this.reshowing = false;
+        }, 1);
+      }, 1);
     }
 
-    this.lastReposition = {
-      x,
-      y,
-      time: Date.now(),
-    };
-
-    figma.ui.hide();
     // @ts-ignore
     figma.ui.reposition(x, y);
-    setTimeout(() => {
-      console.log('showing again');
-      figma.ui.show();
-    }, 1);
-  }
-
-  setWindowMode(mode: WindowMode) {
-    this.windowMode = mode;
-
-    figma.clientStorage.setAsync('windowMode', mode);
-
-    console.log('setWindowMode -> repositionWindow (settled)');
-    this.repositionWindow();
   }
 }
-
-/*
-useful if plugin overlaps selection:
-- snippet to zoom to a specific posistion using a short living rectangle
-*/
-
-/*
-// Define the X and Y coordinates that you want to scroll to
-const scrollToX = 100;
-const scrollToY = 200;
-
-// Define the width and height of the area that you want to zoom in on
-const zoomWidth = 500;
-const zoomHeight = 500;
-
-// Create a new rectangle object
-const zoomRect = figma.createRectangle();
-zoomRect.x = scrollToX;
-zoomRect.y = scrollToY;
-zoomRect.resize(zoomWidth, zoomHeight);
-
-// Call the scrollAndZoomIntoView method to scroll and zoom to the specified position
-figma.viewport.scrollAndZoomIntoView([zoomRect]);
-
-// Remove the rectangle from the page
-zoomRect.remove();
-*/

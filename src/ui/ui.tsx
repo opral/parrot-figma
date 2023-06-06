@@ -51,7 +51,7 @@ window.addEventListener('keydown', (e) => {
 WindowManagerUi.init(
   document.getElementById('sizing-wrapper')!,
   document.getElementById('react-page')!,
-  document.getElementById('corner')!,
+  document.getElementById('resize-handle')!,
 );
 
 const asyncFunctionProxy = new AsyncFunctionProxy('UIAsyncFunctionProxy', (data: any) => {
@@ -242,7 +242,7 @@ function App() {
               tooltip: 'Dock to bottom',
             }]}
             selectedSegment={windowMode}
-            onChoose={(choosenWindowMode: WindowMode) => { WindowManagerUi.instance?.setWindowMode(choosenWindowMode); }}
+            onChoose={(choosenWindowMode: WindowMode) => { WindowManagerUi.instance?.requestWindowMode(choosenWindowMode, false); }}
           />
 
         </div>

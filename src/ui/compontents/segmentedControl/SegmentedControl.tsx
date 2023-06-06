@@ -1,7 +1,7 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 import * as React from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import './SegmentedControl.css';
 
@@ -15,7 +15,6 @@ type SegmentedControlProps<Type> = {
   selectedSegment: Type,
   segments: Segment[],
   onChoose: Function
-
 };
 
 export default function SegmentedControl<Type>({
@@ -29,6 +28,10 @@ export default function SegmentedControl<Type>({
     setSelectedSegment(value);
     onChoose(value);
   };
+
+  useEffect(() => {
+    setSelectedSegment(selectedSegment);
+  }, [selectedSegment]);
 
   return (
     <div className="segmented-control">

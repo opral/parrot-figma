@@ -65,8 +65,8 @@ https://lokalise.com/blog/design-stage-localization/
 # Label state  #1
 - no key (untracked)  - (unset)
     Design View
-    - [ ] option to search for the key 
-    - [ ] enter a key
+    - [x] option to search for the key 
+    - [x] enter a key
         - [x] create key if name is not used yet - version set to the one of the key
         - [ ] handle possible states if key exists
             - [ ] text matches - set version to the one of the key
@@ -248,18 +248,26 @@ What we want from ui point of view:
  - [x] localize tool using the tool :-) POC
  - [x] Add tooltips 
 
- - [ ] add anotation page
- - [ ] allow to save from key translation editor
+ - [x] add anotation page
+ - [x] allow to save from key translation editor
  - [x] fix selection
  - [x] allow to edit sample data on a label - allow to add default sample data
- - [ ] allow to show all translations
- - [ ] allow to specify the quantity param in the key (first number by default)
- - [ ] highlight key of the currently selected label
- - [ ] polish mouse pointer styles
- - [ ] check keyname for at least one visible character
- - [ ] focus key field on link click if no derviation is posible
+ - [x] allow to specify the quantity param in the key (first number by default)
+ - [x] highlight key of the currently selected label
  - [x] last character bug in key editor
- - [ ] plural select
+ - [x] add automatic design update for labels with state modified == false && behind == 0 - feedback?
+ - [x] filter - match case, need review etc based on figmas search design
+ - [x] allow to add a key manually using drawer? Currently one can only create a key form a lable 
+ 
+ - [ ] fix translation update from label
+    - [ ] propagate to other labels after clicking to use figma version
+    - [ ] labels state is not updated to most recent version
+    - [ ] placeholders that have fillins in the label are still shown even if the text doesn't contain the placeholder nor the any translation
+    - [ ] show preview when hover 
+ - [ ] plural select - based on a quantity value
+ - [ ] number based plurals (0 = no new messages, 1 = one new message, other = %n new messages)
+ - [ ] check keyname for at least one visible character
+ - [ ] polish mouse pointer styles
  - [ ] UX key select
     - [x] search by key "key:keyname or other"
     - [x] show only base language and current frame language
@@ -267,16 +275,11 @@ What we want from ui point of view:
  
  - [ ] fix localized label row design
     - [x] do we need to edit or even show the complete text inline in the designs tab?
-    - [ ] plural select (should it be visible if there is only the other option?)
     - [ ] distinct visual style for base language like bold
+ - [ ] translation editor ux - we should be able to hide skipped values from option in toolbar - add hint if it is hidden
 
- - [ ] allow to add a key manually using drawer? Currently one can only create a key form a lable 
-
- - [x] add automatic design update for labels with state modified == false && behind == 0 - feedback?
- - [ ] translation editor ux - we should be able to hide skipped values from option in toolbar
- 
  - [ ] delete selection (multi select)
-
+ - [ ] search and replace  
  
  - [ ] variable replacement logic
     - [ ] placeholder style
@@ -290,7 +293,6 @@ What we want from ui point of view:
  - [ ] allow to rename keys
     - [ ] think about edgecases here 
  - [ ] qa handling of translation
- - [x] filter - match case, need review etc based on figmas search design
 
  - [ ] use base language for translation if possible
  - [ ] handle selection for keys as well (provide an option to only show keys of current selection)
@@ -300,7 +302,16 @@ What we want from ui point of view:
 
 ##### Key Matching
 If we have a label with the text "Hello Martin how are you today?" and a key "Hello [[firstname]] how are you today?",
-we can match it with a regex like "Hello "
+we can match it with a regex like "Hello " ... "how are you today?"
+
+Problems: 
+ - the key found does not match exactly
+  - "Download App" instead of "Download App" - typo
+  - "CO2e" instead of "CO2" - ?
+  - "Hi!" instead of "Hi"
+  - \n in design but not in key
+  - list is not perfect for mapping? - add a mapper screen?
+  - 
 
 #### import
  - [ ] import of ios dict
@@ -363,3 +374,19 @@ https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
 
 
 
+Plurals:
+https://www.unicode.org/reports/tr35/tr35-67/tr35-numbers.html#Language_Plural_Rules
+cardinal (default), ordinal 4th...
+
+https://medium.com/@vitaliikuznetsov/plurals-localization-using-stringsdict-in-ios-a910aab8c28c
+
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/PluralRules
+
+(new Intl.PluralRules('en-US')).resolvedOptions().pluralCategories
+
+(new Intl.PluralRules('en-US')).select(0) -> 'other'
+
+
+AAR'rrr - Piraten maskottchen
+
+An Extension not a Plugin

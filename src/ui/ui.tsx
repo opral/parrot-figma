@@ -36,8 +36,45 @@ import Export from './views/export/Export';
 
 TimeAgo.addDefaultLocale(en);
 
+
+const monkeyPatchCommandExec = document.execCommand;
+// eslint-disable-next-line func-names
+document.execCommand = function() {
+  // eslint-disable-next-line prefer-rest-params
+  if (arguments[0] === 'undo' || arguments[0] === 'redo') {
+    return false;
+  }
+
+  // eslint-disable-next-line prefer-rest-params
+  if (arguments[0] === 'undoForce') {
+    return monkeyPatchCommandExec.call(document, 'undo');
+  }
+
+  // eslint-disable-next-line prefer-rest-params
+  if (arguments[0] === 'redoForce') {
+    return monkeyPatchCommandExec.call(document, 'redo');
+  }
+  // eslint-disable-next-line prefer-rest-params
+  return monkeyPatchCommandExec.apply(document, (arguments as any));
+};
+
+document.addEventListener('keydown', (e) => {
+  // Handle Select All, Undo and Redo in the desktop app
+  if (e.keyCode === 65 /* A */ && e.metaKey && !(e.target! as any).classList.contains('cm-content')) {
+    document.execCommand('selectAll')
+  } else if (e.keyCode === 90 /* Z */ && e.metaKey) {
+    if (e.shiftKey) {
+      document.execCommand('redoForce');
+    } else {
+      document.execCommand('undoForce');
+    }
+  }
+}, true);
+
+
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'z' && !e.shiftKey && !e.altKey) {
+  if (e.key === 'z' && !e.shiftKey && !e.altKey && !(e.target! as any).classList.contains('cm-content')) {
+    console.log('sending undo');
     // Undo the action in Figma
     const isMac = navigator.userAgent.indexOf('Macintosh') >= 0;
     const isCmd = isMac && e.metaKey && !e.ctrlKey;

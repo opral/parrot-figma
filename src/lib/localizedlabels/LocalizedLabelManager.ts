@@ -141,8 +141,7 @@ export default class LocalizedLabelManager {
       changedLabels: changedLabels.filter((node) => !createdLabels.some((createdNode) => createdNode.nodeId === node.nodeId)),
       createdLabels,
     } as ChangeEvent;
-    // console.log(JSON.stringify(event));
-    // console.log(message);
+
     figma.ui.postMessage(message);
   }
 
@@ -256,9 +255,7 @@ export default class LocalizedLabelManager {
     const selections = [];
     for (const node of figma.currentPage.selection) {
       const rootFrame = this.getRootFrame(node);
-      if (rootFrame) {
-        selections.push({ rootFrameId: rootFrame.id, selectedNodeId: node.id });
-      }
+      selections.push({ rootFrameId: rootFrame?.id, selectedNodeId: node.id });
     }
     return selections;
   }

@@ -237,6 +237,7 @@ export class FigmaFileTranslationKeyStore {
     }
     const historyObj = this.getHistorySync(keyName);
     key.history = historyObj.keyHistory;
+    key.latestVersion = key.history.length;
     this.keyState[keyName] = historyObj.state;
 
     return key;

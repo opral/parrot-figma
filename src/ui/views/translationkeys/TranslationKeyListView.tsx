@@ -2,7 +2,7 @@
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 /* eslint-disable jsx-a11y/interactive-supports-focus */
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
 import { Language } from '../../../lib/base/Language';
@@ -40,21 +40,26 @@ export default function TranslationKeyListView({
   const [, setTrigger] = useState(0);
   const [renderEntries, setRenderEntries] = useState(200);
   const [filteredKeys, setFilteredKeys] = useState(translationKeyStore.findKeys(searchQuery));
+  const [selectedKeys, setSelectedKeys] = useState([] as string[]);
   const [query, setQuery] = useState<SearchQuery>(searchQuery);
+  const tableRef = useRef<HTMLDivElement>(null);
 
   async function refreshSelection() {
+    console.log('selection changed');
     const selectedNodes = await localizedLabelManager.getSelection();
+    const freshSelectedKeys = [] as string[];
 
-    const labels = [] as LocalizedLabel[];
-    for (const selectedElement of selectedNodes) {
-      const label = localizedLabelManager.getLabelByNodeId(selectedElement.selectedNodeId);
-      if (label && label.keyType === KeyState.Linked) {
-        labels.push(label);
+    for (const selectedElement of Object.values(selectedNodes)) {
+      if (selectedElement.isLabel) {
+        const label = localizedLabelManager.getLabelByNodeId(selectedElement.selectedNodeId);
+        if (label && label.keyType === KeyState.Linked) {
+          freshSelectedKeys.push(label.key!);
+        }
       }
     }
 
-    // setSelectedLabels(labels);
     refreshKeys();
+    setSelectedKeys(freshSelectedKeys);
     setTrigger((v) => v + 1);
   }
 
@@ -94,8 +99,25 @@ export default function TranslationKeyListView({
         setRenderEntries((value) => value + 250);
       }, 10);
     }
+
+    if (tableRef.current) {
+      const firstSelected = tableRef.current.querySelector('.selected') as HTMLElement;
+      if (firstSelected) {
+        (firstSelected.firstChild as any).scrollIntoViewIfNeeded({ block: 'center' });
+      }
+    }
     return () => { if (renderStepTimeout !== undefined) clearTimeout(renderStepTimeout); };
   }, [renderEntries]);
+
+  useEffect(() => {
+    if (tableRef.current) {
+      const firstSelected = tableRef.current.querySelector('.selected') as HTMLElement;
+      if (firstSelected) {
+        (firstSelected.firstChild as any).scrollIntoViewIfNeeded({ block: 'center' });
+      }
+    }
+  }, [selectedKeys]);
+
 
   if (Object.keys(keys).length === 0) {
     return (
@@ -205,7 +227,8 @@ export default function TranslationKeyListView({
           )}
         </div>
       )}
-      <div className="grid">
+      <div className="grid" ref={tableRef}>
+        {/* helper row for css to set the width when partially rendered */}
         <div className="grid-hidden-layout-helper">
           <TranslationKeyListItem
             key="max-width-helper-row"
@@ -215,6 +238,7 @@ export default function TranslationKeyListView({
             translationKey={keys[longestKey]}
             figmaRemote={figmaRemote}
             select={select}
+            labelSelected={false}
           />
         </div>
         {[...filteredKeys.matchingKeys].map((keyName) => {
@@ -233,6 +257,7 @@ export default function TranslationKeyListView({
               translationKey={keys[keyName]}
               figmaRemote={figmaRemote}
               select={select}
+              labelSelected={selectedKeys.includes(keyName)}
             />
           );
         })}

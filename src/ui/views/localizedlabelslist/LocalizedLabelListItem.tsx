@@ -105,7 +105,7 @@ export default function LocalizedLabelListItem({
             keys={translationKeyStore.translationKeys}
             figmaRemote={figmaRemote}
             refreshKeys={() => {}}
-            searchQuery={MemoryTranslationKeyStore.toQueryObject(`exact_text:true key:* ${searchKey.search}`)}
+            searchQuery={MemoryTranslationKeyStore.toQueryObject(`key:* ${searchKey.search}`)}
             select={(key: string, language: Language, plural: Plural) => {
               localizedLabelManager.linkKey(localizedLabel, key, language, plural);
               setSearchKey(undefined);
@@ -320,22 +320,27 @@ export default function LocalizedLabelListItem({
                         <TranslationEditor
                           editable
                           match={undefined}
-                          onSave={async (text: any) => {
-                            // TODO
+                          onSave={async () => {
+                            localizedLabelManager.commitUndo();
+                          }}
+                          onChange={async (value: string) => {
+                            localizedLabelManager.updateLabelProperties(localizedLabel.nodeId, {
+                              translation: value,
+                            });
                           }}
                           text={localizedLabel.translation}
                           keyName={localizedLabel.key}
                           translationKeyStore={translationKeyStore}
                         />
                         { selected && (
-                          <div className="placeholder-view-grid" style={{ display: localizedLabel.keyType === KeyState.Linked && translatedKey && translatedKey.placeholders && Object.keys(translatedKey.placeholders).length > 0 ? undefined : 'none' }}>
+                          <div className="placeholder-view-grid" style={{ display: Object.keys(localizedLabel.getPlaceholders()).length > 0 ? undefined : 'none' }}>
 
                             <div />
                             <div />
                             <div>Placeholder</div>
                             <div />
                             <div />
-                            {translatedKey && translatedKey.placeholders && Object.entries(translatedKey.placeholders).map((entry, i, array) => (
+                            {Object.entries(localizedLabel.getPlaceholders()).map((entry, i, array) => (
                               <PlaceholderEditorListItem
                                 key={entry[0]}
                                 placeholder={entry[1]}

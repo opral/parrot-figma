@@ -34,7 +34,12 @@ export default function LocalizedLabelsListView({
 
     let selectedLabels = [] as UILocalizedLabel[];
 
-    for (const selectedNode of selectedNodes) {
+    for (const selectedNode of Object.values(selectedNodes)) {
+      if (!selectedNode.rootFrameId) {
+        // eslint-disable-next-line no-continue
+        continue;
+      }
+
       if (!selectedByFrame[selectedNode.rootFrameId]) {
         // console.log('getting labels from manager');
         // eslint-disable-next-line no-await-in-loop -- parallizing would not bring any advantage here

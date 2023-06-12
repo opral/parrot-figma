@@ -13,7 +13,7 @@ export default function TranslationView({
 }: TranslationViewProps) {
   const result = [];
   const placeholders = UITranslationKey.extractPlaceholdersInText(text);
-  const fixedPosition = 3; // TODO source this from the keys parameters instead
+  const fixedPosition = 3; // TODO #8 source this from the keys parameters instead
   let lastEnd = 0;
   let placeHolderIndex = 0;
   for (const placeholder of placeholders) {

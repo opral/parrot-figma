@@ -24,16 +24,8 @@ import { UITranslationKey } from '../../../lib/keystore/UITranslationKey';
 import { PlaceholderView } from '../../compontents/translationEditor/PlaceholderView';
 import PlaceholderEditorListItem from '../../compontents/placeholder/PlaceholderEditor';
 
-type TranslationKeyListItemProps = {
-  translationKey: UITranslationKey,
-  figmaRemote: FigmaUtil,
-  searchMatch: any,
-  translationKeyStore: MemoryTranslationKeyStore,
-  localizedLabelManager: LocalizedLabelManagerUI,
-  select?: Function
-};
-
 interface VersionEntry {
+  version: number,
   versionTag: HistoryTag | undefined
   text: string | undefined
   previousText: string | undefined
@@ -44,6 +36,16 @@ interface VersionEntry {
   verified: boolean
 }
 
+type TranslationKeyListItemProps = {
+  translationKey: UITranslationKey,
+  figmaRemote: FigmaUtil,
+  searchMatch: any,
+  translationKeyStore: MemoryTranslationKeyStore,
+  localizedLabelManager: LocalizedLabelManagerUI,
+  select?: Function,
+  labelSelected: boolean,
+};
+
 export default function TranslationKeyListItem({
   translationKey,
   figmaRemote,
@@ -51,6 +53,7 @@ export default function TranslationKeyListItem({
   translationKeyStore,
   localizedLabelManager,
   select,
+  labelSelected,
 }: TranslationKeyListItemProps) {
   const { t } = useTranslation();
   const [selected, setSelected] = useState(false);
@@ -143,6 +146,7 @@ export default function TranslationKeyListItem({
     console.log('key');
     console.log(translationKey);
 
+
     // filter relevant history changes for the given key
     for (const keyHistoryEntry of translationKey.history) {
       if (keyHistoryEntry.translations?.[language]?.[plural] !== undefined) {
@@ -158,6 +162,7 @@ export default function TranslationKeyListItem({
           text: keyHistoryEntry.translations?.[language]?.[plural]?.text ?? lastRelevantVersion?.text,
           previousText: lastRelevantVersion?.text,
           userName: keyHistoryEntry.user,
+          version: currentVersion,
           date: keyHistoryEntry.date,
           userIconUrl: keyHistoryEntry.user,
           skip: keyHistoryEntry.translations?.[language]?.[plural]?.skip ?? false,
@@ -191,7 +196,7 @@ export default function TranslationKeyListItem({
         }
       }}
     >
-      <div className="grid-item-key">
+      <div className={'grid-item-key ' + (labelSelected ? ' selected' : '')}>
         <div className="grid-item-key-header">
           <span className="layerIcon iconWrapper">
             <span className="svg-container key-svg" />
@@ -376,6 +381,7 @@ export default function TranslationKeyListItem({
               currentVersion={i === 0}
               text={entry.text}
               time={entry.date ?? 0}
+              version={entry.version}
               userName={entry.userName}
               userIconUrl={entry.userIconUrl}
               previousText={entry.previousText}
@@ -448,7 +454,7 @@ export default function TranslationKeyListItem({
             value="Cancel"
             disabled={false}
             onClick={() => {
-              
+
             }}
           />
         </div>

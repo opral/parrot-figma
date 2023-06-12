@@ -48,7 +48,7 @@ export default class FigmaHelper {
         const frame = figma.getNodeById(frameNodeId);
         const MARGIN = 50;
 
-        let translatedFrame = labelManager.getFrameById(frameNodeId);
+        let translatedFrame = await labelManager.getFrameById(frameNodeId);
 
         let keyFrame: FrameNode | null = null
         /*if (frame.getPluginData('keyFrameId')) {
@@ -79,7 +79,8 @@ export default class FigmaHelper {
         let maxRight = 0;
         let maxBottom = (frame as FrameNode).height;
         let i = 0;
-        for (let nodeWithKey of (await translatedFrame).localizedLabelsInFrame) {
+        
+        for (let nodeWithKey of translatedFrame.localizedLabelsInFrame) {
 
             if (nodeWithKey.keyType !== KeyState.Linked) {
               continue;

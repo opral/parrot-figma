@@ -326,7 +326,7 @@ export class UITranslationKey implements TranslationKey {
       placeholders: this.placeholders,
     } as TranslationKey;
 
-    for (let versionI = 0; versionI < version; versionI++) {
+    for (let versionI = 0; versionI <= version; versionI++) {
       const currentVersion = this.history[versionI];
 
       // translationKeyInVersion.history.push(currentVersion);

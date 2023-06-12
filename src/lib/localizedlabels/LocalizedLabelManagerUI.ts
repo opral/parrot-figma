@@ -345,6 +345,8 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   }
 
   async setFrameLanguage(frameId: string, targetLanguage: Language, missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | undefined>) {
+    const version = undefined as undefined | number; // todo fill with fixed version of the frame if set
+    
     await this.localizedLabelMangerSandbox.updateFrameProperties(frameId, {
       language: targetLanguage,
     });
@@ -352,7 +354,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     for (const localizedLabelId of this.cachedFrames[frameId].localizedLabelIds) {
       const localizedLabel = this.cachedLocalisedLabels[localizedLabelId]!;
       // eslint-disable-next-line no-await-in-loop
-      await this.setLabelLanguage(localizedLabel, targetLanguage, missingTranslationProvider);
+      await this.setLabelLanguage(localizedLabel, targetLanguage, version, missingTranslationProvider);
     }
 
     // await this.localizedLabelMangerSandbox.updateFrameById(frameId);
@@ -375,9 +377,10 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   async setLabelLanguage(
     cachedLabel: LocalizedLabel,
     targetLanguage: Language,
+    version: number | undefined,
     missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | undefined>,
   ) {
-    (new UILocalizedLabel(this, cachedLabel)).setLanguage(targetLanguage, missingTranslationProvider);
+    (new UILocalizedLabel(this, cachedLabel)).setLanguage(targetLanguage, version, missingTranslationProvider);
   }
 
   async createNewVersionFromLabelState(localizedLabel: UILocalizedLabel) {
@@ -395,25 +398,28 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   }
 
   async updateToLatestKeyVersion(localizedLabels: LocalizedLabel[]) {
+    const updatePromises = [];
     for (const localizedLabel of localizedLabels) {
       const translationKey = this.keyStore.getKey(localizedLabel.key!)!;
       const historyEntryForVersion = translationKey.getHistoryEntry(localizedLabel.rootFrameLanguage, localizedLabel.pluralId, translationKey.latestVersion);
 
       const fillins = { ...localizedLabel.fillins };
       for (const placeholderName of Object.keys(fillins)) {
-        if (fillins[placeholderName].default) {
+        if (fillins[placeholderName].default && translationKey.defaultFillins[placeholderName]) {
           fillins[placeholderName].value = translationKey.defaultFillins[placeholderName].value;
         }
       }
 
       // eslint-disable-next-line no-await-in-loop
-      await this.updateLabelProperties(localizedLabel.nodeId, {
+      updatePromises.push(this.updateLabelProperties(localizedLabel.nodeId, {
         keyVersion: translationKey.latestVersion,
         translation: historyEntryForVersion!.translations?.[localizedLabel.rootFrameLanguage]?.[localizedLabel.pluralId]?.text,
         language: localizedLabel.rootFrameLanguage,
         fillins,
-      });
+      }));
     }
+
+    await Promise.all(updatePromises);
 
     await this.localizedLabelMangerSandbox.commitUndo();
   }
@@ -479,14 +485,22 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     await this.localizedLabelMangerSandbox.commitUndo();
   }
 
+  async commitUndo() {
+    await this.localizedLabelMangerSandbox.commitUndo();
+  }
+
+  async updateLabelTranslation(localizedLabel: LocalizedLabel, translation: string) {
+    this.updateLabelProperties(localizedLabel.nodeId, {
+      translation,
+    });
+
+    await this.localizedLabelMangerSandbox.commitUndo();
+  }
+
   async updateLabelFillin(localizedLabel: LocalizedLabel, placeholderName: string, fillinValue: string) {
     const newFillins = {
       ...localizedLabel.fillins, // Copy the old fields
     };
-
-    if (!localizedLabel.key || localizedLabel.keyType !== KeyState.Linked) {
-      return;
-    }
 
     newFillins[placeholderName] = { value: fillinValue, default: fillinValue === '' };
     await this.updateLabelProperties(localizedLabel.nodeId, {
@@ -531,35 +545,37 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     const localizedLabelCached = this.cachedLocalisedLabels[nodeId]!;
     const changedPropertiesToForwared = changedProperties;
 
-    if (changedProperties.translation !== undefined
-      || changedProperties.language !== undefined
-      || changedProperties.plural !== undefined
-      || changedProperties.keyVersion !== undefined
-      || changedProperties.fillins !== undefined) {
-      const language = changedProperties.language ?? localizedLabelCached.language;
-      const plural = changedProperties.plural ?? localizedLabelCached.pluralId;
-      // const version = changedProperties.keyVersion ?? localizedLabelCached.keyVersion; // TODO handle version
-      const key = changedProperties.key ?? localizedLabelCached.key!; // TODO check if label has a key
-      const translationKey = this.keyStore.getKey(key)!;
-      const translation = changedProperties.translation ?? translationKey.translations[language]?.[plural]?.text!;
+    const key = changedProperties.key ?? localizedLabelCached.key;
+    const translationKey = key ? this.keyStore.getKey(key) : undefined;
 
+    const defaultFillIns = translationKey ? { ...translationKey.defaultFillins } : {} as Fillins;
+    const labelFillins = changedProperties.fillins ?? localizedLabelCached.fillins;
 
-      const defaultFillIns = {...translationKey.defaultFillins};
-      const labelFillins = changedProperties.fillins ?? localizedLabelCached.fillins;
+    // eslint-disable-next-line no-param-reassign
+    changedPropertiesToForwared.fillins = labelFillins;
 
-      for (const parameterName of Object.keys(defaultFillIns)) {
-        if (labelFillins[parameterName] && labelFillins[parameterName].default) {
-          labelFillins[parameterName] = { default: true, value: defaultFillIns[parameterName].value };
-        }
+    for (const parameterName of Object.keys(defaultFillIns)) {
+      if (labelFillins[parameterName] && labelFillins[parameterName].default) {
+        labelFillins[parameterName] = { default: true, value: defaultFillIns[parameterName].value };
       }
-
-      // eslint-disable-next-line no-param-reassign
-      changedPropertiesToForwared.fillins = labelFillins;
-
-      // eslint-disable-next-line no-param-reassign
-      changedPropertiesToForwared.translation = translation ? UILocalizedLabel.fillTranslation(translation, labelFillins) : 'missing translation!'; // TODO #9 how to deal with missing translations?
-      changedPropertiesToForwared.filledTemplateHash = blake.blake2sHex(changedPropertiesToForwared.translation);
     }
+
+    let translation = changedProperties.translation ?? localizedLabelCached.translation as string | undefined;
+
+    if (changedProperties.language !== undefined
+      || changedProperties.plural !== undefined
+      || changedProperties.keyVersion !== undefined) {
+      if (localizedLabelCached.keyType === KeyState.Linked) {
+        const language = changedProperties.language ?? localizedLabelCached.language;
+        const plural = changedProperties.plural ?? localizedLabelCached.pluralId;
+        const version = changedProperties.keyVersion ?? localizedLabelCached.keyVersion;
+        translation = changedProperties.translation ? changedProperties.translation : translationKey?.getInVersion(version).translations[language]?.[plural]?.text;
+      }
+    }
+    
+    // eslint-disable-next-line no-param-reassign
+    changedPropertiesToForwared.translation = translation ? UILocalizedLabel.toText(translation, labelFillins) : 'missing translation!'; // TODO #9 how to deal with missing translations?
+    changedPropertiesToForwared.filledTemplateHash = blake.blake2sHex(changedPropertiesToForwared.translation);
 
     const localizedLabel = await this.localizedLabelMangerSandbox.updateLabelProperties(nodeId, changedPropertiesToForwared);
 
@@ -570,8 +586,47 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   }
 
   async getSelection() {
-    return this.localizedLabelMangerSandbox.getSelection();
-  }
+    const selectionFromFigma = await this.localizedLabelMangerSandbox.getSelection();
+    const selectionEnhanced = {} as {
+      [keyId: string]: {
+        rootFrameId: string | undefined;
+        selectedNodeId: string,
+        parentSelected: boolean,
+        isLabel: boolean,
+      }
+    };
 
-  
+    for (const selectedNode of selectionFromFigma) {
+      if (this.cachedLocalisedLabels[selectedNode.selectedNodeId]) {
+        // the node within the selection is a label
+        selectionEnhanced[selectedNode.selectedNodeId] = {
+          parentSelected: false,
+          isLabel: true,
+          ...selectedNode,
+        };
+      } else if (selectedNode.rootFrameId && this.cachedFrames[selectedNode.rootFrameId]) {
+        // node is not a label - could be a container - check if a label within the same frame exist with the selected node as parent
+        for (const localisedLabelIdInFrame of this.cachedFrames[selectedNode.rootFrameId].localizedLabelIds) {
+          if (!selectionEnhanced[selectedNode.selectedNodeId] && this.cachedLocalisedLabels[localisedLabelIdInFrame].parentIds.includes(selectedNode.selectedNodeId)) {
+            // is one of the labels parents the selected node and has not been taken into account yet
+            selectionEnhanced[selectedNode.selectedNodeId] = {
+              parentSelected: true,
+              isLabel: true,
+              rootFrameId: selectedNode.rootFrameId,
+              selectedNodeId: localisedLabelIdInFrame,
+            };
+          }
+        }
+      } else if (!selectionEnhanced[selectedNode.selectedNodeId]) {
+        selectionEnhanced[selectedNode.selectedNodeId] = {
+          parentSelected: false,
+          isLabel: false,
+          rootFrameId: selectedNode.rootFrameId,
+          selectedNodeId: selectedNode.selectedNodeId,
+        };
+      }
+    }
+
+    return selectionEnhanced;
+  }
 }

@@ -39,14 +39,6 @@ const myTheme = createTheme({
   ],
 });
 
-type TranslationEditorProps = {
-  keyName?: string,
-  text?: string,
-  onSave: Function
-  match: { start: number, length: number } | undefined
-  editable: boolean,
-  translationKeyStore: MemoryTranslationKeyStore,
-};
 
 function createCompletion(keyProvider: MemoryTranslationKeyStore) {
   return function myCompletions(context: CompletionContext) {
@@ -80,12 +72,23 @@ function createCompletion(keyProvider: MemoryTranslationKeyStore) {
   };
 }
 
+
+type TranslationEditorProps = {
+  keyName?: string,
+  text?: string,
+  onSave: Function,
+  onChange?: Function,
+  match: { start: number, length: number } | undefined
+  editable: boolean,
+  translationKeyStore: MemoryTranslationKeyStore,
+};
+
 // We use this view in two ocations:
 //  - key editor placeholders no fillins
 //  - label editor - text should contain the placeholders but the editor needs to know the fillins?
 
 export default function TranslationEditor({
-  text, keyName, onSave, match, editable = true, translationKeyStore,
+  text, keyName, onSave, match, editable = true, translationKeyStore, onChange,
 }: TranslationEditorProps) {
   const [textState, setTextState] = useState(text);
   const [editingState, setEditingState] = useState(false);
@@ -96,6 +99,9 @@ export default function TranslationEditor({
   // useAutosizeTextArea(textAreaRef.current, translationText ? translationText : '')
 
   const handleChange = (value: string) => {
+    if (onChange !== undefined) {
+      onChange(value);
+    }
     setTextState(value);
   };
 

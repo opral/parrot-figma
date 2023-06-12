@@ -2,10 +2,12 @@ import { Language } from '../base/Language';
 import { Plural } from '../base/Plural';
 import { KeyState, LocalizedLabel } from './LocalizedLabel';
 import { UITranslationKey } from '../keystore/UITranslationKey';
-import { Fillins, PlaceholderType } from '../keystore/TranslationKey';
+import {
+  Fillins, Placeholder, PlaceholderType, PlaceholdersByName, TranslationKey,
+} from '../keystore/TranslationKey';
 
 export interface ILocalizedLabelManagerUI {
-  keyStore: any;
+  keyStore: any; // TODO make this UITranslationKeyStore and add all methods to the interface needed
   updateLabelProperties(nodeId: string, changedProperties: {
     labelName?: string,
     keyType?: KeyState,
@@ -66,6 +68,9 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   textChangedAfterGeneration: boolean;
 
+  /**
+   * contains the translation representation with placeholders and later formation tags
+   */
   translation: string;
 
   fillins: Fillins;
@@ -107,7 +112,28 @@ export class UILocalizedLabel implements LocalizedLabel {
     this.state = this.getState();
   }
 
-  static getPlaceholdersSorted(fillins: Fillins) {
+  getPlaceholders() {
+    const labelTranslationPlaceholders = UITranslationKey.extractPlaceholdersInText(this.translation);
+    let placeholders = {} as PlaceholdersByName;
+
+    if (this.keyType === KeyState.Linked) {
+      const key = this.manager.keyStore.getKey(this.key!)! as UITranslationKey;
+      placeholders = { ...key.placeholders };
+    }
+
+    for (const labelTranslationPlaceholder of labelTranslationPlaceholders) {
+      if (!placeholders[labelTranslationPlaceholder.name]) {
+        placeholders[labelTranslationPlaceholder.name] = labelTranslationPlaceholder;
+      }
+    }
+
+    return placeholders;
+  }
+
+  /**
+   * Provides the placholders sorted for the fillin and text extractions
+   */
+  static getPlaceholdersByFillins(fillins: Fillins) {
     const placeholderByFillin = Object.keys(fillins).sort((placeholderA, placeholderB) => {
       if (fillins[placeholderA].value !== fillins[placeholderB].value) {
         // TODO #8 we just convert the fillin values to a string. The value is a number or a string do we need to take formating into account?
@@ -118,10 +144,10 @@ export class UILocalizedLabel implements LocalizedLabel {
     return placeholderByFillin;
   }
 
-  static fillTranslation(text: string, fillins: Fillins) {
+  static toText(text: string, fillins: Fillins) {
     const pattern = /\[\[([A-Za-z_]{2,})?(?:#(\d+))?(?::*([sdf])(?:\.(\d+))?)?\]\]/g;
 
-    const placeholderByFillin = UILocalizedLabel.getPlaceholdersSorted(fillins);
+    const placeholderByFillin = UILocalizedLabel.getPlaceholdersByFillins(fillins);
     // const wholeMatch = paramMatch[0];
     // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
     // const name = paramMatch[2];
@@ -137,23 +163,19 @@ export class UILocalizedLabel implements LocalizedLabel {
   }
 
   private toTranslation() {
-    const translatedKey = !(this.keyType !== KeyState.Linked) ? this.manager.keyStore.getKey(this.key!) : undefined;
-    if (!translatedKey) {
-      return this.text; // for now we just return the original text in case we don't have a connected text
-    }
+    // if we have no linked key we fall back to name only for now
+    let orginalPlaceholders = [] as Placeholder[];
 
-    const currentKeyVersion = translatedKey.getHistoryEntry(this.language, this.pluralId, this.keyVersion);
-    const currentTranslation = currentKeyVersion?.translations?.[this.language]?.[this.pluralId]?.text;
-
-    if (currentTranslation === undefined) {
-      return this.text;
+    if (this.keyType === KeyState.Linked) {
+      const translatedKey = this.manager.keyStore.getKey(this.key!)!;
+      const currentKeyVersion = translatedKey.getHistoryEntry(this.language, this.pluralId, this.keyVersion);
+      const currentTranslation = currentKeyVersion?.translations?.[this.language]?.[this.pluralId]?.text;
+      // extract the placeholder from the current translation
+      orginalPlaceholders = UITranslationKey.extractPlaceholdersInText(currentTranslation);
     }
 
     // takes the text of the label and replaces all fillins with the placeholders
-    const placeholderByFillin = UILocalizedLabel.getPlaceholdersSorted(this.fillins);
-
-    // extract the placeholder from the current translation
-    const orginalPlaceholders = UITranslationKey.extractPlaceholdersInText(currentTranslation);
+    const placeholderByFillin = UILocalizedLabel.getPlaceholdersByFillins(this.fillins);
 
     let translation = this.text;
     // eslint-disable-next-line for-direction, no-plusplus
@@ -236,7 +258,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 
         // eslint-disable-next-line no-param-reassign
         if (translation !== this.translation) {
-          const filledTranslation = translation ? UILocalizedLabel.fillTranslation(translation, this.fillins) : 'missing translation!'; // TODO #9 how to deal with missing translations?
+          const filledTranslation = translation ? UILocalizedLabel.toText(translation, this.fillins) : 'missing translation!'; // TODO #9 how to deal with missing translations?
           state.modified = true;
           state.orginalText = filledTranslation;
         }
@@ -273,6 +295,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   async setLanguage(
     targetLanguage: Language,
+    version: number | undefined,
     missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | undefined>,
   ) {
     if (this.keyType === KeyState.Unset) {

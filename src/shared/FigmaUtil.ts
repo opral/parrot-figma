@@ -174,13 +174,13 @@ export default class FigmaUtil {
     const fileKey = this.getFileKey();
     const value = await figma.clientStorage.getAsync(`${fileKey}__${key}`);
 
-    console.log(`${fileKey}__${key} - ${value} GET LOCALFILE`);
+    // console.log(`${fileKey}__${key} - ${value} GET LOCALFILE`);
     return value !== '' ? value : undefined;
   }
 
   async setLocalFileConfig(key: string, value: any) {
     const fileKey = this.getFileKey();
-    console.log(`${fileKey}__${key} - ${value} SET LOCALFILE`);
+    // console.log(`${fileKey}__${key} - ${value} SET LOCALFILE`);
     return figma.clientStorage.setAsync(`${fileKey}__${key}`, value);
   }
 

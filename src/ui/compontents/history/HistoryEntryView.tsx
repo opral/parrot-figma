@@ -12,6 +12,7 @@ interface HistoryEntryViewProps {
   last: boolean,
   tag?: HistoryTag;
   text?: string;
+  version: number;
   time: number;
   currentVersion: boolean,
   userName: string;
@@ -26,6 +27,7 @@ export default function HistoryEntryView({
   tag,
   text,
   time,
+  version,
   currentVersion,
   userName,
   userIconUrl,
@@ -40,7 +42,7 @@ export default function HistoryEntryView({
         <div
           className="history_view--versionInfo"
           style={{
-            visibility: tag || currentVersion  || last ? 'inherit' : 'hidden',
+            visibility: tag || currentVersion || last ? 'inherit' : 'hidden',
           }}
         >
           <div className="history_view--userInfo">
@@ -74,7 +76,7 @@ export default function HistoryEntryView({
                 dir="auto"
                 style={{ maxWidth: '165px' }}
               >
-                Current Version
+                { `Current Version (${version})` }
               </div>
             )}
             {tag && (

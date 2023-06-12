@@ -47,14 +47,12 @@ export default function TranslationKeyListView({
   async function refreshSelection() {
     console.log('selection changed');
     const selectedNodes = await localizedLabelManager.getSelection();
+    console.log(selectedNodes);
     const freshSelectedKeys = [] as string[];
 
     for (const selectedElement of Object.values(selectedNodes)) {
-      if (selectedElement.isLabel) {
-        const label = localizedLabelManager.getLabelByNodeId(selectedElement.selectedNodeId);
-        if (label && label.keyType === KeyState.Linked) {
-          freshSelectedKeys.push(label.key!);
-        }
+      if (selectedElement.isLabel && selectedElement.key) {
+        freshSelectedKeys.push(selectedElement.key);
       }
     }
 
@@ -117,7 +115,6 @@ export default function TranslationKeyListView({
       }
     }
   }, [selectedKeys]);
-
 
   if (Object.keys(keys).length === 0) {
     return (

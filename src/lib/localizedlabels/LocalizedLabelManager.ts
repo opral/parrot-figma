@@ -75,6 +75,7 @@ export default class LocalizedLabelManager {
     }
     return undefined;
   }
+
   constructor(translationKeyStore: FigmaFileTranslationKeyStore | undefined) {
     this.translationKeyStore = translationKeyStore;
 
@@ -264,7 +265,7 @@ export default class LocalizedLabelManager {
       changedKeys: [...keysChanged],
     } as ChangeEvent;
 
-    console.log("keys changed");
+    console.log('keys changed');
     console.log(keysChanged);
     figma.ui.postMessage(message);
   }
@@ -407,6 +408,7 @@ export default class LocalizedLabelManager {
         selectedNodeId: string,
         parentSelected: boolean,
         isLabel: boolean,
+        key: string | undefined
       }
     };
 
@@ -414,12 +416,14 @@ export default class LocalizedLabelManager {
       const rootFrame = this.getRootFrame(selectedNode);
 
       if (selectedNode.type === 'TEXT') {
+        const textNode = this.toLocalizedLabelOrUndefined(selectedNode as TextNode);
         // the node within the selection is a label
         selectionEnhanced[selectedNode.id] = {
           rootFrameId: rootFrame?.id,
           parentSelected: false,
           isLabel: selectedNode.type === 'TEXT',
           selectedNodeId: selectedNode.id,
+          key: textNode?.keyType === KeyState.Linked ? textNode?.key : undefined,
         };
       } else {
         selectionEnhanced[selectedNode.id] = {
@@ -427,17 +431,21 @@ export default class LocalizedLabelManager {
           isLabel: false,
           rootFrameId: rootFrame?.id,
           selectedNodeId: selectedNode.id,
+          key: undefined,
         };
 
         const virtualSelectedNode = this.virtualTree.getVirtualNode(selectedNode.id);
         if (virtualSelectedNode) {
+          // eslint-disable-next-line @typescript-eslint/no-loop-func
           this.virtualTree.getAllNodesInBranchByRootId(virtualSelectedNode.id).forEach((virtualNode) => {
             if (virtualNode.type === 'TEXT' && selectionEnhanced[virtualNode.id] === undefined) {
+              const textNode = this.toLocalizedLabelOrUndefined(figma.getNodeById(virtualNode.id) as TextNode);
               selectionEnhanced[virtualNode.id] = {
                 parentSelected: true,
                 isLabel: true,
                 rootFrameId: rootFrame?.id,
                 selectedNodeId: virtualNode.id,
+                key: textNode?.keyType === KeyState.Linked ? textNode?.key : undefined,
               };
             }
           });

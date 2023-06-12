@@ -8,16 +8,12 @@ import ChangeEvent from './ChangeEvent';
 
 import { ILocalizedLabelManagerUI, UILocalizedLabel } from './UILocalizedLabel';
 import { Fillins } from '../keystore/TranslationKey';
+import LinksLoadedEvent from './LinksLoadedEvent';
 
 export default class LocalizedLabelManagerUI extends EventTarget implements ILocalizedLabelManagerUI {
   // mapping from nodeId to localizied label instance
   private cachedLocalisedLabels = {} as {
     [labelId: string]: UILocalizedLabel
-  };
-
-  // mapping from a translationKey to labelId - used to get references of a translation key in design
-  private keysToCachedLabels = {} as {
-    [keyId: string]: Set<string>
   };
 
   // cached root frames containing localized labels
@@ -26,9 +22,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     frameName?: string,
     localizedLabelIds: Set<string>
   } };
-
-  // maps parent to children allows to lookup all children by a change up the branch
-  private cachedBranches = {} as { [parentId: string]: Set<string> };
 
   private removeCachedLabel(labelId: string) {
     const cachedLabel = this.cachedLocalisedLabels[labelId];
@@ -43,24 +36,9 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
       this.cachedFrames[cachedLabel.rootFrameId].localizedLabelIds.delete(labelId);
     }
 
-    if (cachedLabel.key && this.keysToCachedLabels[cachedLabel.key]) {
-      this.keysToCachedLabels[cachedLabel.key].delete(cachedLabel.nodeId);
-    }
-
-    // cleanup leafs
-    // eslint-disable-next-line no-plusplus
-    for (let i = cachedLabel.parentIds.length - 1; i >= 0; i--) {
-      const parentId = cachedLabel.parentIds[i];
-      if (i === cachedLabel.parentIds.length - 1) {
-        this.cachedBranches[parentId].delete(cachedLabel.nodeId);
-      } else {
-        this.cachedBranches[parentId].delete(cachedLabel.parentIds[i + 1]);
-      }
-
-      if (this.cachedBranches[parentId].size === 0) {
-        delete this.cachedBranches[parentId];
-      }
-    }
+    // if (cachedLabel.key && this.keysToCachedLabels[cachedLabel.key]) {
+    //   this.keysToCachedLabels[cachedLabel.key].delete(cachedLabel.nodeId);
+    // }
 
     return true;
   }
@@ -74,12 +52,12 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     const label = new UILocalizedLabel(this, labelToCache);
 
     // flag that signals if the parents of a node have changed (it was moved to another parent for example)
-    let parentsDiffer = true;
+    let rootFrameDiffers = true;
     let stateDiffers = true;
 
     const cachedLabel = this.cachedLocalisedLabels[label.nodeId];
     if (cachedLabel) {
-      parentsDiffer = false;
+      rootFrameDiffers = false;
       stateDiffers = false;
 
       if (cachedLabel.state!.behind !== label.state!.behind
@@ -88,20 +66,18 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         stateDiffers = true;
       }
 
-      if (cachedLabel.parentIds.length !== label.parentIds.length) {
-        parentsDiffer = true;
-      } else {
-        cachedLabel.parentIds.forEach((parentId, i) => { if (label.parentIds[i] !== parentId) parentsDiffer = true; });
+      if (cachedLabel.rootFrameId !== label.rootFrameId) {
+        rootFrameDiffers = true;
       }
 
       // key the lable referres to changed - remove from keys to labels cache
-      if (label.key !== cachedLabel.key && cachedLabel.key) {
-        if (this.keysToCachedLabels[cachedLabel.key]) {
-          this.keysToCachedLabels[cachedLabel.key].delete(cachedLabel.nodeId);
-        }
-      }
+      // if (label.key !== cachedLabel.key && cachedLabel.key) {
+      //   if (this.keysToCachedLabels[cachedLabel.key]) {
+      //     this.keysToCachedLabels[cachedLabel.key].delete(cachedLabel.nodeId);
+      //   }
+      // }
 
-      if (parentsDiffer) {
+      if (rootFrameDiffers) {
         this.removeCachedLabel(label.nodeId);
       } else if (!stateDiffers
           && cachedLabel.derivedKey === label.derivedKey
@@ -130,29 +106,13 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
     this.cachedLocalisedLabels[label.nodeId] = label;
 
-    if (label.key !== undefined) {
-      if (!this.keysToCachedLabels[label.key]) {
-        this.keysToCachedLabels[label.key] = new Set<string>();
-      } this.keysToCachedLabels[label.key].add(label.nodeId);
-    }
+    // if (label.key !== undefined) {
+    //   if (!this.keysToCachedLabels[label.key]) {
+    //     this.keysToCachedLabels[label.key] = new Set<string>();
+    //   } this.keysToCachedLabels[label.key].add(label.nodeId);
+    // }
 
-    if (parentsDiffer) {
-      // eslint-disable-next-line no-plusplus
-      for (let i = 0; i < label.parentIds.length; i++) {
-        const currentParentId = label.parentIds[i];
-
-        if (!this.cachedBranches[currentParentId]) {
-          this.cachedBranches[currentParentId] = new Set<string>();
-        }
-
-        // last parent points to the node it self
-        if (i === (label.parentIds.length - 1)) {
-          this.cachedBranches[currentParentId].add(label.nodeId);
-        } else {
-          this.cachedBranches[currentParentId].add(label.parentIds[i + 1]);
-        }
-      }
-
+    if (rootFrameDiffers) {
       if (!this.cachedFrames[label.rootFrameId]) {
         this.cachedFrames[label.rootFrameId] = {
           frameId: label.rootFrameId,
@@ -166,37 +126,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     }
 
     return true;
-  }
-
-  /**
-   * deletion events in figma only provide the node that was deleted - *NO* child node infomation.
-   * to detect the deletion of a node we have in cache we store the parent ids. this method provides all leaf nodes
-   * for a parent that has been deleted.
-   *
-   * @param parentId the id of a parent in the parent chain to find a leaf for
-   * @returns all leaf nodes that are a child or sub child of the given parent
-   */
-  private getLeaveIdsById(parentId: string) {
-    const children = this.cachedBranches[parentId];
-    if (!children) {
-      if (this.cachedLocalisedLabels[parentId]) {
-        return [parentId];
-      }
-      return []; // No children found for the specified parentId
-    }
-    const leafNodes: string[] = [];
-    // Check each child node
-    children.forEach((childId) => {
-      // If this child has no children of its own, it is a leaf node
-      if (!this.cachedBranches[childId]) {
-        leafNodes.push(childId);
-      } else {
-        // Recursively find leaf nodes of this child
-        const childLeafNodes = this.getLeaveIdsById(childId);
-        leafNodes.push(...childLeafNodes);
-      }
-    });
-    return leafNodes;
   }
 
   private localizedLabelMangerSandbox: LocalizedLabelManager;
@@ -213,6 +142,9 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         if (event.data.pluginMessage.type === 'cacheUpdate') {
           this.processCacheUpdate(event.data.pluginMessage as ChangeEvent);
         }
+        if (event.data.pluginMessage.type === 'linksLoaded') {
+          this.onKeyLabelLinksLoaded(event.data.pluginMessage as LinksLoadedEvent);
+        }
       }
     });
 
@@ -221,6 +153,10 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         this.handleKeyUpdate(changedKey);
       }
     });
+  }
+
+  onKeyLabelLinksLoaded(event:  LinksLoadedEvent) {
+    this.keyStore.updateKeyLinks(event.keys);
   }
 
   framesIdToLoad = [] as string[];
@@ -232,12 +168,12 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
   private handleKeyUpdate(keyId: string) {
     let cacheUpdated = false;
-    if (!this.keysToCachedLabels[keyId]) return;
-    console.log(`handling keyupdate event for ${keyId}`);
-    for (const labelIdToUpdate of this.keysToCachedLabels[keyId]) {
-      const labelToUpdate = this.cachedLocalisedLabels[labelIdToUpdate];
-      if (this.refreshCachedLabel(labelToUpdate)) {
-        cacheUpdated = true;
+
+    for (const labelToUpdate of Object.values(this.cachedLocalisedLabels)) {
+      if (labelToUpdate.key === keyId) {
+        if (this.refreshCachedLabel(labelToUpdate)) {
+          cacheUpdated = true;
+        }
       }
     }
 
@@ -252,15 +188,10 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     // TODO check if we need to invalidate the frame
     // console.log('processCacheUpdate');
     // console.log(JSON.stringify(cacheUpdateMessage));
-    for (const removedHighestLevelId of cacheUpdateMessage.removedHighestLevelParentId) {
-      // console.log(removedHighestLevelId);
-      const leafIds = this.getLeaveIdsById(removedHighestLevelId);
-      // console.log(leafIds);
-      for (const labelId of leafIds) {
-        if (this.removeCachedLabel(labelId)) {
-          // console.log(`label removed: ${JSON.stringify(deleted)}`);
-          cacheUpdated = true;
-        }
+    for (const deletedNodeId of cacheUpdateMessage.deletedNodeIds) {
+      if (this.removeCachedLabel(deletedNodeId)) {
+        // console.log(`label removed: ${JSON.stringify(deleted)}`);
+        cacheUpdated = true;
       }
     }
 
@@ -287,31 +218,10 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   }
 
   async updateUnmodifiedLabelsWithKey(key: string) {
-    if (!this.keysToCachedLabels[key]) {
-      return;
-    }
-    const labelsToUpdate = [] as LocalizedLabel[];
-    for (const labelId of this.keysToCachedLabels[key]) {
-      const label = this.cachedLocalisedLabels[labelId];
-
-      if (label.keyType === KeyState.Linked && !label.state!.modified) {
-        labelsToUpdate.push(label);
-      }
-    }
+   
+    const labelsToUpdate = (await this.getWithKey(key)).filter((label) => label.keyType === KeyState.Linked && !label.state!.modified);
+    
     await this.updateToLatestKeyVersion(labelsToUpdate);
-  }
-
-  getLabelsWithKey(key: string) {
-    const referencingLabels = [] as LocalizedLabel[];
-    const labelIds = this.keysToCachedLabels[key];
-    if (labelIds === undefined) {
-      return referencingLabels;
-    }
-    for (const labelId of labelIds) {
-      referencingLabels.push(this.cachedLocalisedLabels[labelId]);
-    }
-
-    return referencingLabels;
   }
 
   getLabelByNodeId(nodeId: string) {
@@ -320,6 +230,16 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
   getLabelState(localizedLabel: LocalizedLabel): { behind: number, orginalText?: string, modified: boolean } {
     return (new UILocalizedLabel(this, localizedLabel)).getState();
+  }
+
+  async getWithKey(key: string) {
+    const labelsWithKey = await this.localizedLabelMangerSandbox.getWithKey(key);
+    const uiLabels = [] as UILocalizedLabel[];
+    for (const freshLocalizedLabel of labelsWithKey) {
+      this.refreshCachedLabel(freshLocalizedLabel);
+      uiLabels.push(this.cachedLocalisedLabels[freshLocalizedLabel.nodeId]);
+    }
+    return uiLabels;
   }
 
   async getLocalizedLabelsByFrame(frameId: string) {
@@ -346,7 +266,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
   async setFrameLanguage(frameId: string, targetLanguage: Language, missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | undefined>) {
     const version = undefined as undefined | number; // todo fill with fixed version of the frame if set
-    
+
     await this.localizedLabelMangerSandbox.updateFrameProperties(frameId, {
       language: targetLanguage,
     });
@@ -572,7 +492,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         translation = changedProperties.translation ? changedProperties.translation : translationKey?.getInVersion(version).translations[language]?.[plural]?.text;
       }
     }
-    
+
     // eslint-disable-next-line no-param-reassign
     changedPropertiesToForwared.translation = translation ? UILocalizedLabel.toText(translation, labelFillins) : 'missing translation!'; // TODO #9 how to deal with missing translations?
     changedPropertiesToForwared.filledTemplateHash = blake.blake2sHex(changedPropertiesToForwared.translation);
@@ -586,47 +506,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   }
 
   async getSelection() {
-    const selectionFromFigma = await this.localizedLabelMangerSandbox.getSelection();
-    const selectionEnhanced = {} as {
-      [keyId: string]: {
-        rootFrameId: string | undefined;
-        selectedNodeId: string,
-        parentSelected: boolean,
-        isLabel: boolean,
-      }
-    };
-
-    for (const selectedNode of selectionFromFigma) {
-      if (this.cachedLocalisedLabels[selectedNode.selectedNodeId]) {
-        // the node within the selection is a label
-        selectionEnhanced[selectedNode.selectedNodeId] = {
-          parentSelected: false,
-          isLabel: true,
-          ...selectedNode,
-        };
-      } else if (selectedNode.rootFrameId && this.cachedFrames[selectedNode.rootFrameId]) {
-        // node is not a label - could be a container - check if a label within the same frame exist with the selected node as parent
-        for (const localisedLabelIdInFrame of this.cachedFrames[selectedNode.rootFrameId].localizedLabelIds) {
-          if (!selectionEnhanced[selectedNode.selectedNodeId] && this.cachedLocalisedLabels[localisedLabelIdInFrame].parentIds.includes(selectedNode.selectedNodeId)) {
-            // is one of the labels parents the selected node and has not been taken into account yet
-            selectionEnhanced[selectedNode.selectedNodeId] = {
-              parentSelected: true,
-              isLabel: true,
-              rootFrameId: selectedNode.rootFrameId,
-              selectedNodeId: localisedLabelIdInFrame,
-            };
-          }
-        }
-      } else if (!selectionEnhanced[selectedNode.selectedNodeId]) {
-        selectionEnhanced[selectedNode.selectedNodeId] = {
-          parentSelected: false,
-          isLabel: false,
-          rootFrameId: selectedNode.rootFrameId,
-          selectedNodeId: selectedNode.selectedNodeId,
-        };
-      }
-    }
-
-    return selectionEnhanced;
+    const selection = await this.localizedLabelMangerSandbox.getSelection();
+    return selection;
   }
 }

@@ -44,6 +44,8 @@ export class UITranslationKey implements TranslationKey {
 
   keyStore: UITranslationKeyStore;
 
+  referencingTextNodes: string[];
+
   constructor(keyStore: UITranslationKeyStore, key: TranslationKey) {
     this.keyStore = keyStore;
 
@@ -52,6 +54,7 @@ export class UITranslationKey implements TranslationKey {
     this.historyTags = key.historyTags;
     this.plural = key.plural;
     this.labels = key.labels;
+    this.referencingTextNodes = key.referencingTextNodes;
     this.translations = key.translations;
     this.history = key.history;
     this.quantity = key.quantity;
@@ -322,6 +325,7 @@ export class UITranslationKey implements TranslationKey {
       history: [],
       translations: {},
       quantity: this.quantity,
+      referencingTextNodes: this.referencingTextNodes,
       defaultFillins: this.defaultFillins,
       placeholders: this.placeholders,
     } as TranslationKey;

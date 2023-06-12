@@ -172,7 +172,7 @@ export default function LocalizedFrameGroup({
           key={translationState.nodeId}
           figmaRemote={figmaRemote}
           localizedLabelManager={localizedLabelManager}
-          selected={selectedNodes.some((item) => [translationState.nodeId, ...translationState.parentIds].includes(item))}
+          selected={selectedNodes.includes(translationState.nodeId)}
           localizedLabel={translationState}
         />
       ))}

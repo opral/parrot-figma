@@ -24,7 +24,6 @@ export interface ILocalizedLabelManagerUI {
 const markerCharacter = '​'; // 'X'; // '​';
 
 export class UILocalizedLabel implements LocalizedLabel {
-  parentIds: string[];
 
   pageId: string;
 
@@ -84,7 +83,6 @@ export class UILocalizedLabel implements LocalizedLabel {
   constructor(manager: ILocalizedLabelManagerUI, localizedLabel: LocalizedLabel) {
     this.manager = manager;
 
-    this.parentIds = localizedLabel.parentIds;
     this.pageId = localizedLabel.pageId;
     this.pageName = localizedLabel.pageName;
     this.rootFrameId = localizedLabel.rootFrameId;

@@ -97,6 +97,7 @@ export interface SerializableTranslationKey {
     [tagIndex: number]: number,
   },
   labels: string[],
+  referencingTextNodes: string[],
   plural: boolean,
   translations: Translations,
   quantity: { value: number } | { placeholder: string },

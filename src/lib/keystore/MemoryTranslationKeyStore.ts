@@ -48,6 +48,22 @@ export default class MemoryTranslationKeyStore extends EventTarget {
     });
   }
 
+  public async updateKeyLinks(keys: string[]) {
+    const changes = {
+      updated: [] as string[],
+    };
+
+    for (const updatedKeyLink of keys) {
+      const key = await this.parentKeyStore.getKeyAsync(updatedKeyLink);
+      if (key) {
+        this.upsertCache(key);
+      }
+    }
+
+    const event = new CustomEvent<any>('updated', { detail: changes });
+    this.dispatchEvent(event);
+  }
+
   private async processCacheUpdate(changedKeys: { deleted: string[], added: string[], updated: string[] }, updatedHistoryTags: HistoryTag[] | undefined) {
     const changes = {
       deleted: [] as string[],

@@ -44,6 +44,10 @@ export class FigmaFileTranslationKeyStore {
     [keyId: string]: number
   };
 
+  public keyToLabels = {} as {
+    [keyName: string]: Set<string>
+  };
+
   constructor(asProxy: boolean) {
     if (!asProxy) {
       figma.on('documentchange', this.forwardDocumentChanges.bind(this));
@@ -238,6 +242,7 @@ export class FigmaFileTranslationKeyStore {
     const historyObj = this.getHistorySync(keyName);
     key.history = historyObj.keyHistory;
     key.latestVersion = key.history.length;
+    key.referencingTextNodes = this.keyToLabels[key.keyName] ? [...this.keyToLabels[key.keyName]] : [];
     this.keyState[keyName] = historyObj.state;
 
     return key;
@@ -380,6 +385,7 @@ export class FigmaFileTranslationKeyStore {
       labels: [],
       plural,
       translations: translationsObj,
+      referencingTextNodes: this.keyToLabels[keyName] ? [...this.keyToLabels[keyName]] : [],
       placeholders,
       quantity,
       defaultFillins,

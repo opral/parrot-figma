@@ -66,7 +66,7 @@ export default function TranslationKeyListItem({
 
   const rowRef = React.useRef<HTMLDivElement>(null);
 
-  const referencingLabels = localizedLabelManager.getLabelsWithKey(translationKey.keyName);
+  const referencingLabels = translationKey.referencingTextNodes;
 
   async function onNodeSelect(nodeId: string) {
     await figmaRemote.scrollIntoViewIfNeeded(nodeId, true);
@@ -74,10 +74,9 @@ export default function TranslationKeyListItem({
 
   async function showAll() {
     // TODO check in which page the label is in
-    const nodeIds = referencingLabels.map((l) => l.nodeId);
 
-    await figmaRemote.selectNodes(nodeIds);
-    await figmaRemote.scrollAndZoomNodesIntoView(nodeIds);
+    await figmaRemote.selectNodes(referencingLabels);
+    await figmaRemote.scrollAndZoomNodesIntoView(referencingLabels);
   }
 
   async function showNext(backward: boolean) {
@@ -90,7 +89,7 @@ export default function TranslationKeyListItem({
 
     let indexToSelect = -1;
     if (selectedNodeIds.length === 1) {
-      indexToSelect = referencingLabels.findIndex((localizedLabel) => localizedLabel.nodeId === selectedNodeIds[0]);
+      indexToSelect = referencingLabels.findIndex((textNodeId) => textNodeId === selectedNodeIds[0]);
 
       if (indexToSelect !== -1) {
         if (backward) {
@@ -109,9 +108,9 @@ export default function TranslationKeyListItem({
       }
     }
 
-    await figmaRemote.selectNodes([referencingLabels[indexToSelect].nodeId]);
+    await figmaRemote.selectNodes([referencingLabels[indexToSelect]]);
 
-    await figmaRemote.scrollAndZoomNodesIntoView([referencingLabels[indexToSelect].nodeId]);
+    await figmaRemote.scrollAndZoomNodesIntoView([referencingLabels[indexToSelect]]);
   }
 
   const baseLang = translationKeyStore.getBaseLanugage();
@@ -248,12 +247,12 @@ export default function TranslationKeyListItem({
               </div>
               {showUsage && referencingLabels.map((label) => (
 
-                <div key={label.nodeId} className="localized-label" onClick={() => onNodeSelect(label.nodeId)}>
+                <div key={label} className="localized-label" onClick={() => onNodeSelect(label)}>
                   <div className="spacer" />
                   <div className="element-symbol">
                     <div className="svg-container number-sign-svg" />
                   </div>
-                  <div className="name">{label.rootFrameName}</div>
+                  <div className="name">{label}</div>
                 </div>
 
               ))}

@@ -10,8 +10,6 @@ export enum KeyState {
 
 export interface LocalizedLabel {
 
-  parentIds: string[],
-
   pageId: string;
   pageName: string;
 

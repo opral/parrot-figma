@@ -241,7 +241,7 @@ export class FigmaFileTranslationKeyStore {
     }
     const historyObj = this.getHistorySync(keyName);
     key.history = historyObj.keyHistory;
-    key.latestVersion = key.history.length;
+    key.latestVersion = key.history.length - 1;
     key.referencingTextNodes = this.keyToLabels[key.keyName] ? [...this.keyToLabels[key.keyName]] : [];
     this.keyState[keyName] = historyObj.state;
 

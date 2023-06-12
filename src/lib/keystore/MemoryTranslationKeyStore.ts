@@ -51,6 +51,7 @@ export default class MemoryTranslationKeyStore extends EventTarget {
   public async updateKeyLinks(keys: string[]) {
     const changes = {
       updated: [] as string[],
+      changedKeys: keys,
     };
 
     for (const updatedKeyLink of keys) {

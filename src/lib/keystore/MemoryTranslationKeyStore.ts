@@ -344,13 +344,14 @@ export default class MemoryTranslationKeyStore extends EventTarget {
     };
 
     for (const key of Object.values(this.translationKeys)) {
-      for (const [language, languages] of Object.entries(key.translations)) {
+      for (const language of this.getLanugages()!) {
+        const plurals = key.translations[language];
         for (const plural of getPluralFormsByLanguage(language as Language)) {
           if (query.text === '') {
             results.matchingKeys.add(key.keyName);
-          } else if (languages[plural]?.text !== undefined) {
-            const matchStartText = languages[plural]!.text!.toLowerCase().indexOf(query.text.toLowerCase());
-            if ((query.exactText && matchStartText === 0 && languages[plural]!.text!.length === query.text.length)
+          } else if (plurals?.[plural]?.text !== undefined) {
+            const matchStartText = plurals[plural]!.text!.toLowerCase().indexOf(query.text.toLowerCase());
+            if ((query.exactText && matchStartText === 0 && plurals[plural]!.text!.length === query.text.length)
               || (!query.exactText && matchStartText !== -1)) {
               if (!results.matches[key.keyName]) {
                 results.matches[key.keyName] = { textMatches: {}, keyMatch: undefined };
@@ -365,13 +366,19 @@ export default class MemoryTranslationKeyStore extends EventTarget {
             }
           }
 
-          if (
-            (key.plural || plural === Plural.OTHER)
-            && (languages[plural] === undefined || (!languages[plural]?.skip && (!languages[plural]?.text || languages[plural]?.text === '')))) {
-            results.withMissingTranslations.add(key.keyName);
+          if (plurals?.[plural]?.text === undefined) {
+            if (plurals?.[plural]?.skip !== true) {
+              if (key.plural || plural === Plural.OTHER) {
+                if ((!plurals?.[plural]?.text || plurals?.[plural]?.text === '')) {
+                  if (key.plural || plural === Plural.OTHER) {
+                    results.withMissingTranslations.add(key.keyName);
+                  }
+                }
+              }
+            }
           }
 
-          if (languages[plural] && !languages[plural]!.verified) {
+          if (plurals?.[plural] && !plurals[plural]!.verified) {
             results.withMissingReview.add(key.keyName);
           }
         }

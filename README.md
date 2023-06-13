@@ -266,9 +266,9 @@ What we want from ui point of view:
     - [ ] show preview when hover 
  - [x] import misses feedback
  - [x] deleting a key gives a crash
- - [ ] missing translation filter
+ - [x] baselanguage selection does not work in settings screen
+ - [x] missing translation filter
  - [ ] esc key in drawer and call to action (cancel)
- - [ ] baselanguage selection does not work in settings screen
  - [ ] Change language - auto translate of links - remove link 
  - [ ] how to handle attributes on localized text like class - we cant store them in the element
  - [ ] plural select - based on a quantity value

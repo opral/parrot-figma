@@ -265,6 +265,11 @@ What we want from ui point of view:
     - [ ] placeholders that have fillins in the label are still shown even if the text doesn't contain the placeholder nor the any translation
     - [ ] show preview when hover 
  - [x] import misses feedback
+ - [x] deleting a key gives a crash
+ - [ ] missing translation filter
+ - [ ] esc key in drawer and call to action (cancel)
+ - [ ] baselanguage selection does not work in settings screen
+ - [ ] Change language - auto translate of links - remove link 
  - [ ] how to handle attributes on localized text like class - we cant store them in the element
  - [ ] plural select - based on a quantity value
  - [ ] number based plurals (0 = no new messages, 1 = one new message, other = %n new messages)

@@ -102,10 +102,8 @@ export default function LocalizedLabelListItem({
           <TranslationKeyListView
             translationKeyStore={translationKeyStore}
             localizedLabelManager={localizedLabelManager}
-            keys={translationKeyStore.translationKeys}
             figmaRemote={figmaRemote}
-            refreshKeys={() => {}}
-            searchQuery={MemoryTranslationKeyStore.toQueryObject(`key:* ${searchKey.search}`)}
+            initialSearchQuery={MemoryTranslationKeyStore.toQueryObject(`key:* ${searchKey.search}`)}
             select={(key: string, language: Language, plural: Plural) => {
               localizedLabelManager.linkKey(localizedLabel, key, language, plural);
               setSearchKey(undefined);

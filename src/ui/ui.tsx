@@ -115,14 +115,10 @@ function App() {
   // initial app screen is startup until we initialy loaded the data
   const [appScreen, setAppScreen] = useState(undefined as String | undefined);
 
-  const [translatedKeys, setTranslatedKeys] = useState({} as UITranslationKeys);
   const [windowMode, setWindowMode] = useState(WindowManagerUi.instance!.windowMode);
 
   const [, setDefaultLinkStyle] = useState('' as string);
 
-  const refreshTranslatedKeys = async () => {
-    setTranslatedKeys(memoryTranslationKeyStore.translationKeys);
-  };
 
   useEffect(() => {
     // asynchronous fetch the state from figma helper
@@ -133,7 +129,6 @@ function App() {
 
       setDefaultLinkStyle(await remoteLocalizedLabelManager.getLinkStyle());
 
-      await refreshTranslatedKeys();
       let initialScreen = (await figmaRemote.getLocalFileConfig('lastView')) ?? 'design';
       if (localizedLabelManager.keyStore.config?.baseLanguage === undefined
         || localizedLabelManager.keyStore.config?.enabledLanguages === undefined) {
@@ -194,12 +189,11 @@ function App() {
   if (appScreen === 'keys') {
     view = (
       <TranslationKeyListView
-        searchQuery={MemoryTranslationKeyStore.toQueryObject('')}
+        initialSearchQuery={MemoryTranslationKeyStore.toQueryObject('')}
         translationKeyStore={memoryTranslationKeyStore}
         localizedLabelManager={localizedLabelManager}
-        keys={translatedKeys}
         figmaRemote={figmaRemote}
-        refreshKeys={refreshTranslatedKeys}
+        
       />
     );
   } else if (appScreen === 'settings') {
@@ -219,7 +213,7 @@ function App() {
   } else if (appScreen === 'import') {
     view = (
       <Import
-      figmaRemote={figmaRemote}
+        figmaRemote={figmaRemote}
         labelManager={localizedLabelManager}
       />
     );

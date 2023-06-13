@@ -17,66 +17,60 @@ import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabel
 import { KeyState, LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
 
 type TranslationKeyListViewProps = {
-  keys: UITranslationKeys,
-  searchQuery: SearchQuery,
+  initialSearchQuery: SearchQuery,
   translationKeyStore: MemoryTranslationKeyStore
   localizedLabelManager: LocalizedLabelManagerUI
-
   figmaRemote: FigmaUtil
-  refreshKeys: Function
   select?: (key: string, language: Language, plural: Plural) => void
 };
 
 export default function TranslationKeyListView({
-  keys,
-  searchQuery,
+  initialSearchQuery,
   translationKeyStore,
   localizedLabelManager,
   figmaRemote,
-  refreshKeys,
   select,
 }: TranslationKeyListViewProps) {
   const { t } = useTranslation();
-  const [, setTrigger] = useState(0);
+  // const [, setTrigger] = useState(0);
   const [renderEntries, setRenderEntries] = useState(200);
-  const [filteredKeys, setFilteredKeys] = useState(translationKeyStore.findKeys(searchQuery));
+
   const [selectedKeys, setSelectedKeys] = useState([] as string[]);
   const [highlightingAfterSelectionDone, setHighlightingAfterSelectionDone] = useState(false);
-  const [query, setQuery] = useState<SearchQuery>(searchQuery);
+  // const [keys, setKeys] = useState: UITranslationKeys,
+  const [searchQuery, setSearchQuery] = useState<SearchQuery>(initialSearchQuery);
+  const [filteredKeys, setFilteredKeys] = useState(translationKeyStore.findKeys(initialSearchQuery));
   const tableRef = useRef<HTMLDivElement>(null);
 
-  async function refreshSelection(selection: boolean = false) {
-    if (selection) {
-      setHighlightingAfterSelectionDone(false);
-    }
-    console.log('selection changed');
+  async function refreshData() {
+    setFilteredKeys(translationKeyStore.findKeys(searchQuery));
+    // setTrigger((v) => v + 1);
+  }
+
+  async function refreshSelection() {
     const selectedNodes = await localizedLabelManager.getSelection();
-    console.log(selectedNodes);
-    const freshSelectedKeys = [] as string[];
+    const freshSelectedKeys = Object.values(selectedNodes).filter((selectedNode) => selectedNode.isLabel && selectedNode.key).map((selectedNode) => selectedNode.selectedNodeId);
 
-    for (const selectedElement of Object.values(selectedNodes)) {
-      if (selectedElement.isLabel && selectedElement.key) {
-        freshSelectedKeys.push(selectedElement.key);
-      }
-    }
-
-    refreshKeys();
     setSelectedKeys(freshSelectedKeys);
-    setTrigger((v) => v + 1);
   }
 
   function messageHandler(event: any) {
     if (event.data.pluginMessage.type === 'event') {
       if (event.data.pluginMessage.name === 'selectionchange') {
+        setHighlightingAfterSelectionDone(false);
         // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
-        refreshSelection(true);
+        refreshSelection();
       }
     }
   }
 
-  const eventHandlerWrapper = () => {
-    refreshSelection(false);
-  };
+  function tryToHighlightSelectedKey() {
+    const firstSelected = tableRef.current?.querySelector('.selected') as HTMLElement;
+    if (firstSelected && !highlightingAfterSelectionDone) {
+      setHighlightingAfterSelectionDone(true);
+      (firstSelected.firstChild as any).scrollIntoViewIfNeeded({ block: 'center' });
+    }
+  }
 
   useEffect(() => {
     // asynchronous fetch the state from figma helper
@@ -85,24 +79,26 @@ export default function TranslationKeyListView({
       await refreshSelection();
     })();
 
-    localizedLabelManager.addEventListener('updated', eventHandlerWrapper);
-    translationKeyStore.addEventListener('updated', eventHandlerWrapper);
+    localizedLabelManager.addEventListener('updated', refreshData);
+    translationKeyStore.addEventListener('updated', refreshData);
     window.addEventListener('message', messageHandler);
 
     return () => {
-      localizedLabelManager.removeEventListener('updated', eventHandlerWrapper);
-      translationKeyStore.removeEventListener('updated', eventHandlerWrapper);
+      localizedLabelManager.removeEventListener('updated', refreshData);
+      translationKeyStore.removeEventListener('updated', refreshData);
       window.removeEventListener('message', messageHandler);
     };
   }, []);
 
+  // rendering is done in chunks the first time to give the dom time to settle
+  const renderChunkSize = 250;
   useEffect(() => {
     // we use any here since NodeJS.Timout - the suggested type by the ide is not correct
     let renderStepTimeout : any | undefined;
-    if (Object.keys(keys).length > renderEntries) {
+    if (Object.keys(filteredKeys).length > renderEntries) {
       renderStepTimeout = setTimeout(() => {
         // console.log(`rending next portion ${renderEntries + 100}`);
-        setRenderEntries((value) => value + 250);
+        setRenderEntries((value) => value + renderChunkSize);
       }, 10);
     }
 
@@ -118,15 +114,15 @@ export default function TranslationKeyListView({
 
   useEffect(() => {
     if (tableRef.current) {
-      const firstSelected = tableRef.current.querySelector('.selected') as HTMLElement;
-      if (firstSelected && !highlightingAfterSelectionDone) {
-        setHighlightingAfterSelectionDone(true);
-        (firstSelected.firstChild as any).scrollIntoViewIfNeeded({ block: 'center' });
-      }
+      tryToHighlightSelectedKey();
     }
   }, [selectedKeys]);
 
-  if (Object.keys(keys).length === 0) {
+  useEffect(() => {
+    setFilteredKeys(translationKeyStore.findKeys(searchQuery));
+  }, [searchQuery]);
+
+  if (Object.keys(translationKeyStore.translationKeys).length === 0) {
     return (
       <div className="emptyState">
         <div className="emptyStateTitle">No Translation keys yet</div>
@@ -143,15 +139,15 @@ export default function TranslationKeyListView({
 
   const updateQuery = (newQuery: SearchQuery) => {
     const newFilteredKeys = translationKeyStore.findKeys(newQuery);
-    setQuery(newQuery);
+    setSearchQuery(newQuery);
     setFilteredKeys(newFilteredKeys);
   };
 
   const onSearchChange = (searchString: string) => {
-    updateQuery(MemoryTranslationKeyStore.toQueryObject(searchString));
+    setSearchQuery(MemoryTranslationKeyStore.toQueryObject(searchString));
   };
 
-  const longestKey = Object.keys(keys).reduce((acc, key) => (key.length > acc.length ? key : acc), '');
+  const longestKey = Object.keys(translationKeyStore.translationKeys).reduce((acc, key) => (key.length > acc.length ? key : acc), '');
 
   let rendered = 0;
 
@@ -165,10 +161,9 @@ export default function TranslationKeyListView({
           className="search--searchInput"
           spellCheck="false"
           dir="auto"
-          value={MemoryTranslationKeyStore.toSearchString(query)}
+          value={MemoryTranslationKeyStore.toSearchString(searchQuery)}
           onChange={(e) => {
             onSearchChange(e.target.value);
-
             setRenderEntries(100);
           }}
         />
@@ -181,26 +176,26 @@ export default function TranslationKeyListView({
             {filteredKeys.matchingKeys.size}
             {' '}
           </div>
-          {!query.key && filteredKeys.inKeys.size > 0 && (
+          {!searchQuery.key && filteredKeys.inKeys.size > 0 && (
           <div
             className="searchResults-suggestion"
             onClick={() => {
-              const newQuery = JSON.parse(JSON.stringify(query)) as SearchQuery;
-              newQuery.key = query.text;
+              const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
+              newQuery.key = searchQuery.text;
               newQuery.keyAtEnd = false;
               newQuery.text = '';
 
               updateQuery(newQuery);
             }}
           >
-            {`key:${query.text} ${filteredKeys.inKeys.size}`}
+            {`key:${searchQuery.text} ${filteredKeys.inKeys.size}`}
           </div>
           )}
-          {!query.key && filteredKeys.inText.size > 0 && (
+          {!searchQuery.key && filteredKeys.inText.size > 0 && (
           <div
             className="searchResults-suggestion"
             onClick={() => {
-              const newQuery = JSON.parse(JSON.stringify(query)) as SearchQuery;
+              const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
               newQuery.key = '*';
               updateQuery(newQuery);
             }}
@@ -208,11 +203,11 @@ export default function TranslationKeyListView({
             {`Results in Text ${filteredKeys.inText.size}`}
           </div>
           )}
-          { false && query.unverified !== true && ( // TODO #9 activate again as soon as verification is in place
+          { false && searchQuery.unverified !== true && ( // TODO #9 activate again as soon as verification is in place
           <div
             className="searchResults-suggestion"
             onClick={() => {
-              const newQuery = JSON.parse(JSON.stringify(query)) as SearchQuery;
+              const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
               newQuery.unverified = true;
               updateQuery(newQuery);
             }}
@@ -220,11 +215,11 @@ export default function TranslationKeyListView({
             {`unverified:true ${filteredKeys.withMissingReview.size}`}
           </div>
           )}
-          {query.missingTranslation === undefined && (
+          {searchQuery.missingTranslation === undefined && (
           <div
             className="searchResults-suggestion"
             onClick={() => {
-              const newQuery = JSON.parse(JSON.stringify(query)) as SearchQuery;
+              const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
               newQuery.missingTranslation = true;
               updateQuery(newQuery);
             }}
@@ -242,7 +237,7 @@ export default function TranslationKeyListView({
             translationKeyStore={translationKeyStore}
             localizedLabelManager={localizedLabelManager}
             searchMatch={undefined}
-            translationKey={keys[longestKey]}
+            translationKey={translationKeyStore.translationKeys[longestKey]}
             figmaRemote={figmaRemote}
             select={select}
             labelSelected={false}
@@ -261,7 +256,7 @@ export default function TranslationKeyListView({
               translationKeyStore={translationKeyStore}
               localizedLabelManager={localizedLabelManager}
               searchMatch={filteredKeys.matches[keyName]}
-              translationKey={keys[keyName]}
+              translationKey={translationKeyStore.translationKeys[keyName]}
               figmaRemote={figmaRemote}
               select={select}
               labelSelected={selectedKeys.includes(keyName)}

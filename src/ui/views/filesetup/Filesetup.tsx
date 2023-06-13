@@ -75,8 +75,8 @@ export default function Filesetup({
         <Select
           placeholder="Select item"
           onChange={(value) => { setBaselanguage(value.value as Language); }}
-          // defaultValue={rootFrameLanguage?.value}
-          getOptions={() => languageOptiones}
+          defaultValue={languageOptiones.find((opt) => opt.value === translationKeyStore.getBaseLanugage())}
+          getOptions={() => languageOptiones.filter((language) => selectedLanguages.includes(language.value as Language))}
         />
         <div>
           Please select langueages to translate the designfile for.

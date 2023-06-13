@@ -23,6 +23,7 @@ import HistoryEntryView from '../../compontents/history/HistoryEntryView';
 import { UITranslationKey } from '../../../lib/keystore/UITranslationKey';
 import { PlaceholderView } from '../../compontents/translationEditor/PlaceholderView';
 import PlaceholderEditorListItem from '../../compontents/placeholder/PlaceholderEditor';
+import AsyncImage from './AsyncImage';
 
 interface VersionEntry {
   version: number,
@@ -145,7 +146,6 @@ export default function TranslationKeyListItem({
     console.log('key');
     console.log(translationKey);
 
-
     // filter relevant history changes for the given key
     for (const keyHistoryEntry of translationKey.history) {
       if (keyHistoryEntry.translations?.[language]?.[plural] !== undefined) {
@@ -232,7 +232,7 @@ export default function TranslationKeyListItem({
             </div>
           )) }
         </div>
-        { select === undefined && (
+        { false && select === undefined && (
         <div className="key-usage">
           { /* TODO add references to keys */ }
           { referencingLabels.length === 0 && <div>no usage</div>}
@@ -248,11 +248,7 @@ export default function TranslationKeyListItem({
               {showUsage && referencingLabels.map((label) => (
 
                 <div key={label} className="localized-label" onClick={() => onNodeSelect(label)}>
-                  <div className="spacer" />
-                  <div className="element-symbol">
-                    <div className="svg-container number-sign-svg" />
-                  </div>
-                  <div className="name">{label}</div>
+                  <AsyncImage figmaRemote={figmaRemote} localizedLabelManager={localizedLabelManager} labelId={label} />
                 </div>
 
               ))}
@@ -312,7 +308,6 @@ export default function TranslationKeyListItem({
                         className="layerIcon iconWrapper button"
                         onClick={async () => {
                           // disable a translation
-                          // debugger;
                           await localizedLabelManager.updateKey(translationKey.keyName!, [{
                             language,
                             plural,

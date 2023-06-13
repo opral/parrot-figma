@@ -398,6 +398,7 @@ export class FigmaFileTranslationKeyStore {
   async updateKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], plural?: boolean, quantity?: { value: number } | { placeholder: string }, defaultFillins?: Fillins): Promise<TranslationKey> {
     // this one gets a deep clone of the key
     const keyToUpdate = this.getKey(keyName);
+    let changeFound = false;
 
     if (keyToUpdate === undefined) {
       throw new Error(`Key [${keyName}] not found!`);
@@ -425,27 +426,40 @@ export class FigmaFileTranslationKeyStore {
       }
 
       // create a new translation entry with increased version
-      keyToUpdate.translations[translation.language]![translation.plural]!.version = keyToUpdate.latestVersion + 1;
-      keyToUpdate.translations[translation.language]![translation.plural]!.text = translation.text;
-      keyToUpdate.translations[translation.language]![translation.plural]!.skip = translation.skip;
+      if (keyToUpdate.translations[translation.language]![translation.plural]!.text !== translation.text
+        || keyToUpdate.translations[translation.language]![translation.plural]!.skip !== translation.skip) {
+        changeFound = true;
+        keyToUpdate.translations[translation.language]![translation.plural]!.version = keyToUpdate.latestVersion + 1;
+        keyToUpdate.translations[translation.language]![translation.plural]!.text = translation.text;
+        keyToUpdate.translations[translation.language]![translation.plural]!.skip = translation.skip;
+      }
     }
 
-    if (plural !== undefined && plural !== null) {
+    if (plural !== undefined && plural !== null && keyToUpdate.plural !== plural) {
+      changeFound = true;
       keyToUpdate.plural = plural;
     }
 
     const placeholders = UITranslationKey.extractParameters(keyToUpdate.translations, this.getConfigSync().baseLanguage!, keyToUpdate.plural);
 
-    keyToUpdate.placeholders = placeholders;
+    if (JSON.stringify(keyToUpdate.placeholders) !== JSON.stringify(placeholders)) {
+      changeFound = true;
+      keyToUpdate.placeholders = placeholders;
+    }
 
-    if (quantity !== undefined && quantity !== null) {
+    if (quantity !== undefined && quantity !== null && JSON.stringify(keyToUpdate.quantity) === JSON.stringify(quantity)) {
+      changeFound = true;
       keyToUpdate.quantity = quantity;
     }
 
-    if (defaultFillins !== undefined && defaultFillins !== null) {
+    if (defaultFillins !== undefined && defaultFillins !== null && JSON.stringify(keyToUpdate.defaultFillins) === JSON.stringify(defaultFillins)) {
+      changeFound = true;
       keyToUpdate.defaultFillins = defaultFillins;
     }
 
+    if (!changeFound) {
+      return keyToUpdate;
+    }
     return this.persistKey(keyToUpdate);
   }
 

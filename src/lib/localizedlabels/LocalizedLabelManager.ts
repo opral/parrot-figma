@@ -373,19 +373,6 @@ export default class LocalizedLabelManager {
           keysLoaded.add(key);
         }
       }
-      // const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode);
-      /* if (lokalizedLabel) {
-        localizedLabels.push(lokalizedLabel);
-      }
-      const blockedExecutionTime = Date.now() - lastInterception;
-      // if (blockedExecutionTime > 30) {
-      if (localizedLabels.length % 100 === 0) {
-        // console.log(`fillUpCache - ${container.name} textNodes ${foundtextNodes.length} collected ${Date.now() - start}`);
-        // console.log(`fillUpCache - break because of blockage of ${blockedExecutionTime}`);
-        lastInterception = Date.now();
-        // eslint-disable-next-line no-promise-executor-return
-        await new Promise((resolve) => setTimeout(resolve, 2));
-      } */
     }
 
     console.log(`fillUpCache - creating localizedLabels took ${Date.now() - innerStart}ms for ${localizedLabels.length} labels`);
@@ -484,6 +471,17 @@ export default class LocalizedLabelManager {
     }
 
     return rootFrame;
+  }
+
+  async getById(textNodeId: string) {
+    const textNode = figma.getNodeById(textNodeId) as TextNode;
+    const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode);
+    if (lokalizedLabel) {
+      if (!this.virtualTree.hasNode(textNode.id)) {
+        this.virtualTree.addNode(textNode, textNode.id);
+      }
+    }
+    return lokalizedLabel;
   }
 
   async getWithKey(key: string) {

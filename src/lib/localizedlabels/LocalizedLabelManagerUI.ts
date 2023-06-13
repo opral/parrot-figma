@@ -155,7 +155,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     });
   }
 
-  onKeyLabelLinksLoaded(event:  LinksLoadedEvent) {
+  onKeyLabelLinksLoaded(event: LinksLoadedEvent) {
     this.keyStore.updateKeyLinks(event.keys);
   }
 
@@ -218,9 +218,8 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   }
 
   async updateUnmodifiedLabelsWithKey(key: string) {
-   
     const labelsToUpdate = (await this.getWithKey(key)).filter((label) => label.keyType === KeyState.Linked && !label.state!.modified);
-    
+
     await this.updateToLatestKeyVersion(labelsToUpdate);
   }
 
@@ -230,6 +229,16 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
   getLabelState(localizedLabel: LocalizedLabel): { behind: number, orginalText?: string, modified: boolean } {
     return (new UILocalizedLabel(this, localizedLabel)).getState();
+  }
+
+  async getById(textNodeId: string) {
+    if (!this.cachedLocalisedLabels[textNodeId]) {
+      const freshLocalizedLabel = await this.localizedLabelMangerSandbox.getById(textNodeId);
+      if (freshLocalizedLabel) {
+        this.refreshCachedLabel(freshLocalizedLabel);
+      }
+    }
+    return this.cachedLocalisedLabels[textNodeId];
   }
 
   async getWithKey(key: string) {
@@ -287,11 +296,14 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     fillins?: Fillins,
     quantity?: { value: number } | { placeholder: string },
   ) {
-    await this.keyStore.updateKey(keyName, translations, plural, fillins, quantity);
+    const originalKey = await this.keyStore.getKey(keyName);
+    const updatedKey = await this.keyStore.updateKey(keyName, translations, plural, fillins, quantity);
 
-    await this.updateUnmodifiedLabelsWithKey(keyName);
+    if (originalKey?.latestVersion !== updatedKey.latestVersion) {
+      await this.updateUnmodifiedLabelsWithKey(keyName);
 
-    this.keyStore.parentKeyStore.commitUndo();
+      this.keyStore.parentKeyStore.commitUndo();
+    }
   }
 
   async setLabelLanguage(

@@ -41,10 +41,14 @@ export default function TranslationKeyListView({
   const [renderEntries, setRenderEntries] = useState(200);
   const [filteredKeys, setFilteredKeys] = useState(translationKeyStore.findKeys(searchQuery));
   const [selectedKeys, setSelectedKeys] = useState([] as string[]);
+  const [highlightingAfterSelectionDone, setHighlightingAfterSelectionDone] = useState(false);
   const [query, setQuery] = useState<SearchQuery>(searchQuery);
   const tableRef = useRef<HTMLDivElement>(null);
 
-  async function refreshSelection() {
+  async function refreshSelection(selection: boolean = false) {
+    if (selection) {
+      setHighlightingAfterSelectionDone(false);
+    }
     console.log('selection changed');
     const selectedNodes = await localizedLabelManager.getSelection();
     console.log(selectedNodes);
@@ -65,10 +69,14 @@ export default function TranslationKeyListView({
     if (event.data.pluginMessage.type === 'event') {
       if (event.data.pluginMessage.name === 'selectionchange') {
         // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
-        refreshSelection();
+        refreshSelection(true);
       }
     }
   }
+
+  const eventHandlerWrapper = () => {
+    refreshSelection(false);
+  };
 
   useEffect(() => {
     // asynchronous fetch the state from figma helper
@@ -77,13 +85,13 @@ export default function TranslationKeyListView({
       await refreshSelection();
     })();
 
-    localizedLabelManager.addEventListener('updated', refreshSelection);
-    translationKeyStore.addEventListener('updated', refreshSelection);
+    localizedLabelManager.addEventListener('updated', eventHandlerWrapper);
+    translationKeyStore.addEventListener('updated', eventHandlerWrapper);
     window.addEventListener('message', messageHandler);
 
     return () => {
-      localizedLabelManager.removeEventListener('updated', refreshSelection);
-      translationKeyStore.removeEventListener('updated', refreshSelection);
+      localizedLabelManager.removeEventListener('updated', eventHandlerWrapper);
+      translationKeyStore.removeEventListener('updated', eventHandlerWrapper);
       window.removeEventListener('message', messageHandler);
     };
   }, []);
@@ -100,7 +108,8 @@ export default function TranslationKeyListView({
 
     if (tableRef.current) {
       const firstSelected = tableRef.current.querySelector('.selected') as HTMLElement;
-      if (firstSelected) {
+      if (firstSelected && !highlightingAfterSelectionDone) {
+        setHighlightingAfterSelectionDone(true);
         (firstSelected.firstChild as any).scrollIntoViewIfNeeded({ block: 'center' });
       }
     }
@@ -110,7 +119,8 @@ export default function TranslationKeyListView({
   useEffect(() => {
     if (tableRef.current) {
       const firstSelected = tableRef.current.querySelector('.selected') as HTMLElement;
-      if (firstSelected) {
+      if (firstSelected && !highlightingAfterSelectionDone) {
+        setHighlightingAfterSelectionDone(true);
         (firstSelected.firstChild as any).scrollIntoViewIfNeeded({ block: 'center' });
       }
     }

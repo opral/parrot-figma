@@ -20,6 +20,12 @@ export default class FigmaUtil {
     return fileKey;
   }
 
+  async getImageFromFrame(nodeId: string, settings: ExportSettings) {
+    const node = figma.getNodeById(nodeId) as TextNode;
+    const imageAsUint8Array = await node.exportAsync(settings);
+    return imageAsUint8Array;
+  }
+
   async drawKeyFrame(frameNodeId: string, name: string, localizedLabelsInFrame: LocalizedLabel[]) {
     const frame = figma.getNodeById(frameNodeId);
     const MARGIN = 50;

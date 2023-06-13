@@ -691,6 +691,8 @@ export default class LocalizedLabelManager {
     return '';
   }
 
+  helperDomain = 'https://relativeUrl';
+
   private toTextRangeObject(tokenizedText: string) {
     const splitRegex = /(<a[^>]*>.*?<\/a>)/;
     const parts = tokenizedText.split(splitRegex);
@@ -705,12 +707,13 @@ export default class LocalizedLabelManager {
         const linkRegex = /<a[^>]*href=["']([^"']*)["'][^>]*>(.*?)<\/a>/g;
         const linkParts = linkRegex.exec(part);
         if (linkParts) {
+          const url = linkParts![1].startsWith('/') ? this.helperDomain + linkParts![1] : linkParts![1];
           cleanedUpText += linkParts![2];
           textDecoration.push({
             type: 'href',
             from: currentPosition,
             to: currentPosition + linkParts![2].length,
-            url: linkParts![1],
+            url,
           });
 
           currentPosition += linkParts![2].length;
@@ -751,7 +754,7 @@ export default class LocalizedLabelManager {
       }
 
       if (hyperLink.hyperlink) {
-        textChunks.push(`<a href="${hyperLink.hyperlink?.value}">${originalText.substring(hyperLink.start, hyperLink.end)}</a>`);
+        textChunks.push(`<a href="${hyperLink.hyperlink.value.replace(this.helperDomain, '')}">${originalText.substring(hyperLink.start, hyperLink.end)}</a>`);
       } else {
         textChunks.push(originalText.substring(hyperLink.start, hyperLink.end));
       }

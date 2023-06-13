@@ -13,21 +13,22 @@ import FileDropZone from '../../compontents/dropzone/Dropzone';
 import KeyImporter from '../../../lib/import/KeyImporter';
 import { ImportTranslationKey } from '../../../lib/import/ImportTranslationKey';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
-
+import FigmaUtil from '../../../shared/FigmaUtil';
 
 type ImportProps = {
-  labelManager: LocalizedLabelManagerUI
+  labelManager: LocalizedLabelManagerUI,
+  figmaRemote: FigmaUtil,
 };
 
 export default function Import({
   labelManager,
+  figmaRemote,
 }: ImportProps) {
   const { t } = useTranslation();
 
   const languageOptiones = [] as TileSelectOption<Language>[];
   const availableLanguages = SupportedLanguages;
   const [importLanguageState, setImportLanguageState] = useState<Language | undefined>(undefined);
-  const [activeView, setActiveView] = useState('baselanguage');
   const [importKeys, setImportKeys] = useState<ImportTranslationKey[] | undefined>(undefined);
   const [fileType, setFileType] = useState<string | undefined>(undefined);
   const [importKeysByState, setimportKeysByState] = useState<{
@@ -135,7 +136,13 @@ export default function Import({
             className="button button--buttonSecondary"
             type="button"
             onClick={() => {
-              KeyImporter.import(labelManager, importKeys!, importLanguageState!);
+              (async () => {
+                await KeyImporter.import(labelManager, importKeys!, importLanguageState!);
+                figmaRemote.notify(`Key Import done. Created Keys: ${importKeysByState.newKeys.length} New Translations: ${importKeysByState.newTranslations.length}  Updated Translations: ${importKeysByState.updatedTranslations.length}`);
+                setFileType(undefined);
+                setImportKeys(undefined);
+                setImportLanguageState(undefined);
+              })();
             }}
           >
             <span data-tooltip-type="text">
@@ -152,6 +159,7 @@ export default function Import({
             onClick={() => {
               setFileType(undefined);
               setImportKeys(undefined);
+              setImportLanguageState(undefined);
             }}
           >
             <span data-tooltip-type="text">

@@ -20,6 +20,10 @@ export default class FigmaUtil {
     return fileKey;
   }
 
+  async notify(message: string) {
+    figma.notify(message);
+  }
+
   async getImageFromFrame(nodeId: string, settings: ExportSettings) {
     const node = figma.getNodeById(nodeId) as TextNode;
     const imageAsUint8Array = await node.exportAsync(settings);

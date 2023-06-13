@@ -259,11 +259,13 @@ What we want from ui point of view:
  - [x] filter - match case, need review etc based on figmas search design
  - [x] allow to add a key manually using drawer? Currently one can only create a key form a lable 
  
- - [ ] fix translation update from label
-    - [ ] propagate to other labels after clicking to use figma version
-    - [ ] labels state is not updated to most recent version
+ - [x] fix translation update from label
+    - [x] propagate to other labels after clicking to use figma version
+    - [x] labels state is not updated to most recent version
     - [ ] placeholders that have fillins in the label are still shown even if the text doesn't contain the placeholder nor the any translation
     - [ ] show preview when hover 
+ - [x] import misses feedback
+ - [ ] how to handle attributes on localized text like class - we cant store them in the element
  - [ ] plural select - based on a quantity value
  - [ ] number based plurals (0 = no new messages, 1 = one new message, other = %n new messages)
  - [ ] check keyname for at least one visible character

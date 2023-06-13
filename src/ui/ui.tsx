@@ -219,6 +219,7 @@ function App() {
   } else if (appScreen === 'import') {
     view = (
       <Import
+      figmaRemote={figmaRemote}
         labelManager={localizedLabelManager}
       />
     );

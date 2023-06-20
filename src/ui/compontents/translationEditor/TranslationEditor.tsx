@@ -7,75 +7,19 @@
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import OutsideClickHandler from 'react-outside-click-handler';
-import { autocompletion, CompletionContext, snippetCompletion } from '@codemirror/autocomplete';
 
-import CodeMirror from '@uiw/react-codemirror';
-import createTheme from '@uiw/codemirror-themes';
 import './TranslationEditor.css';
-import {
-  EditorView,
-} from '@codemirror/view';
 
+import Quill from 'quill';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
-import placeholderDecorator from './PlaceholderDecorator';
 import TranslationView from './TranslationView';
-
-const myTheme = createTheme({
-  theme: 'light',
-  settings: {
-    background: 'var(--figma-color-bg)',
-    foreground: '#4D4D4C',
-    caret: '#AEAFAD',
-    selection: '#D6D6D6',
-    selectionMatch: '#D6D6D6',
-    gutterBackground: 'var(--figma-color-bg)',
-    gutterForeground: 'var(--figma-color-bg)',
-    gutterBorder: '#ddd',
-    gutterActiveForeground: '',
-    lineHighlight: 'transparent',
-  },
-  styles: [
-
-  ],
-});
-
-
-function createCompletion(keyProvider: MemoryTranslationKeyStore) {
-  return function myCompletions(context: CompletionContext) {
-    const word = context.matchBefore(/\[\[|\[\[*/);
-    if (!word || (word.from === word.to && !context.explicit)) {
-      return null;
-    }
-
-    let options = [snippetCompletion('[[{1}]]', {
-      label: '[[',
-      detail: 'Text Placeholder',
-    })] as any[];
-
-    // options = options.concat(keyProvider.getSampleKeyNames().map((keyName) => ({ label: `[[${keyName}]]` })));
-
-    return {
-      from: word.from,
-      options,
-      /* [
-        snippetCompletion('[%s:#{1}]', {
-          label: '[%s:',
-          detail: 'Text Placeholder',
-        }),
-        { label: '[%s:name]', type: 'variable' },
-        // { label: 'hello', type: 'variable', info: '(World)' },
-        // {
-        // label: '[%magic', type: 'text', apply: '⠁⭒*.✩.*⭒⠁', detail: 'macro',
-        // },
-      ], */
-    };
-  };
-}
-
+import QuillEditor from './QuillEditor';
+import { Fillins } from '../../../lib/keystore/TranslationKey';
 
 type TranslationEditorProps = {
   keyName?: string,
-  text?: string,
+  fillins: Fillins,
+  translationHTML?: string,
   onSave: Function,
   onChange?: Function,
   match: { start: number, length: number } | undefined
@@ -88,9 +32,12 @@ type TranslationEditorProps = {
 //  - label editor - text should contain the placeholders but the editor needs to know the fillins?
 
 export default function TranslationEditor({
-  text, keyName, onSave, match, editable = true, translationKeyStore, onChange,
+  translationHTML, keyName, fillins, onSave, match, editable = true, translationKeyStore, onChange,
 }: TranslationEditorProps) {
-  const [textState, setTextState] = useState(text);
+  const quillContainerRef = useRef<HTMLInputElement>(null);
+  let quillEditor : any;
+
+  const [textState, setTextState] = useState(translationHTML);
   const [editingState, setEditingState] = useState(false);
   const [isMouseOver, setMouseOver] = useState(false);
 
@@ -98,23 +45,23 @@ export default function TranslationEditor({
 
   // useAutosizeTextArea(textAreaRef.current, translationText ? translationText : '')
 
-  const handleChange = (value: string) => {
+  const handleChange = (value: string, updatedFillins: Fillins) => {
     if (onChange !== undefined) {
-      onChange(value);
+      onChange(value, updatedFillins);
     }
     setTextState(value);
   };
 
   useEffect(() => {
-    setTextState(text);
-  }, [text]);
+    setTextState(translationHTML);
+  }, [translationHTML]);
 
   let textToUse;
 
   if (textState === undefined || textState === '') {
-    textToUse = '<no translation>';
-  } else if (textState.charAt(textState.length - 1) === '\n') {
-    textToUse = `${textState}\n`;
+    textToUse = 'no translation';
+  // } else if (textState.charAt(textState.length - 1) === '\n') {
+  //   textToUse = `${textState}\n`;
   } else {
     textToUse = textState;
   }
@@ -146,26 +93,13 @@ export default function TranslationEditor({
           </div>
           { (isMouseOver || editingState) && (
 
-          <CodeMirror
+          <QuillEditor
             value={textState}
-            maxWidth="100%"
+            fillins={fillins}
+            onFocus={() => { setEditingState(true); }}
             onChange={handleChange}
-            height="auto"
-            theme={myTheme}
-            placeholder={textToUse}
-            basicSetup={{
-              closeBrackets: false,
-              foldGutter: false,
-              lineNumbers: false,
-              searchKeymap: false,
-            }}
-            extensions={[
-              autocompletion({ override: [createCompletion(translationKeyStore)] }),
-              placeholderDecorator(translationKeyStore, keyName),
-              EditorView.lineWrapping,
-            ]}
-            onFocus={() => setEditingState(true)}
           />
+
           )}
 
         </div>
@@ -174,7 +108,7 @@ export default function TranslationEditor({
           <input
             type="button"
             value="Save"
-            disabled={textState === text}
+            disabled={textState === translationHTML}
             onClick={() => {
               setEditingState(!editingState);
               onSave(textState);
@@ -187,7 +121,7 @@ export default function TranslationEditor({
               setEditingState(!editingState);
             }}
           />
-          { text !== undefined && text !== textState && (
+          {/* text !== undefined && text !== textState && (
 
           <div onClick={() => {
             setTextState(text!);
@@ -196,7 +130,7 @@ export default function TranslationEditor({
             <div>Figma: </div>
             { text! }
           </div>
-          )}
+        ) */}
         </>
         )}
       </div>

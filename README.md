@@ -268,6 +268,7 @@ What we want from ui point of view:
  - [x] deleting a key gives a crash
  - [x] baselanguage selection does not work in settings screen
  - [x] missing translation filter
+ - [ ] search and replace 
  - [ ] esc key in drawer and call to action (cancel)
  - [ ] Change language - auto translate of links - remove link 
  - [ ] how to handle attributes on localized text like class - we cant store them in the element
@@ -397,3 +398,11 @@ https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects
 AAR'rrr - Piraten maskottchen
 
 An Extension not a Plugin
+
+
+# TODO'S
+
+Landing page 
+Plugin publish
+Icon
+UI / UX runthrough

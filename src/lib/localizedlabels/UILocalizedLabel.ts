@@ -1,10 +1,14 @@
+import Quill, { Delta as DeltaType, DeltaOperation } from 'quill';
 import { Language } from '../base/Language';
 import { Plural } from '../base/Plural';
-import { KeyState, LocalizedLabel } from './LocalizedLabel';
+import { KeyState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
 import { UITranslationKey } from '../keystore/UITranslationKey';
 import {
   Fillins, Placeholder, PlaceholderType, PlaceholdersByName, TranslationKey,
 } from '../keystore/TranslationKey';
+import LocalizedLabelManager, { DeltaOp, MARKER_CHARACTER } from './LocalizedLabelManager';
+
+const Delta = Quill.import('delta') as typeof DeltaType;
 
 export interface ILocalizedLabelManagerUI {
   keyStore: any; // TODO make this UITranslationKeyStore and add all methods to the interface needed
@@ -15,16 +19,13 @@ export interface ILocalizedLabelManagerUI {
     keyVersion?: number,
     language?: Language,
     plural?: Plural,
-    text?: string,
+    translationHTML?: string,
     filledTemplateHash?: string,
     showSampleValues?: boolean,
   }): Promise<void>;
 }
 
-const markerCharacter = '​'; // 'X'; // '​';
-
 export class UILocalizedLabel implements LocalizedLabel {
-
   pageId: string;
 
   pageName: string;
@@ -61,7 +62,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   pluralId: Plural;
 
-  text: string;
+  characters: string;
 
   state?: { behind: number; orginalText?: string | undefined; modified: boolean; } | undefined;
 
@@ -70,11 +71,15 @@ export class UILocalizedLabel implements LocalizedLabel {
   /**
    * contains the translation representation with placeholders and later formation tags
    */
-  translation: string;
+  // translation: string;
 
   fillins: Fillins;
 
   derivedKey?: string | undefined;
+
+  warnings: string[];
+
+  labelStyle: LabelStyle;
 
   // utils
   // to manage the label within the UI keep a reference of the Label manager
@@ -101,18 +106,133 @@ export class UILocalizedLabel implements LocalizedLabel {
     this.key = localizedLabel.key;
     this.keyVersion = localizedLabel.keyVersion;
     this.pluralId = localizedLabel.pluralId;
-    this.text = localizedLabel.text;
-    this.state = localizedLabel.state;
+    this.characters = localizedLabel.characters;
     this.textChangedAfterGeneration = localizedLabel.textChangedAfterGeneration;
     this.derivedKey = localizedLabel.derivedKey;
     this.fillins = localizedLabel.fillins;
-    this.translation = this.toTranslation();
+    this.ops = localizedLabel.ops;
+    this.warnings = localizedLabel.warnings;
+    this.labelStyle = localizedLabel.labelStyle;
+
+    this.translationHTML = UILocalizedLabel.toHtml(localizedLabel.characters, localizedLabel.ops, this.fillins, true);
     this.state = this.getState();
   }
 
+  translationHTML: string;
+
+  ops: DeltaOp[];
+
+  filledTemplateHash?: string | undefined;
+
+  static toHtml(text: string, ops: DeltaOp[], fillins: Fillins, trimLabelStyles: boolean) {
+    const deltaOps = [] as DeltaOperation[];
+
+    
+
+    for (const op of ops) {
+      if (op.attributes.placeholder) {
+        const insert = op.attributes.placeholder.name;
+        const parameterOperation = {
+          insert,
+          attributes: {
+            ...op.attributes,
+          },
+        };
+        // enrich fillin
+        (parameterOperation.attributes.placeholder! as any).fillin = fillins[insert].value;
+        
+        deltaOps.push(parameterOperation);
+      } else {
+        const insert = text.substring(op.start, op.end);
+        deltaOps.push({
+          insert,
+          attributes: op.attributes,
+        });
+      }
+    }
+
+    const delta = new Delta(deltaOps);
+
+    const tempCont = document.createElement('div');
+    (new Quill(tempCont)).setContents(delta);
+    let htmlContent = tempCont.getElementsByClassName('ql-editor')[0].innerHTML;
+
+    /*for (let i = placeholderByFillin.length - 1; i >= 0; i--) {
+      const currentPlaceholderName = placeholderByFillin[i];
+      const filinValue = fillins[currentPlaceholderName].value;
+      const markerLength = i + 1;
+
+      htmlContent = htmlContent.split(filinValue + MARKER_CHARACTER.repeat(markerLength)).join(`<ph type="string" fillin="${filinValue}">${currentPlaceholderName}</ph>`);
+    }*/
+
+    console.log(htmlContent);
+    return htmlContent.split('<p>').join('').split('</p>').join('');
+  }
+
+  static toTextAndOps(html: string, fillins: Fillins) {
+    const pattern = /<ph type="([^"]*)"([^>])*>([^<]*)<\/ph>/g;
+
+    const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(fillins);
+    // const wholeMatch = paramMatch[0];
+    // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
+    // const name = paramMatch[2];
+
+    const htmlWithFilledPlaceholders = html.replace(pattern, (match, type, otherTagsGroup, name, _argumentPosition) => {
+      const placeholderName = name;
+      if (placeholderName && fillins[placeholderName]) {
+        const extensionLength = placeholderByFillin.indexOf(placeholderName) + 1;
+        return fillins[placeholderName].value + MARKER_CHARACTER.repeat(extensionLength);
+      }
+      return match;
+    });
+
+    const tempCont = document.createElement('div');
+    const quill = new Quill(tempCont);
+    quill.clipboard.dangerouslyPasteHTML(htmlWithFilledPlaceholders);
+    const contents = quill.getContents();
+    const text = tempCont.getElementsByClassName('ql-editor')[0].textContent ?? '';
+
+    const ops = [] as any[];
+    let currentPositon = 0;
+    contents.ops?.forEach((operation) => {
+      ops.push({
+        from: currentPositon,
+        to: currentPositon + operation.insert.length,
+        attributes: operation.attributes,
+      });
+
+      currentPositon += operation.insert.length;
+    });
+    // remove the /n at the end?
+    ops.pop();
+    return {
+      text,
+      ops,
+    };
+  }
+
+  getFillins(keyToUse?: string, fillins?: Fillins) {
+    
+    const key = keyToUse ?? this.key;
+    const translationKey = key ? this.manager.keyStore.getKey(key) : undefined;
+
+    const defaultFillIns = translationKey ? { ...translationKey.defaultFillins } : {} as Fillins;
+    const labelFillins = fillins ?? this.fillins;
+
+    for (const parameterName of Object.keys(defaultFillIns)) {
+      if (labelFillins[parameterName] && labelFillins[parameterName].default) {
+        labelFillins[parameterName] = { default: true, value: defaultFillIns[parameterName].value };
+      }
+    }
+
+    return labelFillins;
+  }
+
   getPlaceholders() {
+    const placeholders = {} as PlaceholdersByName;
+    return placeholders; // TODO
+    /*
     const labelTranslationPlaceholders = UITranslationKey.extractPlaceholdersInText(this.translation);
-    let placeholders = {} as PlaceholdersByName;
 
     if (this.keyType === KeyState.Linked) {
       const key = this.manager.keyStore.getKey(this.key!)! as UITranslationKey;
@@ -125,27 +245,13 @@ export class UILocalizedLabel implements LocalizedLabel {
       }
     }
 
-    return placeholders;
-  }
-
-  /**
-   * Provides the placholders sorted for the fillin and text extractions
-   */
-  static getPlaceholdersByFillins(fillins: Fillins) {
-    const placeholderByFillin = Object.keys(fillins).sort((placeholderA, placeholderB) => {
-      if (fillins[placeholderA].value !== fillins[placeholderB].value) {
-        // TODO #8 we just convert the fillin values to a string. The value is a number or a string do we need to take formating into account?
-        return (`${fillins[placeholderA].value}`).localeCompare(`${fillins[placeholderB].value}`);
-      }
-      return placeholderA.localeCompare(placeholderB);
-    });
-    return placeholderByFillin;
+    return placeholders; */
   }
 
   static toText(text: string, fillins: Fillins) {
     const pattern = /\[\[([A-Za-z_]{2,})?(?:#(\d+))?(?::*([sdf])(?:\.(\d+))?)?\]\]/g;
 
-    const placeholderByFillin = UILocalizedLabel.getPlaceholdersByFillins(fillins);
+    const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(fillins);
     // const wholeMatch = paramMatch[0];
     // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
     // const name = paramMatch[2];
@@ -154,12 +260,13 @@ export class UILocalizedLabel implements LocalizedLabel {
       const placeholderName = name;
       if (placeholderName && fillins[placeholderName]) {
         const extensionLength = placeholderByFillin.indexOf(placeholderName) + 1;
-        return fillins[placeholderName].value + markerCharacter.repeat(extensionLength);
+        return fillins[placeholderName].value + MARKER_CHARACTER.repeat(extensionLength);
       }
       return match;
     });
   }
 
+  /*
   private toTranslation() {
     // if we have no linked key we fall back to name only for now
     let orginalPlaceholders = [] as Placeholder[];
@@ -173,14 +280,14 @@ export class UILocalizedLabel implements LocalizedLabel {
     }
 
     // takes the text of the label and replaces all fillins with the placeholders
-    const placeholderByFillin = UILocalizedLabel.getPlaceholdersByFillins(this.fillins);
+    const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(this.fillins);
 
-    let translation = this.text;
+    let translation = this.characters;
     // eslint-disable-next-line for-direction, no-plusplus
     for (let i = placeholderByFillin.length - 1; i >= 0; i--) {
       const currentPlaceholderName = placeholderByFillin[i];
       const filinValue = this.fillins[currentPlaceholderName].value;
-      const nonPlaceholderParts = translation.split(filinValue + markerCharacter.repeat(i + 1));
+      const nonPlaceholderParts = translation.split(filinValue + MARKER_CHARACTER.repeat(i + 1));
       const placeholdersInKey = orginalPlaceholders.filter((orgPlaceholder) => orgPlaceholder.name === currentPlaceholderName);
 
       // eslint-disable-next-line prefer-destructuring
@@ -221,6 +328,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 
     return translation;
   }
+  */
 
   /**
    * The state of a label is represented by two main properties:
@@ -252,11 +360,11 @@ export class UILocalizedLabel implements LocalizedLabel {
       } else {
         state.behind = translatedKey.getChangesSince(this.language, this.pluralId, this.keyVersion);
 
-        const translation = currentVersion.translations[this.language]?.[this.pluralId]?.text!;
+        const translationHtml = currentVersion.translations[this.language]?.[this.pluralId]?.text!;
 
         // eslint-disable-next-line no-param-reassign
-        if (translation !== this.translation) {
-          const filledTranslation = translation ? UILocalizedLabel.toText(translation, this.fillins) : 'missing translation!'; // TODO #9 how to deal with missing translations?
+        if (translationHtml !== this.translationHTML) {
+          const filledTranslation = translationHtml ? UILocalizedLabel.toText(translationHtml, this.fillins) : 'missing translation!'; // TODO #9 how to deal with missing translations?
           state.modified = true;
           state.orginalText = filledTranslation;
         }
@@ -286,7 +394,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     if (text) {
       await this.manager.updateLabelProperties(this.nodeId, {
         showSampleValues,
-        text,
+        translationHTML: text,
       });
     }
   }
@@ -315,13 +423,13 @@ export class UILocalizedLabel implements LocalizedLabel {
     let translationKey = this.manager.keyStore.getKey(translationKeyName);
     // check if key exists
     if (translationKey === undefined) {
-      const translation = await missingTranslationProvider(this.text!, this.language, targetLanguage);
+      const translation = await missingTranslationProvider(this.translationHTML!, this.language, targetLanguage);
 
       // ok we have a fresh key to create - no translation to expect
       translationKey = await this.manager.keyStore.createKey(translationKeyName, [{
         language: this.language,
         plural: this.pluralId,
-        text: this.text,
+        text: this.translationHTML,
         skip: false,
       }, {
         language: targetLanguage,
@@ -369,7 +477,7 @@ export class UILocalizedLabel implements LocalizedLabel {
         key: translationKeyName,
         keyType: KeyState.Linked,
         language: targetLanguage,
-        text: versionToApply?.translations?.[targetLanguage]?.[this.pluralId]?.text,
+        translationHTML: versionToApply?.translations?.[targetLanguage]?.[this.pluralId]?.text,
         keyVersion: labelVersion,
       });
     }

@@ -32,8 +32,6 @@
   padding-right: 5px;
 }
 
-
-
 .cm-theme .cm-editor {
   outline: none !important;
   padding-left: 8px;
@@ -55,6 +53,16 @@
   letter-spacing: 0.01em;
 }
 
+
+
+.translation-editor-text em, .translation-editor-text em * {
+  font-style: italic; 
+}
+
+.translation-editor-text strong, .translation-editor-text strong * {
+  font-weight: 800;
+}
+
 .translation-editor-text .translation {
   background-color: var(--figma-color-bg);
 }
@@ -69,6 +77,16 @@
    /* background-color: var(--figma-color-bg);*/
   
 }
+
+
+ph {
+  border: 1px solid blue;
+  border-radius: 7px;
+  padding: 1 6.55px;
+  background-color: lightblue;
+  margin-right: 1px;
+}
+
 
 .placholder-container.selected {
   border: 1px solid blue;

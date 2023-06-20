@@ -40,19 +40,19 @@ export default function TranslationView({
     // we do not mask if the cursor is placed within a placeholder
   }
 
-  if (result.length > 0) {
+  if (false && result.length > 0) {
     result.push(<>{text.substring(lastEnd)}</>);
     return <>{result.map((el) => el)}</>;
   }
 
-  if (match !== undefined) {
-    return (
-      <>
-        {text.substring(0, match.start)}
-        <mark className="match">{text.substring(match.start, match.start + match.length)}</mark>
-        {text.substring(match.start + match.length)}
-      </>
-    );
-  }
-  return <span>{text}</span>;
+  // if (match !== undefined) {
+  //   return (
+  //     <>
+  //       {text.substring(0, match.start)}
+  //       <mark className="match">{text.substring(match.start, match.start + match.length)}</mark>
+  //       {text.substring(match.start + match.length)}
+  //     </>
+  //   );
+  // }
+  return <span dangerouslySetInnerHTML={{__html:text }}/>;
 }

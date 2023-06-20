@@ -1,11 +1,19 @@
 import { Language } from '../base/Language';
 import { Plural } from '../base/Plural';
 import { Fillins } from '../keystore/TranslationKey';
+import { DeltaOp } from './LocalizedLabelManager';
 
 export enum KeyState {
   Unset = 'unset', // label has not yet modified by the plugin
   NoKey = 'nokey', // state when the label has not been translated by the plugin yet
   Linked = 'linked', // key was set to a fixed key
+}
+
+export interface LabelStyle {
+  fontFamily: string | undefined,
+  bold: boolean | 'MIXED' | undefined,
+  italic: boolean | 'MIXED' | undefined,
+  textDecoration: TextDecoration | 'MIXED' | undefined,
 }
 
 export interface LocalizedLabel {
@@ -33,8 +41,10 @@ export interface LocalizedLabel {
   key?: string;
   keyVersion: number,
   pluralId: Plural;
-  text: string;
-  state?: { behind: number, orginalText?: string, modified: boolean }
+  characters: string;
+  ops: DeltaOp[];
+  warnings: string[];
+  labelStyle: LabelStyle;
 
   // fillins needed to suppoert bidirectional template filling and extraction
   // 1. if we look at the label Text "Hello Martin, how are you today?" we want to be able to get the key string inclusive placeholders like:

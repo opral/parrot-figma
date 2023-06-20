@@ -1,9 +1,8 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable class-methods-use-this */
-import { text } from 'stream/consumers';
-import FigmaUtil from '../../shared/FigmaUtil';
+import { t } from 'i18next';
 import { Language } from '../base/Language';
-import { KeyState, LocalizedLabel } from './LocalizedLabel';
+import { KeyState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../base/Plural';
 import ChangeEvent from './ChangeEvent';
 import { FigmaFileTranslationKeyStore } from '../keystore/FigmaFileTranslationKeyStore';
@@ -11,6 +10,39 @@ import { Fillins } from '../keystore/TranslationKey';
 import VirtualTree, { VirtualTreeNode } from './VirtualTree';
 import LinksLoadedEvent from './LinksLoadedEvent';
 
+export interface SandboxUpdateLabelProperties {
+  labelName?: string,
+  keyType?: KeyState,
+  key?: string,
+  language?: Language,
+  plural?: Plural,
+  keyVersion?: number,
+  filledTemplateHash?: string,
+  characters?: string,
+  ops?: any
+  fillins?: Fillins,
+  showSampleValues?: boolean,
+}
+
+export interface DeltaOp {
+  start: number,
+  end: number,
+  attributes: {
+    placeholder?: {
+      name: string,
+      invisibleMarkers: number
+    },
+    link?: string,
+    textDecoration?: TextDecoration,
+    bold?: boolean,
+    italic?: boolean,
+    fontFamily?: string,
+  }
+  processed?: boolean,
+  ignoreForLabelStyle?: boolean
+}
+
+export const MARKER_CHARACTER = '​';// 'X'; // '​';
 export default class LocalizedLabelManager {
   translationKeyStore?: FigmaFileTranslationKeyStore;
 
@@ -87,8 +119,6 @@ export default class LocalizedLabelManager {
   }
 
   forwardDocumentChanges(event: any) {
-    console.log('changes');
-    console.log(event);
     const deletedIds = new Set<string>();
     const changedLabels = [] as LocalizedLabel[];
     const createdLabels = [] as LocalizedLabel[];
@@ -123,7 +153,7 @@ export default class LocalizedLabelManager {
               createdLabels.push(localizedLabel);
             }
           } else if ((createdNode as FrameNode).children) {
-            console.log(`Node created - with children ${change.id}`);
+            // console.log(`Node created - with children ${change.id}`);
             const skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
             figma.skipInvisibleInstanceChildren = true;
             const createdTextNodes = (createdNode as FrameNode).findAllWithCriteria({ types: ['TEXT'] });
@@ -161,7 +191,7 @@ export default class LocalizedLabelManager {
             this.refreshLabelKeyLinkCache(node.id, undefined);
             deletedIds.add(node.id);
           });
-          console.log(`Node deleted ${change.id} leafs: ${JSON.stringify(deletedIds)}`);
+          // console.log(`Node deleted ${change.id} leafs: ${JSON.stringify(deletedIds)}`);
           break;
         }
         case 'PROPERTY_CHANGE': {
@@ -180,13 +210,13 @@ export default class LocalizedLabelManager {
           }
 
           if (changedNode?.type === 'TEXT') {
-            console.log(`Node changed - text ${changedNode.id}`);
+            // console.log(`Node changed - text ${changedNode.id}`);
 
             if (!this.virtualTree.hasNode(changedNode.id)) {
-              console.log(`Node changed - text ${changedNode.id} added to vt`);
+              // console.log(`Node changed - text ${changedNode.id} added to vt`);
               this.virtualTree.addNode(changedNode, changedNode.id);
             } else if (change.properties.includes('parent')) {
-              console.log(`Node changed - text ${changedNode.id} moved...`);
+              // console.log(`Node changed - text ${changedNode.id} moved...`);
               this.virtualTree.moveNode(changedNode!.id, changedNode!.parent!);
             }
 
@@ -212,11 +242,11 @@ export default class LocalizedLabelManager {
             let changedVirtualNodes = [] as VirtualTreeNode[];
             if (change.properties.includes('parent')) {
               changedVirtualNodes = this.virtualTree.moveNode(changedNode!.id, changedNode!.parent!);
-              console.log(`Node changed - parent ${change.id} moved in vt affacted: ${JSON.stringify(changedVirtualNodes.length)}`);
+              // console.log(`Node changed - parent ${change.id} moved in vt affacted: ${JSON.stringify(changedVirtualNodes.length)}`);
             } else if (change.properties.includes('name')) {
               // if the name changed we have to update all childs since naming changes the key abrivation
               changedVirtualNodes = this.virtualTree.getAllNodesInBranchByRootId(changedNode!.id);
-              console.log(`Node changed - ${change.id} name in vt affacted: ${JSON.stringify(changedVirtualNodes.length)}`);
+              // console.log(`Node changed - ${change.id} name in vt affacted: ${JSON.stringify(changedVirtualNodes.length)}`);
             }
             // eslint-disable-next-line @typescript-eslint/no-loop-func
             changedVirtualNodes.forEach((changedVNode) => {
@@ -265,8 +295,8 @@ export default class LocalizedLabelManager {
       changedKeys: [...keysChanged],
     } as ChangeEvent;
 
-    console.log('keys changed');
-    console.log(keysChanged);
+    // console.log('keys changed');
+    // console.log(keysChanged);
     figma.ui.postMessage(message);
   }
 
@@ -577,19 +607,7 @@ export default class LocalizedLabelManager {
     // console.log((new Date()).getTime() + 'execution finished - puting result into message');
   }
 
-  async updateLabelProperties(nodeId: string, changedProperties:
-  {
-    labelName?: string,
-    keyType?: KeyState,
-    key?: string,
-    language?: Language,
-    plural?: Plural,
-    keyVersion?: number,
-    filledTemplateHash?: string,
-    translation?: string,
-    fillins?: Fillins,
-    showSampleValues?: boolean,
-  }) {
+  async updateLabelProperties(nodeId: string, changedProperties: SandboxUpdateLabelProperties) {
     const textNode = figma.getNodeById(nodeId)! as TextNode;
 
     if (changedProperties.labelName !== undefined) {
@@ -618,24 +636,103 @@ export default class LocalizedLabelManager {
       textNode.setPluginData(this.fillinsKey, JSON.stringify(changedProperties.fillins));
     }
 
-    if (changedProperties.translation !== undefined) {
-      const linkStyle = await this.getLinkStyle();
-
+    if (changedProperties.characters !== undefined) {
       await this.loadFontsForTextNodes([textNode]);
 
-      const textWithDecorators = this.toTextRangeObject(changedProperties.translation);
+      // const textWithDecorators = this.toTextRangeObject(changedProperties.translation);
 
       textNode.setPluginData(this.filledTemplateHashDataKey, changedProperties.filledTemplateHash ? changedProperties.filledTemplateHash : '');
-      textNode.characters = textWithDecorators.text;
+      textNode.characters = changedProperties.characters;
 
-      for (const rangeStyle of textWithDecorators.textDecorations) {
-        if (rangeStyle.type === 'href') {
-          textNode.setRangeHyperlink(rangeStyle.from, rangeStyle.to, { type: 'URL', value: rangeStyle.url });
-          if (linkStyle) {
-            textNode.setRangeFills(rangeStyle.from, rangeStyle.to, [
-              JSON.parse(linkStyle),
-            ]);
-          }
+      // NOTE: when we are here and we have mixed font family we have warned the user already - we go for the first one
+      const textNodeFontFamily = (textNode.getRangeFontName(0, 1) as FontName).family;
+      const fonts = await figma.listAvailableFontsAsync();
+      const fontFamily = fonts.filter((font: Font) => font.fontName.family === textNodeFontFamily).map((font) => font.fontName);
+
+      let regularFontName: FontName | undefined;
+      let boldFontName: FontName | undefined;
+      let italicFontName: FontName | undefined;
+      let boldItalicontName: FontName | undefined;
+
+      fontFamily.forEach((fontFamilyVariant) => {
+        const styleLowerCase = fontFamilyVariant.style.toLowerCase();
+        if (styleLowerCase === 'regular') {
+          regularFontName = fontFamilyVariant;
+        }
+        if (!regularFontName && styleLowerCase === 'medium') {
+          regularFontName = fontFamilyVariant;
+        }
+
+        if (styleLowerCase === 'bold') {
+          boldFontName = fontFamilyVariant;
+        }
+
+        if (styleLowerCase === 'italic') {
+          italicFontName = fontFamilyVariant;
+        }
+
+        if (styleLowerCase.includes('bold italic')) {
+          boldItalicontName = fontFamilyVariant;
+        }
+        if (!boldItalicontName && styleLowerCase.includes('italic') && styleLowerCase.includes('bild')) {
+          boldItalicontName = fontFamilyVariant;
+        }
+      });
+
+      if (regularFontName) {
+        await figma.loadFontAsync(regularFontName);
+      }
+
+      if (boldFontName) {
+        await figma.loadFontAsync(boldFontName);
+      }
+
+      if (italicFontName) {
+        await figma.loadFontAsync(italicFontName);
+      }
+
+      if (boldItalicontName) {
+        await figma.loadFontAsync(boldItalicontName);
+      }
+
+      for (const rangeStyle of changedProperties.ops!) {
+        // debugger;
+
+        let linkUrl = rangeStyle.attributes?.link;
+        if (linkUrl && linkUrl.startsWith('/')) {
+          linkUrl = this.helperDomain + linkUrl;
+        }
+
+        textNode.setRangeHyperlink(rangeStyle.from, rangeStyle.to, linkUrl ? { type: 'URL', value: linkUrl } : null);
+
+        let decoration = 'NONE' as TextDecoration;
+        if (rangeStyle.attributes?.underline) {
+          decoration = 'UNDERLINE';
+        } else if (rangeStyle.attributes?.strikethrough) {
+          decoration = 'STRIKETHROUGH';
+        }
+
+        textNode.setRangeTextDecoration(rangeStyle.from, rangeStyle.to, decoration);
+
+        // check if we should apply styles at all... is bold/italic/regular swiched once? otherwise keep the orginal label
+        if (regularFontName
+          && !rangeStyle.attributes?.bold && !rangeStyle.attributes?.italic) {
+          textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, regularFontName);
+        }
+
+        if (italicFontName
+          && !rangeStyle.attributes?.bold && rangeStyle.attributes?.italic) {
+          textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, italicFontName);
+        }
+
+        if (boldFontName
+          && rangeStyle.attributes?.bold && !rangeStyle.attributes?.italic) {
+          textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, boldFontName);
+        }
+
+        if (boldItalicontName
+          && rangeStyle.attributes?.bold && rangeStyle.attributes?.italic) {
+          textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, boldItalicontName);
         }
       }
     }
@@ -693,80 +790,18 @@ export default class LocalizedLabelManager {
 
   helperDomain = 'https://relativeUrl';
 
-  private toTextRangeObject(tokenizedText: string) {
-    const splitRegex = /(<a[^>]*>.*?<\/a>)/;
-    const parts = tokenizedText.split(splitRegex);
-    const textDecoration = [];
-    let cleanedUpText = '';
-
-    let currentPosition = 0;
-
-    for (let i = 0; i < parts.length; i += 1) {
-      const part = parts[i];
-      if (part.match(splitRegex)) {
-        const linkRegex = /<a[^>]*href=["']([^"']*)["'][^>]*>(.*?)<\/a>/g;
-        const linkParts = linkRegex.exec(part);
-        if (linkParts) {
-          const url = linkParts![1].startsWith('/') ? this.helperDomain + linkParts![1] : linkParts![1];
-          cleanedUpText += linkParts![2];
-          textDecoration.push({
-            type: 'href',
-            from: currentPosition,
-            to: currentPosition + linkParts![2].length,
-            url,
-          });
-
-          currentPosition += linkParts![2].length;
-        } else {
-          cleanedUpText += part;
-          currentPosition += part.length;
-        }
-      } else {
-        cleanedUpText += part;
-        currentPosition += part.length;
+  /**
+   * Provides the placholders sorted for the fillin and text extractions
+   */
+  static getPlaceholdersByFillins(fillins: Fillins) {
+    const placeholderByFillin = Object.keys(fillins).sort((placeholderA, placeholderB) => {
+      if (fillins[placeholderA].value !== fillins[placeholderB].value) {
+        // TODO #8 we just convert the fillin values to a string. The value is a number or a string do we need to take formating into account?
+        return (`${fillins[placeholderA].value}`).localeCompare(`${fillins[placeholderB].value}`);
       }
-    }
-
-    return { text: cleanedUpText, textDecorations: textDecoration };
-  }
-
-  private toTokenizedText(node: TextNode) {
-    const textnode = node as TextNode;
-
-    if (textnode.characters.length === 0) {
-      return '';
-    }
-
-    const hyperLinks = textnode.getStyledTextSegments(['hyperlink'], 0, textnode.characters.length);
-
-    const originalText = textnode.characters;
-
-    if (hyperLinks.length === 0) {
-      return textnode.characters;
-    }
-
-    let carret = 0;
-    const textChunks = [];
-
-    for (const hyperLink of hyperLinks) {
-      if (hyperLink.start !== carret) {
-        textChunks.push(originalText.substring(carret, hyperLink.start));
-      }
-
-      if (hyperLink.hyperlink) {
-        textChunks.push(`<a href="${hyperLink.hyperlink.value.replace(this.helperDomain, '')}">${originalText.substring(hyperLink.start, hyperLink.end)}</a>`);
-      } else {
-        textChunks.push(originalText.substring(hyperLink.start, hyperLink.end));
-      }
-
-      carret = hyperLink.end;
-    }
-
-    if (carret !== originalText.length) {
-      textChunks.push(originalText.substring(carret, originalText.length));
-    }
-
-    return textChunks.join('');
+      return placeholderA.localeCompare(placeholderB);
+    });
+    return placeholderByFillin;
   }
 
   private toLocalizedLabelOrUndefined(node: TextNode): LocalizedLabel | undefined {
@@ -833,7 +868,10 @@ export default class LocalizedLabelManager {
     derivedName = this.extractKeyName(rootFrame.name) + this.separator + derivedName;
 
     // 1562ms -> 1071ms ~ 1/4
-    const text = this.toTokenizedText(node);
+    const text = node.characters;
+
+    const fillins = node.getPluginData(this.fillinsKey) === '' ? {} : JSON.parse(node.getPluginData(this.fillinsKey));
+    const tokenizedTextResult = this.extractDeltaOpsAndLabelStyles(node, fillins);
 
     if (text.length === 1 && !/[0-9a-zA-Z\n\s]/.test(text)) {
       return;
@@ -845,7 +883,6 @@ export default class LocalizedLabelManager {
     const pluralId = node.getPluginData(this.keyPluralDataKey) === '' ? Plural.OTHER : node.getPluginData(this.keyPluralDataKey);
     const language = node.getPluginData(this.languageDataKey) === '' ? this.translationKeyStore!.getConfigSync().baseLanguage! : node.getPluginData(this.languageDataKey) as Language;
     const keyVersion = node.getPluginData(this.keyVersionDataKey) === '' ? -1 : parseInt(node.getPluginData(this.keyVersionDataKey), 10);
-    const fillins = node.getPluginData(this.fillinsKey) === '' ? {} : JSON.parse(node.getPluginData(this.fillinsKey));
 
     const keyType = node.getPluginData(this.keyTypeDataKey) === '' || node.getPluginData(this.keyTypeDataKey) === undefined ? KeyState.Unset : node.getPluginData(this.keyTypeDataKey) as KeyState;
     const key = node.getPluginData(this.keyDataKey) === '' ? undefined : node.getPluginData(this.keyDataKey);
@@ -879,7 +916,239 @@ export default class LocalizedLabelManager {
       fillins,
       derivedKey: derivable ? derivedName : undefined,
       pluralId: pluralId as Plural,
-      text,
+      characters: text,
+      ops: tokenizedTextResult.deltaOps,
+      warnings: tokenizedTextResult.warnings,
+      labelStyle: tokenizedTextResult.labelStyle,
+    };
+  }
+
+  private getPlaceholderDeltaOps(characters: string, fillins: Fillins) {
+    const placeholderDeltaOps = [] as DeltaOp[];
+    const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(fillins);
+
+    // eslint-disable-next-line for-direction, no-plusplus
+    for (let i = placeholderByFillin.length - 1; i >= 0; i--) {
+      const currentPlaceholderName = placeholderByFillin[i];
+      const fillinValue = fillins[currentPlaceholderName].value;
+
+      let lastMatchIndex = 0;
+
+      while (lastMatchIndex !== -1) {
+        const markerLength = i + 1;
+        lastMatchIndex = characters.indexOf(fillinValue + MARKER_CHARACTER.repeat(markerLength), lastMatchIndex + 1);
+        if (lastMatchIndex !== -1) {
+          placeholderDeltaOps.push({
+            start: lastMatchIndex,
+            end: lastMatchIndex + markerLength + (`${fillinValue}`).length,
+            attributes: {
+              placeholder: {
+                invisibleMarkers: markerLength,
+                name: currentPlaceholderName,
+              },
+            },
+          });
+        }
+      }
+    }
+    return placeholderDeltaOps;
+  }
+
+  private getTextStyleDeltaOps(node: TextNode) {
+    const textStyleDeltaOps = [] as DeltaOp[];
+    const textSegments = node.getStyledTextSegments(['fontName', 'textDecoration', 'hyperlink']);
+
+    textSegments.forEach((textSegment) => {
+      const italic = textSegment.fontName.style.toLowerCase().includes('italic');
+      const weightName = textSegment.fontName.style.replace('italic', '').replace(' ', '');
+      const bold = weightName.toLowerCase().includes('bold');
+      const { textDecoration } = textSegment;
+
+      let linkUrl = textSegment.hyperlink?.type === 'URL' ? textSegment.hyperlink?.value : undefined;
+      if (linkUrl && textSegment.hyperlink?.value.startsWith(this.helperDomain)) {
+        linkUrl = textSegment.hyperlink.value.substring(this.helperDomain.length);
+      }
+
+      textStyleDeltaOps.push({
+        start: textSegment.start,
+        end: textSegment.end,
+        attributes: {
+          textDecoration,
+          bold: bold ? true : undefined,
+          italic: italic ? true : undefined,
+          link: linkUrl,
+        },
+
+      });
+    });
+
+    return textStyleDeltaOps;
+  }
+
+  private getDeltaOps(node: TextNode, fillins: Fillins) {
+    const deltaOps = [] as DeltaOp[];
+    const textStyleDeltaOps = this.getTextStyleDeltaOps(node);
+    const placehodlderDeltaOps = this.getPlaceholderDeltaOps(node.characters, fillins);
+
+    // merge textsegments and placeholder segments
+    for (const textStyleDeltaOp of textStyleDeltaOps) {
+      console.log('processing:');
+      console.log(textStyleDeltaOp);
+      // eslint-disable-next-line no-plusplus
+      for (let i = 0; i < placehodlderDeltaOps.length; i++) {
+        const placehodlderDeltaOp = placehodlderDeltaOps[i];
+        if (!placehodlderDeltaOps[i].processed) {
+          if (textStyleDeltaOp.start === placehodlderDeltaOp.start
+            && textStyleDeltaOp.end === placehodlderDeltaOp.end) {
+            // style delta and placeholder match
+            // - add placeholder to textStyleOp and push the whole textStyleOp
+            textStyleDeltaOp.attributes.placeholder = placehodlderDeltaOp.attributes.placeholder;
+            deltaOps.push(textStyleDeltaOp);
+            placehodlderDeltaOp.processed = true;
+            textStyleDeltaOp.processed = true;
+          } else if (textStyleDeltaOp.start === placehodlderDeltaOp.start
+            && textStyleDeltaOp.end > (placehodlderDeltaOp.end - placehodlderDeltaOp.attributes.placeholder!.invisibleMarkers)
+            && textStyleDeltaOp.end < placehodlderDeltaOp.end) {
+            // style delta only formats the placeholder - but its end sits within the markers
+            // - no split needed but set end to the end of the text marker
+            textStyleDeltaOp.attributes.placeholder = placehodlderDeltaOp.attributes.placeholder;
+            textStyleDeltaOp.end = placehodlderDeltaOp.end;
+            textStyleDeltaOp.processed = true;
+            placehodlderDeltaOp.processed = true;
+            deltaOps.push(textStyleDeltaOp);
+          } else if (textStyleDeltaOp.start >= placehodlderDeltaOp.start
+            && textStyleDeltaOp.end <= placehodlderDeltaOp.end) {
+            // Segment starts and ends within the placeholder but don't cover it completly (previous cases)
+            // - we ignore this style
+            textStyleDeltaOp.processed = true;
+          } else if (textStyleDeltaOp.start < placehodlderDeltaOp.start
+            && textStyleDeltaOp.end >= (placehodlderDeltaOp.end - placehodlderDeltaOp.attributes.placeholder!.invisibleMarkers)) {
+            // start is before the placeholder and it covers it completly split it and move start
+            // - push delta before the placeholder
+            deltaOps.push({
+              start: textStyleDeltaOp.start,
+              end: placehodlderDeltaOp.start,
+              attributes: {
+                ...textStyleDeltaOp.attributes,
+              },
+            });
+            // push delta covering the placeholder
+            deltaOps.push({
+              start: placehodlderDeltaOp.start,
+              end: placehodlderDeltaOp.end,
+              attributes: {
+                ...textStyleDeltaOp.attributes,
+                ...placehodlderDeltaOp.attributes,
+              },
+            });
+            // placeholder is processed
+            placehodlderDeltaOp.processed = true;
+            // textStyleDeltaOp only if it ends with the placeholder
+            if (textStyleDeltaOp.end <= placehodlderDeltaOp.end) {
+              textStyleDeltaOp.processed = true;
+            } else {
+              textStyleDeltaOp.start = placehodlderDeltaOp.end;
+            }
+
+            if (!(textStyleDeltaOp.start < textStyleDeltaOp.end)) {
+              throw new Error('textStyleDeltaOp.start < textStyleDeltaOp.end');
+            }
+          } else if (textStyleDeltaOp.start < placehodlderDeltaOp.start
+            && textStyleDeltaOp.end >= placehodlderDeltaOp.start
+            && textStyleDeltaOp.end < (placehodlderDeltaOp.end - placehodlderDeltaOp.attributes.placeholder!.invisibleMarkers)) {
+            // start falls before a placeholder but it ends within it -> move end to the beginng
+            // - we cant process it yet since its bounds may be changed by later placeholder
+            textStyleDeltaOp.end = placehodlderDeltaOp.start;
+            deltaOps.push({
+              start: textStyleDeltaOp.start,
+              end: textStyleDeltaOp.end,
+              attributes: {
+                ...textStyleDeltaOp.attributes,
+              },
+            });
+            // placeholder is processed
+            textStyleDeltaOp.processed = true;
+          } else if (textStyleDeltaOp.start >= placehodlderDeltaOp.start
+            && textStyleDeltaOp.start < (placehodlderDeltaOp.end - placehodlderDeltaOp.attributes.placeholder!.invisibleMarkers)) {
+            // start falls into a placeholder - move it to the end of the placeholder
+            // - we cant process it yet since its bounds may be changed by later placeholder
+            textStyleDeltaOp.start = placehodlderDeltaOp.end;
+          } else if (textStyleDeltaOp.end > placehodlderDeltaOp.start
+            && textStyleDeltaOp.end < (placehodlderDeltaOp.end - placehodlderDeltaOp.attributes.placeholder!.invisibleMarkers)) {
+            // end falls into hello within helloXXX of the placeholder move it to the start
+            textStyleDeltaOp.end = placehodlderDeltaOp.start;
+
+            textStyleDeltaOp.processed = true;
+            if (textStyleDeltaOp.end < textStyleDeltaOp.start) {
+              // still a legal rang - add it finaly
+              deltaOps.push(textStyleDeltaOp);
+            }
+          }
+        }
+      }
+
+      if (!textStyleDeltaOp.processed) {
+        if (!(textStyleDeltaOp.start < textStyleDeltaOp.end)) {
+          throw new Error('textStyleDeltaOp.start < textStyleDeltaOp.end');
+        }
+
+        deltaOps.push(textStyleDeltaOp);
+      }
+    }
+
+    const uncoveredPlaceholderOps = placehodlderDeltaOps.filter((placehodlderDeltaOp) => !placehodlderDeltaOp.processed);
+    for (const uncoveredPlaceholderOp of uncoveredPlaceholderOps) {
+      uncoveredPlaceholderOp.ignoreForLabelStyle = true;
+      deltaOps.push(uncoveredPlaceholderOp);
+    }
+
+    return deltaOps.sort((op1, op2) => op1.start - op2.start);
+  }
+
+  private extractDeltaOpsAndLabelStyles(node: TextNode, fillins: Fillins): { warnings: string[], deltaOps: any[], labelStyle: LabelStyle } {
+    const fontFamilies = new Set<string>();
+
+    const labelStyle = {
+      fontFamily: undefined,
+      bold: undefined,
+      italic: undefined,
+      textDecoration: undefined,
+    } as LabelStyle;
+
+    const deltaOps = this.getDeltaOps(node, fillins);
+
+    // get label styles
+    for (const deltaOp of deltaOps) {
+      if (deltaOp.ignoreForLabelStyle) {
+        console.log('ignoring placeholders not wrapped by styles:');
+        console.log(deltaOp);
+        continue;
+      }
+      if (deltaOp.attributes.fontFamily) {
+        fontFamilies.add(deltaOp.attributes.fontFamily);
+      }
+
+      labelStyle.bold = labelStyle.bold !== undefined && labelStyle.bold !== deltaOp.attributes.bold ? 'MIXED' : deltaOp.attributes.bold;
+      labelStyle.italic = labelStyle.italic !== undefined && labelStyle.italic !== deltaOp.attributes.italic ? 'MIXED' : deltaOp.attributes.italic;
+      labelStyle.textDecoration = labelStyle.textDecoration !== undefined && labelStyle.textDecoration !== deltaOp.attributes.textDecoration ? 'MIXED' : deltaOp.attributes.textDecoration;
+      labelStyle.fontFamily = labelStyle.fontFamily !== undefined && labelStyle.fontFamily !== deltaOp.attributes.fontFamily ? 'MIXED' : deltaOp.attributes.fontFamily;
+    }
+
+    // reset unmixed label stlyes
+    for (const deltaOp of deltaOps) {
+      deltaOp.attributes.bold = labelStyle.bold !== 'MIXED' ? undefined : deltaOp.attributes.bold;
+      deltaOp.attributes.italic = labelStyle.italic !== 'MIXED' ? undefined : deltaOp.attributes.italic;
+      deltaOp.attributes.textDecoration = labelStyle.textDecoration !== 'MIXED' ? undefined : deltaOp.attributes.textDecoration;
+      deltaOp.attributes.fontFamily = labelStyle.fontFamily !== 'MIXED' ? undefined : deltaOp.attributes.fontFamily;
+    }
+
+    const warnings = [] as string[];
+
+    return {
+      warnings,
+      // if we have no style changes within the label we don't handle styling
+      deltaOps, // : deltaOps.length > 1 ? deltaOps : [],
+      labelStyle,
     };
   }
 

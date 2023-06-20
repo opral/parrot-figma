@@ -15,6 +15,7 @@ import TextField from '../../compontents/textfield/TextField';
 import TranslationKeyListView from '../translationkeys/TranslationKeyListView';
 import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
 import PlaceholderEditorListItem from '../../compontents/placeholder/PlaceholderEditor';
+import { Fillins } from '../../../lib/keystore/TranslationKey';
 
 type LocalizedLabelListItemProps = {
 
@@ -30,7 +31,6 @@ export default function LocalizedLabelListItem({
   localizedLabelManager,
   selected,
 }: LocalizedLabelListItemProps) {
-
   const translationKeyStore = localizedLabelManager.keyStore;
   const translatedKey = localizedLabel.keyType !== KeyState.Unset ? translationKeyStore.getKey(localizedLabel.key!) : undefined;
 
@@ -125,7 +125,7 @@ export default function LocalizedLabelListItem({
           <div className="text-field-text editing ">
             <input
               style={{
-                position: 'inherit'
+                position: 'inherit',
               }}
               defaultValue={localizedLabel.name}
               onChange={(e) => { setNewKey(e.target.value); }}
@@ -195,7 +195,7 @@ export default function LocalizedLabelListItem({
                         localizedLabelManager.setNoKey(localizedLabel);
                       } else if (selectedOption.value === 'select-key') {
                         setSearchKey({
-                          search: localizedLabel.text,
+                          search: localizedLabel.characters,
                         });
                       } else if (selectedOption.value === 'create-key') {
                         setNewKey(localizedLabel.derivedKey ?? '');
@@ -211,7 +211,7 @@ export default function LocalizedLabelListItem({
                     let noMatch = true;
                     let defaulValueFound = false;
 
-                    const query = MemoryTranslationKeyStore.toQueryObject(`exact_text:true key:* ${localizedLabel.text}`);
+                    const query = MemoryTranslationKeyStore.toQueryObject(`exact_text:true key:* ${localizedLabel.characters}`);
                     const { matches } = translationKeyStore.findKeys(query);
                     for (const key of Object.keys(matches)) {
                       // try to use the language of the root frame
@@ -321,12 +321,15 @@ export default function LocalizedLabelListItem({
                           onSave={async () => {
                             localizedLabelManager.commitUndo();
                           }}
-                          onChange={async (value: string) => {
+                          onChange={async (value: string, fillins: Fillins) => {
+                            debugger;
                             localizedLabelManager.updateLabelProperties(localizedLabel.nodeId, {
-                              translation: value,
+                              translationHTML: value,
+                              fillins,
                             });
                           }}
-                          text={localizedLabel.translation}
+                          fillins={localizedLabel.getFillins()}
+                          translationHTML={localizedLabel.translationHTML}
                           keyName={localizedLabel.key}
                           translationKeyStore={translationKeyStore}
                         />

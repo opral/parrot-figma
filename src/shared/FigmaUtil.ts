@@ -275,7 +275,7 @@ export default class FigmaUtil {
   }
 
   async selectNodes(nodeIds: string[]) {
-    console.log('update selection');
+    
     const nodesToSelect = [] as SceneNode[];
 
     for (const nodeId of nodeIds) {
@@ -289,7 +289,7 @@ export default class FigmaUtil {
 
     if (nodesToSelect.length > 0) {
       figma.currentPage.selection = nodesToSelect;
-      console.log('update selection  - done');
+      
     }
   }
 

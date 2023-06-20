@@ -24,6 +24,7 @@ import { UITranslationKey } from '../../../lib/keystore/UITranslationKey';
 import { PlaceholderView } from '../../compontents/translationEditor/PlaceholderView';
 import PlaceholderEditorListItem from '../../compontents/placeholder/PlaceholderEditor';
 import AsyncImage from './AsyncImage';
+// import ReactQuill from 'react-quill';
 
 interface VersionEntry {
   version: number,
@@ -284,6 +285,7 @@ export default function TranslationKeyListItem({
                   <div className="grid-item-translation translation-container translation">
                     <TranslationEditor
                       keyName={translationKey.keyName}
+                      fillins={translationKey.defaultFillins}
                       editable={select === undefined}
                       match={searchMatch?.textMatches[language]?.[plural as Plural]}
                       onSave={async (text: any) => {
@@ -296,9 +298,10 @@ export default function TranslationKeyListItem({
                           language, plural: plural as Plural, text, skip,
                         }]);
                       }}
-                      text={translationKey.translations[language as Language]?.[plural as Plural]?.text}
+                      translationHTML={translationKey.translations[language as Language]?.[plural as Plural]?.text}
                       translationKeyStore={translationKeyStore}
                     />
+                    
 
                   </div>
                   <div className="grid-item-actions">

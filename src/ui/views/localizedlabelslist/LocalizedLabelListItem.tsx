@@ -322,7 +322,6 @@ export default function LocalizedLabelListItem({
                             localizedLabelManager.commitUndo();
                           }}
                           onChange={async (value: string, fillins: Fillins) => {
-                            debugger;
                             localizedLabelManager.updateLabelProperties(localizedLabel.nodeId, {
                               translationHTML: value,
                               fillins,

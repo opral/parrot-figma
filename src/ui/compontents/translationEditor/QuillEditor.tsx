@@ -86,7 +86,6 @@ interface PlaceholderValue {
 
 class PlaceholderBlot extends Inline {
   static create(value: PlaceholderValue) {
-    debugger;
     const node = super.create() as HTMLElement;
     node.setAttribute('type', value.type);
     node.setAttribute('fillin', value.fillin);
@@ -95,7 +94,6 @@ class PlaceholderBlot extends Inline {
   }
 
   static value(node: HTMLElement): PlaceholderValue {
-    debugger;
     return {
       name: node.innerText!,
       type: node.getAttribute('type')! as PlaceholderType,
@@ -111,11 +109,6 @@ class PlaceholderBlot extends Inline {
     };
   }
 
-  /* formats() {
-    debugger;
-    const superFormats = super.formats();
-    return superFormats;
-  } */
 }
 
 PlaceholderBlot.blotName = 'placeholder';

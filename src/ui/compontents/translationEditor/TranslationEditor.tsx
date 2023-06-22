@@ -16,12 +16,14 @@ import TranslationView from './TranslationView';
 import QuillEditor from './QuillEditor';
 import { Fillins } from '../../../lib/keystore/TranslationKey';
 
+
 type TranslationEditorProps = {
   keyName?: string,
   fillins: Fillins,
   translationHTML?: string,
-  onSave: Function,
+  onSave?: Function,
   onChange?: Function,
+  onBlur?: Function,
   match: { start: number, length: number } | undefined
   editable: boolean,
   translationKeyStore: MemoryTranslationKeyStore,
@@ -32,12 +34,13 @@ type TranslationEditorProps = {
 //  - label editor - text should contain the placeholders but the editor needs to know the fillins?
 
 export default function TranslationEditor({
-  translationHTML, keyName, fillins, onSave, match, editable = true, translationKeyStore, onChange,
+  translationHTML, keyName, fillins, onSave, onBlur, match, editable = true, translationKeyStore, onChange,
 }: TranslationEditorProps) {
   const quillContainerRef = useRef<HTMLInputElement>(null);
   let quillEditor : any;
 
   const [textState, setTextState] = useState(translationHTML);
+  const [fillinsState, setFillinsState] = useState(fillins);
   const [editingState, setEditingState] = useState(false);
   const [isMouseOver, setMouseOver] = useState(false);
 
@@ -50,11 +53,18 @@ export default function TranslationEditor({
       onChange(value, updatedFillins);
     }
     setTextState(value);
+    setFillinsState(updatedFillins);
   };
 
   useEffect(() => {
     setTextState(translationHTML);
   }, [translationHTML]);
+
+
+  useEffect(() => {
+    setFillinsState(fillins);
+  }, [fillins]);
+
 
   let textToUse;
 
@@ -65,11 +75,15 @@ export default function TranslationEditor({
   } else {
     textToUse = textState;
   }
+
+  
+
   return (
     <OutsideClickHandler
       onOutsideClick={() => {
         setEditingState(!editingState);
-        onSave(textState);
+        onBlur?.();
+        onSave?.(textState);
       }}
       disabled={!editingState}
       display="contents"
@@ -103,15 +117,15 @@ export default function TranslationEditor({
           )}
 
         </div>
-        { editingState && (
+        { onSave !== undefined && editingState && (
         <>
           <input
             type="button"
             value="Save"
-            disabled={textState === translationHTML}
+            disabled={textState === translationHTML && JSON.stringify(fillinsState) === JSON.stringify(fillins)}
             onClick={() => {
               setEditingState(!editingState);
-              onSave(textState);
+              onSave?.(textState, fillinsState);
             }}
           />
           <input
@@ -121,16 +135,7 @@ export default function TranslationEditor({
               setEditingState(!editingState);
             }}
           />
-          {/* text !== undefined && text !== textState && (
-
-          <div onClick={() => {
-            setTextState(text!);
-          }}
-          >
-            <div>Figma: </div>
-            { text! }
-          </div>
-        ) */}
+          
         </>
         )}
       </div>

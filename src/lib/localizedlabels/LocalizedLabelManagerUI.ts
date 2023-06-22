@@ -9,6 +9,7 @@ import ChangeEvent from './ChangeEvent';
 import { ILocalizedLabelManagerUI, UILocalizedLabel } from './UILocalizedLabel';
 import { Fillins } from '../keystore/TranslationKey';
 import LinksLoadedEvent from './LinksLoadedEvent';
+import { placeholder } from '@codemirror/view';
 
 export default class LocalizedLabelManagerUI extends EventTarget implements ILocalizedLabelManagerUI {
   // mapping from nodeId to localizied label instance
@@ -61,7 +62,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
       if (cachedLabel.state!.behind !== label.state!.behind
         || cachedLabel.state!.modified !== label.state!.modified
-        || cachedLabel.state!.orginalText !== label.state!.orginalText) {
+        || cachedLabel.state!.orginalTranslationHTML !== label.state!.orginalTranslationHTML) {
         stateDiffers = true;
       }
 
@@ -102,6 +103,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
           && cachedLabel.labelStyle.italic === label.labelStyle.italic
           && cachedLabel.labelStyle.textDecoration === label.labelStyle.textDecoration
           && JSON.stringify(cachedLabel.ops) === JSON.stringify(label.ops)
+          && JSON.stringify(cachedLabel.fillins) === JSON.stringify(label.fillins)
           && cachedLabel.x === label.x
           && cachedLabel.y === label.y) {
         return false;
@@ -359,7 +361,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   async revertDesignChanges(localizedLabel: UILocalizedLabel) {
     await this.updateLabelProperties(localizedLabel.nodeId, {
       keyVersion: localizedLabel.keyVersion,
-      translationHTML: localizedLabel.state?.orginalText,
+      translationHTML: localizedLabel.state?.orginalTranslationHTML,
     });
 
     await this.localizedLabelMangerSandbox.commitUndo();
@@ -382,12 +384,13 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
       // TODO check if design is sync with translation - if not offer update with prompt
     } else {
+      
       translationKey = await this.keyStore.createKey(keyToLinkTo, [{
         language,
         plural,
-        text: localizedLabel.characters,
+        text: localizedLabel.translationHTML,
         skip: false,
-      }], plural !== Plural.OTHER);
+      }], plural !== Plural.OTHER, localizedLabel.fillins);
       await this.updateLabelProperties(localizedLabel.nodeId, {
         key: keyToLinkTo,
         keyType: KeyState.Linked,
@@ -480,6 +483,14 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
     const key = changedProperties.key ?? localizedLabelCached.key;
     const translationKey = key ? this.keyStore.getKey(key) : undefined;
+
+    if (translationKey?.defaultFillins) {
+      for (const [placeholderName, fillin] of Object.entries(translationKey.defaultFillins)) {
+        if (!labelFillins[placeholderName] || labelFillins[placeholderName].default === true) {
+          labelFillins[placeholderName] = fillin;
+        }
+      }
+    }
 
     const changedPropertiesToForwared = changedProperties as SandboxUpdateLabelProperties;
 

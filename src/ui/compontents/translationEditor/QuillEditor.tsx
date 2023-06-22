@@ -19,10 +19,12 @@ import Quill, {
   Delta as DeltaType,
 } from 'quill';
 import { Fillins, PlaceholderType } from '../../../lib/keystore/TranslationKey';
-import ParrotTheme from './QuillTheme';
+import ParrotTheme from './quill/QuillTheme';
+import ParrotToolbar from './quill/Toolbar';
 
 const Delta = Quill.import('delta') as typeof DeltaType;
 Quill.register('themes/parrot', ParrotTheme, true);
+Quill.register('modules/toolbar', ParrotToolbar, false);
 
 // https://stackoverflow.com/questions/50129438/creating-a-quill-js-theme
 // const BubbleTheme = Quill.import('themes/bubble');
@@ -58,9 +60,6 @@ class LinkBlot extends Inline {
     const node = super.create();
     // Sanitize url value if desired
     node.setAttribute('href', value);
-    // Okay to set other non-format related attributes
-    // These are invisible to Parchment so must be static
-    node.setAttribute('target', '_blank');
     return node;
   }
 
@@ -81,6 +80,9 @@ const BlockEmbed = Quill.import('blots/block');
 interface PlaceholderValue {
   name: string,
   type: PlaceholderType,
+  format?: string,
+  argumentPosition?: number,
+  unnamed: boolean,
   fillin: string,
 }
 
@@ -88,6 +90,21 @@ class PlaceholderBlot extends Inline {
   static create(value: PlaceholderValue) {
     const node = super.create() as HTMLElement;
     node.setAttribute('type', value.type);
+    value.format = 'test';
+    if (value.format) {
+      node.setAttribute('format', value.format);
+    }
+
+    value.argumentPosition = 10;
+    if (value.argumentPosition) {
+      node.setAttribute('arg', `${value.argumentPosition}`);
+    }
+
+    value.unnamed = true;
+    if (value.unnamed) {
+      node.setAttribute('unnamed', '');
+    }
+
     node.setAttribute('fillin', value.fillin);
     node.setAttribute('contenteditable', 'false');
     return node;
@@ -97,18 +114,23 @@ class PlaceholderBlot extends Inline {
     return {
       name: node.innerText!,
       type: node.getAttribute('type')! as PlaceholderType,
+      unnamed: node.getAttribute('unnamed') !== null,
+      format: node.getAttribute('format') ?? undefined,
       fillin: node.getAttribute('fillin')!,
+      argumentPosition: node.getAttribute('arg') ? parseInt(node.getAttribute('arg')!, 10) : undefined,
     };
   }
 
   static formats(domNode: HTMLElement) {
     return {
       type: domNode.getAttribute('type')!,
+      unnamed: domNode.getAttribute('unnamed') !== null,
+      format: domNode.getAttribute('format') ?? undefined,
       fillin: domNode.getAttribute('fillin')!,
       name: domNode.innerText!,
+      argumentPosition: domNode.getAttribute('arg') ? parseInt(domNode.getAttribute('arg')!, 10) : undefined,
     };
   }
-
 }
 
 PlaceholderBlot.blotName = 'placeholder';
@@ -116,7 +138,7 @@ PlaceholderBlot.tagName = 'ph';
 
 Quill.register(PlaceholderBlot);
 
-const toolbarContainer = ['bold', 'italic', 'link', 'placeholder'];
+const toolbarContainer = ['bold', 'italic', 'underline', 'strike'];
 
 type QuillEditorProps = {
   value?: string,
@@ -162,8 +184,10 @@ export default function QuillEditor({
       }
 
       let cleanValue = quillEditor!.root.innerHTML.split('<p>').join('').split('</p>').join('');
+      debugger;
 
       const regex = /.<span contenteditable="false">([^<]*)<\/span>./g;
+      cleanValue = cleanValue.replace(/fillin="([^"])*" contenteditable="false">/g, '>');
       cleanValue = cleanValue.replace(regex, (match, group1) => group1);
 
       onChange(cleanValue, updatedFillins);
@@ -213,22 +237,18 @@ export default function QuillEditor({
   }, [isEditing]);
 
   function updateQuill(quillEditorRef: Quill, updatedValue: string, fillins: Fillins) {
-    console.log('value was set from outside');
     if (quillEditorRef) {
-      console.log(`updating quil${updatedValue}`);
+      const delta = (quillEditorRef.clipboard as any).convert({ html: updatedValue });
 
-      /* const delta = (quillEditorRef.clipboard as any).convert({ html: updatedValue });
-
-      console.log('OPERATIONS:');
       for (const ops of delta.ops!) {
-        const placeholderName = ops.insert?.placeholder?.name;
+        const placeholderName = ops.attributes?.placeholder?.name;
         if (placeholderName) {
-        //   ops.insert!.placeholder!.fillin = fillins[placeholderName]?.value ?? 'oh oh';
+          ops.attributes.placeholder!.fillin = fillins[placeholderName]?.value ?? 'oh oh';
         }
       }
 
-      quillEditorRef.setContents(delta); */
-      quillEditorRef?.clipboard.dangerouslyPasteHTML(updatedValue);
+      quillEditorRef.setContents(delta, 'silent');
+      // quillEditorRef?.clipboard.dangerouslyPasteHTML(updatedValue);
 
       // quillEditorRef.setSelection(0, 0, 'silent' as Sources);
     }
@@ -236,7 +256,6 @@ export default function QuillEditor({
 
   useEffect(() => {
     if (editorDivRef.current) {
-      console.log('creating editor');
       const editor = new Quill(editorDivRef.current, {
         theme: 'parrot',
         modules: {
@@ -246,6 +265,14 @@ export default function QuillEditor({
               placeholder(value: any) {
                 // eslint-disable-next-line react/no-this-in-sfc
                 this.quill.theme.tooltip.edit('placeholder');
+              },
+              link(value: any) {
+                // console.log(this.quill.getFormat(this.quill.getSelection()!));
+                if (false && !value) {
+                  this.quill.format('link', false);
+                } else {
+                  this.quill.theme.tooltip.edit('link');
+                }
               },
             },
           },
@@ -262,6 +289,7 @@ export default function QuillEditor({
         },
         readOnly: true,
       });
+      editor.root.setAttribute('spellcheck', 'false');
 
       setQuillEditor(editor);
 
@@ -274,7 +302,6 @@ export default function QuillEditor({
   }, [editorDivRef]);
 
   useEffect(() => {
-    console.log('setting events on editor');
     quillEditor?.on('editor-change', onEditorChange);
     return () => {
       quillEditor?.off('editor-change', onEditorChange);
@@ -290,7 +317,7 @@ export default function QuillEditor({
     setTextState(cleanValue);
 
     updateQuill(quillEditor!, value ?? '', fillins);
-  }, [value]);
+  }, [value, fillins]);
 
   return (
     <OutsideClickHandler

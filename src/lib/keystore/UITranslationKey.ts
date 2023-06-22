@@ -98,7 +98,17 @@ export class UITranslationKey implements TranslationKey {
     // (?:\.(\d+))?        Non-capturing group for optional decimalPlaces preceded by a dot
     //                     (\d+) captures one or more digits as decimalPlaces
     // \]\]                Matches the closing double square brackets
-    const pattern = /\[\[([A-Za-z_]{2,})?(?:#(\d+))?(?::*([df])(?:\.(\d+))?)?\]\]/g;
+
+    
+    const pattern = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;
+
+    // type -> 2
+    // format -> 4
+    // arg -> 6
+    // unnamed -> 7
+    // name -> -> 10
+    // name, argumentPosition, unnamed, decimalplaces
+    // 
 
     const parameters = [] as Placeholder[];
     let parameterNumber = 0;
@@ -107,8 +117,8 @@ export class UITranslationKey implements TranslationKey {
     let match;
     // eslint-disable-next-line no-cond-assign
     while ((match = pattern.exec(text)) !== null) {
-      let name = match[1];
-      const argumentPosition = match[2] ? parseInt(match[2], 10) : undefined;
+      let name = match[10];
+      const argumentPosition = match[6] ? parseInt(match[6], 10) : undefined;
       let named = true;
       if (!name) {
         unnamedIndex += 1;
@@ -116,8 +126,8 @@ export class UITranslationKey implements TranslationKey {
         name = `unnamed_parameter__${unnamedIndex}`;
       }
 
-      const type = (match[3] || 's') as PlaceholderType;
-      const decimalPlaces = match[4] ? parseInt(match[4], 10) : undefined;
+      const type = (match[2] || 's') as PlaceholderType;
+      const decimalPlaces = undefined;// TODO #8 match[4] ? parseInt(match[4], 10) : undefined;
 
       parameters.push({
         named,
@@ -128,7 +138,7 @@ export class UITranslationKey implements TranslationKey {
         decimalPlaces,
         specifiedArgumentPosition: argumentPosition,
         positionInString: match.index,
-        length: match[0].length,
+        length: name.length,
       });
       parameterNumber++;
     }

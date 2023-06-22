@@ -268,6 +268,33 @@ What we want from ui point of view:
  - [x] deleting a key gives a crash
  - [x] baselanguage selection does not work in settings screen
  - [x] missing translation filter
+ - [x] placeholder not working if at position 0
+ - [ ] command z not working for fillin change
+ - [ ] changing a placeholder name in one lable - does not
+ - [ ] leading linebreak in label - auto removal fix
+ - [ ] label formating/link vs inline formatting - recognize link on label
+    - [ ] label formatting not removed from quill but from the renderview?
+ - [x] styling
+ - [ ] disable placeholder button on selection of multiple placeholders / mixed approach
+ - [ ] formatting label <-> key
+    - [x] placeholder renaming hinders replacement in label
+    - [x] placeholder not saved to key on creation
+    - [ ] default placeholder not working
+        - create a label with a placeholder 
+        - create a key based on that label
+        - create another label and link it to the key
+        - change default placeholder 
+        Expexted: the value in the label should be updated
+    - [x] changing the placeholder value in the key leads to unsynced label (fillin part of the serialized key) -> remove fillin=\\"*\\" contenteditable=\\"false\\"
+ - [ ] placeholder types not implemented
+ - [ ] type and format not implemented
+
+ - [x] remove save button from label
+ - [ ] placeholder not working when no text surrounding it
+ - [ ] error when deleting the whole label text
+ - [ ] strikethrough/underline handling
+ - [ ] unsupported url - only allow relative urls with leading / or http / https / mailto prefix  
+
  - [ ] search and replace 
  - [ ] esc key in drawer and call to action (cancel)
  - [ ] Change language - auto translate of links - remove link 

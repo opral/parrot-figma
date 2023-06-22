@@ -11,7 +11,7 @@ import OutsideClickHandler from 'react-outside-click-handler';
 import { fileLoader } from 'ejs';
 import { Language } from '../../../lib/base/Language';
 import { Plural, getPluralFormsByLanguage } from '../../../lib/base/Plural';
-import { HistoryTag, Placeholder } from '../../../lib/keystore/TranslationKey';
+import { Fillins, HistoryTag, Placeholder } from '../../../lib/keystore/TranslationKey';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
 
 import FigmaUtil from '../../../shared/FigmaUtil';
@@ -288,7 +288,7 @@ export default function TranslationKeyListItem({
                       fillins={translationKey.defaultFillins}
                       editable={select === undefined}
                       match={searchMatch?.textMatches[language]?.[plural as Plural]}
-                      onSave={async (text: any) => {
+                      onSave={async (text: any, fillins: Fillins) => {
                         let skip = translationKey.translations[language as Language]?.[plural as Plural]?.skip ?? false;
 
                         if (text !== undefined && text !== '') {
@@ -296,12 +296,11 @@ export default function TranslationKeyListItem({
                         }
                         await localizedLabelManager.updateKey(translationKey.keyName!, [{
                           language, plural: plural as Plural, text, skip,
-                        }]);
+                        }], undefined, fillins);
                       }}
                       translationHTML={translationKey.translations[language as Language]?.[plural as Plural]?.text}
                       translationKeyStore={translationKeyStore}
                     />
-                    
 
                   </div>
                   <div className="grid-item-actions">
@@ -426,7 +425,7 @@ export default function TranslationKeyListItem({
             {translationKey.placeholders && Object.entries(translationKey.placeholders).map((entry, i, array) => (
               <PlaceholderEditorListItem
                 placeholder={entry[1]}
-                fillin={translationKey.defaultFillins![entry[0]]!.value}
+                fillin={translationKey.defaultFillins![entry[0]]?.value ?? ''}
                 onValueChange={(placeholderName, fillinValue) => {
                   const newFillins = {
                     ...defaultFillins, // Copy the old fields

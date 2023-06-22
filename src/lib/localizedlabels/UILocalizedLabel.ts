@@ -64,7 +64,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   characters: string;
 
-  state?: { behind: number; orginalText?: string | undefined; modified: boolean; } | undefined;
+  state?: { behind: number; orginalTranslationHTML?: string | undefined; modified: boolean; } | undefined;
 
   textChangedAfterGeneration: boolean;
 
@@ -127,8 +127,6 @@ export class UILocalizedLabel implements LocalizedLabel {
   static toHtml(text: string, ops: DeltaOp[], fillins: Fillins, trimLabelStyles: boolean) {
     const deltaOps = [] as DeltaOperation[];
 
-    
-
     for (const op of ops) {
       if (op.attributes.placeholder) {
         const insert = op.attributes.placeholder.name;
@@ -156,28 +154,23 @@ export class UILocalizedLabel implements LocalizedLabel {
     const tempCont = document.createElement('div');
     (new Quill(tempCont)).setContents(delta);
     let htmlContent = tempCont.getElementsByClassName('ql-editor')[0].innerHTML;
-
-    /*for (let i = placeholderByFillin.length - 1; i >= 0; i--) {
-      const currentPlaceholderName = placeholderByFillin[i];
-      const filinValue = fillins[currentPlaceholderName].value;
-      const markerLength = i + 1;
-
-      htmlContent = htmlContent.split(filinValue + MARKER_CHARACTER.repeat(markerLength)).join(`<ph type="string" fillin="${filinValue}">${currentPlaceholderName}</ph>`);
-    }*/
-
-    console.log(htmlContent);
+    // remove all quill helper attributes
+    
+    htmlContent = htmlContent.replace(/fillin="([^"])*" contenteditable="false">/g, '>');
     return htmlContent.split('<p>').join('').split('</p>').join('');
   }
 
   static toTextAndOps(html: string, fillins: Fillins) {
-    const pattern = /<ph type="([^"]*)"([^>])*>([^<]*)<\/ph>/g;
+    const pattern = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;
 
     const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(fillins);
     // const wholeMatch = paramMatch[0];
     // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
     // const name = paramMatch[2];
 
-    const htmlWithFilledPlaceholders = html.replace(pattern, (match, type, otherTagsGroup, name, _argumentPosition) => {
+    
+    const htmlWithFilledPlaceholders = html.replace(pattern, (match, _helper1, type, _helper3, format, _helper5, argumentPosition, unnamed, _helper8, _helper9, name) => {
+      
       const placeholderName = name;
       if (placeholderName && fillins[placeholderName]) {
         const extensionLength = placeholderByFillin.indexOf(placeholderName) + 1;
@@ -342,12 +335,12 @@ export class UILocalizedLabel implements LocalizedLabel {
    * @param localizedLabel the label to provide the state for
    * @returns
    */
-  getState(): { behind: number, orginalText?: string, modified: boolean } {
+  getState(): { behind: number, orginalTranslationHTML?: string, modified: boolean } {
     const state = {
       modified: false,
       translationDeleted: false,
       behind: 0,
-      orginalText: undefined as string | undefined,
+      orginalTranslationHTML: undefined as string | undefined,
     };
 
     const translatedKey = this.keyType !== KeyState.Unset ? this.manager.keyStore.getKey(this.key!) : undefined;
@@ -364,9 +357,8 @@ export class UILocalizedLabel implements LocalizedLabel {
 
         // eslint-disable-next-line no-param-reassign
         if (translationHtml !== this.translationHTML) {
-          const filledTranslation = translationHtml ? UILocalizedLabel.toText(translationHtml, this.fillins) : 'missing translation!'; // TODO #9 how to deal with missing translations?
           state.modified = true;
-          state.orginalText = filledTranslation;
+          state.orginalTranslationHTML = translationHtml;
         }
       }
     }

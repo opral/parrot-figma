@@ -1,6 +1,7 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable class-methods-use-this */
 import { t } from 'i18next';
+import { debug } from 'console';
 import { Language } from '../base/Language';
 import { KeyState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../base/Plural';
@@ -42,7 +43,8 @@ export interface DeltaOp {
   ignoreForLabelStyle?: boolean
 }
 
-export const MARKER_CHARACTER = '​';// 'X'; // '​';
+export const MARKER_CHARACTER = '​';
+// export const MARKER_CHARACTER = 'X​';
 export default class LocalizedLabelManager {
   translationKeyStore?: FigmaFileTranslationKeyStore;
 
@@ -927,27 +929,36 @@ export default class LocalizedLabelManager {
     const placeholderDeltaOps = [] as DeltaOp[];
     const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(fillins);
 
+    
     // eslint-disable-next-line for-direction, no-plusplus
     for (let i = placeholderByFillin.length - 1; i >= 0; i--) {
       const currentPlaceholderName = placeholderByFillin[i];
       const fillinValue = fillins[currentPlaceholderName].value;
 
-      let lastMatchIndex = 0;
+      let matchIndex = 0;
+      const markerLength = i + 1;
 
-      while (lastMatchIndex !== -1) {
-        const markerLength = i + 1;
-        lastMatchIndex = characters.indexOf(fillinValue + MARKER_CHARACTER.repeat(markerLength), lastMatchIndex + 1);
-        if (lastMatchIndex !== -1) {
-          placeholderDeltaOps.push({
-            start: lastMatchIndex,
-            end: lastMatchIndex + markerLength + (`${fillinValue}`).length,
-            attributes: {
-              placeholder: {
-                invisibleMarkers: markerLength,
-                name: currentPlaceholderName,
+      while (matchIndex !== -1) {
+        matchIndex = characters.indexOf(fillinValue + MARKER_CHARACTER.repeat(markerLength), matchIndex);
+
+        if (matchIndex !== -1) {
+          const start = matchIndex;
+          const end = matchIndex + markerLength + (`${fillinValue}`).length;
+
+          // ensure no conflict with previous match
+          if (placeholderDeltaOps.find((op) => op.start < end && start < op.end) === undefined) {
+            placeholderDeltaOps.push({
+              start,
+              end,
+              attributes: {
+                placeholder: {
+                  invisibleMarkers: markerLength,
+                  name: currentPlaceholderName,
+                },
               },
-            },
-          });
+            });
+          }
+          matchIndex += 1;
         }
       }
     }
@@ -992,8 +1003,8 @@ export default class LocalizedLabelManager {
 
     // merge textsegments and placeholder segments
     for (const textStyleDeltaOp of textStyleDeltaOps) {
-      console.log('processing:');
-      console.log(textStyleDeltaOp);
+      // console.log('processing:');
+      // console.log(textStyleDeltaOp);
       // eslint-disable-next-line no-plusplus
       for (let i = 0; i < placehodlderDeltaOps.length; i++) {
         const placehodlderDeltaOp = placehodlderDeltaOps[i];
@@ -1120,8 +1131,8 @@ export default class LocalizedLabelManager {
     // get label styles
     for (const deltaOp of deltaOps) {
       if (deltaOp.ignoreForLabelStyle) {
-        console.log('ignoring placeholders not wrapped by styles:');
-        console.log(deltaOp);
+        // ignoring placeholders not wrapped by styles
+        // eslint-disable-next-line no-continue
         continue;
       }
       if (deltaOp.attributes.fontFamily) {

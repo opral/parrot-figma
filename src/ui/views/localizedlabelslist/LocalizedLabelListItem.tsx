@@ -31,6 +31,7 @@ export default function LocalizedLabelListItem({
   localizedLabelManager,
   selected,
 }: LocalizedLabelListItemProps) {
+  
   const translationKeyStore = localizedLabelManager.keyStore;
   const translatedKey = localizedLabel.keyType !== KeyState.Unset ? translationKeyStore.getKey(localizedLabel.key!) : undefined;
 
@@ -318,7 +319,7 @@ export default function LocalizedLabelListItem({
                         <TranslationEditor
                           editable
                           match={undefined}
-                          onSave={async () => {
+                          onBlur={async () => {
                             localizedLabelManager.commitUndo();
                           }}
                           onChange={async (value: string, fillins: Fillins) => {
@@ -369,7 +370,7 @@ export default function LocalizedLabelListItem({
                 </span>
                 )}
 
-                { ((localizedLabel.keyType === KeyState.Linked && labelState.modified && labelState.orginalText !== undefined)) && ( // allow the user revert the changes in design to the last versioned text
+                { ((localizedLabel.keyType === KeyState.Linked && labelState.modified && labelState.orginalTranslationHTML !== undefined)) && ( // allow the user revert the changes in design to the last versioned text
                 <span
                   className="layerIcon iconWrapper button"
                   data-tooltip-trigger="span"

@@ -32,6 +32,39 @@
   padding-right: 5px;
 }
 
+.ql-toolbar {
+  display: flex;
+}
+
+.ql-formats {
+  flex: 0 0 auto;
+}
+
+.ql-placeholder-editor {
+  flex: 0 0 auto;
+  margin: 8px 12px 8px 0px;
+}
+
+.ql-placeholder-editor input {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 13px;
+  height: 100%;
+  outline: none;
+  width: 100px;
+}
+
+.ql-tooltip-editor.ql-editing {
+  height: 100%;
+  position: absolute;
+  width: 100%;
+  left: 0px;
+  top: 0px;
+  background-color: rgb(18, 13, 13);
+  display: block !important;
+}
+
 .cm-theme .cm-editor {
   outline: none !important;
   padding-left: 8px;
@@ -42,7 +75,6 @@
   padding: 0px !important;
 }
 
-
 .translation-editor-text * {
   color:  var(--figma-color-text);
   font-family: "Inter", sans-serif;
@@ -52,8 +84,6 @@
   line-height: 14px;
   letter-spacing: 0.01em;
 }
-
-
 
 .translation-editor-text em, .translation-editor-text em * {
   font-style: italic; 
@@ -67,17 +97,49 @@
   background-color: var(--figma-color-bg);
 }
 
-  .cm-theme {
-  }
-  .cm-theme .cm-selectionLayer {
-    z-index: -1 !important;
-  }
-
-  .translation-editor-text .cm-theme .cm-scroller {
-   /* background-color: var(--figma-color-bg);*/
+div.ql-tooltip {
+  position: absolute !important;
   
+  z-index: 1 !important;
+  background-color: var(--figma-color-bg-inverse, #fff) !important;
+  border: 1px solid var(--figma-color-border-strong, #d4d4d4) !important;
+  box-shadow: 0 4px 14px var(--figma-color-border-strong, rgba(0, 0, 0, .1)) !important;
+  color: var(--figma-color-text-tooltip, #333333) !important;
+  white-space: nowrap !important;
+  border-radius: 3px !important;
 }
 
+.ql-placeholder-fillin {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 13px;
+    outline: none;
+    padding: 3px 12px;
+
+}
+
+.cm-theme {
+}
+.cm-theme .cm-selectionLayer {
+  z-index: -1 !important;
+}
+
+.translation-editor-text .cm-theme .cm-scroller {
+  /* background-color: var(--figma-color-bg);*/
+}
+
+.ql-placeholder-group {
+  margin: 7px 12px 7px 0px;
+}
+
+.ql-bubble .ql-toolbar .ql-formats {
+  margin: 7px 0px 7px 12px !important;
+}
+
+.ql-bubble.ql-toolbar button, .ql-bubble .ql-toolbar button {
+  height: 20px !important;
+}
 
 ph {
   border: 1px solid blue;
@@ -86,7 +148,6 @@ ph {
   background-color: lightblue;
   margin-right: 1px;
 }
-
 
 .placholder-container.selected {
   border: 1px solid blue;
@@ -108,9 +169,11 @@ ph {
  padding-left: 5px;
  padding-right: 2px;
 }
+
 .placholder-argument-position-match {
   
 }
+
 .placholder-argument-position-missmatch {
   color: red;
 }

@@ -216,7 +216,7 @@ export class FigmaFileTranslationKeyStore {
 
     for (const placeholderName of Object.keys(placeholders)) {
       // if the placeholder does not exist or is flagged as default value, enrich with default value
-      const defaultValue = !(key.defaultFillins?.[placeholderName]?.default === false);
+      const defaultValue = key.defaultFillins?.[placeholderName]?.default === true;
       if (defaultValue) {
         const placehodlder = key.placeholders[placeholderName];
         let fillinDefaultValue = defaultStringFillinValue as string | number;
@@ -447,12 +447,12 @@ export class FigmaFileTranslationKeyStore {
       keyToUpdate.placeholders = placeholders;
     }
 
-    if (quantity !== undefined && quantity !== null && JSON.stringify(keyToUpdate.quantity) === JSON.stringify(quantity)) {
+    if (quantity !== undefined && quantity !== null && JSON.stringify(keyToUpdate.quantity) !== JSON.stringify(quantity)) {
       changeFound = true;
       keyToUpdate.quantity = quantity;
     }
 
-    if (defaultFillins !== undefined && defaultFillins !== null && JSON.stringify(keyToUpdate.defaultFillins) === JSON.stringify(defaultFillins)) {
+    if (defaultFillins !== undefined && defaultFillins !== null && JSON.stringify(keyToUpdate.defaultFillins) !== JSON.stringify(defaultFillins)) {
       changeFound = true;
       keyToUpdate.defaultFillins = defaultFillins;
     }

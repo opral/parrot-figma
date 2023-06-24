@@ -155,7 +155,7 @@ export default function QuillEditor({
   onFocus,
   onBlur,
 }: QuillEditorProps) {
-  const editorDivRef = useRef<HTMLDivElement>(null);
+  const editorPreRef = useRef<HTMLPreElement>(null);
   const [textState, setTextState, textStateRef] = useState(value);
   const [isEditing, setEditingState] = useState(false);
 
@@ -172,7 +172,8 @@ export default function QuillEditor({
     if (eventName === 'text-change' && source !== 'silent') {
       setTextState(quillEditor!.root.innerHTML);
       const contents = quillEditor?.getContents();
-
+      console.log('text-change---------------');
+      
       const updatedFillins = { ...fillins };
       for (const op of contents!.ops!) {
         const placeholder = op.attributes?.placeholder;
@@ -182,14 +183,18 @@ export default function QuillEditor({
           }
         }
       }
-
-      let cleanValue = quillEditor!.root.innerHTML.split('<p>').join('').split('</p>').join('');
-      debugger;
+      let cleanValue = quillEditor!.root.innerHTML;
+      console.log('text-change-------RAW');
+      console.log(cleanValue);
+      cleanValue = cleanValue.split('<p><br></p>').join('\n');
+      cleanValue.split('</p><p>').join('\n').split('<p>').join('').split('</p>').join('');
 
       const regex = /.<span contenteditable="false">([^<]*)<\/span>./g;
       cleanValue = cleanValue.replace(/fillin="([^"])*" contenteditable="false">/g, '>');
       cleanValue = cleanValue.replace(regex, (match, group1) => group1);
 
+      console.log('text-change-------CLEAN');
+      console.log(cleanValue);
       onChange(cleanValue, updatedFillins);
     } else if (eventName === 'selection-change') {
       // nothing for now
@@ -223,22 +228,28 @@ export default function QuillEditor({
       }
     };
 
-    editorDivRef.current?.addEventListener('focusin', focusInFunction);
-    editorDivRef.current?.addEventListener('focusout', focusOutFunction);
+    editorPreRef.current?.addEventListener('focusin', focusInFunction);
+    editorPreRef.current?.addEventListener('focusout', focusOutFunction);
 
-    editorDivRef.current?.addEventListener('keydown', keydownFunction);
+    editorPreRef.current?.addEventListener('keydown', keydownFunction);
 
     return () => {
-      editorDivRef.current?.removeEventListener('focusin', focusInFunction);
-      editorDivRef.current?.removeEventListener('focusout', focusOutFunction);
+      editorPreRef.current?.removeEventListener('focusin', focusInFunction);
+      editorPreRef.current?.removeEventListener('focusout', focusOutFunction);
 
-      editorDivRef.current?.removeEventListener('keydown', keydownFunction);
+      editorPreRef.current?.removeEventListener('keydown', keydownFunction);
     };
   }, [isEditing]);
 
   function updateQuill(quillEditorRef: Quill, updatedValue: string, fillins: Fillins) {
     if (quillEditorRef) {
-      const delta = (quillEditorRef.clipboard as any).convert({ html: updatedValue });
+      
+      (quillEditorRef.clipboard as any).matchers[0][1] = function matchText(node: any, delta: any) {
+        const text = node.data;
+        return delta.insert(text);
+      };
+      console.log('updateQuill:\n' + updatedValue);
+      const delta = (quillEditorRef.clipboard as any).convertHTML(updatedValue.split('\n').join('<br>'));
 
       for (const ops of delta.ops!) {
         const placeholderName = ops.attributes?.placeholder?.name;
@@ -255,10 +266,11 @@ export default function QuillEditor({
   }
 
   useEffect(() => {
-    if (editorDivRef.current) {
-      const editor = new Quill(editorDivRef.current, {
+    if (editorPreRef.current) {
+      const editor = new Quill(editorPreRef.current, {
         theme: 'parrot',
         modules: {
+          
           toolbar: {
             container: toolbarContainer,
             handlers: {
@@ -299,7 +311,7 @@ export default function QuillEditor({
     return () => {
       quillEditor?.off('editor-change', onEditorChange);
     };
-  }, [editorDivRef]);
+  }, [editorPreRef]);
 
   useEffect(() => {
     quillEditor?.on('editor-change', onEditorChange);
@@ -326,7 +338,7 @@ export default function QuillEditor({
       display="contents"
     >
 
-      <div ref={editorDivRef} />
+      <pre ref={editorPreRef} />
     </OutsideClickHandler>
   );
 }

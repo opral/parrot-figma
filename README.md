@@ -14,6 +14,30 @@ MVP
     - modal
     - bottomsheet
 
+# Formatting
+
+Formating while it looks beautifule it can be prety painful to deal with to deal with variants of text.
+
+Topics: 
+
+ - how to translate a string with formating 
+    -> mask formats with translator specific makers (check deepl api)
+ - how to deal with conflicts between label styles and inline text styles of a key
+    -> A key "Hello *world*" empathises the word "world" by formatting it in bold
+    -> A label with a label style set to "bold" would overrid the inline style after the key was applied
+
+# Inline Styles
+
+Translations have no key wide style properties. It's not possible to make a whole translation bold for example.
+This is because a translation might be used in varios placess with different variants.
+
+It could be that the Text on a Website viewed on desktop should appear bold while on the mobile the text should be 
+printed in regular. 
+
+        
+    
+
+
 
 # Export format 
 
@@ -271,7 +295,8 @@ What we want from ui point of view:
  - [x] placeholder not working if at position 0
  - [ ] command z not working for fillin change
  - [ ] changing a placeholder name in one lable - does not
- - [ ] leading linebreak in label - auto removal fix
+ - [x] leading linebreak in label - auto removal fix
+ - [x] leading spaces 
  - [ ] label formating/link vs inline formatting - recognize link on label
     - [ ] label formatting not removed from quill but from the renderview?
  - [x] styling

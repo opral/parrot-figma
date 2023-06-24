@@ -5,6 +5,8 @@
   margin-bottom: 4px;
 }
 
+
+
 .translation-editor-text {
   display: grid;
   grid-template-columns: 1fr;
@@ -12,10 +14,24 @@
   border: 1px solid transparent;
 }
 
-.translation-editor-text div,p {
+
+.translation-editor-text p {
+  margin: 0;
+  padding: 0;
+}
+
+.translation-editor-text div, p {
   grid-row-start: 1;
   grid-column-start: 1;
 }
+
+
+
+.translation-editor-text pre {
+  grid-row-start: 1;
+  grid-column-start: 1;
+}
+
 
 .translation-editor-text:hover {
   border-color: var(--figma-color-border);

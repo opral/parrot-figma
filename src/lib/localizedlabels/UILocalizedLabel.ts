@@ -127,6 +127,15 @@ export class UILocalizedLabel implements LocalizedLabel {
   static toHtml(text: string, ops: DeltaOp[], fillins: Fillins, trimLabelStyles: boolean) {
     const deltaOps = [] as DeltaOperation[];
 
+    console.log('toHtml');
+    console.log(text.split('\n').join('<br>'));
+    console.log(ops);
+  
+    if (text[text.length-1] === '\n') {
+      ops[ops.length-1].end += 1;
+      text += '\n';
+   }
+
     for (const op of ops) {
       if (op.attributes.placeholder) {
         const insert = op.attributes.placeholder.name;
@@ -148,19 +157,31 @@ export class UILocalizedLabel implements LocalizedLabel {
         });
       }
     }
+    
 
     const delta = new Delta(deltaOps);
+    console.log(delta);
+    
 
-    const tempCont = document.createElement('div');
+    const tempCont = document.createElement('pre');
     (new Quill(tempCont)).setContents(delta);
     let htmlContent = tempCont.getElementsByClassName('ql-editor')[0].innerHTML;
     // remove all quill helper attributes
     
     htmlContent = htmlContent.replace(/fillin="([^"])*" contenteditable="false">/g, '>');
-    return htmlContent.split('<p>').join('').split('</p>').join('');
+
+    
+    htmlContent = htmlContent.split('<p><br></p>').join('\n');
+    htmlContent.split('</p><p>').join('\n').split('<p>').join('').split('</p>').join('');
+    console.log(htmlContent);
+    return htmlContent;
   }
 
   static toTextAndOps(html: string, fillins: Fillins) {
+
+    console.log('-------toTextAndOps');
+    console.log('-------toTextAndOps----- RAW');
+    console.log(html);
     const pattern = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;
 
     const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(fillins);
@@ -169,25 +190,45 @@ export class UILocalizedLabel implements LocalizedLabel {
     // const name = paramMatch[2];
 
     
-    const htmlWithFilledPlaceholders = html.replace(pattern, (match, _helper1, type, _helper3, format, _helper5, argumentPosition, unnamed, _helper8, _helper9, name) => {
+    let htmlWithFilledPlaceholders = html.replace(pattern, (match, _helper1, type, _helper3, format, _helper5, argumentPosition, unnamed, _helper8, _helper9, name) => {
       
       const placeholderName = name;
       if (placeholderName && fillins[placeholderName]) {
         const extensionLength = placeholderByFillin.indexOf(placeholderName) + 1;
         return fillins[placeholderName].value + MARKER_CHARACTER.repeat(extensionLength);
       }
+
       return match;
     });
 
-    const tempCont = document.createElement('div');
+    console.log('creating new virtual quill');
+    const tempCont = document.createElement('pre');
     const quill = new Quill(tempCont);
-    quill.clipboard.dangerouslyPasteHTML(htmlWithFilledPlaceholders);
-    const contents = quill.getContents();
-    const text = tempCont.getElementsByClassName('ql-editor')[0].textContent ?? '';
+    quill.disable();
+    htmlWithFilledPlaceholders = htmlWithFilledPlaceholders.split('\n').join('<br>');
+
+    console.log('-------toTextAndOps----- PROCESSED');
+    console.log(htmlWithFilledPlaceholders);
+    // htmlWithFilledPlaceholders = htmlWithFilledPlaceholders.split(' ').join('&nbsp;');
+
+    (quill.clipboard as any).matchers[0][1] = function matchText(node: any, delta: any) {
+      const text = node.data;
+      return delta.insert(text);
+    };
+  
+    
+    console.log('htmlWithFilledPlaceholders: \n' + htmlWithFilledPlaceholders);
+    const contents = (quill.clipboard as any).convert({html: htmlWithFilledPlaceholders}) as any;
+    // const contents = quill.getContents();
+    console.log('ops: \n');
+    console.log(contents);
+    let text = contents.filter((op: any) => typeof op.insert === 'string').map((op: any) => op.insert).join(''); // quill.getText();// tempCont.getElementsByClassName('ql-editor')[0].textContent ?? '';
+    // text = text.split('&nbsp;').join(' ');
+    console.log('text: \n' + text);
 
     const ops = [] as any[];
     let currentPositon = 0;
-    contents.ops?.forEach((operation) => {
+    contents.ops?.forEach((operation: any) => {
       ops.push({
         from: currentPositon,
         to: currentPositon + operation.insert.length,
@@ -197,7 +238,7 @@ export class UILocalizedLabel implements LocalizedLabel {
       currentPositon += operation.insert.length;
     });
     // remove the /n at the end?
-    ops.pop();
+    
     return {
       text,
       ops,

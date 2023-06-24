@@ -647,7 +647,7 @@ export default class LocalizedLabelManager {
       textNode.characters = changedProperties.characters;
 
       // NOTE: when we are here and we have mixed font family we have warned the user already - we go for the first one
-      const textNodeFontFamily = (textNode.getRangeFontName(0, 1) as FontName).family;
+      const textNodeFontFamily = (textNode.fontName as FontName).family ?? (textNode.getRangeFontName(0, 1) as FontName).family;
       const fonts = await figma.listAvailableFontsAsync();
       const fontFamily = fonts.filter((font: Font) => font.fontName.family === textNodeFontFamily).map((font) => font.fontName);
 
@@ -962,7 +962,7 @@ export default class LocalizedLabelManager {
         }
       }
     }
-    return placeholderDeltaOps;
+    return placeholderDeltaOps.sort((op1, op2) => op1.start - op2.start);;
   }
 
   private getTextStyleDeltaOps(node: TextNode) {

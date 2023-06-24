@@ -294,7 +294,7 @@ What we want from ui point of view:
  - [x] missing translation filter
  - [x] placeholder not working if at position 0
  - [ ] command z not working for fillin change
- - [ ] changing a placeholder name in one lable - does not
+ - [ ] changing a placeholder name in one lable - does not update other labels referencing the same key
  - [x] leading linebreak in label - auto removal fix
  - [x] leading spaces 
  - [ ] label formating/link vs inline formatting - recognize link on label
@@ -311,12 +311,13 @@ What we want from ui point of view:
         - change default placeholder 
         Expexted: the value in the label should be updated
     - [x] changing the placeholder value in the key leads to unsynced label (fillin part of the serialized key) -> remove fillin=\\"*\\" contenteditable=\\"false\\"
+ - [x] placeholder not working when inserted before another one
  - [ ] placeholder types not implemented
  - [ ] type and format not implemented
 
  - [x] remove save button from label
  - [ ] placeholder not working when no text surrounding it
- - [ ] error when deleting the whole label text
+ - [x] error when deleting the whole label text
  - [ ] strikethrough/underline handling
  - [ ] unsupported url - only allow relative urls with leading / or http / https / mailto prefix  
 

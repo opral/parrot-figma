@@ -293,14 +293,17 @@ What we want from ui point of view:
  - [x] baselanguage selection does not work in settings screen
  - [x] missing translation filter
  - [x] placeholder not working if at position 0
+ - [ ] switching language with placeholder not working atm
+    - hint: if placeholder is present in one language only it seems to work
  - [ ] command z not working for fillin change
  - [ ] changing a placeholder name in one lable - does not update other labels referencing the same key
  - [x] leading linebreak in label - auto removal fix
  - [x] leading spaces 
  - [ ] label formating/link vs inline formatting - recognize link on label
     - [ ] label formatting not removed from quill but from the renderview?
+    - [ ] toolbar button not working properly / setting mixin 
  - [x] styling
- - [ ] disable placeholder button on selection of multiple placeholders / mixed approach
+ - [x] disable placeholder button on selection of multiple placeholders / mixed approach
  - [ ] formatting label <-> key
     - [x] placeholder renaming hinders replacement in label
     - [x] placeholder not saved to key on creation
@@ -312,11 +315,16 @@ What we want from ui point of view:
         Expexted: the value in the label should be updated
     - [x] changing the placeholder value in the key leads to unsynced label (fillin part of the serialized key) -> remove fillin=\\"*\\" contenteditable=\\"false\\"
  - [x] placeholder not working when inserted before another one
- - [ ] placeholder types not implemented
- - [ ] type and format not implemented
+ - [ ] click on placeholder should select it
+ - [ ] placeholder type and format not implemented
+    - [ ] DateTime (Format) - check relative date format etc
+    - [ ] Decimal number 
+    - [ ] floating number - check format for numbers
+    - [ ] currency 
+    
 
  - [x] remove save button from label
- - [ ] placeholder not working when no text surrounding it
+ - [x] placeholder not working when no text surrounding it
  - [x] error when deleting the whole label text
  - [ ] strikethrough/underline handling
  - [ ] unsupported url - only allow relative urls with leading / or http / https / mailto prefix  
@@ -459,3 +467,7 @@ Landing page
 Plugin publish
 Icon
 UI / UX runthrough
+
+Content design
+https://www.youtube.com/watch?v=A0yOXuSeX68&ab_channel=Figma
+https://www.linkedin.com/in/candiwilliamswriter/

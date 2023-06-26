@@ -26,6 +26,10 @@
   color: var(--figma-color-text-warning);
 }
 
+.translation-editor-text a {
+  text-decoration: inherit !important;
+}
+
 .missing.translation {
   color: var(--figma-color-text-danger);
 }

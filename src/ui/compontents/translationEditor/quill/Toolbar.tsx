@@ -86,11 +86,21 @@ export default class ParrotToolbar extends Toolbar {
         const selectionContents = contents.slice(range.index, range.index + range.length);
         const afterSelectionContents = contents.slice(range.index + range.length, contents.length());
 
+        let replacementDelta: DeltaType;
+        if (value === '') {
+          delete selectionContents.ops[0].attributes?.placeholder;
+          // remove placeholder and use fillin
+          replacementDelta = (new Delta()).insert(fillin, {
+            placeholder: null,
+            ...selectionContents.ops[0].attributes,
+          });
+        } else {
+          replacementDelta = (new Delta()).insert(value, {
+            placeholder: { type: 'string', name: value, fillin },
+            ...selectionContents.ops[0].attributes,
+          });
+        }
         // TODO weight the formats - for now use the first
-        const replacementDelta = (new Delta()).insert(value, {
-          placeholder: { type: 'string', name: value, fillin },
-          ...selectionContents.ops[0].attributes,
-        });
 
         const updatedDelta = beforeSelectionContents.concat(replacementDelta as any).concat(afterSelectionContents);
 
@@ -137,7 +147,7 @@ export default class ParrotToolbar extends Toolbar {
 
       event.preventDefault();
     } else if (event.key === 'Escape') {
-        this.placholderFillinInput.value = this.placholderFillinInput.getAttribute('data-orginal-value')!;
+      this.placholderFillinInput.value = this.placholderFillinInput.getAttribute('data-orginal-value')!;
       event.preventDefault();
     }
   }
@@ -162,8 +172,7 @@ export default class ParrotToolbar extends Toolbar {
   onLinkClick() {
     this.tooltipEditor.classList.add('ql-editing');
     this.tooltipEditor.classList.remove('ql-hidden');
-    // TODO is one link in selection - get complete range, we don't allow split here - no usecase
-
+    
     this.editMode = 'link';
 
     const selectionStart = this.quill.getSelection()!.index;
@@ -178,7 +187,10 @@ export default class ParrotToolbar extends Toolbar {
 
     this.tooltipEditorInput.placeholder = 'Enter Link address';
 
-    const oneLink = this.quill.getFormat(this.currentRange!).link;
+    const rangeFormat = this.quill.getFormat(this.currentRange!);
+
+    
+    const oneLink = typeof this.quill.getFormat(this.currentRange!).link === 'string';
 
     if (oneLink) {
       for (const op of this.quill.getContents().ops) {
@@ -241,7 +253,7 @@ export default class ParrotToolbar extends Toolbar {
       this.currentRange = range;
       const selectedDelta = this.quill.getContents(range);
 
-      let nonPlaceholderSelection = false;
+      let selectionChunkWithNoPlaceholder = false;
       for (const deltaOp of selectedDelta.ops) {
         if (deltaOp.attributes?.placeholder) {
           const placeholder = deltaOp.attributes.placeholder as any;
@@ -252,7 +264,7 @@ export default class ParrotToolbar extends Toolbar {
 
           });
         } else {
-          nonPlaceholderSelection = true;
+          selectionChunkWithNoPlaceholder = true;
         }
 
         if (deltaOp.attributes?.link && !this.linkUrls.includes(deltaOp.attributes.link as string)) {
@@ -260,14 +272,14 @@ export default class ParrotToolbar extends Toolbar {
         }
       }
 
-      this.linkEditButton.classList.toggle('ql-active', formats.link && this.linkUrl?.length === 1);
+      this.linkEditButton.classList.toggle('ql-active', this.linkUrls?.length > 0);
 
       if (this.selectedPlacholder.length > 1
-        || (nonPlaceholderSelection && this.selectedPlacholder.length > 0)) {
+        || (selectionChunkWithNoPlaceholder && this.selectedPlacholder.length > 0)) {
         // TODO hide placeholder nodes
         this.placholderFillinInput.classList.toggle('ql-hidden', true);
         this.placholderEditButton.classList.toggle('ql-hidden', true);
-      } else if (!nonPlaceholderSelection && this.selectedPlacholder.length === 1) {
+      } else if (!selectionChunkWithNoPlaceholder && this.selectedPlacholder.length === 1) {
         // show edit placeholder
         this.placholderFillinInput.classList.toggle('ql-hidden', false);
         this.placholderFillinInput.value = this.selectedPlacholder[0].fillin;

@@ -10,10 +10,10 @@ export enum KeyState {
 }
 
 export interface LabelStyle {
-  fontFamily: string | undefined,
-  bold: boolean | 'MIXED' | undefined,
-  italic: boolean | 'MIXED' | undefined,
-  textDecoration: TextDecoration | 'MIXED' | undefined,
+  fontFamily: string | undefined | null,
+  bold: boolean | 'MIXED' | undefined | null,
+  italic: boolean | 'MIXED' | undefined | null,
+  textDecoration: TextDecoration | 'MIXED' | undefined | null,
 }
 
 export interface LocalizedLabel {

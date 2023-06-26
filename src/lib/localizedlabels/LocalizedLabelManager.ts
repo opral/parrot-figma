@@ -10,6 +10,7 @@ import { FigmaFileTranslationKeyStore } from '../keystore/FigmaFileTranslationKe
 import { Fillins } from '../keystore/TranslationKey';
 import VirtualTree, { VirtualTreeNode } from './VirtualTree';
 import LinksLoadedEvent from './LinksLoadedEvent';
+import { text } from 'stream/consumers';
 
 export interface SandboxUpdateLabelProperties {
   labelName?: string,
@@ -708,9 +709,9 @@ export default class LocalizedLabelManager {
         textNode.setRangeHyperlink(rangeStyle.from, rangeStyle.to, linkUrl ? { type: 'URL', value: linkUrl } : null);
 
         let decoration = 'NONE' as TextDecoration;
-        if (rangeStyle.attributes?.underline) {
+        if (rangeStyle.attributes?.textDecoration === 'UNDERLINE') {
           decoration = 'UNDERLINE';
-        } else if (rangeStyle.attributes?.strikethrough) {
+        } else if (rangeStyle.attributes?.textDecoration === 'STRIKETHROUGH') {
           decoration = 'STRIKETHROUGH';
         }
 
@@ -929,7 +930,6 @@ export default class LocalizedLabelManager {
     const placeholderDeltaOps = [] as DeltaOp[];
     const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(fillins);
 
-    
     // eslint-disable-next-line for-direction, no-plusplus
     for (let i = placeholderByFillin.length - 1; i >= 0; i--) {
       const currentPlaceholderName = placeholderByFillin[i];
@@ -970,10 +970,12 @@ export default class LocalizedLabelManager {
     const textSegments = node.getStyledTextSegments(['fontName', 'textDecoration', 'hyperlink']);
 
     textSegments.forEach((textSegment) => {
-      const italic = textSegment.fontName.style.toLowerCase().includes('italic');
+      
+      // if the node has one stile (non mixed) its not inline styling - ignore it
+      const italic = node.fontName !== figma.mixed ? undefined : textSegment.fontName.style.toLowerCase().includes('italic');
       const weightName = textSegment.fontName.style.replace('italic', '').replace(' ', '');
-      const bold = weightName.toLowerCase().includes('bold');
-      const { textDecoration } = textSegment;
+      const bold = node.fontName !== figma.mixed ? undefined : weightName.toLowerCase().includes('bold');
+      const textDecoration = node.textDecoration !== figma.mixed || textSegment.textDecoration === 'NONE' ? undefined : textSegment.textDecoration;
 
       let linkUrl = textSegment.hyperlink?.type === 'URL' ? textSegment.hyperlink?.value : undefined;
       if (linkUrl && textSegment.hyperlink?.value.startsWith(this.helperDomain)) {
@@ -1120,10 +1122,10 @@ export default class LocalizedLabelManager {
     const fontFamilies = new Set<string>();
 
     const labelStyle = {
-      fontFamily: undefined,
-      bold: undefined,
-      italic: undefined,
-      textDecoration: undefined,
+      fontFamily: null,
+      bold: null,
+      italic: null,
+      textDecoration: null,
     } as LabelStyle;
 
     const deltaOps = this.getDeltaOps(node, fillins);
@@ -1139,10 +1141,10 @@ export default class LocalizedLabelManager {
         fontFamilies.add(deltaOp.attributes.fontFamily);
       }
 
-      labelStyle.bold = labelStyle.bold !== undefined && labelStyle.bold !== deltaOp.attributes.bold ? 'MIXED' : deltaOp.attributes.bold;
-      labelStyle.italic = labelStyle.italic !== undefined && labelStyle.italic !== deltaOp.attributes.italic ? 'MIXED' : deltaOp.attributes.italic;
-      labelStyle.textDecoration = labelStyle.textDecoration !== undefined && labelStyle.textDecoration !== deltaOp.attributes.textDecoration ? 'MIXED' : deltaOp.attributes.textDecoration;
-      labelStyle.fontFamily = labelStyle.fontFamily !== undefined && labelStyle.fontFamily !== deltaOp.attributes.fontFamily ? 'MIXED' : deltaOp.attributes.fontFamily;
+      labelStyle.bold = labelStyle.bold !== null && labelStyle.bold !== deltaOp.attributes.bold ? 'MIXED' : deltaOp.attributes.bold;
+      labelStyle.italic = labelStyle.italic !== null && labelStyle.italic !== deltaOp.attributes.italic ? 'MIXED' : deltaOp.attributes.italic;
+      labelStyle.textDecoration = labelStyle.textDecoration !== null && labelStyle.textDecoration !== deltaOp.attributes.textDecoration ? 'MIXED' : deltaOp.attributes.textDecoration;
+      labelStyle.fontFamily = labelStyle.fontFamily !== null && labelStyle.fontFamily !== deltaOp.attributes.fontFamily ? 'MIXED' : deltaOp.attributes.fontFamily;
     }
 
     // reset unmixed label stlyes

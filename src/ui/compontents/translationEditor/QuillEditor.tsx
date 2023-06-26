@@ -21,6 +21,7 @@ import Quill, {
 import { Fillins, PlaceholderType } from '../../../lib/keystore/TranslationKey';
 import ParrotTheme from './quill/QuillTheme';
 import ParrotToolbar from './quill/Toolbar';
+import Emitter from 'quill/core/emitter';
 
 const Delta = Quill.import('delta') as typeof DeltaType;
 Quill.register('themes/parrot', ParrotTheme, true);
@@ -52,8 +53,35 @@ class ItalicBlot extends Inline { }
 ItalicBlot.blotName = 'italic';
 ItalicBlot.tagName = 'em';
 
+class TextDecorationBlot extends Inline {
+  static create(value: any) {
+    if (value === 'UNDERLINE') {
+      return document.createElement('u');
+    }
+    if (value === 'STRIKETHROUGH') {
+      return document.createElement('s');
+    }
+    return super.create(value);
+  }
+
+  static formats(domNode: any) {
+    if (domNode.tagName === 'U') return 'UNDERLINE';
+    if (domNode.tagName === 'S') return 'STRIKETHROUGH';
+    return undefined;
+  }
+}
+TextDecorationBlot.blotName = 'textDecoration';
+TextDecorationBlot.tagName = ['S', 'U'];
+
 Quill.register(BoldBlot);
 Quill.register(ItalicBlot);
+Quill.register(TextDecorationBlot);
+
+const icons = Quill.import('ui/icons');
+icons.textDecoration = {
+  UNDERLINE: icons.underline,
+  STRIKETHROUGH: icons.strike,
+};
 
 class LinkBlot extends Inline {
   static create(value: string) {
@@ -74,8 +102,6 @@ LinkBlot.blotName = 'link';
 LinkBlot.tagName = 'a';
 
 Quill.register(LinkBlot);
-
-const BlockEmbed = Quill.import('blots/block');
 
 interface PlaceholderValue {
   name: string,
@@ -138,7 +164,9 @@ PlaceholderBlot.tagName = 'ph';
 
 Quill.register(PlaceholderBlot);
 
-const toolbarContainer = ['bold', 'italic', 'underline', 'strike'];
+
+
+const toolbarContainer = ['bold', 'italic', { textDecoration: 'UNDERLINE' }, { textDecoration: 'STRIKETHROUGH' }];
 
 type QuillEditorProps = {
   value?: string,
@@ -173,7 +201,7 @@ export default function QuillEditor({
       setTextState(quillEditor!.root.innerHTML);
       const contents = quillEditor?.getContents();
       console.log('text-change---------------');
-      
+
       const updatedFillins = { ...fillins };
       for (const op of contents!.ops!) {
         const placeholder = op.attributes?.placeholder;
@@ -187,7 +215,9 @@ export default function QuillEditor({
       console.log('text-change-------RAW');
       console.log(cleanValue);
       cleanValue = cleanValue.split('<p><br></p>').join('\n');
-      cleanValue.split('</p><p>').join('\n').split('<p>').join('').split('</p>').join('');
+      cleanValue.split('</p><p>').join('\n').split('<p>').join('')
+        .split('</p>')
+        .join('');
 
       const regex = /.<span contenteditable="false">([^<]*)<\/span>./g;
       cleanValue = cleanValue.replace(/fillin="([^"])*" contenteditable="false">/g, '>');
@@ -228,27 +258,40 @@ export default function QuillEditor({
       }
     };
 
+    const onClick = (e: any) => {
+      console.log('clicked');
+      console.log(e);
+      if (e.target.nodeName === 'PH') {
+        const range = document.createRange();
+        range.selectNodeContents(e.target);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      }
+    };
+
     editorPreRef.current?.addEventListener('focusin', focusInFunction);
     editorPreRef.current?.addEventListener('focusout', focusOutFunction);
 
     editorPreRef.current?.addEventListener('keydown', keydownFunction);
+    editorPreRef.current?.addEventListener('click', onClick);
 
     return () => {
       editorPreRef.current?.removeEventListener('focusin', focusInFunction);
       editorPreRef.current?.removeEventListener('focusout', focusOutFunction);
 
       editorPreRef.current?.removeEventListener('keydown', keydownFunction);
+      editorPreRef.current?.removeEventListener('click', onClick  );
     };
   }, [isEditing]);
 
   function updateQuill(quillEditorRef: Quill, updatedValue: string, fillins: Fillins) {
     if (quillEditorRef) {
-      
       (quillEditorRef.clipboard as any).matchers[0][1] = function matchText(node: any, delta: any) {
         const text = node.data;
         return delta.insert(text);
       };
-      console.log('updateQuill:\n' + updatedValue);
+      console.log(`updateQuill:\n${updatedValue}`);
       const delta = (quillEditorRef.clipboard as any).convertHTML(updatedValue.split('\n').join('<br>'));
 
       for (const ops of delta.ops!) {
@@ -270,7 +313,6 @@ export default function QuillEditor({
       const editor = new Quill(editorPreRef.current, {
         theme: 'parrot',
         modules: {
-          
           toolbar: {
             container: toolbarContainer,
             handlers: {
@@ -288,6 +330,19 @@ export default function QuillEditor({
               },
             },
           },
+          keyboard: {
+            bindings: {
+              underline: {
+                key: 'u',
+                shortKey: true,
+                handler(_range: any, context: any) {
+                  const format = 'textDecoration';
+                  // eslint-disable-next-line react/no-this-in-sfc
+                  this.quill.format(format, context.format[format] === 'UNDERLINE' ? undefined : 'UNDERLINE', Emitter.sources.USER);
+                },
+              },
+            },
+          },
           clipboard: {
             matchers: [
               ['PH', function (node: HTMLElement, delta: any) {
@@ -295,7 +350,12 @@ export default function QuillEditor({
                 const name = node.innerHTML;
                 return delta.compose(new Delta().retain(delta.length(), { placeholder: { fillin, name } }));
               }],
-
+              ['S', function (node: HTMLElement, delta: any) {
+                return delta.compose(new Delta().retain(delta.length(), { textDecoration: 'STRIKETHROUGH' }));
+              }],
+              ['U', function (node: HTMLElement, delta: any) {
+                return delta.compose(new Delta().retain(delta.length(), { textDecoration: 'UNDERLINE' }));
+              }],
             ],
           },
         },

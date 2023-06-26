@@ -64,10 +64,44 @@ export default class ParrotToolbar extends Toolbar {
     if (this.editMode === 'link' && value !== 'MIXED') {
       const { scrollTop } = this.quill.root;
 
+      const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,})+$/;
+      const urlRegex = /^(https?|HTTPS?):\/\/[^\s/$.?#].[^\s]*$/;
+      let valueToSet = false as boolean | string;
+
+      if (value === '') {
+        valueToSet = false;
+      } else if (value.startsWith('mailto:')) {
+        // check if we have a valid mail abc@abc1.com ...
+        if (emailRegex.test(value.substring('mailto:'.length))) {
+          valueToSet = value;
+        } else {
+          // invalid mail adress
+        }
+      } else if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('/')) {
+        const urlToCheck = value.startsWith('/') ? `https://helperdomain${value}` : value;
+        if (urlRegex.test(urlToCheck)) {
+          valueToSet = value;
+        } else {
+          // invalid url
+        }
+      } else if (emailRegex.test(value)) {
+        // value matches an email adress
+        valueToSet = `mailto:${value}`;
+      } else if (urlRegex.test(`https://${value}`)) {
+        // matches a url pattern
+        valueToSet = `https://${value}`;
+      } else {
+        // invalid url :-/
+      }
+
+      if (valueToSet === false) {
+        // TODO inform the user
+      }
+
       this.quill.formatText(
         this.currentRange,
         'link',
-        (value === '' ? false : value),
+        valueToSet,
         Emitter.sources.USER,
       );
       this.restoreFocus();
@@ -172,7 +206,7 @@ export default class ParrotToolbar extends Toolbar {
   onLinkClick() {
     this.tooltipEditor.classList.add('ql-editing');
     this.tooltipEditor.classList.remove('ql-hidden');
-    
+
     this.editMode = 'link';
 
     const selectionStart = this.quill.getSelection()!.index;
@@ -189,7 +223,6 @@ export default class ParrotToolbar extends Toolbar {
 
     const rangeFormat = this.quill.getFormat(this.currentRange!);
 
-    
     const oneLink = typeof this.quill.getFormat(this.currentRange!).link === 'string';
 
     if (oneLink) {

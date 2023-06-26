@@ -18,10 +18,10 @@ import Quill, {
   Sources,
   Delta as DeltaType,
 } from 'quill';
+import Emitter from 'quill/core/emitter';
 import { Fillins, PlaceholderType } from '../../../lib/keystore/TranslationKey';
 import ParrotTheme from './quill/QuillTheme';
 import ParrotToolbar from './quill/Toolbar';
-import Emitter from 'quill/core/emitter';
 
 const Delta = Quill.import('delta') as typeof DeltaType;
 Quill.register('themes/parrot', ParrotTheme, true);
@@ -164,8 +164,6 @@ PlaceholderBlot.tagName = 'ph';
 
 Quill.register(PlaceholderBlot);
 
-
-
 const toolbarContainer = ['bold', 'italic', { textDecoration: 'UNDERLINE' }, { textDecoration: 'STRIKETHROUGH' }];
 
 type QuillEditorProps = {
@@ -200,6 +198,7 @@ export default function QuillEditor({
     if (eventName === 'text-change' && source !== 'silent') {
       setTextState(quillEditor!.root.innerHTML);
       const contents = quillEditor?.getContents();
+
       console.log('text-change---------------');
 
       const updatedFillins = { ...fillins };
@@ -214,11 +213,17 @@ export default function QuillEditor({
       let cleanValue = quillEditor!.root.innerHTML;
       console.log('text-change-------RAW');
       console.log(cleanValue);
-      cleanValue = cleanValue.split('</p>').join('\n').split('<p>').join('').split('<br>').join('');
-      
+      cleanValue = cleanValue.split('</p>').join('\n').split('<p>').join('')
+        .split('<br>')
+        .join('');
+
       const regex = /.<span contenteditable="false">([^<]*)<\/span>./g;
       cleanValue = cleanValue.replace(/fillin="([^"])*" contenteditable="false">/g, '>');
       cleanValue = cleanValue.replace(regex, (match, group1) => group1);
+
+      if (cleanValue[cleanValue.length - 1] === '\n') {
+        cleanValue = cleanValue.substring(0, cleanValue.length - 1);
+      }
 
       console.log('text-change-------CLEAN');
       console.log(cleanValue);
@@ -278,7 +283,7 @@ export default function QuillEditor({
       editorPreRef.current?.removeEventListener('focusout', focusOutFunction);
 
       editorPreRef.current?.removeEventListener('keydown', keydownFunction);
-      editorPreRef.current?.removeEventListener('click', onClick  );
+      editorPreRef.current?.removeEventListener('click', onClick);
     };
   }, [isEditing]);
 

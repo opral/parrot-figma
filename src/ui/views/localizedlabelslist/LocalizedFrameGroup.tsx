@@ -48,18 +48,18 @@ export default function LocalizedFrameGroup({
     const translationProvider = async (text: string, sourceLanguage: string, targetLanguage: string) => {
       // replace placeholder with numbers to not translate them
 
-      const pattern = /\[\[([A-Za-z_]{2,})?(?:#(\d+))?(?::*([sdf])(?:\.(\d+))?)?\]\]/g;
+      const pattern = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;
 
       const placeholderIndexMapping = [] as string[];
       let currentIndex = 0;
-
+      
       // const wholeMatch = paramMatch[0];
       // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
       // const name = paramMatch[2];
 
-      const textWithMaskedPlaceholders = text.replace(pattern, (match, name, _argumentPosition) => {
-        const placeholderName = name;
-        placeholderIndexMapping[currentIndex] = placeholderName;
+      const textWithMaskedPlaceholders = text.replace(pattern, (match, _helper1, type, _helper3, format, _helper5, argumentPosition, unnamed, _helper8, _helper9, name) => {
+        // const placeholderName = name;
+        placeholderIndexMapping[currentIndex] = match;
         const placeholderReplacement = `[[${currentIndex}]]`;
         // eslint-disable-next-line no-plusplus
         currentIndex++;
@@ -99,7 +99,7 @@ export default function LocalizedFrameGroup({
       // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
       // const name = paramMatch[2];
 
-      const translationWithoutPlaceholders = translationWithMaskedPlaceholders.replace(patternMaskedPlaceholders, (match, placeholderIndex, _argumentPosition) => `[[${placeholderIndexMapping[placeholderIndex]}]]`);
+      const translationWithoutPlaceholders = translationWithMaskedPlaceholders.replace(patternMaskedPlaceholders, (match, placeholderIndex, _argumentPosition) => `${placeholderIndexMapping[placeholderIndex]}`);
 
       return translationWithoutPlaceholders;
       /*

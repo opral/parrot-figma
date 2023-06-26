@@ -299,9 +299,9 @@ What we want from ui point of view:
  - [ ] changing a placeholder name in one lable - does not update other labels referencing the same key
  - [x] leading linebreak in label - auto removal fix
  - [x] leading spaces 
- - [ ] label formating/link vs inline formatting - recognize link on label
-    - [ ] label formatting not removed from quill but from the renderview?
-    - [ ] toolbar button not working properly / setting mixin 
+ - [x] label formating/link vs inline formatting - recognize link on label
+    - [x] label formatting not removed from quill but from the renderview?
+    - [x] toolbar button not working properly / setting mixin 
  - [x] styling
  - [x] disable placeholder button on selection of multiple placeholders / mixed approach
  - [ ] formatting label <-> key
@@ -315,7 +315,9 @@ What we want from ui point of view:
         Expexted: the value in the label should be updated
     - [x] changing the placeholder value in the key leads to unsynced label (fillin part of the serialized key) -> remove fillin=\\"*\\" contenteditable=\\"false\\"
  - [x] placeholder not working when inserted before another one
- - [ ] click on placeholder should select it
+ - [x] click on placeholder should select it
+ - [ ] enter in create key panel
+ - [ ] esc in panel - cancel
  - [ ] placeholder type and format not implemented
     - [ ] DateTime (Format) - check relative date format etc
     - [ ] Decimal number 
@@ -326,9 +328,11 @@ What we want from ui point of view:
  - [x] remove save button from label
  - [x] placeholder not working when no text surrounding it
  - [x] error when deleting the whole label text
- - [ ] strikethrough/underline handling
- - [ ] unsupported url - only allow relative urls with leading / or http / https / mailto prefix  
-
+ - [x] strikethrough/underline handling
+ - [x] unsupported url - only allow relative urls with leading / or http / https / mailto prefix  
+ - [ ] add sentry (see: https://github.com/tokens-studio/figma-plugin/tree/916a34f70d729cb3797a00bcffd78f1790695cb4)
+ - [ ] add mixpanel (see: https://github.com/tokens-studio/figma-plugin/tree/916a34f70d729cb3797a00bcffd78f1790695cb4)
+ - [ ] add feddback on invalid url via notification
  - [ ] search and replace 
  - [ ] esc key in drawer and call to action (cancel)
  - [ ] Change language - auto translate of links - remove link 

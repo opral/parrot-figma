@@ -54,5 +54,12 @@ export default function TranslationView({
   //     </>
   //   );
   // }
-  return <span dangerouslySetInnerHTML={{__html:text.split('\n').join('<br>') }}/>;
+ 
+  // Hello 
+  // 
+  // 
+  let htmlRepresentation = text;
+  htmlRepresentation = htmlRepresentation.split('\n').map((content, index, array) => content === '' && array.length !== (index + 1) ? '<p>' + '<br>' + '</p>' : '<p>' + content + '</p>').join('');
+
+  return <span dangerouslySetInnerHTML={{__html:htmlRepresentation }}/>;
 }

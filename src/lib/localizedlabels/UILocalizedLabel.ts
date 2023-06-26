@@ -171,8 +171,8 @@ export class UILocalizedLabel implements LocalizedLabel {
     htmlContent = htmlContent.replace(/fillin="([^"])*" contenteditable="false">/g, '>');
 
     
-    htmlContent = htmlContent.split('<p><br></p>').join('\n');
-    htmlContent.split('</p><p>').join('\n').split('<p>').join('').split('</p>').join('');
+    htmlContent = htmlContent.split('</p>').join('\n').split('<p>').join('').split('<br>').join('');
+    console.log('htmlContent');
     console.log(htmlContent);
     return htmlContent;
   }
@@ -384,6 +384,7 @@ export class UILocalizedLabel implements LocalizedLabel {
       orginalTranslationHTML: undefined as string | undefined,
     };
 
+    // debugger;
     const translatedKey = this.keyType !== KeyState.Unset ? this.manager.keyStore.getKey(this.key!) : undefined;
 
     if (translatedKey) {

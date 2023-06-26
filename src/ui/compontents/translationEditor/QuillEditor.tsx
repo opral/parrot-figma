@@ -214,11 +214,8 @@ export default function QuillEditor({
       let cleanValue = quillEditor!.root.innerHTML;
       console.log('text-change-------RAW');
       console.log(cleanValue);
-      cleanValue = cleanValue.split('<p><br></p>').join('\n');
-      cleanValue.split('</p><p>').join('\n').split('<p>').join('')
-        .split('</p>')
-        .join('');
-
+      cleanValue = cleanValue.split('</p>').join('\n').split('<p>').join('').split('<br>').join('');
+      
       const regex = /.<span contenteditable="false">([^<]*)<\/span>./g;
       cleanValue = cleanValue.replace(/fillin="([^"])*" contenteditable="false">/g, '>');
       cleanValue = cleanValue.replace(regex, (match, group1) => group1);

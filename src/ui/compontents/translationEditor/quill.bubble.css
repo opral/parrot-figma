@@ -30,6 +30,12 @@
   padding: 0;
 }
 .ql-editor {
+  padding-left: 8px;
+  padding-top: 4px;
+  padding-bottom: 3px;
+  padding-right: 5px;
+  padding-bottom: 3px;
+  padding-right: 5px;
   padding-top: 4px;
   padding-left: 8px;
   box-sizing: border-box;

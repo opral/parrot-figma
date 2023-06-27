@@ -345,7 +345,8 @@ What we want from ui point of view:
     - [x] search by key "key:keyname or other"
     - [x] show only base language and current frame language
     - [ ] add single line action button "use key"
- 
+ - [ ] renaming parameter needs a refactoring - should rename all of them
+
  - [ ] fix localized label row design
     - [x] do we need to edit or even show the complete text inline in the designs tab?
     - [ ] distinct visual style for base language like bold

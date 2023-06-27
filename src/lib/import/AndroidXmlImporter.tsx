@@ -52,6 +52,50 @@ export default class AndroidXmlImporter {
     return str;
   }
 
+  private static toParrotFormat(value: string) {
+    /*
+    Bold: <b>, <em>
+    Italic: <i>, <cite>, <dfn>
+    25% larger text: <big>
+    20% smaller text: <small>
+    Setting font properties: <font face=”font_family“ color=”hex_color”>. Examples of possible font families include monospace, serif, and sans_serif.
+    Setting a monospace font family: <tt>
+    Strikethrough: <s>, <strike>, <del>
+    Underline: <u>
+    Superscript: <sup>
+    Subscript: <sub>
+    Bullet points: <ul>, <li>
+    Line breaks: <br>
+    Division: <div>
+    CSS style: <span style=”color|background_color|text-decoration”>
+    Paragraphs: <p dir=”rtl | ltr” style=”…”></div>
+    */
+
+  }
+
+  private static toParrotPlaceholders(inputString: string) {
+    const regex = /%(([\d]*)\$)?(\.[\d]*)*([sdf])/g;
+
+    let index = 1;
+    const replacedString = inputString.replace(regex, (match, group1, group2, group3, group4) => {
+      const type = group4;
+      let format = '';
+      let arg = '';
+      const parameterName = `unnamed__${index++}`;
+
+      if (type === 'f' && group3) {
+        format = ` format="${group3}"`;
+      }
+
+      if (group2) {
+        arg = ` arg="${group2}"`;
+      }
+
+      return `<ph type="${type}"${format}${arg} unnamed>${parameterName}</ph>`;
+    });
+    return replacedString;
+  }
+
   static toImportObject(filename: string, stringsFileContent: string): ImportTranslationKey[] | undefined {
     const fileNameParts = filename.split('.');
     const fileExtension = fileNameParts[fileNameParts.length - 1];
@@ -97,7 +141,7 @@ export default class AndroidXmlImporter {
         importedKeys.push({
           keyName: stringNode.getAttribute('name') as string,
           plural: Plural.OTHER,
-          text: this.unMask(childNode.textContent),
+          text: this.toParrotPlaceholders(this.unMask(childNode.textContent)),
         });
       } else if (childNode.nodeName === 'plurals') {
         const pluralNode = childNode as Element;
@@ -110,7 +154,7 @@ export default class AndroidXmlImporter {
           importedKeys.push({
             keyName: pluralNode.getAttribute('name') as string,
             plural: pluralType,
-            text: this.unMask(plurals[pluralType]!.text!),
+            text: this.toParrotPlaceholders(this.unMask(plurals[pluralType]!.text!)),
           });
         }
       }

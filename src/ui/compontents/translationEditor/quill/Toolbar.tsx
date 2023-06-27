@@ -124,15 +124,18 @@ export default class ParrotToolbar extends Toolbar {
         if (value === '') {
           delete selectionContents.ops[0].attributes?.placeholder;
           // remove placeholder and use fillin
-          replacementDelta = (new Delta()).insert(fillin, {
-            placeholder: null,
+          const updatedAttributes = {
             ...selectionContents.ops[0].attributes,
-          });
+          };
+          updatedAttributes.placeholder = null;
+          replacementDelta = (new Delta()).insert(fillin, updatedAttributes);
         } else {
-          replacementDelta = (new Delta()).insert(value, {
-            placeholder: { type: 'string', name: value, fillin },
+          const updatedAttributes = {
             ...selectionContents.ops[0].attributes,
-          });
+          };
+          updatedAttributes.placeholder = { type: 's', name: value, fillin };
+
+          replacementDelta = (new Delta()).insert(value, updatedAttributes);
         }
         // TODO weight the formats - for now use the first
 

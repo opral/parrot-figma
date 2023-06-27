@@ -126,10 +126,6 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   static toHtml(text: string, ops: DeltaOp[], fillins: Fillins, trimLabelStyles: boolean) {
     const deltaOps = [] as DeltaOperation[];
-
-    console.log('toHtml');
-    console.log(text.split('\n').join('<br>'));
-    console.log(ops);
   
     if (text[text.length-1] === '\n') {
       ops[ops.length-1].end += 1;
@@ -160,7 +156,6 @@ export class UILocalizedLabel implements LocalizedLabel {
     
 
     const delta = new Delta(deltaOps);
-    console.log(delta);
     
 
     const tempCont = document.createElement('pre');
@@ -172,16 +167,12 @@ export class UILocalizedLabel implements LocalizedLabel {
 
     
     htmlContent = htmlContent.split('</p>').join('\n').split('<p>').join('').split('<br>').join('');
-    console.log('htmlContent');
-    console.log(htmlContent);
+    
     return htmlContent;
   }
 
   static toTextAndOps(html: string, fillins: Fillins) {
 
-    console.log('-------toTextAndOps');
-    console.log('-------toTextAndOps----- RAW');
-    console.log(html);
     const pattern = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;
 
     const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(fillins);
@@ -201,14 +192,11 @@ export class UILocalizedLabel implements LocalizedLabel {
       return match;
     });
 
-    console.log('creating new virtual quill');
     const tempCont = document.createElement('pre');
     const quill = new Quill(tempCont);
     quill.disable();
     htmlWithFilledPlaceholders = htmlWithFilledPlaceholders.split('\n').join('<br>');
 
-    console.log('-------toTextAndOps----- PROCESSED');
-    console.log(htmlWithFilledPlaceholders);
     // htmlWithFilledPlaceholders = htmlWithFilledPlaceholders.split(' ').join('&nbsp;');
 
     (quill.clipboard as any).matchers[0][1] = function matchText(node: any, delta: any) {
@@ -216,15 +204,12 @@ export class UILocalizedLabel implements LocalizedLabel {
       return delta.insert(text);
     };
   
-    
-    console.log('htmlWithFilledPlaceholders: \n' + htmlWithFilledPlaceholders);
+  
     const contents = (quill.clipboard as any).convert({html: htmlWithFilledPlaceholders}) as any;
     // const contents = quill.getContents();
-    console.log('ops: \n');
-    console.log(contents);
     let text = contents.filter((op: any) => typeof op.insert === 'string').map((op: any) => op.insert).join(''); // quill.getText();// tempCont.getElementsByClassName('ql-editor')[0].textContent ?? '';
     // text = text.split('&nbsp;').join(' ');
-    console.log('text: \n' + text);
+    
 
     const ops = [] as any[];
     let currentPositon = 0;

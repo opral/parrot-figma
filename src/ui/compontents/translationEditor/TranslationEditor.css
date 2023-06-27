@@ -20,10 +20,20 @@
   padding: 0;
 }
 
-.translation-editor-text div, p {
+.translation-editor-text .translation {
   grid-row-start: 1;
   grid-column-start: 1;
 }
+
+
+.translation-editor-text .ql-container {
+  position: absolute;
+  left: 0px;
+  right: 0px;
+  top: 0px;
+  bottom: 0px;
+}
+
 
 .ql-bubble .ql-hidden {
   display: none !important;

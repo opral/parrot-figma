@@ -116,17 +116,15 @@ class PlaceholderBlot extends Inline {
   static create(value: PlaceholderValue) {
     const node = super.create() as HTMLElement;
     node.setAttribute('type', value.type);
-    value.format = 'test';
+    
     if (value.format) {
       node.setAttribute('format', value.format);
     }
 
-    value.argumentPosition = 10;
     if (value.argumentPosition) {
       node.setAttribute('arg', `${value.argumentPosition}`);
     }
 
-    value.unnamed = true;
     if (value.unnamed) {
       node.setAttribute('unnamed', '');
     }
@@ -199,8 +197,6 @@ export default function QuillEditor({
       setTextState(quillEditor!.root.innerHTML);
       const contents = quillEditor?.getContents();
 
-      console.log('text-change---------------');
-
       const updatedFillins = { ...fillins };
       for (const op of contents!.ops!) {
         const placeholder = op.attributes?.placeholder;
@@ -211,8 +207,6 @@ export default function QuillEditor({
         }
       }
       let cleanValue = quillEditor!.root.innerHTML;
-      console.log('text-change-------RAW');
-      console.log(cleanValue);
       cleanValue = cleanValue.split('</p>').join('\n').split('<p>').join('')
         .split('<br>')
         .join('');
@@ -225,8 +219,6 @@ export default function QuillEditor({
         cleanValue = cleanValue.substring(0, cleanValue.length - 1);
       }
 
-      console.log('text-change-------CLEAN');
-      console.log(cleanValue);
       onChange(cleanValue, updatedFillins);
     } else if (eventName === 'selection-change') {
       // nothing for now
@@ -261,8 +253,6 @@ export default function QuillEditor({
     };
 
     const onClick = (e: any) => {
-      console.log('clicked');
-      console.log(e);
       if (e.target.nodeName === 'PH') {
         const range = document.createRange();
         range.selectNodeContents(e.target);
@@ -293,7 +283,6 @@ export default function QuillEditor({
         const text = node.data;
         return delta.insert(text);
       };
-      console.log(`updateQuill:\n${updatedValue}`);
       const delta = (quillEditorRef.clipboard as any).convertHTML(updatedValue.split('\n').join('<br>'));
 
       for (const ops of delta.ops!) {

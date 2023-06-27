@@ -10,6 +10,29 @@ export default class AppleStringsFileImporter {
     return text; // TODO #8 map all ios placeholders to plugin format
   }
 
+  private static toParrotPlaceholders(inputString: string) {
+    const regex = /%(([\d]*)\$)?(\.[\d]*)*([sdf])/g;
+
+    let index = 1;
+    const replacedString = inputString.replace(regex, (match, group1, group2, group3, group4) => {
+      const type = group4;
+      let format = '';
+      let arg = '';
+      const parameterName = `unnamed__${index++}`;
+
+      if (type === 'f' && group3) {
+        format = ` format="${group3}"`;
+      }
+
+      if (group2) {
+        arg = ` arg="${group2}"`;
+      }
+
+      return `<ph type="${type}"${format}${arg} unnamed>${parameterName}</ph>`;
+    });
+    return replacedString;
+  }
+
   static toImportObject(filename: string, stringsFileContent: string): ImportTranslationKey[] | undefined {
     const fileNameParts = filename.split('.');
     const fileExtension = fileNameParts[fileNameParts.length - 1];
@@ -74,6 +97,8 @@ export default class AppleStringsFileImporter {
         value = value.split('\\"').join('"');
       }
       value = value.replace(/\\n/g, '\n');
+
+      value = this.toParrotPlaceholders(value);
 
       // add the key-value pair to our result object
       importedKeys.push({

@@ -35,7 +35,7 @@ export default function Tooltip({ triggerAttribute, contentAttribute }: TooltipP
       clearTimeout(hideTooltipTimeoutRef.current);
     }
     hideTooltipTimeoutRef.current = setTimeout(() => {
-      // setTooltipVisible(false);
+      setTooltipVisible(false);
     }, hideTimeout);
   };
 
@@ -101,6 +101,9 @@ export default function Tooltip({ triggerAttribute, contentAttribute }: TooltipP
       }
 
       setTooltipPlacement(placement);
+      if (placement.top === 0 && placement.left === 0) {
+        setTooltipVisible(false);
+      }
     } else {
       // ok we have to put it on top
       const placement = {
@@ -117,7 +120,12 @@ export default function Tooltip({ triggerAttribute, contentAttribute }: TooltipP
         placement.transformX = parentRect.left - (tooltipSourceRect.left! + 16);
       }
       setTooltipPlacement(placement);
+      if (placement.top === 0 && placement.left === 0) {
+        setTooltipVisible(false);
+      }
     }
+
+   
   }, [tooltipPlacement]);
 
   useEffect(() => {

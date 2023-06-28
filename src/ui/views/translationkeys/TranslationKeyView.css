@@ -307,13 +307,13 @@
 }
 
 .languageWrapper>div:first-child {
-  background-color: #E5E5E5;
+  /* background-color: #E5E5E5; */
 }
 
 .languageWrapper:nth-child(odd)>div:last-child>div {}
 
 .languageWrapper:nth-child(even)>div:last-child>div {
-  background-color: #F0F0F0;
+  /* background-color: #F0F0F0; */
 }
 
 

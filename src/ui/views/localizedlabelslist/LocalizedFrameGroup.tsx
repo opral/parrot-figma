@@ -151,17 +151,6 @@ export default function LocalizedFrameGroup({
               defaultValue={languageOptiones.find((opt) => opt.value === rootFrameLanguage?.value)}
               getOptions={() => languageOptiones}
             />
-            <div
-              className="row-action-icon"
-              onClick={async (e) => {
-                e.preventDefault();
-                const localizedFrames = await localizedLabelManager.getLocalizedLabelsByFrame(firstTranslationState.rootFrameId);
-                const temp = JSON.parse(JSON.stringify(localizedFrames));
-                figmaRemote.drawKeyFrame(firstTranslationState.rootFrameId, 'test', temp);
-              }}
-            >
-              <div className="svg-container placeholder-filled-svg" />
-            </div>
 
           </div>
         </div>

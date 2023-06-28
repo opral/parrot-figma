@@ -293,10 +293,28 @@ What we want from ui point of view:
  - [x] baselanguage selection does not work in settings screen
  - [x] missing translation filter
  - [x] placeholder not working if at position 0
+
+ TODOS before release
+ - [ ] filter not applied if key was updated
+ - [x] Title Assets and resources -> parrot
+ - [x] Version & Export -> Export
+    - [x] remove "Please select the version you want to export"
+ - [x] remove versioning
+ - [x] remove eye for deactivate translation 
+ - [x] deactivate plurals
+ - [ ] rename placeholders to dynamic content 
+ - [ ] alert once delete key button pressed to confirm action
+ - [ ] esc for hiding modal views  
+ - [ ] highlight row in key select on hover
+ - [ ] add action button to create key when no result in search
+ - [ ] provide filter current frame key
  - [ ] switching language with placeholder not working atm
     - hint: if placeholder is present in one language only it seems to work
  - [ ] command z not working for fillin change
  - [ ] changing a placeholder name in one lable - does not update other labels referencing the same key
+ - [ ] override label text with translation from key and show toast if text changed
+ - [ ] 
+ - [x] remove option to undo changes in design
  - [x] leading linebreak in label - auto removal fix
  - [x] leading spaces 
  - [x] label formating/link vs inline formatting - recognize link on label

@@ -14,6 +14,7 @@ import './Export.css';
 import TileSelect, { TileSelectOption } from '../../compontents/tileselect/tileselect';
 import { Language } from '../../../lib/base/Language';
 import KeyExporter from '../../../lib/export/KeyExporter';
+import FEATURES_FLAGS from '../../featuretoggle';
 
 type ExportProps = {
   translationKeyStore: MemoryTranslationKeyStore
@@ -112,6 +113,7 @@ export default function Export({
 
   return (
     <div>
+      { FEATURES_FLAGS.versioning && (
       <div>
         Please select the version you want to export
         <Select
@@ -121,6 +123,7 @@ export default function Export({
           defaultValue={tagOptions.find((option) => option.value === selectedVersion)!}
         />
       </div>
+      )}
       <div>
         Select Language
         <TileSelect<Language>

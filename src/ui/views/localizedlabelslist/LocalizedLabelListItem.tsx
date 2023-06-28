@@ -16,6 +16,7 @@ import TranslationKeyListView from '../translationkeys/TranslationKeyListView';
 import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
 import PlaceholderEditorListItem from '../../compontents/placeholder/PlaceholderEditor';
 import { Fillins } from '../../../lib/keystore/TranslationKey';
+import FEATURES_FLAGS from '../../featuretoggle';
 
 type LocalizedLabelListItemProps = {
 
@@ -31,7 +32,6 @@ export default function LocalizedLabelListItem({
   localizedLabelManager,
   selected,
 }: LocalizedLabelListItemProps) {
-  
   const translationKeyStore = localizedLabelManager.keyStore;
   const translatedKey = localizedLabel.keyType !== KeyState.Unset ? translationKeyStore.getKey(localizedLabel.key!) : undefined;
 
@@ -295,26 +295,29 @@ export default function LocalizedLabelListItem({
                   <div className="languageWrapper" key={localizedLabel.language}>
                     <div className="grid-item-language"><span className="rowText">{localizedLabel.keyType === KeyState.Linked && localizedLabel.language}</span></div>
                     <div key={localizedLabel.pluralId} className={`keyPluralWrapper ${translatedKey?.plural ? 'onePlural' : ' multiplePlurals'}`}>
+                      { FEATURES_FLAGS.plurals
+                      && (
                       <div className="grid-item-plural">
                         {localizedLabel.keyType === KeyState.Linked && (
-                          <>
-                            {translatedKey?.plural && (
-                            <Select
-                              onChange={(value) => {
-                                localizedLabelManager.updateLabelPlural(localizedLabel, value.value! as Plural);
-                              }}
-                              defaultValue={pluralsAvailable.find((opt) => opt.value === localizedLabel.pluralId)}
-                              getOptions={() => pluralsAvailable}
-                              placeholder=""
-                            />
-                            )}
-                            {!translatedKey?.plural && (
-                              <span className="rowText">{localizedLabel.pluralId}</span>
-                            )}
-                          </>
+                        <>
+                          {translatedKey?.plural && (
+                          <Select
+                            onChange={(value) => {
+                              localizedLabelManager.updateLabelPlural(localizedLabel, value.value! as Plural);
+                            }}
+                            defaultValue={pluralsAvailable.find((opt) => opt.value === localizedLabel.pluralId)}
+                            getOptions={() => pluralsAvailable}
+                            placeholder=""
+                          />
+                          )}
+                          {!translatedKey?.plural && (
+                          <span className="rowText">{localizedLabel.pluralId}</span>
+                          )}
+                        </>
                         )}
 
                       </div>
+                      )}
                       <div className="grid-item-translation translation-container translation">
                         <TranslationEditor
                           editable
@@ -359,7 +362,7 @@ export default function LocalizedLabelListItem({
                   </div>
                 </div>
 
-                { (localizedLabel.keyType === KeyState.Linked && (labelState.behind > 0 || localizedLabel.language !== localizedLabel.rootFrameLanguage)) && ( // allow the user to catch up with the keys version
+                { (localizedLabel.keyType === KeyState.Linked && (labelState.modified || labelState.behind > 0 || localizedLabel.language !== localizedLabel.rootFrameLanguage)) && ( // allow the user to catch up with the keys version
                 <span
                   className="layerIcon iconWrapper button"
                   data-tooltip-trigger="span"
@@ -370,7 +373,7 @@ export default function LocalizedLabelListItem({
                 </span>
                 )}
 
-                { ((localizedLabel.keyType === KeyState.Linked && labelState.modified && labelState.orginalTranslationHTML !== undefined)) && ( // allow the user revert the changes in design to the last versioned text
+                { ((false && localizedLabel.keyType === KeyState.Linked && labelState.modified && labelState.orginalTranslationHTML !== undefined)) && ( // allow the user revert the changes in design to the last versioned text
                 <span
                   className="layerIcon iconWrapper button"
                   data-tooltip-trigger="span"

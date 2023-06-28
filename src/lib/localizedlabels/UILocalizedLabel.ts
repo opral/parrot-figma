@@ -168,6 +168,9 @@ export class UILocalizedLabel implements LocalizedLabel {
     
     htmlContent = htmlContent.split('</p>').join('\n').split('<p>').join('').split('<br>').join('');
     
+    if (htmlContent[htmlContent.length - 1] === '\n') {
+      htmlContent = htmlContent.substring(0, htmlContent.length - 1);
+    }
     return htmlContent;
   }
 
@@ -362,6 +365,7 @@ export class UILocalizedLabel implements LocalizedLabel {
    * @returns
    */
   getState(): { behind: number, orginalTranslationHTML?: string, modified: boolean } {
+    
     const state = {
       modified: false,
       translationDeleted: false,

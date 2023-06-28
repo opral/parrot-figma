@@ -223,8 +223,8 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     }
   }
 
-  async updateUnmodifiedLabelsWithKey(key: string) {
-    const labelsToUpdate = (await this.getWithKey(key)).filter((label) => label.keyType === KeyState.Linked && !label.state!.modified);
+  async updateUnpinnedLabelsWithKey(key: string) {
+    const labelsToUpdate = (await this.getWithKey(key)).filter((label) => label.keyType === KeyState.Linked);
 
     await this.updateToLatestKeyVersion(labelsToUpdate);
   }
@@ -302,7 +302,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     const updatedKey = await this.keyStore.updateKey(keyName, translations, plural, fillins, quantity);
 
     if (originalKey?.latestVersion !== updatedKey.latestVersion) {
-      await this.updateUnmodifiedLabelsWithKey(keyName);
+      await this.updateUnpinnedLabelsWithKey(keyName);
 
       this.keyStore.parentKeyStore.commitUndo();
     }
@@ -320,13 +320,13 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   async createNewVersionFromLabelState(localizedLabel: UILocalizedLabel) {
     const localizedKey = await this.keyStore.updateKey(localizedLabel.key!, [{
       language: localizedLabel.language as Language, plural: localizedLabel.pluralId as Plural, text: localizedLabel.translationHTML, skip: false,
-    }]);
+    }], undefined, localizedLabel.fillins);
 
     await this.updateLabelProperties(localizedLabel.nodeId, {
       keyVersion: localizedKey.latestVersion,
     });
 
-    await this.updateUnmodifiedLabelsWithKey(localizedLabel.key!);
+    await this.updateUnpinnedLabelsWithKey(localizedLabel.key!);
 
     await this.localizedLabelMangerSandbox.commitUndo();
   }
@@ -338,11 +338,16 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
       const historyEntryForVersion = translationKey.getHistoryEntry(localizedLabel.rootFrameLanguage, localizedLabel.pluralId, translationKey.latestVersion);
 
       const fillins = { ...localizedLabel.fillins };
-      for (const placeholderName of Object.keys(fillins)) {
-        if (fillins[placeholderName].default && translationKey.defaultFillins[placeholderName]) {
-          fillins[placeholderName].value = translationKey.defaultFillins[placeholderName].value;
+      for (const placeholderName of Object.keys(translationKey.defaultFillins)) {
+        if ((!fillins[placeholderName] || fillins[placeholderName].default) && translationKey.defaultFillins[placeholderName]) {
+          fillins[placeholderName] = {
+            default: true,
+            value: translationKey.defaultFillins[placeholderName].value,
+          };
         }
       }
+
+      console.log('updateToLatestKeyVersion: ' +  historyEntryForVersion!.translations?.[localizedLabel.rootFrameLanguage]?.[localizedLabel.pluralId]?.text);
 
       // eslint-disable-next-line no-await-in-loop
       updatePromises.push(this.updateLabelProperties(localizedLabel.nodeId, {
@@ -354,8 +359,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     }
 
     await Promise.all(updatePromises);
-
-    await this.localizedLabelMangerSandbox.commitUndo();
   }
 
   async revertDesignChanges(localizedLabel: UILocalizedLabel) {

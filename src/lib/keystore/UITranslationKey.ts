@@ -100,6 +100,7 @@ export class UITranslationKey implements TranslationKey {
     // \]\]                Matches the closing double square brackets
 
     
+    // <ph type="s" format=".3" arg="" unnamed >unnamed_arg</ph>
     const pattern = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;
 
     // type -> 2

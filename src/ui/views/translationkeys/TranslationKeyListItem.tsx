@@ -24,6 +24,7 @@ import { UITranslationKey } from '../../../lib/keystore/UITranslationKey';
 import { PlaceholderView } from '../../compontents/translationEditor/PlaceholderView';
 import PlaceholderEditorListItem from '../../compontents/placeholder/PlaceholderEditor';
 import AsyncImage from './AsyncImage';
+import FEATURES_FLAGS from '../../featuretoggle';
 // import ReactQuill from 'react-quill';
 
 interface VersionEntry {
@@ -214,6 +215,7 @@ export default function TranslationKeyListItem({
             >
               <span className="svg-container trash-svg" />
             </span>
+            { FEATURES_FLAGS.plurals && (
             <span
               className="layerIcon iconWrapper button"
               onClick={() => {
@@ -222,6 +224,7 @@ export default function TranslationKeyListItem({
             >
               <span className={'svg-container ' + (translationKey.plural ? 'plural-svg' : 'no-plural-svg')} />
             </span>
+            )}
 
           </>
           )}
@@ -281,7 +284,7 @@ export default function TranslationKeyListItem({
               // eslint-disable-next-line consistent-return
               return (
                 <div key={plural} className={`keyPluralWrapper ${translationKey.plural ? 'onePlural' : ' multiplePlurals'}${translationKey.translations[language as Language]?.[plural as Plural]?.skip === true ? ' skipped' : ''}`}>
-                  { translationKey.plural && <div className="grid-item-plural"><span className="rowText">{plural}</span></div>}
+                  { FEATURES_FLAGS.plurals && translationKey.plural && <div className="grid-item-plural"><span className="rowText">{plural}</span></div>}
                   <div className="grid-item-translation translation-container translation">
                     <TranslationEditor
                       keyName={translationKey.keyName}
@@ -306,6 +309,8 @@ export default function TranslationKeyListItem({
                   <div className="grid-item-actions">
                     { select === undefined && (
                     <>
+                      { FEATURES_FLAGS.disableKeyLanguage
+                      && (
                       <span
                         className="layerIcon iconWrapper button"
                         onClick={async () => {
@@ -320,6 +325,8 @@ export default function TranslationKeyListItem({
                       >
                         <span className={'svg-container' + (translationKey.translations[language as Language]?.[plural as Plural]?.skip === true ? ' eye-closed-svg' : ' eye-svg')} />
                       </span>
+                      )}
+                      { FEATURES_FLAGS.versioning && (
                       <span
                         className="layerIcon iconWrapper button"
                         onClick={async () => {
@@ -328,6 +335,7 @@ export default function TranslationKeyListItem({
                       >
                         <span className="svg-container history-svg" />
                       </span>
+                      )}
                       <span
                         className="layerIcon iconWrapper button"
                         onClick={async () => {

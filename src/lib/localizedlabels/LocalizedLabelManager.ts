@@ -2,6 +2,7 @@
 /* eslint-disable class-methods-use-this */
 import { t } from 'i18next';
 import { debug } from 'console';
+import { text } from 'stream/consumers';
 import { Language } from '../base/Language';
 import { KeyState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../base/Plural';
@@ -10,7 +11,6 @@ import { FigmaFileTranslationKeyStore } from '../keystore/FigmaFileTranslationKe
 import { Fillins } from '../keystore/TranslationKey';
 import VirtualTree, { VirtualTreeNode } from './VirtualTree';
 import LinksLoadedEvent from './LinksLoadedEvent';
-import { text } from 'stream/consumers';
 
 export interface SandboxUpdateLabelProperties {
   labelName?: string,
@@ -610,7 +610,23 @@ export default class LocalizedLabelManager {
     // console.log((new Date()).getTime() + 'execution finished - puting result into message');
   }
 
+  labelUpdateQueue = {
+
+  } as any;
+
   async updateLabelProperties(nodeId: string, changedProperties: SandboxUpdateLabelProperties) {
+    // setup queue for atomic label update processing
+    if (this.labelUpdateQueue[nodeId]) {
+      // eslint-disable-next-line no-promise-executor-return
+      console.log('queing update');
+      await (new Promise((resolver) => this.labelUpdateQueue[nodeId].push(resolver)));
+      console.log('dequied');
+    } else {
+      console.log('queing not needed - prepare queue for next call');
+      // start a new queue
+      this.labelUpdateQueue[nodeId] = [];
+    }
+
     const textNode = figma.getNodeById(nodeId)! as TextNode;
 
     if (changedProperties.labelName !== undefined) {
@@ -645,6 +661,7 @@ export default class LocalizedLabelManager {
       // const textWithDecorators = this.toTextRangeObject(changedProperties.translation);
 
       textNode.setPluginData(this.filledTemplateHashDataKey, changedProperties.filledTemplateHash ? changedProperties.filledTemplateHash : '');
+      console.log(`setting characters from ${textNode.characters} to ${changedProperties.characters}`);
       textNode.characters = changedProperties.characters;
 
       // NOTE: when we are here and we have mixed font family we have warned the user already - we go for the first one
@@ -655,7 +672,7 @@ export default class LocalizedLabelManager {
       let regularFontName: FontName | undefined;
       let boldFontName: FontName | undefined;
       let italicFontName: FontName | undefined;
-      let boldItalicontName: FontName | undefined;
+      let boldItalicFontName: FontName | undefined;
 
       fontFamily.forEach((fontFamilyVariant) => {
         const styleLowerCase = fontFamilyVariant.style.toLowerCase();
@@ -675,10 +692,10 @@ export default class LocalizedLabelManager {
         }
 
         if (styleLowerCase.includes('bold italic')) {
-          boldItalicontName = fontFamilyVariant;
+          boldItalicFontName = fontFamilyVariant;
         }
-        if (!boldItalicontName && styleLowerCase.includes('italic') && styleLowerCase.includes('bild')) {
-          boldItalicontName = fontFamilyVariant;
+        if (!boldItalicFontName && styleLowerCase.includes('italic') && styleLowerCase.includes('bild')) {
+          boldItalicFontName = fontFamilyVariant;
         }
       });
 
@@ -694,8 +711,8 @@ export default class LocalizedLabelManager {
         await figma.loadFontAsync(italicFontName);
       }
 
-      if (boldItalicontName) {
-        await figma.loadFontAsync(boldItalicontName);
+      if (boldItalicFontName) {
+        await figma.loadFontAsync(boldItalicFontName);
       }
 
       for (const rangeStyle of changedProperties.ops!) {
@@ -717,10 +734,20 @@ export default class LocalizedLabelManager {
 
         textNode.setRangeTextDecoration(rangeStyle.from, rangeStyle.to, decoration);
 
+        console.log(`Processing: ${textNode.characters.length} ${rangeStyle.to} ${textNode.characters} ${changedProperties.characters}`);
+
         // check if we should apply styles at all... is bold/italic/regular swiched once? otherwise keep the orginal label
         if (regularFontName
           && !rangeStyle.attributes?.bold && !rangeStyle.attributes?.italic) {
-          textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, regularFontName);
+          if (rangeStyle.from === 0
+            && rangeStyle.to === textNode.characters.length) {
+            if (textNode.fontName === boldItalicFontName || textNode.fontName === boldFontName || (italicFontName && textNode.fontName === italicFontName)) {
+              textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, regularFontName);
+            }
+          } else {
+            debugger;
+            textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, regularFontName);
+          }
         }
 
         if (italicFontName
@@ -733,9 +760,9 @@ export default class LocalizedLabelManager {
           textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, boldFontName);
         }
 
-        if (boldItalicontName
+        if (boldItalicFontName
           && rangeStyle.attributes?.bold && rangeStyle.attributes?.italic) {
-          textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, boldItalicontName);
+          textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, boldItalicFontName);
         }
       }
     }
@@ -748,6 +775,15 @@ export default class LocalizedLabelManager {
       textNode.setPluginData(this.languageDataKey, changedProperties.language ? changedProperties.language : '');
     }
 
+    // allow this function to return sucessfully before we start the next update in the queue
+    setTimeout(() => {
+      const nextUpdateResolver = this.labelUpdateQueue[nodeId].shift();
+      if (nextUpdateResolver) {
+        nextUpdateResolver();
+      } else {
+        delete this.labelUpdateQueue[nodeId];
+      }
+    }, 1);
     return this.toLocalizedLabelOrUndefined(textNode)!;
   }
 
@@ -962,7 +998,7 @@ export default class LocalizedLabelManager {
         }
       }
     }
-    return placeholderDeltaOps.sort((op1, op2) => op1.start - op2.start);;
+    return placeholderDeltaOps.sort((op1, op2) => op1.start - op2.start);
   }
 
   private getTextStyleDeltaOps(node: TextNode) {
@@ -970,7 +1006,6 @@ export default class LocalizedLabelManager {
     const textSegments = node.getStyledTextSegments(['fontName', 'textDecoration', 'hyperlink']);
 
     textSegments.forEach((textSegment) => {
-      
       // if the node has one stile (non mixed) its not inline styling - ignore it
       const italic = node.fontName !== figma.mixed ? undefined : textSegment.fontName.style.toLowerCase().includes('italic');
       const weightName = textSegment.fontName.style.replace('italic', '').replace(' ', '');

@@ -33,13 +33,13 @@ import { Language } from '../lib/base/Language';
 import Tooltip from './compontents/tooltip/Tooltip';
 import Import from './views/import/Import';
 import Export from './views/export/Export';
+import FEATURES_FLAGS from './featuretoggle';
 
 TimeAgo.addDefaultLocale(en);
 
-
 const monkeyPatchCommandExec = document.execCommand;
 // eslint-disable-next-line func-names
-document.execCommand = function() {
+document.execCommand = function () {
   // eslint-disable-next-line prefer-rest-params
   if (arguments[0] === 'undo' || arguments[0] === 'redo') {
     return false;
@@ -61,7 +61,7 @@ document.execCommand = function() {
 document.addEventListener('keydown', (e) => {
   // Handle Select All, Undo and Redo in the desktop app
   if (e.keyCode === 65 /* A */ && e.metaKey && !(e.target! as any).classList.contains('cm-content')) {
-    document.execCommand('selectAll')
+    document.execCommand('selectAll');
   } else if (e.keyCode === 90 /* Z */ && e.metaKey) {
     if (e.shiftKey) {
       document.execCommand('redoForce');
@@ -70,7 +70,6 @@ document.addEventListener('keydown', (e) => {
     }
   }
 }, true);
-
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'z' && !e.shiftKey && !e.altKey && !(e.target! as any).classList.contains('cm-content')) {
@@ -118,7 +117,6 @@ function App() {
   const [windowMode, setWindowMode] = useState(WindowManagerUi.instance!.windowMode);
 
   const [, setDefaultLinkStyle] = useState('' as string);
-
 
   useEffect(() => {
     // asynchronous fetch the state from figma helper
@@ -193,7 +191,7 @@ function App() {
         translationKeyStore={memoryTranslationKeyStore}
         localizedLabelManager={localizedLabelManager}
         figmaRemote={figmaRemote}
-        
+
       />
     );
   } else if (appScreen === 'settings') {
@@ -254,7 +252,7 @@ function App() {
         <div className="tabHeader">
           <div className={`tab ${appScreen === 'design' ? 'active' : ''}`} onClick={() => setAppScreen('design')}>Design</div>
           <div className={`tab ${appScreen === 'keys' ? 'active' : ''}`} onClick={() => setAppScreen('keys')}>Keys</div>
-          <div className={`tab ${appScreen === 'export' ? 'active' : ''}`} onClick={() => setAppScreen('export')}>Versions & Export</div>
+          <div className={`tab ${appScreen === 'export' ? 'active' : ''}`} onClick={() => setAppScreen('export')}>{ FEATURES_FLAGS.versioning ? 'Versions & Export' : 'Export'}</div>
           <div className={`tab ${appScreen === 'import' ? 'active' : ''}`} onClick={() => setAppScreen('import')}>Import</div>
           <div className={`tab ${appScreen === 'settings' ? 'active' : ''}`} onClick={() => setAppScreen('settings')}>Settings</div>
         </div>

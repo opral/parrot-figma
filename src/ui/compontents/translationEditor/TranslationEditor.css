@@ -1,8 +1,7 @@
 
 .translation-editor {
-  width: 100%;
   margin-top: 4px;
-  margin-bottom: 4px;
+  width: 100%;
 }
 
 
@@ -32,6 +31,7 @@
   right: 0px;
   top: 0px;
   bottom: 0px;
+  padding-right: 5px;
 }
 
 
@@ -58,15 +58,39 @@
 }
 
 .translation-editor-text.editing {
+  background-color: var(--figma-color-bg);
   border-color: var(--figma-color-border-brand-strong);
 }
 
-.translation-editor-text .translation {
+.translation-editor-text.editing .translation {
+  visibility: hidden;
+}
+
+
+
+.translation-editor-text {
+  border-radius: 1px;
+  border: 1px solid transparent;
+  outline: none;
   padding-left: 8px;
   padding-top: 4px;
   padding-bottom: 3px;
   padding-right: 5px;
 }
+
+.translation-editor-text:hover {
+  border: 1px solid var(--figma-color-border, rgba(0, 0, 0, .1));
+  
+}
+
+
+.translation-editor-text.editing {
+  outline-offset: 0.39px;
+  border: 1px solid var(--figma-color-border-selected);
+  outline: 1px solid var(--figma-color-border-selected);
+}
+
+
 
 .ql-toolbar {
   display: flex;
@@ -99,6 +123,7 @@
   top: 0px;
   background-color: rgb(18, 13, 13);
   display: block !important;
+  
 }
 
 .cm-theme .cm-editor {
@@ -113,12 +138,12 @@
 
 .translation-editor-text * {
   color:  var(--figma-color-text);
-  font-family: "Inter", sans-serif;
+  /*font-family: "Inter", sans-serif;
   font-style: normal;
   font-weight: 400;
   font-size: 11px;
   line-height: 14px;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.01em;*/
 }
 
 .translation-editor-text em, .translation-editor-text em * {
@@ -129,20 +154,18 @@
   font-weight: 800;
 }
 
-.translation-editor-text .translation {
-  background-color: var(--figma-color-bg);
-}
 
 div.ql-tooltip {
   position: absolute !important;
   
   z-index: 1 !important;
-  background-color: var(--figma-color-bg-inverse, #fff) !important;
-  border: 1px solid var(--figma-color-border-strong, #d4d4d4) !important;
-  box-shadow: 0 4px 14px var(--figma-color-border-strong, rgba(0, 0, 0, .1)) !important;
+  background-color: #222 !important;
+  border: 1px solid #2c2c2c !important;
+  
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.9) !important;
   color: var(--figma-color-text-tooltip, #333333) !important;
   white-space: nowrap !important;
-  border-radius: 3px !important;
+  border-radius: 2px !important;
 }
 
 .ql-placeholder-fillin {

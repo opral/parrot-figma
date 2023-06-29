@@ -5,6 +5,7 @@ import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
+import { color } from '@uiw/react-codemirror';
 import { Language } from '../../../lib/base/Language';
 
 import MemoryTranslationKeyStore, { SearchQuery, UITranslationKeys } from '../../../lib/keystore/MemoryTranslationKeyStore';
@@ -15,9 +16,11 @@ import { Plural } from '../../../lib/base/Plural';
 import './TranslationKeyView.css';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import { KeyState, LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
+import { NodeSelection } from '../../../lib/localizedlabels/LocalizedLabelManager';
 
 type TranslationKeyListViewProps = {
   initialSearchQuery: SearchQuery,
+  showSearchBar: boolean,
   translationKeyStore: MemoryTranslationKeyStore
   localizedLabelManager: LocalizedLabelManagerUI
   figmaRemote: FigmaUtil
@@ -26,66 +29,57 @@ type TranslationKeyListViewProps = {
 
 export default function TranslationKeyListView({
   initialSearchQuery,
+  showSearchBar,
   translationKeyStore,
   localizedLabelManager,
   figmaRemote,
   select,
 }: TranslationKeyListViewProps) {
   const { t } = useTranslation();
-  // const [, setTrigger] = useState(0);
+  const [, setTrigger] = useState(0);
   const [renderEntries, setRenderEntries] = useState(200);
 
-  const [selectedKeys, setSelectedKeys] = useState([] as string[]);
-  const [highlightingAfterSelectionDone, setHighlightingAfterSelectionDone] = useState(false);
+  const [fullyRendered, setFullyRendered] = useState(false);
+  const [selectedNodes, setSelectedNodes] = useState({} as NodeSelection);
+  const [highlightSelection, setHighlightSelection] = useState(false);
+
   // const [keys, setKeys] = useState: UITranslationKeys,
   const [searchQuery, setSearchQuery] = useState<SearchQuery>(initialSearchQuery);
-  const [filteredKeys, setFilteredKeys] = useState(translationKeyStore.findKeys(initialSearchQuery));
+  const filteredKeys = translationKeyStore.findKeys(searchQuery, selectedNodes);
   const tableRef = useRef<HTMLDivElement>(null);
 
-  async function refreshData() {
-    setFilteredKeys(translationKeyStore.findKeys(searchQuery));
-    // setTrigger((v) => v + 1);
-  }
+  async function refreshSelection(triggerHighlight: boolean) {
+    const freshSelectedNodes = await localizedLabelManager.getSelection();
 
-  async function refreshSelection() {
-    const selectedNodes = await localizedLabelManager.getSelection();
-    const freshSelectedKeys = Object.values(selectedNodes).filter((selectedNode) => selectedNode.isLabel && selectedNode.key).map((selectedNode) => selectedNode.selectedNodeId);
-
-    setSelectedKeys(freshSelectedKeys);
-  }
-
-  function messageHandler(event: any) {
-    if (event.data.pluginMessage.type === 'event') {
-      if (event.data.pluginMessage.name === 'selectionchange') {
-        setHighlightingAfterSelectionDone(false);
-        // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
-        refreshSelection();
-      }
-    }
-  }
-
-  function tryToHighlightSelectedKey() {
-    const firstSelected = tableRef.current?.querySelector('.selected') as HTMLElement;
-    if (firstSelected && !highlightingAfterSelectionDone) {
-      setHighlightingAfterSelectionDone(true);
-      (firstSelected.firstChild as any).scrollIntoViewIfNeeded({ block: 'center' });
-    }
+    setSelectedNodes(freshSelectedNodes);
+    setHighlightSelection(triggerHighlight);
   }
 
   useEffect(() => {
+    const messageHandler = (event: any) => {
+      if (event.data.pluginMessage.type === 'event' && event.data.pluginMessage.name === 'selectionchange') {
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
+        refreshSelection(true);
+      }
+    };
+
     // asynchronous fetch the state from figma helper
     (async () => {
       // eslint-disable-next-line @typescript-eslint/no-use-before-define
-      await refreshSelection();
+      await refreshSelection(false);
     })();
 
-    localizedLabelManager.addEventListener('updated', refreshData);
-    translationKeyStore.addEventListener('updated', refreshData);
+    const onUpdated = () => {
+      setTrigger((v) => v + 1);
+    };
+
+    localizedLabelManager.addEventListener('updated', onUpdated);
+    translationKeyStore.addEventListener('updated', onUpdated);
     window.addEventListener('message', messageHandler);
 
     return () => {
-      localizedLabelManager.removeEventListener('updated', refreshData);
-      translationKeyStore.removeEventListener('updated', refreshData);
+      localizedLabelManager.removeEventListener('updated', onUpdated);
+      translationKeyStore.removeEventListener('updated', onUpdated);
       window.removeEventListener('message', messageHandler);
     };
   }, []);
@@ -102,27 +96,23 @@ export default function TranslationKeyListView({
       }, 10);
     }
 
-    if (tableRef.current) {
-      const firstSelected = tableRef.current.querySelector('.selected') as HTMLElement;
-      if (firstSelected && !highlightingAfterSelectionDone) {
-        setHighlightingAfterSelectionDone(true);
-        (firstSelected.firstChild as any).scrollIntoViewIfNeeded({ block: 'center' });
-      }
-    }
+    setFullyRendered(true);
+
     return () => { if (renderStepTimeout !== undefined) clearTimeout(renderStepTimeout); };
   }, [renderEntries]);
 
   useEffect(() => {
-    if (tableRef.current) {
-      tryToHighlightSelectedKey();
+    if (tableRef.current && highlightSelection) {
+      setHighlightSelection(false);
+      const firstSelected = tableRef.current?.querySelector('.selected') as HTMLElement;
+      if (firstSelected) {
+        (firstSelected.parentNode!.firstChild! as any).scrollIntoViewIfNeeded({ block: 'center' });
+      }
     }
-  }, [selectedKeys]);
+  }, [highlightSelection]);
 
-  useEffect(() => {
-    setFilteredKeys(translationKeyStore.findKeys(searchQuery));
-  }, [searchQuery]);
-
-  if (Object.keys(translationKeyStore.translationKeys).length === 0) {
+  const fileHasKeys = Object.keys(translationKeyStore.translationKeys).length > 0;
+  if (!fileHasKeys) {
     return (
       <div className="emptyState">
         <div className="emptyStateTitle">No Translation keys yet</div>
@@ -138,9 +128,7 @@ export default function TranslationKeyListView({
   }
 
   const updateQuery = (newQuery: SearchQuery) => {
-    const newFilteredKeys = translationKeyStore.findKeys(newQuery);
     setSearchQuery(newQuery);
-    setFilteredKeys(newFilteredKeys);
   };
 
   const onSearchChange = (searchString: string) => {
@@ -153,6 +141,7 @@ export default function TranslationKeyListView({
 
   return (
     <div>
+      { showSearchBar && (
       <div className="style_picker--search search--margin">
         <span className="svg-container search-svg" />
         <input
@@ -168,67 +157,163 @@ export default function TranslationKeyListView({
           }}
         />
       </div>
-      { true && (
-        <div className="searchResults">
+      )}
+
+      <div className="searchResults">
+        { searchQuery.key !== undefined && (
+          <div className="searchResults-suggestion">
+            <div className="text">{`Key: ${searchQuery.key}`}</div>
+            <div
+              className="close svg-container cross-svg"
+              onClick={() => {
+                const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
+                newQuery.key = undefined;
+                updateQuery(newQuery);
+              }}
+            />
+          </div>
+        )}
+
+        { searchQuery.key === undefined && (
+          <div style={{paddingRight: '5px'}}>
+            <span>
+              {filteredKeys.matchingKeys.size}
+              {' '}
+              Translation Keys
+              {' '}
+            </span>
+            {searchQuery.missingTranslation === undefined && (
+            <>
+              {' '}
+              <span>
+                {' '}
+                -
+                {' '}
+                {filteredKeys.withMissingTranslations.size}
+                {' '}
+                Missing Translations
+              </span>
+              <span style={{ color: '#1DA1F2', cursor: 'pointer' }}
+              onClick={() => {
+                const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
+                newQuery.missingTranslation = true;
+                updateQuery(newQuery);
+              }}> filter</span>
+            </>
+            )}
+
+          </div>
+        )}
+        { searchQuery.key === undefined && searchQuery.missingTranslation !== undefined && (
+          <div className="searchResults-suggestion">
+            <div className="text">Missing Translation</div>
+            <div
+              className="close svg-container cross-svg"
+              onClick={() => {
+                const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
+                newQuery.missingTranslation = undefined;
+                updateQuery(newQuery);
+              }}
+            />
+          </div>
+        )}
+
+        { false && (
+        <>
+          <div
+            className={`searchResults-suggestion ${searchQuery.missingTranslation === false ? ' active' : ''}`}
+            onClick={() => {
+              const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
+              newQuery.missingTranslation = searchQuery.missingTranslation === false ? undefined : false;
+
+              updateQuery(newQuery);
+            }}
+          >
+            {`Full Translation (${filteredKeys.withMissingTranslations.size})`}
+          </div>
+          <div
+            className={`searchResults-suggestion ${searchQuery.selected === 'FRAME' ? ' active' : ''}`}
+            onClick={() => {
+              const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
+              newQuery.selected = searchQuery.selected === 'FRAME' ? undefined : 'FRAME';
+
+              updateQuery(newQuery);
+            }}
+          >
+            {`In Selected Frame (${filteredKeys.referencedInFrame.size})`}
+          </div>
+          <div
+            className={`searchResults-suggestion ${searchQuery.selected === 'LABEL' ? ' active' : ''}`}
+            onClick={() => {
+              const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
+              newQuery.selected = searchQuery.selected === 'LABEL' ? undefined : 'LABEL';
+
+              updateQuery(newQuery);
+            }}
+          >
+            {`In Selected Label (${filteredKeys.referencedInLabels.size})`}
+          </div>
           <div className="searchResults-suggestion">
             results:
             {' '}
             {filteredKeys.matchingKeys.size}
             {' '}
           </div>
-          {!searchQuery.key && filteredKeys.inKeys.size > 0 && (
-          <div
-            className="searchResults-suggestion"
-            onClick={() => {
-              const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-              newQuery.key = searchQuery.text;
-              newQuery.keyAtEnd = false;
-              newQuery.text = '';
+        </>
+        )}
+        {false && !searchQuery.key && filteredKeys.inKeys.size > 0 && (
+        <div
+          className="searchResults-suggestion"
+          onClick={() => {
+            const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
+            newQuery.key = searchQuery.text;
+            newQuery.keyAtEnd = false;
+            newQuery.text = '';
 
-              updateQuery(newQuery);
-            }}
-          >
-            {`key:${searchQuery.text} ${filteredKeys.inKeys.size}`}
-          </div>
-          )}
-          {!searchQuery.key && filteredKeys.inText.size > 0 && (
-          <div
-            className="searchResults-suggestion"
-            onClick={() => {
-              const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-              newQuery.key = '*';
-              updateQuery(newQuery);
-            }}
-          >
-            {`Results in Text ${filteredKeys.inText.size}`}
-          </div>
-          )}
-          { false && searchQuery.unverified !== true && ( // TODO #9 activate again as soon as verification is in place
-          <div
-            className="searchResults-suggestion"
-            onClick={() => {
-              const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-              newQuery.unverified = true;
-              updateQuery(newQuery);
-            }}
-          >
-            {`unverified:true ${filteredKeys.withMissingReview.size}`}
-          </div>
-          )}
-          {searchQuery.missingTranslation === undefined && (
-          <div
-            className="searchResults-suggestion"
-            onClick={() => {
-              const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-              newQuery.missingTranslation = true;
-              updateQuery(newQuery);
-            }}
-          >
-            {`missing_translation:true ${filteredKeys.withMissingTranslations.size}`}
-          </div>
-          )}
+            updateQuery(newQuery);
+          }}
+        >
+          {`key:${searchQuery.text} ${filteredKeys.inKeys.size}`}
         </div>
-      )}
+        )}
+        {false && !searchQuery.key && filteredKeys.inText.size > 0 && (
+        <div
+          className="searchResults-suggestion"
+          onClick={() => {
+            const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
+            newQuery.key = '*';
+            updateQuery(newQuery);
+          }}
+        >
+          {`Results in Text ${filteredKeys.inText.size}`}
+        </div>
+        )}
+        { false && searchQuery.unverified !== true && ( // TODO #9 activate again as soon as verification is in place
+        <div
+          className="searchResults-suggestion"
+          onClick={() => {
+            const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
+            newQuery.unverified = true;
+            updateQuery(newQuery);
+          }}
+        >
+          {`unverified:true ${filteredKeys.withMissingReview.size}`}
+        </div>
+        )}
+        { false && searchQuery.missingTranslation === undefined && (
+        <div
+          className="searchResults-suggestion"
+          onClick={() => {
+            const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
+            newQuery.missingTranslation = true;
+            updateQuery(newQuery);
+          }}
+        >
+          {`missing_translation:true ${filteredKeys.withMissingTranslations.size}`}
+        </div>
+        )}
+      </div>
+
       <div className="grid" ref={tableRef}>
         {/* helper row for css to set the width when partially rendered */}
         <div className="grid-hidden-layout-helper">
@@ -259,7 +344,7 @@ export default function TranslationKeyListView({
               translationKey={translationKeyStore.translationKeys[keyName]}
               figmaRemote={figmaRemote}
               select={select}
-              labelSelected={selectedKeys.includes(keyName)}
+              labelSelected={Object.values(selectedNodes).map((selectedNode) => selectedNode.key).includes(keyName)}
             />
           );
         })}

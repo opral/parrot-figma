@@ -84,10 +84,12 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+const resizeHandle = document.getElementById('resize-handle')!;
+
 WindowManagerUi.init(
   document.getElementById('sizing-wrapper')!,
   document.getElementById('react-page')!,
-  document.getElementById('resize-handle')!,
+  resizeHandle,
 );
 
 const asyncFunctionProxy = new AsyncFunctionProxy('UIAsyncFunctionProxy', (data: any) => {
@@ -115,6 +117,7 @@ function App() {
   const [appScreen, setAppScreen] = useState(undefined as String | undefined);
 
   const [windowMode, setWindowMode] = useState(WindowManagerUi.instance!.windowMode);
+  const [keyQuery, setKeyQuery] = useState(MemoryTranslationKeyStore.toQueryObject(''));
 
   const [, setDefaultLinkStyle] = useState('' as string);
 
@@ -187,7 +190,8 @@ function App() {
   if (appScreen === 'keys') {
     view = (
       <TranslationKeyListView
-        initialSearchQuery={MemoryTranslationKeyStore.toQueryObject('')}
+        showSearchBar={false}
+        initialSearchQuery={keyQuery}
         translationKeyStore={memoryTranslationKeyStore}
         localizedLabelManager={localizedLabelManager}
         figmaRemote={figmaRemote}
@@ -238,6 +242,10 @@ function App() {
   } else {
     view = (
       <LocalizedLabelsListView
+        showKey={(key: string) => {
+          setKeyQuery(MemoryTranslationKeyStore.toQueryObject(`key:${key}`));
+          setAppScreen('keys');
+        }}
         localizedLabelManager={localizedLabelManager}
         figmaRemote={figmaRemote}
       />
@@ -251,10 +259,33 @@ function App() {
       <div className="toolbar">
         <div className="tabHeader">
           <div className={`tab ${appScreen === 'design' ? 'active' : ''}`} onClick={() => setAppScreen('design')}>Design</div>
-          <div className={`tab ${appScreen === 'keys' ? 'active' : ''}`} onClick={() => setAppScreen('keys')}>Keys</div>
+          <div
+            className={`tab ${appScreen === 'keys' ? 'active' : ''}`}
+            onClick={() => {
+              setKeyQuery(MemoryTranslationKeyStore.toQueryObject(''));
+              setAppScreen('keys');
+            }}
+          >
+            Keys
+
+          </div>
           <div className={`tab ${appScreen === 'export' ? 'active' : ''}`} onClick={() => setAppScreen('export')}>{ FEATURES_FLAGS.versioning ? 'Versions & Export' : 'Export'}</div>
           <div className={`tab ${appScreen === 'import' ? 'active' : ''}`} onClick={() => setAppScreen('import')}>Import</div>
           <div className={`tab ${appScreen === 'settings' ? 'active' : ''}`} onClick={() => setAppScreen('settings')}>Settings</div>
+        </div>
+        <div
+          style={{ flexGrow: 1, cursor: 'ns-resize' }}
+          onPointerDown={(event) => {
+            event.preventDefault(); // Prevent the default behavior
+            event.stopPropagation(); // Stop event bubbling
+            resizeHandle.dispatchEvent(new PointerEvent('pointerdown', event as any));
+          }}
+          onPointerUp={(event) => {
+            event.preventDefault(); // Prevent the default behavior
+            event.stopPropagation(); // Stop event bubbling
+            resizeHandle.dispatchEvent(new PointerEvent('onpointerup', event as any));
+          }}
+        >
         </div>
         <div className="window-control">
           <SegmentedControl

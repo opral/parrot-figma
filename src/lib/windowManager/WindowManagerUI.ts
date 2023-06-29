@@ -146,6 +146,9 @@ export default class WindowManagerUi extends EventTarget {
   }
 
   onResizeHandleDrag(e: any) {
+    const computedStyle = getComputedStyle(this.sizeWrapper);
+    const height = parseInt(computedStyle.height, 10);
+    const width = parseInt(computedStyle.width, 10);
     if (this.windowMode === WindowMode.Window) {
       const size = {
         width: Math.max(50, Math.floor(e.clientX + 5)),
@@ -153,11 +156,9 @@ export default class WindowManagerUi extends EventTarget {
       };
       parent.postMessage({ pluginMessage: { target: 'WindowManager', size, source: 'dragging' } }, '*');
     } else if (this.windowMode === WindowMode.BottomSheet) {
-      const computedStyle = getComputedStyle(this.sizeWrapper);
-      const height = parseInt(computedStyle.height, 10);
       if (!isNaN(height)) {
         const size = {
-          height: Math.max(50, Math.floor(height - e.clientY + 5)),
+          height: Math.max(50, Math.floor(height - (e.clientY - this.startingOffsetY))),
         };
         parent.postMessage({ pluginMessage: { target: 'WindowManager', size, source: 'dragging' } }, '*');
       }
@@ -171,7 +172,16 @@ export default class WindowManagerUi extends EventTarget {
     e.target.releasePointerCapture(e.pointerId);
   }
 
+  startingOffsetY = -1;
+
+  startingOffsetX = -1;
+
   onResizeHandlePointerDown(e: any) {
+
+    this.startingOffsetY = e.clientY;
+    this.startingOffsetX = e.clientX;
+    console.log(e.clientY);
+    console.log(e.clientX);
     this.isResizing = true;
     e.target.onpointermove = this.onResizeHandleDrag.bind(this);
     e.target.setPointerCapture(e.pointerId);

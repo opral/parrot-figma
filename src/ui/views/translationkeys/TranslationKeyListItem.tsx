@@ -197,6 +197,7 @@ export default function TranslationKeyListItem({
         }
       }}
     >
+      <div className="grid-full-height-helper" />
       <div className={'grid-item-key ' + (labelSelected ? ' selected' : '')}>
         <div className="grid-item-key-header">
           <span className="layerIcon iconWrapper">

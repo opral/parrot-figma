@@ -105,6 +105,11 @@
   }
 
 
+  .cross-svg {
+    -webkit-mask-image: url(./cross.svg);
+    mask-image: url(./cross.svg);
+  }
+
   .reset-instance-svg {
     -webkit-mask-image: url(./reset-instance.svg);
     mask-image: url(./reset-instance.svg);

@@ -1,6 +1,7 @@
 
 .translation-editor {
-  margin-top: 4px;
+  margin-top: 1px;
+  margin-bottom: 1px;
   width: 100%;
 }
 
@@ -69,11 +70,12 @@
 
 
 .translation-editor-text {
-  border-radius: 1px;
+  min-height: 18px;
+  border-radius: 2px;
   border: 1px solid transparent;
   outline: none;
   padding-left: 8px;
-  padding-top: 4px;
+  padding-top: 7px;
   padding-bottom: 3px;
   padding-right: 5px;
 }

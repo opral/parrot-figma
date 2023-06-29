@@ -19,7 +19,7 @@ import { Fillins } from '../../../lib/keystore/TranslationKey';
 import FEATURES_FLAGS from '../../featuretoggle';
 
 type LocalizedLabelListItemProps = {
-
+  showKey: Function,
   localizedLabel: UILocalizedLabel,
   figmaRemote: FigmaUtil,
   localizedLabelManager: LocalizedLabelManagerUI,
@@ -27,6 +27,7 @@ type LocalizedLabelListItemProps = {
 };
 
 export default function LocalizedLabelListItem({
+  showKey,
   localizedLabel,
   figmaRemote,
   localizedLabelManager,
@@ -101,6 +102,7 @@ export default function LocalizedLabelListItem({
           </div>
           { searchKey !== undefined && (
           <TranslationKeyListView
+            showSearchBar
             translationKeyStore={translationKeyStore}
             localizedLabelManager={localizedLabelManager}
             figmaRemote={figmaRemote}
@@ -200,6 +202,8 @@ export default function LocalizedLabelListItem({
                         });
                       } else if (selectedOption.value === 'create-key') {
                         setNewKey(localizedLabel.derivedKey ?? '');
+                      } else if (selectedOption.value === 'show-key') {
+                        showKey(localizedLabel.key!);
                       }
                     } else if (selectedOption.type === 'key') {
                       localizedLabelManager.linkKey(localizedLabel, selectedOption.value as string, selectedOption.language!, selectedOption.plural!);
@@ -280,6 +284,16 @@ export default function LocalizedLabelListItem({
                       type: 'action',
                     });
 
+
+                    if (localizedLabel.key !== undefined) {
+                      options.push({
+                        label: 'show key...',
+                        value: 'show-key',
+                        type: 'action',
+                      });
+                    }
+
+
                     options.push({
                       label: 'No Translation',
                       value: 'no-translation',
@@ -293,7 +307,7 @@ export default function LocalizedLabelListItem({
                 <div className="grid">
 
                   <div className="languageWrapper" key={localizedLabel.language}>
-                    <div className="grid-item-language"><span className="rowText">{localizedLabel.keyType === KeyState.Linked && localizedLabel.language}</span></div>
+                    <div className="grid-item-language"><span className="rowText">{localizedLabel.keyType === KeyState.Linked ? localizedLabel.language : localizedLabel.rootFrameLanguage}</span></div>
                     <div key={localizedLabel.pluralId} className={`keyPluralWrapper ${translatedKey?.plural ? 'onePlural' : ' multiplePlurals'}`}>
                       { FEATURES_FLAGS.plurals
                       && (

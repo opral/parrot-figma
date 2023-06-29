@@ -98,6 +98,11 @@ select.select-menu {
   position: relative;
 }
 
+.select-menu__button.placeholder {
+  color: var(--figma-color-text-disabled);
+}
+
+
 .select-menu__button {
   display: flex;
   align-items: center;

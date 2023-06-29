@@ -340,6 +340,7 @@ export default function Select({
   const expanListClass = isExpanded ? 'select-menu__menu--active' : '';
   const disabledColorClass = isDisabled ? 'icon--black-3' : '';
 
+  
   const label = (selectedOption && selectedOption.label) || placeholder;
   const labelParts = label.split('_');
 
@@ -360,7 +361,7 @@ export default function Select({
       <div className={`select-menu ${className}`}>
         <button
           ref={buttonRef}
-          className={`select-menu__button ${expandButtonClass} ${disabledColorClass}`}
+          className={`select-menu__button ${expandButtonClass} ${disabledColorClass} ${selectedOption ? '' : 'placeholder'}`}
           onClick={handleExpandClick}
           disabled={isDisabled}
           title={selectedOption?.title}

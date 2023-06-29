@@ -11,6 +11,7 @@ import { Language } from '../../../lib/base/Language';
 import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
 
 type LocalizedFrameGroupProps = {
+  showKey: Function,
   localizedLabels: UILocalizedLabel[],
   selectedNodes: string[]
   figmaRemote: FigmaUtil
@@ -18,6 +19,7 @@ type LocalizedFrameGroupProps = {
 };
 
 export default function LocalizedFrameGroup({
+  showKey,
   localizedLabels,
   selectedNodes,
   figmaRemote,
@@ -140,9 +142,6 @@ export default function LocalizedFrameGroup({
             <div className="svg-container number-sign-svg" />
           </div>
           <div className="element-name font-body-24-bold">{rootFrameName}</div>
-        </div>
-        <div className="column-2">
-
           <div className="row-actions">
             <div style={{ width: '240px' }} />
             <Select
@@ -158,6 +157,7 @@ export default function LocalizedFrameGroup({
 
       {rootFrameLanguage?.value && localizedLabels.map((translationState) => (
         <LocalizedLabelListItem
+          showKey={showKey}
           key={translationState.nodeId}
           figmaRemote={figmaRemote}
           localizedLabelManager={localizedLabelManager}

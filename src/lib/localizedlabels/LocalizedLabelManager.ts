@@ -12,6 +12,16 @@ import { Fillins } from '../keystore/TranslationKey';
 import VirtualTree, { VirtualTreeNode } from './VirtualTree';
 import LinksLoadedEvent from './LinksLoadedEvent';
 
+export interface NodeSelection {
+  [nodeId: string]: {
+    rootFrameId: string | undefined;
+    selectedNodeId: string;
+    directSelection: boolean;
+    isLabel: boolean;
+    key: string | undefined;
+  };
+}
+
 export interface SandboxUpdateLabelProperties {
   labelName?: string,
   keyType?: KeyState,
@@ -422,15 +432,7 @@ export default class LocalizedLabelManager {
   }
 
   async getSelection() {
-    const selectionEnhanced = {} as {
-      [keyId: string]: {
-        rootFrameId: string | undefined;
-        selectedNodeId: string,
-        parentSelected: boolean,
-        isLabel: boolean,
-        key: string | undefined
-      }
-    };
+    const selectionEnhanced = {} as NodeSelection;
 
     for (const selectedNode of figma.currentPage.selection) {
       const rootFrame = this.getRootFrame(selectedNode);
@@ -440,14 +442,14 @@ export default class LocalizedLabelManager {
         // the node within the selection is a label
         selectionEnhanced[selectedNode.id] = {
           rootFrameId: rootFrame?.id,
-          parentSelected: false,
+          directSelection: true,
           isLabel: selectedNode.type === 'TEXT',
           selectedNodeId: selectedNode.id,
           key: textNode?.keyType === KeyState.Linked ? textNode?.key : undefined,
         };
       } else {
         selectionEnhanced[selectedNode.id] = {
-          parentSelected: false,
+          directSelection: true,
           isLabel: false,
           rootFrameId: rootFrame?.id,
           selectedNodeId: selectedNode.id,
@@ -461,7 +463,7 @@ export default class LocalizedLabelManager {
             if (virtualNode.type === 'TEXT' && selectionEnhanced[virtualNode.id] === undefined) {
               const textNode = this.toLocalizedLabelOrUndefined(figma.getNodeById(virtualNode.id) as TextNode);
               selectionEnhanced[virtualNode.id] = {
-                parentSelected: true,
+                directSelection: false,
                 isLabel: true,
                 rootFrameId: rootFrame?.id,
                 selectedNodeId: virtualNode.id,
@@ -745,7 +747,6 @@ export default class LocalizedLabelManager {
               textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, regularFontName);
             }
           } else {
-            debugger;
             textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, regularFontName);
           }
         }

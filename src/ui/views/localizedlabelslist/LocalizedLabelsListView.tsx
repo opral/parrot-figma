@@ -9,11 +9,13 @@ import './LocalizedLabelsListView.css';
 import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
 
 type LocalizedLabelsListViewProps = {
+  showKey: Function,
   figmaRemote: FigmaUtil
   localizedLabelManager: LocalizedLabelManagerUI,
 };
 
 export default function LocalizedLabelsListView({
+  showKey,
   figmaRemote,
   localizedLabelManager,
 }: LocalizedLabelsListViewProps) {
@@ -116,6 +118,7 @@ export default function LocalizedLabelsListView({
         <div className="table" ref={tableRef}>
           {Object.keys(selection).map((mainFrameId) => (
             <LocalizedFrameGroup
+              showKey={showKey}
               localizedLabels={localizedLabels.filter((l) => l.rootFrameId === mainFrameId).sort((a, b) => Math.hypot(a.x, a.y * (2) - Math.hypot(b.x, b.y * 2)))}
               selectedNodes={selection[mainFrameId]}
               figmaRemote={figmaRemote}

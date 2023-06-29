@@ -302,6 +302,9 @@ What we want from ui point of view:
  - [x] remove versioning
  - [x] remove eye for deactivate translation 
  - [x] deactivate plurals
+ - [ ] window handling (sizes in different modes )
+ - [ ] resize handler
+ - [ ] right aling select arrow also in non hover state
  - [ ] rename placeholders to dynamic content 
  - [ ] alert once delete key button pressed to confirm action
  - [ ] esc for hiding modal views  
@@ -389,6 +392,16 @@ What we want from ui point of view:
  - [ ] use base language for translation if possible
  - [ ] handle selection for keys as well (provide an option to only show keys of current selection)
  - [ ] add show difference toggle to history view
+
+
+#### Searching
+
+ When do one want to search?
+ Key select modal
+ - Matching - when one wants to select a key for a non linked label (separate view)
+ Key Tab
+ - Missing Translations (filter without search)
+ - 
 
 #### Placeholder logic
 

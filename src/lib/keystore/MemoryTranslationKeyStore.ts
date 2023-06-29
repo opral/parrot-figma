@@ -8,9 +8,10 @@ import {
 } from './TranslationKey';
 import { Config, FigmaFileTranslationKeyStore } from './FigmaFileTranslationKeyStore';
 import { UITranslationKey } from './UITranslationKey';
+import { NodeSelection } from '../localizedlabels/LocalizedLabelManager';
 
 export type SearchQuery = {
-  selected: boolean,
+  selected: 'FRAME' | 'LABEL' | undefined,
   hasLabel: string[],
   oneLabelOf: string[],
   unverified?: boolean,
@@ -20,6 +21,24 @@ export type SearchQuery = {
   text: string,
   exactText: boolean,
   searchString: string,
+};
+
+export type SearchResult = {
+
+  inKeys: Set<string>,
+  inText: Set<string>,
+  withMissingTranslations: Set<string>,
+  withMissingReview: Set<string>,
+  matchingKeys: Set<string>,
+  referencedInFrame: Set<string>,
+  referencedInLabels: Set<string>,
+  matches: { [key: string] : {
+    keyMatch: { start: number, length: number } | undefined,
+    textMatches: {
+      [language in Language]?: { [plural in Plural]?: { start: number, length: number } }
+    }
+  } },
+
 };
 
 export interface UITranslationKeys {
@@ -178,9 +197,14 @@ export default class MemoryTranslationKeyStore extends EventTarget {
 
   static toSearchString(searchQuery: SearchQuery): string {
     let searchString = '';
-    if (searchQuery.selected) {
-      searchString += 'selected:true ';
+    if (searchQuery.selected === 'FRAME') {
+      searchString += 'selected:FRAME ';
     }
+
+    if (searchQuery.selected === 'LABEL') {
+      searchString += 'selected:LABEL ';
+    }
+
     if (searchQuery.hasLabel.length > 0) {
       searchString += `label:${searchQuery.hasLabel.join(' label:')} `;
     }
@@ -215,7 +239,7 @@ export default class MemoryTranslationKeyStore extends EventTarget {
 
   static toQueryObject(searchString: string): SearchQuery {
     const searchQueryObj = {
-      selected: false,
+      selected: undefined,
       hasLabel: [],
       oneLabelOf: [],
       verified: undefined,
@@ -243,12 +267,17 @@ export default class MemoryTranslationKeyStore extends EventTarget {
     const filterRe = /((\b\w+:[\w,*:]+))\s/g;
     const filterMatches = processedInputString.match(filterRe);
     const filters = [] as string[];
+    
 
     if (filterMatches) {
       for (const filterMatch of filterMatches!.sort((match) => match.length)) {
         const filterParts = filterMatch.split(' ').join('').split(':');
-        if (filterParts[0] === 'selected' && filterParts[1] === 'true') {
-          searchQueryObj.selected = true;
+        if (filterParts[0] === 'selected') {
+          if (filterParts[1] === 'FRAME') {
+            searchQueryObj.selected = 'FRAME';
+          } else if (filterParts[1] === 'LABEL') {
+            searchQueryObj.selected = 'LABEL';
+          }
         } else if (filterParts[0] === 'label' && filterParts.length > 1) {
           searchQueryObj.hasLabel.push(filterParts[1]);
         } else if (filterParts[0] === 'one_label_of' && filterParts.length > 1) {
@@ -328,13 +357,15 @@ export default class MemoryTranslationKeyStore extends EventTarget {
    *
    *
    */
-  findKeys(query: SearchQuery) {
+  findKeys(query: SearchQuery, selection?: NodeSelection): SearchResult {
     const results = {
       inKeys: new Set<string>(),
       inText: new Set<string>(),
       withMissingTranslations: new Set<string>(),
       withMissingReview: new Set<string>(),
       matchingKeys: new Set<string>(),
+      referencedInFrame: new Set<string>(),
+      referencedInLabels: new Set<string>(),
       matches: {} as { [key:string] : {
         keyMatch: { start: number, length: number } | undefined,
         textMatches: {
@@ -342,6 +373,17 @@ export default class MemoryTranslationKeyStore extends EventTarget {
         }
       } },
     };
+
+    if (selection) {
+      Object.values(selection).forEach((selectedNode) => {
+        if (selectedNode.key !== undefined) {
+          if (!selectedNode.directSelection) {
+            results.referencedInLabels.add(selectedNode.key);
+          }
+          results.referencedInFrame.add(selectedNode.key);
+        }
+      });
+    }
 
     for (const key of Object.values(this.translationKeys)) {
       for (const language of this.getLanugages()!) {
@@ -426,6 +468,13 @@ export default class MemoryTranslationKeyStore extends EventTarget {
     } else if (query.unverified === false) {
       results.matchingKeys = new Set([...results.matchingKeys].filter((x) => !results.withMissingReview.has(x)));
     }
+
+    if (query.selected === 'FRAME') {
+      results.matchingKeys = new Set([...results.matchingKeys].filter((x) => results.referencedInFrame.has(x)));
+    } else if (query.selected === 'LABEL') {
+      results.matchingKeys = new Set([...results.matchingKeys].filter((x) => results.referencedInLabels.has(x)));
+    }
+
     // in case we have no specific we want to suggest specific like
     // - matches in keys (n)
     // - matches in text (n)

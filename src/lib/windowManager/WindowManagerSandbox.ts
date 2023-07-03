@@ -18,6 +18,14 @@ export class WindowManagerSandbox {
 
   bottomSheetHeight = 300;
 
+  fullscreenMarginRight = 35;
+
+  fullscreenMarginLeft = 35;
+
+  fullscreenMarginTop = 35;
+
+  fullscreenMarginBottom = 35;
+
   viewportResizeCheckInterval: any;
 
   pluginDragCheckInterval: any;
@@ -184,11 +192,11 @@ export class WindowManagerSandbox {
       const leftPanelWidth = 240;
       const rightPanelWidth = 240;
 
-      width = figma.viewport.bounds.width * figma.viewport.zoom + leftPanelWidth + rightPanelWidth;
-      height = figma.viewport.bounds.height * figma.viewport.zoom;
+      width = figma.viewport.bounds.width * figma.viewport.zoom + leftPanelWidth + rightPanelWidth - (this.fullscreenMarginLeft + this.fullscreenMarginRight);
+      height = figma.viewport.bounds.height * figma.viewport.zoom - (this.titleBarHeight + this.fullscreenMarginTop + this.fullscreenMarginBottom);
 
-      x = figma.viewport.bounds.x - ((leftPanelWidth) / figma.viewport.zoom);
-      y = figma.viewport.bounds.y;
+      x = figma.viewport.bounds.x - ((leftPanelWidth) / figma.viewport.zoom) + (this.fullscreenMarginLeft / figma.viewport.zoom);
+      y = figma.viewport.bounds.y + (this.fullscreenMarginTop / figma.viewport.zoom);
     } else if (this.windowMode === WindowMode.BottomSheet) {
       width = figma.viewport.bounds.width * figma.viewport.zoom;
       height = this.bottomSheetHeight; // in case of the bottom sheet we always keep the windows size equal to the viewport size

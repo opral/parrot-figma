@@ -302,6 +302,16 @@ What we want from ui point of view:
  - [x] remove versioning
  - [x] remove eye for deactivate translation 
  - [x] deactivate plurals
+ - [ ] devmode
+    - [ ] remove design, import, settings tab
+    - [ ] make keys tab read onnly in dev mode
+    - [ ] remvoe window mode button from dev mode
+
+
+
+    Offene fragen: 
+    welche sprachen bieten wir an?
+-
  - [ ] window handling (sizes in different modes )
  - [ ] resize handler
  - [ ] right aling select arrow also in non hover state

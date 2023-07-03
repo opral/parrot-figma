@@ -40,6 +40,7 @@ interface VersionEntry {
 }
 
 type TranslationKeyListItemProps = {
+  rowClassNames?: string | undefined,
   translationKey: UITranslationKey,
   figmaRemote: FigmaUtil,
   searchMatch: any,
@@ -50,6 +51,7 @@ type TranslationKeyListItemProps = {
 };
 
 export default function TranslationKeyListItem({
+  rowClassNames,
   translationKey,
   figmaRemote,
   searchMatch,
@@ -190,7 +192,7 @@ export default function TranslationKeyListItem({
   return (
     <div
       ref={rowRef}
-      className={`keyWrapper ${selected ? 'selected' : ''}`}
+      className={`row row-key ${selected || labelSelected ? 'selected' : ''} ${rowClassNames !== undefined ? rowClassNames : ''}`}
       onClick={() => {
         if (select) {
           select(translationKey.keyName);
@@ -198,11 +200,9 @@ export default function TranslationKeyListItem({
       }}
     >
       <div className="grid-full-height-helper" />
-      <div className={'grid-item-key ' + (labelSelected ? ' selected' : '')}>
+      <div className={'column column-key grid-item-key ' + (labelSelected ? ' selected' : '')}>
         <div className="grid-item-key-header">
-          <span className="layerIcon iconWrapper">
-            <span className="svg-container key-svg" />
-          </span>
+          <div className="spacer" />
           <span className="rowText"><MatchView text={translationKey.keyName} match={searchMatch?.keyMatch} /></span>
         </div>
         <div className="grid-item-actions">
@@ -262,7 +262,7 @@ export default function TranslationKeyListItem({
         </div>
         )}
       </div>
-      {languages.map((language) => {
+      {languages.map((language, i, allLanguages) => {
         let languageSkipped = false;
         if (translationKey.translations[language as Language] !== undefined) {
           for (const plural of Object.keys(translationKey.translations[language as Language]!)) {
@@ -276,17 +276,14 @@ export default function TranslationKeyListItem({
         }
 
         return (
-          <div className={`languageWrapper${languageSkipped ? ' skipped ' : ''}`} key={language}>
-            <div className="grid-item-language"><span className="rowText">{language}</span></div>
-            {getPluralFormsByLanguage(language).map((plural) => {
-              if (!translationKey.plural && plural !== Plural.OTHER) {
-                return null;
-              }
+          <div className={`group language-group ${languageSkipped ? ' skipped ' : ''}${language === baseLang ? ' baselanguage grid-item-border grid-item-border-top' : ''}${i === (allLanguages.length - 1) ? ' grid-item-border grid-item-border-bottom ' : ''}`} key={language}>
+            <div className="column column-language grid-item-language"><span className="rowText">{language}</span></div>
+            {getPluralFormsByLanguage(language).filter((plural) => translationKey.plural || plural === Plural.OTHER).map((plural, pluralsIndex, allPlurals) =>
               // eslint-disable-next-line consistent-return
-              return (
-                <div key={plural} className={`keyPluralWrapper ${translationKey.plural ? 'onePlural' : ' multiplePlurals'}${translationKey.translations[language as Language]?.[plural as Plural]?.skip === true ? ' skipped' : ''}`}>
-                  { FEATURES_FLAGS.plurals && translationKey.plural && <div className="grid-item-plural"><span className="rowText">{plural}</span></div>}
-                  <div className="grid-item-translation translation-container translation">
+              (
+                <div key={plural} className={`group plural-group ${pluralsIndex === (allPlurals.length - 1) ? 'lastPlural  grid-item-border grid-item-border-bottom' : ''} ${pluralsIndex === 0 ? 'firstPlural  grid-item-border grid-item-border-top' : ''} ${translationKey.plural ? 'onePlural' : ' multiplePlurals'}${translationKey.translations[language as Language]?.[plural as Plural]?.skip === true ? ' skipped' : ''}`}>
+                  <div className="column column-plural grid-item-plural grid-item-border"><span className="rowText">{translationKey.plural ? plural : ''}</span></div>
+                  <div className="column  column-translation grid-item-translation grid-item-border translation-container translation">
                     <TranslationEditor
                       keyName={translationKey.keyName}
                       fillins={translationKey.defaultFillins}
@@ -307,7 +304,7 @@ export default function TranslationKeyListItem({
                     />
 
                   </div>
-                  <div className="grid-item-actions">
+                  <div className="column column-actions grid-item-actions grid-item-border grid-item-border-right">
                     { select === undefined && (
                     <>
                       { FEATURES_FLAGS.disableKeyLanguage
@@ -349,12 +346,10 @@ export default function TranslationKeyListItem({
                     )}
                   </div>
                 </div>
-              );
-            })}
+              ))}
           </div>
         );
       })}
-      <div className="grid-item-language" style={{ height: '10px' }} />
       <OutsideClickHandler
         onOutsideClick={() => { setShowHistory(undefined); }}
         disabled={showHistory === undefined}

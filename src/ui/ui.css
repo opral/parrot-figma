@@ -177,7 +177,7 @@ body {
   }
   
   .toolbar {
-    border-bottom: 1px solid rgba(237, 237, 237, 0.6);
+    border-bottom: 1px solid var(--figma-color-border);
     flex-direction: row;
     display: flex;
   }
@@ -316,7 +316,5 @@ button:disabled {
 }
 
 button:focus:not(:disabled), .basic_form--btn--t7Y67:active:not(:disabled) {
-  line-height: 28px;
-  padding: 0 10px;
-  border: 2px solid var(--figma-color-bg-brand);
+  
 }

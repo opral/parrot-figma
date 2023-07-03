@@ -1,13 +1,18 @@
 {
-  "name": "Assets and Resources",
+  "name": "Parrot",
   "id": "1205803482754362456",
   "api": "1.0.0",
   "editorType": [
-    "figma"
+    "figma",
+    "dev"
   ],
+  "capabilities": ["inspect","codegen"],
   "ui": "dist/ui.html",
   "main": "dist/code.js",
-
+  "codegenLanguages": [
+    {"label": "React", "value": "react"}
+  ],
+  
   "permissions": ["currentuser", "payments"]
 
 }

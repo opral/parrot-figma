@@ -26,6 +26,10 @@ export default class WindowManagerUi extends EventTarget {
 
   openRequest: WindowMode | undefined;
 
+  minHeight = 50;
+
+  minWidth = 370;
+
   static init(sizeWrapperEl: HTMLElement, contentEl: HTMLElement, resizeHandelEl: HTMLElement) {
     if (this.instance) {
       throw Error('WindowManagerUi initialized twice');
@@ -151,14 +155,14 @@ export default class WindowManagerUi extends EventTarget {
     const width = parseInt(computedStyle.width, 10);
     if (this.windowMode === WindowMode.Window) {
       const size = {
-        width: Math.max(50, Math.floor(e.clientX + 5)),
-        height: Math.max(50, Math.floor(e.clientY + 5)),
+        width: Math.max(this.minWidth, Math.floor(e.clientX + 5)),
+        height: Math.max(this.minHeight, Math.floor(e.clientY + 5)),
       };
       parent.postMessage({ pluginMessage: { target: 'WindowManager', size, source: 'dragging' } }, '*');
     } else if (this.windowMode === WindowMode.BottomSheet) {
       if (!isNaN(height)) {
         const size = {
-          height: Math.max(50, Math.floor(height - (e.clientY - this.startingOffsetY))),
+          height: Math.max(this.minHeight, Math.floor(height - (e.clientY - this.startingOffsetY))),
         };
         parent.postMessage({ pluginMessage: { target: 'WindowManager', size, source: 'dragging' } }, '*');
       }

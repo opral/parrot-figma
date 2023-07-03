@@ -225,6 +225,15 @@
   }
 
 
+  .caret-svg {
+    width: 8px;
+    height: 7px;
+    -webkit-mask-image: url(./caret.svg);
+    mask-image: url(./caret.svg);
+  }
+
+
+
   .history-svg {
     -webkit-mask-image: url(./history.svg);
     mask-image: url(./history.svg);

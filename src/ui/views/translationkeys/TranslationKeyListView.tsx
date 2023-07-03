@@ -316,9 +316,10 @@ export default function TranslationKeyListView({
 
       <div className="grid" ref={tableRef}>
         {/* helper row for css to set the width when partially rendered */}
-        <div className="grid-hidden-layout-helper">
+        
           <TranslationKeyListItem
             key="max-width-helper-row"
+            rowClassNames='hidden-helper-row'
             translationKeyStore={translationKeyStore}
             localizedLabelManager={localizedLabelManager}
             searchMatch={undefined}
@@ -327,7 +328,6 @@ export default function TranslationKeyListView({
             select={select}
             labelSelected={false}
           />
-        </div>
         {[...filteredKeys.matchingKeys].map((keyName) => {
           if (rendered > renderEntries) {
             return;

@@ -143,7 +143,6 @@ export default function LocalizedFrameGroup({
           </div>
           <div className="element-name font-body-24-bold">{rootFrameName}</div>
           <div className="row-actions">
-            <div style={{ width: '240px' }} />
             <Select
               placeholder="Select item"
               onChange={(value) => { onLanguageSelectionClick(firstTranslationState, value.value as Language); }}

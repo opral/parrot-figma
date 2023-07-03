@@ -15,7 +15,7 @@
     align-items: center;
 }
 
-.table {
+.table {    
 
     display: grid;
     grid-template-columns: 20% 1fr;
@@ -168,7 +168,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     font-feature-settings: "ss02" on, "liga" on, "calt" on;
-    padding-top: 0px;
+    padding-top: -1px;
     padding-right: 8px;
     padding-bottom: 0px;
     padding-left: 8px;
@@ -241,7 +241,7 @@ margin-left: auto;
 .top-drawer {
     overflow: scroll;
     height: calc(100% - 50px);
-    background: white;
+    background: var(--figma-color-bg);
     position: fixed;
     top: 0;
     right: 0;

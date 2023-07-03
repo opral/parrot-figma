@@ -373,7 +373,7 @@ export default function Select({
           <span className="select-menu__label select-menu__label-part2">
             {labelPart2}
           </span>
-          <span className="select-menu__caret" />
+          <span className="select-menu__caret svg-container caret-svg" />
         </button>
         <div
           ref={menuContainerRef}

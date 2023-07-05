@@ -53,19 +53,6 @@ body {
     padding-left: 24px;
 }
 
-.language-select {
-    filter: grayscale(100%) opacity(0.4);
-}
-
-.language-select:hover {
-    filter: grayscale(0%) opacity(1);
-}
-
-.language-select.selected {
-    filter: grayscale(0%) opacity(1);
-}
-
-
 .key-table-key {
     font-family: monospace;
     font-size: 11px;

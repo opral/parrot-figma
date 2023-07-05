@@ -1,3 +1,12 @@
+
+
+.setup-baselanguage-select {
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+
 .available-language {
     display: flex;
 }
@@ -9,4 +18,27 @@
 .available-language .language {
     align-self: center;
     padding-left: 8px;
+}
+
+.onboarding-buttonbar {
+    display: flex;
+    margin-right: 15px;
+    height: 100px;
+}
+
+.onboarding-buttonbar .button {
+   margin-left: auto;
+   margin-top: auto;
+}
+
+button.button--buttonPrimary {
+    background-color: var(--figma-color-bg-brand);
+    color: var(--figma-color-text-onbrand);
+    border-color: var(--figma-color-border-brand);
+}
+
+button.button--buttonPrimary:disabled {
+    background-color: var(--figma-color-bg-disabled);
+    color: var(--figma-color-text-ondisabled);
+    border-color: var(--figma-color-border-disabled);
 }

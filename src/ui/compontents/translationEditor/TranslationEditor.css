@@ -204,10 +204,10 @@ div.ql-tooltip {
 
 ph {
   cursor: pointer;
-  border: 1px solid blue;
+  color:  var(--figma-color-text-component) !important;
   border-radius: 7px;
   padding: 1 6.55px;
-  background-color: lightblue;
+  background-color: var(--figma-color-bg-component-tertiary);
   margin-right: 1px;
 }
 

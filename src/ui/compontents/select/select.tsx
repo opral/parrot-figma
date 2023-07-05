@@ -21,6 +21,7 @@ export interface SelectOption {
 
 export interface SelectProps {
   className?: string;
+  iconClass?: string,
   getOptions: () => SelectOption[];
   placeholder: string;
   isDisabled?: boolean;
@@ -31,6 +32,7 @@ export interface SelectProps {
 
 export default function Select({
   className = '',
+  iconClass,
   getOptions,
   placeholder,
   isDisabled,
@@ -340,7 +342,6 @@ export default function Select({
   const expanListClass = isExpanded ? 'select-menu__menu--active' : '';
   const disabledColorClass = isDisabled ? 'icon--black-3' : '';
 
-  
   const label = (selectedOption && selectedOption.label) || placeholder;
   const labelParts = label.split('_');
 
@@ -367,6 +368,9 @@ export default function Select({
           title={selectedOption?.title}
           type="button"
         >
+          {iconClass !== undefined && (
+            <div className={`svg-container ${iconClass}`} style={{marginRight: '8px'}}/>
+          )}
           <span className="select-menu__label select-menu__label-part1">
             {labelPart1}
           </span>

@@ -307,6 +307,8 @@ What we want from ui point of view:
     - [ ] make keys tab read onnly in dev mode
     - [ ] remvoe window mode button from dev mode
 
+- [ ] react select instead of select in settings screen
+- [ ] dropdown state based on input (only show dropdown on carret click or when something is typed)
 
 
     Offene fragen: 

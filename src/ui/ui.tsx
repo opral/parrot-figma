@@ -27,7 +27,7 @@ import LocalizedLabelManagerUI from '../lib/localizedlabels/LocalizedLabelManage
 import './tabbar.css';
 import './assets/icons.css';
 import SegmentedControl from './compontents/segmentedControl/SegmentedControl';
-import Filesetup from './views/filesetup/Filesetup';
+import LanguageSetup from './compontents/languageSetup/LanguageSetup';
 import Onboarding from './views/onboarding/Onboarding';
 import { Language } from '../lib/base/Language';
 import Tooltip from './compontents/tooltip/Tooltip';
@@ -179,6 +179,7 @@ function App() {
           const languages = [baseLanguage, ...selectedLanguages.filter((lang) => lang !== baseLanguage)];
           await memoryTranslationKeyStore.setLanguages(languages);
           await memoryTranslationKeyStore.setBaseLanguage(baseLanguage);
+          WindowManagerUi.instance?.requestWindowMode(WindowMode.BottomSheet, false);
           setAppScreen('design');
         }}
         />
@@ -200,9 +201,13 @@ function App() {
     );
   } else if (appScreen === 'settings') {
     view = (
-      <Filesetup
-        translationKeyStore={memoryTranslationKeyStore}
-        showNextButton={false}
+      <LanguageSetup
+        baseLanguage={undefined}
+        activeLanguages={ []}
+        onChange={(baselanguage, activeLanguages) => {
+          memoryTranslationKeyStore.setBaseLanguage(baselanguage);
+          memoryTranslationKeyStore.setLanguages(activeLanguages);
+        }}
       />
     );
   /* (
@@ -271,7 +276,7 @@ function App() {
           </div>
           <div className={`tab ${appScreen === 'export' ? 'active' : ''}`} onClick={() => setAppScreen('export')}>{ FEATURES_FLAGS.versioning ? 'Versions & Export' : 'Export'}</div>
           <div className={`tab ${appScreen === 'import' ? 'active' : ''}`} onClick={() => setAppScreen('import')}>Import</div>
-          <div className={`tab ${appScreen === 'settings' ? 'active' : ''}`} onClick={() => setAppScreen('settings')}>Settings</div>
+          <div className={`tab ${appScreen === 'settings' ? 'active' : ''}`} onClick={() => setAppScreen('settings')}>Setup</div>
         </div>
         <div
           style={{ flexGrow: 1, cursor: 'ns-resize' }}

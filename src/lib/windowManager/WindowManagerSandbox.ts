@@ -2,7 +2,9 @@ import { debug } from 'console';
 import { FigmaFileTranslationKeyStore } from '../keystore/FigmaFileTranslationKeyStore';
 
 export enum WindowMode {
+  IntroWindow = 'introWindow',
   Window = 'window',
+  Mini = 'mini',
   BottomSheet = 'bottomSheet',
   Fullscreen = 'fullscreen',
 }
@@ -16,7 +18,11 @@ export class WindowManagerSandbox {
 
   titleBarHeight = 40;
 
+  // bottom sheet
+
   bottomSheetHeight = 300;
+
+  // fullscreen
 
   fullscreenMarginRight = 35;
 
@@ -152,8 +158,9 @@ export class WindowManagerSandbox {
     });
   }
 
-  setWindowMode(mode: WindowMode, fromDrag: boolean) {
-    if (this.windowMode === WindowMode.BottomSheet && mode === WindowMode.Window && fromDrag) {
+  private setWindowMode(mode: WindowMode, fromDrag: boolean) {
+    if (this.windowMode === WindowMode.BottomSheet 
+      && mode === WindowMode.Window && fromDrag) {
       const width = Math.ceil(figma.viewport.bounds.width * figma.viewport.zoom);
       const height = this.bottomSheetHeight; // in case of the bottom sheet we always keep the windows size equal to the viewport size
       this.size.width = width;
@@ -205,7 +212,7 @@ export class WindowManagerSandbox {
       y = figma.viewport.bounds.y + figma.viewport.bounds.height - ((this.bottomSheetHeight + this.titleBarHeight - 5) / figma.viewport.zoom);
     } else if (this.windowMode === WindowMode.Window) {
       if (this.currentMode !== this.windowMode) {
-        // center window on switch to window mode
+        // center window on switch to window mode - there is no way to save the window position at the moment
         x = figma.viewport.bounds.x + ((figma.viewport.bounds.width / 2) - ((width / 2) / figma.viewport.zoom));
         y = figma.viewport.bounds.y + ((figma.viewport.bounds.height / 2) - (((height + this.titleBarHeight) / 2) / figma.viewport.zoom));
       }

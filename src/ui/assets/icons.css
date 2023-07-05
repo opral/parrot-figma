@@ -225,6 +225,11 @@
   }
 
 
+  .world-svg {
+    -webkit-mask-image: url(./world.svg);
+    mask-image: url(./world.svg);
+  }
+
   .caret-svg {
     width: 8px;
     height: 7px;

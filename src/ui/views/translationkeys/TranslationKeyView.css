@@ -258,11 +258,13 @@
 }
 
 .grid-item-language {
+  flex-shrink: 0;
   color: var(--figma-color-text-disabled);
   width: 30px;
 }
 
 .grid-item-plural {
+  flex-shrink: 0;
   width: 72px;
 }
 

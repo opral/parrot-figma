@@ -235,6 +235,7 @@ margin-left: auto;
 }
 
 .key-panel .grid {
+    display: flex;
     flex-grow: 1;
 }
 

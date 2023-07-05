@@ -262,18 +262,23 @@ export default function QuillEditor({
       }
     };
 
-    editorPreRef.current?.addEventListener('focusin', focusInFunction);
-    editorPreRef.current?.addEventListener('focusout', focusOutFunction);
+    if (editorPreRef.current) {
+      editorPreRef.current.addEventListener('focusin', focusInFunction);
+      editorPreRef.current.addEventListener('focusout', focusOutFunction);
+      editorPreRef.current.addEventListener('keydown', keydownFunction);
+      editorPreRef.current.addEventListener('click', onClick);
+    }
 
-    editorPreRef.current?.addEventListener('keydown', keydownFunction);
-    editorPreRef.current?.addEventListener('click', onClick);
+   
 
     return () => {
-      editorPreRef.current?.removeEventListener('focusin', focusInFunction);
-      editorPreRef.current?.removeEventListener('focusout', focusOutFunction);
-
-      editorPreRef.current?.removeEventListener('keydown', keydownFunction);
-      editorPreRef.current?.removeEventListener('click', onClick);
+      if (editorPreRef.current) {
+        editorPreRef.current?.removeEventListener('focusin', focusInFunction);
+        editorPreRef.current?.removeEventListener('focusout', focusOutFunction);
+  
+        editorPreRef.current.removeEventListener('keydown', keydownFunction);
+        editorPreRef.current?.removeEventListener('click', onClick);
+      }
     };
   }, [isEditing]);
 

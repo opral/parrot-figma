@@ -55,11 +55,20 @@ export default function TranslationView({
   //   );
   // }
  
-  // Hello 
   // 
   // 
   let htmlRepresentation = text;
-  htmlRepresentation = htmlRepresentation.split('\n').map((content, index, array) => content === '' && array.length !== (index + 1) ? '<p>' + '<br>' + '</p>' : '<p>' + content + '</p>').join('');
-
+  // TODO #23 updating the reder view
+  console.log('JO:: 23 TranslationView update label props wi text: \n [' + text + ']');
+  htmlRepresentation = htmlRepresentation.split('\n').map((content, index, array) => {
+    if (false && index === (array.length - 1) && content === '') {
+      return '';
+    }
+    if (content === '') {
+      return '<p><br></p>';
+    }
+    return '<p>' + content + '</p>'
+  }).join('');
+  console.log('JO:: 23 TranslationView otml: \n[' + htmlRepresentation + ']');
   return <span dangerouslySetInnerHTML={{__html:htmlRepresentation }}/>;
 }

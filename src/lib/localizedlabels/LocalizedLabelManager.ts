@@ -620,11 +620,11 @@ export default class LocalizedLabelManager {
     // setup queue for atomic label update processing
     if (this.labelUpdateQueue[nodeId]) {
       // eslint-disable-next-line no-promise-executor-return
-      console.log('queing update');
+      // console.log('queing update');
       await (new Promise((resolver) => this.labelUpdateQueue[nodeId].push(resolver)));
-      console.log('dequied');
+      // console.log('dequied');
     } else {
-      console.log('queing not needed - prepare queue for next call');
+      // console.log('queing not needed - prepare queue for next call');
       // start a new queue
       this.labelUpdateQueue[nodeId] = [];
     }
@@ -663,7 +663,8 @@ export default class LocalizedLabelManager {
       // const textWithDecorators = this.toTextRangeObject(changedProperties.translation);
 
       textNode.setPluginData(this.filledTemplateHashDataKey, changedProperties.filledTemplateHash ? changedProperties.filledTemplateHash : '');
-      console.log(`setting characters from ${textNode.characters} to ${changedProperties.characters}`);
+      // console.log(`setting characters from ${textNode.characters} to ${changedProperties.characters}`);
+
       textNode.characters = changedProperties.characters;
 
       // NOTE: when we are here and we have mixed font family we have warned the user already - we go for the first one
@@ -736,7 +737,7 @@ export default class LocalizedLabelManager {
 
         textNode.setRangeTextDecoration(rangeStyle.from, rangeStyle.to, decoration);
 
-        console.log(`Processing: ${textNode.characters.length} ${rangeStyle.to} ${textNode.characters} ${changedProperties.characters}`);
+        // console.log(`Processing: ${textNode.characters.length} ${rangeStyle.to} ${textNode.characters} ${changedProperties.characters}`);
 
         // check if we should apply styles at all... is bold/italic/regular swiched once? otherwise keep the orginal label
         if (regularFontName
@@ -909,7 +910,7 @@ export default class LocalizedLabelManager {
 
     // 1562ms -> 1071ms ~ 1/4
     const text = node.characters;
-
+    
     const fillins = node.getPluginData(this.fillinsKey) === '' ? {} : JSON.parse(node.getPluginData(this.fillinsKey));
     const tokenizedTextResult = this.extractDeltaOpsAndLabelStyles(node, fillins);
 

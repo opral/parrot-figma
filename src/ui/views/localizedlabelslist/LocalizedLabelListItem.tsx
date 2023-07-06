@@ -336,7 +336,7 @@ export default function LocalizedLabelListItem({
                         <TranslationEditor
                           editable
                           match={undefined}
-                          onBlur={async () => {
+                          onCancel={async () => {
                             localizedLabelManager.commitUndo();
                           }}
                           onChange={async (value: string, fillins: Fillins) => {

@@ -113,7 +113,6 @@ export class UILocalizedLabel implements LocalizedLabel {
     this.ops = localizedLabel.ops;
     this.warnings = localizedLabel.warnings;
     this.labelStyle = localizedLabel.labelStyle;
-
     this.translationHTML = UILocalizedLabel.toHtml(localizedLabel.characters, localizedLabel.ops, this.fillins, true);
     this.state = this.getState();
   }
@@ -126,12 +125,48 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   static toHtml(text: string, ops: DeltaOp[], fillins: Fillins, trimLabelStyles: boolean) {
     const deltaOps = [] as DeltaOperation[];
-  
-    if (text[text.length-1] === '\n') {
-      ops[ops.length-1].end += 1;
-      text += '\n';
-   }
+    const lastTwoCharsBreaks = text.length > 1 && text[text.length - 1] === '\n' && text[text.length - 2] === '\n';
 
+    // allways add an additional line break at the end
+    ops[ops.length - 1].end += 1;
+    const rawtext = `${text}\n`;
+
+    // s
+    // <p>s</p>
+    // s\n
+    // <p>s</p>
+    // s\n\n
+    // <p>s</p><p><br></p>
+    // s\n\n\n
+    // <p>s</p><p><br></p><p><br></p>
+
+    // --> adding a helper new line (\n)
+    // s(\n)
+    // <p>s</p>
+    // s\n(\n)
+    // <p>s</p><p><br></p>
+    // s\n\n(\n)
+    // <p>s</p><p><br></p><p><br></p>
+    // s\n\n\n(\n)
+    // <p>s</p><p><br></p><p><br></p><p><br></p>
+
+    // --> replacing wrapper and introducing new lines by \n again
+    // all <p><br></p> -> \n
+    // <p>s</p><p><br></p><p><br></p><p><br></p> -> should become s\n\n\n
+    // <p>s</p>\n\n\n
+    // all </p> -> \n -> <p>s\n\n\n\n
+    // remove all <p> -> s\n\n\n\n
+    // remove last \n -> s\n\n\n CHECK
+
+    // --> replacing wrapper and introducing new lines by \n again
+    // all <p><br></p> -> \n
+    // <p>s</p> -> should become "s"
+    // <p>s</p>
+    // all </p> -> \n -> <p>s\n
+    // remove all <p> -> s\n
+    // remove last \n -> s CHECK
+
+    // placholder replacement
     for (const op of ops) {
       if (op.attributes.placeholder) {
         const insert = op.attributes.placeholder.name;
@@ -143,39 +178,34 @@ export class UILocalizedLabel implements LocalizedLabel {
         };
         // enrich fillin
         (parameterOperation.attributes.placeholder! as any).fillin = fillins[insert].value;
-        
+
         deltaOps.push(parameterOperation);
       } else {
-        const insert = text.substring(op.start, op.end);
+        const insert = rawtext.substring(op.start, op.end);
         deltaOps.push({
           insert,
           attributes: op.attributes,
         });
       }
     }
-    
 
     const delta = new Delta(deltaOps);
-    
 
     const tempCont = document.createElement('pre');
     (new Quill(tempCont)).setContents(delta);
     let htmlContent = tempCont.getElementsByClassName('ql-editor')[0].innerHTML;
     // remove all quill helper attributes
-    
-    htmlContent = htmlContent.replace(/fillin="([^"])*" contenteditable="false">/g, '>');
 
-    
-    htmlContent = htmlContent.split('</p>').join('\n').split('<p>').join('').split('<br>').join('');
-    
-    if (htmlContent[htmlContent.length - 1] === '\n') {
-      htmlContent = htmlContent.substring(0, htmlContent.length - 1);
-    }
+    htmlContent = htmlContent.replace(/fillin="([^"])*" contenteditable="false">/g, '>');
+    htmlContent = htmlContent.split('<p><br></p>').join('\n');
+    htmlContent = htmlContent.split('</p>').join('\n');
+
+    htmlContent = htmlContent.split('<p>').join('');
+    htmlContent = htmlContent.slice(0, htmlContent.length - 1);
     return htmlContent;
   }
 
   static toTextAndOps(html: string, fillins: Fillins) {
-
     const pattern = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;
 
     const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(fillins);
@@ -183,9 +213,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
     // const name = paramMatch[2];
 
-    
     let htmlWithFilledPlaceholders = html.replace(pattern, (match, _helper1, type, _helper3, format, _helper5, argumentPosition, unnamed, _helper8, _helper9, name) => {
-      
       const placeholderName = name;
       if (placeholderName && fillins[placeholderName]) {
         const extensionLength = placeholderByFillin.indexOf(placeholderName) + 1;
@@ -206,13 +234,10 @@ export class UILocalizedLabel implements LocalizedLabel {
       const text = node.data;
       return delta.insert(text);
     };
-  
-  
-    const contents = (quill.clipboard as any).convert({html: htmlWithFilledPlaceholders}) as any;
-    // const contents = quill.getContents();
-    let text = contents.filter((op: any) => typeof op.insert === 'string').map((op: any) => op.insert).join(''); // quill.getText();// tempCont.getElementsByClassName('ql-editor')[0].textContent ?? '';
-    // text = text.split('&nbsp;').join(' ');
-    
+
+    htmlWithFilledPlaceholders += '<br>';
+    const contents = (quill.clipboard as any).convert({ html: htmlWithFilledPlaceholders }) as any;
+    const text = contents.filter((op: any) => typeof op.insert === 'string').map((op: any) => op.insert).join(''); // quill.getText();// tempCont.getElementsByClassName('ql-editor')[0].textContent ?? '';
 
     const ops = [] as any[];
     let currentPositon = 0;
@@ -226,7 +251,6 @@ export class UILocalizedLabel implements LocalizedLabel {
       currentPositon += operation.insert.length;
     });
     // remove the /n at the end?
-    
     return {
       text,
       ops,
@@ -234,7 +258,6 @@ export class UILocalizedLabel implements LocalizedLabel {
   }
 
   getFillins(keyToUse?: string, fillins?: Fillins) {
-    
     const key = keyToUse ?? this.key;
     const translationKey = key ? this.manager.keyStore.getKey(key) : undefined;
 
@@ -365,7 +388,6 @@ export class UILocalizedLabel implements LocalizedLabel {
    * @returns
    */
   getState(): { behind: number, orginalTranslationHTML?: string, modified: boolean } {
-    
     const state = {
       modified: false,
       translationDeleted: false,

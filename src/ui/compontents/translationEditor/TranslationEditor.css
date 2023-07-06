@@ -75,7 +75,7 @@
   border: 1px solid transparent;
   outline: none;
   padding-left: 8px;
-  padding-top: 7px;
+  padding-top: 5px;
   padding-bottom: 3px;
   padding-right: 5px;
 }
@@ -140,6 +140,8 @@
 
 .translation-editor-text * {
   color:  var(--figma-color-text);
+  line-height: 18px;
+
   /*font-family: "Inter", sans-serif;
   font-style: normal;
   font-weight: 400;
@@ -208,7 +210,19 @@ ph {
   border-radius: 7px;
   padding: 1 6.55px;
   background-color: var(--figma-color-bg-component-tertiary);
-  margin-right: 1px;
+  border-color: transparent;
+  margin-right: 1px;    
+  border-width: 1px;
+  border-style: solid;
+}
+
+ph:hover {
+  border-color: var(--color-border-component-hover, #a094e6);
+}
+
+ph::selection {
+  
+  background-color: transparent;
 }
 
 .placholder-container.selected {

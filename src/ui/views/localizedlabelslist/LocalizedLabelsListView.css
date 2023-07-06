@@ -129,7 +129,7 @@
 
 
 .element-symbol .svg-container {
-    background-color: var(--figma-color-icon-disabled);
+    background-color: var(--figma-color-icon);
 }
 
 .selected .element-symbol .svg-container {

@@ -347,7 +347,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         }
       }
 
-      console.log('updateToLatestKeyVersion: ' +  historyEntryForVersion!.translations?.[localizedLabel.rootFrameLanguage]?.[localizedLabel.pluralId]?.text);
+      // console.log('updateToLatestKeyVersion: ' +  historyEntryForVersion!.translations?.[localizedLabel.rootFrameLanguage]?.[localizedLabel.pluralId]?.text);
 
       // eslint-disable-next-line no-await-in-loop
       updatePromises.push(this.updateLabelProperties(localizedLabel.nodeId, {
@@ -527,7 +527,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     }
 
     const localizedLabel = await this.localizedLabelMangerSandbox.updateLabelProperties(nodeId, changedPropertiesToForwared);
-
     if (this.refreshCachedLabel(localizedLabel)) {
       const event = new CustomEvent('updated', { });
       this.dispatchEvent(event);

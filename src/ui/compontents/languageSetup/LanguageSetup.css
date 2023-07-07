@@ -48,8 +48,10 @@
 }
 
 .language-name { 
-    background-color: hsl(0, 0%, 90%);
-    border-radius: 2px;
+    background-color: var(--figma-color-bg);
+    border-color: var(--figma-color-border);
+    border-style: solid;
+    border-radius: 4px;
     margin: 2px;
     align-items: center;
     padding-left: 6px;
@@ -93,13 +95,20 @@
     align-items: center;
 }
 
+div.react-select__single-value {
+    color: var(--figma-color-text-disabled);
+}
+
+input.react-select__input {
+    color: var(--figma-color-text) !important;
+}
 
 .react-select__control::before {
     -webkit-mask-image: url(../../assets/world.svg);
     mask-image: url(../../assets/world.svg);
     mask-size: 15px;
     -webkit-mask-size: 15px;
-    background-color: black;
+    background-color: var(--figma-color-icon);
     content: ' ';
     display: inline-block;
     width: 13px;
@@ -125,8 +134,8 @@
     border-radius: 2px;
     margin-top: 0px;
     box-shadow: none;
-    color: var(--figma-color-text-oninverse);
-    background-color: var(--figma-color-bg-inverse);
+    color: var(--figma-color-text-onbrand);
+    background-color: var(--figma-color-bg-menu-hover);
 }
 
 .view .react-select__option {
@@ -154,7 +163,7 @@
 
 .view .react-select__option.react-select__option--is-selected .svg-container {
 
-    background-color: var(--figma-color-icon-oninverse);
+    background-color: var(--figma-color-icon-onbrand);
 }
 
 
@@ -167,14 +176,20 @@
     background-color: transparent;
 }
 
-.react-select__multi-value {
+div.react-select__multi-value {
     display: flex;
     align-items: center;
     height: 24px;
+
+    background-color: var(--figma-color-bg);
+    border-color: var(--figma-color-border);
+    border-style: solid;
+    border-radius: 4px;
 }
 
 .view .react-select__multi-value__label {
     font-size: inherit;
+    color: inherit;
 }
 
 .view .react-select__remove_language:hover {

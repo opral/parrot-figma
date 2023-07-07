@@ -24,7 +24,6 @@ function Option(props: any) {
 function MultiValueRemove(props: MultiValueRemoveProps<any>) {
   return (
     <components.MultiValueRemove {...props}><div className="react-select__remove_language svg-container cross-svg" /></components.MultiValueRemove>
-
   );
 }
 
@@ -33,18 +32,28 @@ function DropdownIndicator(props: any) {
 }
 
 function toLanguageOption(language: string, baseLanguage?: string) {
+  let languageNameInCurrentLanguage = 'no name found';
+  try {
+    languageNameInCurrentLanguage = new Intl.DisplayNames('en', { type: 'language' }).of(language) ?? languageNameInCurrentLanguage;
+  } catch (e) { /* empty */ }
+
+  let languageNameInForeignLanguage = 'no name found';
+  try {
+    languageNameInForeignLanguage = new Intl.DisplayNames(language, { type: 'language' }).of(language) ?? languageNameInForeignLanguage;
+  } catch (e) { /* empty */ }
+
   if (baseLanguage && language === baseLanguage) {
     return {
       value: language,
-      label: `${new Intl.DisplayNames('en', { type: 'language' }).of(language)} - ${language}`,
-      menuLabel: `${new Intl.DisplayNames('en', { type: 'language' }).of(language)} - ${language} (${new Intl.DisplayNames(language, { type: 'language' }).of(language)})`,
+      label: `${languageNameInCurrentLanguage} - ${language}`,
+      menuLabel: `${languageNameInCurrentLanguage} - ${language} (${languageNameInForeignLanguage})`,
       isDisabled: true,
     };
   }
   return {
     value: language,
-    label: `${new Intl.DisplayNames('en', { type: 'language' }).of(language)} - ${language}`,
-    menuLabel: `${new Intl.DisplayNames('en', { type: 'language' }).of(language)} - ${language} (${new Intl.DisplayNames(language, { type: 'language' }).of(language)})`,
+    label: `${languageNameInCurrentLanguage} - ${language}`,
+    menuLabel: `${languageNameInCurrentLanguage} - ${language} (${languageNameInForeignLanguage})`,
   };
 }
 
@@ -75,7 +84,20 @@ export default function LanguageSetup({
     value: any,
   ) => {
     setChangeBaseLanguage(false);
-    setSelectedBaseLanguage(value);
+
+    if (selectedBaseLanguage?.value !== undefined && selectedBaseLanguage?.value !== value) {
+      const previousBaseLanguage = selectedBaseLanguage;
+      const currentLanguages = selectedLanguages;
+      if (currentLanguages.findIndex((languageOption) => languageOption.value === previousBaseLanguage.value) === -1) {
+        currentLanguages.push(previousBaseLanguage);
+      }
+      const updatedLanguages = currentLanguages.filter((language) => language.value !== value.value);
+
+      setSelectedLanguages(updatedLanguages);
+      setSelectedBaseLanguage(value);
+
+      onChange(value.value as Language, updatedLanguages.map((languageOption: any) => languageOption.value as Language));
+    }
   };
 
   const onSelectedLanguagesChange = (

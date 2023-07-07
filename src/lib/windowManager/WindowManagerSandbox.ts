@@ -9,6 +9,8 @@ export enum WindowMode {
   Fullscreen = 'fullscreen',
 }
 
+export const RESIZEDETECTION_OVERLAP_PX = 5;
+
 export class WindowManagerSandbox {
   public proxClassName = 'LocalizedLabelManager';
 
@@ -159,7 +161,7 @@ export class WindowManagerSandbox {
   }
 
   private setWindowMode(mode: WindowMode, fromDrag: boolean) {
-    if (this.windowMode === WindowMode.BottomSheet 
+    if (this.windowMode === WindowMode.BottomSheet
       && mode === WindowMode.Window && fromDrag) {
       const width = Math.ceil(figma.viewport.bounds.width * figma.viewport.zoom);
       const height = this.bottomSheetHeight; // in case of the bottom sheet we always keep the windows size equal to the viewport size
@@ -209,7 +211,7 @@ export class WindowManagerSandbox {
       height = this.bottomSheetHeight; // in case of the bottom sheet we always keep the windows size equal to the viewport size
 
       x = figma.viewport.bounds.x;
-      y = figma.viewport.bounds.y + figma.viewport.bounds.height - ((this.bottomSheetHeight + this.titleBarHeight - 5) / figma.viewport.zoom);
+      y = figma.viewport.bounds.y + figma.viewport.bounds.height - ((this.bottomSheetHeight + this.titleBarHeight - RESIZEDETECTION_OVERLAP_PX) / figma.viewport.zoom);
     } else if (this.windowMode === WindowMode.Window) {
       if (this.currentMode !== this.windowMode) {
         // center window on switch to window mode - there is no way to save the window position at the moment

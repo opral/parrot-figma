@@ -24,6 +24,10 @@ body {
   color: var(--figma-color-text);
 }
 
+.windowmanager-bottomSheet {
+  height: calc(100% - var(--resize-detection-overlap)) !important;
+}
+
 .window-control {
   align-self: center;
   justify-self: flex-end;

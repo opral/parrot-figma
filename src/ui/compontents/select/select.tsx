@@ -53,15 +53,18 @@ export default function Select({
   const [selectedOption, onSelectOption] = useState(defaultValue);
   const [options, setOptions] = useState<SelectOption[]>([] as SelectOption[]);
 
-  const [wrapperMaxHeight, setWrapperMaxHeigth] = useState(30);
-  const [containerBox, setContainerBox] = useState({
-    top: 30,
-    height: 30,
-  });
+  const wrapperMaxHeight = useRef(30);
+  const wrapperMaxHeightTop = useRef(30);
+  const wrapperMaxHeightBottom = useRef(30);
+  const wrapperMenuEntryHeight = useRef(30);
+  const lastScrollPos = useRef(0);
+
   const [wrapperScrollTop, setWrapperScrollTop] = useState({ scrollTop: 30 });
   const [viewPortHeight, setViewPortHeight] = useState(0);
 
-  let initialPositioning = false;
+  const initialPositioning = useRef(false);
+  const startScrollDownTimeInterval = useRef<any>(-1);
+  const startScrollUpTimeInterval = useRef<any>(-1);
 
   // synchronize visibile height
   useEffect(() => {
@@ -71,6 +74,7 @@ export default function Select({
     }
 
     const intersectionObserver = new IntersectionObserver((entries: IntersectionObserverEntry[]) => {
+      console.log(`SELECT useEffect.[] setting viewport height to ${entries[0].intersectionRect.height}`);
       setViewPortHeight(entries[0].intersectionRect.height);
     }, {
       root: null, // default is the viewport
@@ -104,11 +108,44 @@ export default function Select({
     }
   }, [isExpanded]);
 
+  function updateScrollButtons() {
+    console.log('updateScrollButtons ==================================================================================== ');
+    console.log('updateScrollButtons menuWrapperRef.current!.scrollTop '+Math.ceil(menuWrapperRef.current!.scrollTop));
+    console.log('updateScrollButtons === ');
+    console.log('updateScrollButtons menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight '+(menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight));
+    console.log('updateScrollButtons || ');
+    console.log('updateScrollButtons menuRef.current?.clientHeight '+(menuRef.current?.clientHeight));
+    console.log('updateScrollButtons === ');
+    console.log('updateScrollButtons menuWrapperRef.current?.clientHeight '+(menuWrapperRef.current?.clientHeight));
+    if (
+      (menuWrapperRef.current!.scrollTop - (menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight) > 2)
+    || menuRef.current?.clientHeight === menuWrapperRef.current?.clientHeight) {
+      // at bottom
+      setCanScrollDown(false);
+    } else {
+      setCanScrollDown(true);
+    }
+
+    console.log('updateScrollButtons ============================');
+    console.log('updateScrollButtons menuWrapperRef.current!.scrollTop '+Math.ceil(menuWrapperRef.current!.scrollTop));
+    console.log('updateScrollButtons === 0');
+    
+    if (menuWrapperRef.current!.scrollTop === 0) {
+      // at top
+      setCanScrollUp(false);
+    } else {
+      setCanScrollUp(true);
+    }
+
+  }
+
   useEffect(() => {
     if (isExpanded && menuWrapperRef.current !== undefined) {
       // on expand calculate starting position
       const rect = buttonRef.current!.getBoundingClientRect();
       menuWrapperRef.current!.style.left = `${rect.left}px`;
+
+      console.log(`SELECT.useEffect[...] button bounding rect ${JSON.stringify(rect)}`);
 
       const menuPadding = 8;
       const menuEntryHeight = 24;
@@ -120,48 +157,139 @@ export default function Select({
       const selectedDiv = menuWrapperRef.current!.childNodes[0].childNodes[menuPositionIndex] as HTMLDivElement;
 
       const spaceNeededOnTop = selectedDiv ? selectedDiv?.offsetTop : 0;
-
       const spaceNeededOnBottom = (options.length - menuPositionIndex - 1) * menuEntryHeight + menuPadding;
 
-      const height = Math.min(maxSpaceToTop, spaceNeededOnTop) + menuEntryHeight + Math.min(maxSpaceToBottom, spaceNeededOnBottom);
-      const top = Math.max(0, maxSpaceToTop - spaceNeededOnTop);
+      let height = Math.min(maxSpaceToTop, spaceNeededOnTop) + menuEntryHeight + Math.min(maxSpaceToBottom, spaceNeededOnBottom);
+      console.log('SCROLL height ' + height);
+      
+      let top = maxSpaceToTop - spaceNeededOnTop;
 
-      const scroll = Math.max(0, spaceNeededOnTop - maxSpaceToTop);
+      if (top < 0) {
+        console.log('SCROLL - over the top - reducing height');
+        height = maxSpaceToTop + menuEntryHeight + Math.min(maxSpaceToBottom, spaceNeededOnBottom);
+        top = 0;
+      }
+      console.log('SCROLL height corrected' + height);
 
-      setContainerBox({
-        top,
-        height,
-      });
+      const scrollTop = spaceNeededOnTop - maxSpaceToTop;
+      
+      console.log('SCROLL height to (init) ' + height);
+      menuContainerRef.current!.style.height = `${height}px`;
+      console.log('SCROLL top to (init) ' + top);
+      menuContainerRef.current!.style.top = `${top}px`;
 
-      setWrapperMaxHeigth(maxSpaceToTop + menuEntryHeight + maxSpaceToBottom);
-      setWrapperScrollTop({ scrollTop: scroll });
+      wrapperMaxHeight.current = maxSpaceToTop + menuEntryHeight + maxSpaceToBottom;
+      wrapperMaxHeightBottom.current = maxSpaceToBottom;
+      wrapperMaxHeightTop.current = maxSpaceToTop;
+      wrapperMenuEntryHeight.current = menuEntryHeight;
+      menuWrapperRef.current!.scrollTop = scrollTop;
+
+      // menuWrapperRef.current!.scrollTop = menuWrapperRef.current!.scrollTop;
+
+      updateScrollButtons();
     }
+
+    const scrollHandler = () => {
+      console.log('SCROLL scroll event')
+      // if (initialPositioning.current) {
+      //   console.log('SELECT initial positioning done')
+      //   initialPositioning.current = false;
+      //   return;
+      // }
+
+      const scrollDiff = menuWrapperRef.current!.scrollTop - lastScrollPos.current;
+
+      updateScrollButtons();
+      const box = {
+        height: menuContainerRef.current!.clientHeight,
+        top: menuContainerRef.current!.offsetTop,
+      };
+      console.log(`SELECT${JSON.stringify(box)}`);
+
+      const setContainer = (pos: { height: Number, top: Number }) => {
+        console.log('SCROLL top to (scroll) ' + pos.top);
+        menuContainerRef.current!.style.top = `${pos.top}px`;
+        console.log('SCROLL height to (scroll) ' + pos.height);
+        menuContainerRef.current!.style.height = `${pos.height}px`;
+
+        updateScrollButtons();
+      };
+
+      if (scrollDiff < 0) { // scroll down (container is at the top of the screen
+        const pxScrolledDown = -scrollDiff;
+        console.log('SCROLL DOWN');
+        // setContainerBox((box) => {
+
+        // setContainerBox((box) => {
+        if (box.top - pxScrolledDown < 0 && (box.height + pxScrolledDown) < (wrapperMaxHeight.current)) {
+          console.log('SCROLL DOWN - growing');
+          setContainer({
+            height: box.height + pxScrolledDown,
+            top: 0,
+          });
+        } else if (box.height + pxScrolledDown > (wrapperMaxHeight.current)) {
+          console.log('SCROLL DOWN - no change in measures');
+          // scrolling should do the trick?
+          setContainer({
+            height: wrapperMaxHeight.current,
+            top: 0,
+          });
+        } else {
+          console.log('SCROLL DOWN - increase height and move top up / sync scroll pos');
+          // scroll down - only grow by setting height
+          setContainer({
+            height: box.height + scrollDiff,
+            top: box.top - scrollDiff,
+          });
+          menuWrapperRef.current!.scrollTop = lastScrollPos.current;
+        }
+        // });
+      } else if (scrollDiff > 0) { // scroll up (container is at the bottom of the screen)
+        const pxScrolledUp = scrollDiff;
+        console.log('SCROLL UP');
+        console.log('at bottom and beyoind');
+        if (box.top - pxScrolledUp > 0) {
+          console.log('SCROLL UP - growing');
+          setContainer({
+            height: box.height + pxScrolledUp,
+            top: box.top - pxScrolledUp,
+          });
+          menuWrapperRef.current!.scrollTop = lastScrollPos.current;
+        } else if (box.height + pxScrolledUp > (wrapperMaxHeight.current)) {
+          console.log('SCROLL UP - no change in measure');
+          setContainer({
+            height: wrapperMaxHeight.current,
+            top: 0,
+          });
+        } else {
+          console.log(`SCROLL UP - growing height - keep top as it is and don't scroll`);
+          // console.log(`SCROLL UP - can expand top ${box.top} height  ${box.height} scrollUp: ${pxScrolledUp} scrollTop: ${menuWrapperRef.current!.scrollTop}`);
+          // scroll up - grow by setting height and reposition to top
+          setContainer({
+            height: box.height + pxScrolledUp,
+            top: box.top,
+          });
+
+          // console.log(`SCROLL UP - set scroll to: ${lastScrollPos.current}`);
+          menuWrapperRef.current!.scrollTop = lastScrollPos.current;
+        }
+
+        // });
+      }
+      console.log('SCROLL - setting last scorlllpos inner');
+      lastScrollPos.current = menuWrapperRef.current!.scrollTop;
+    };
+
+    if (menuWrapperRef.current) {
+      console.log('SCROLL - setting last scorlllpos outer');
+      lastScrollPos.current = menuWrapperRef.current!.scrollTop;
+      menuWrapperRef.current.addEventListener('scroll', scrollHandler);
+    }
+
+    return () => { menuWrapperRef.current?.removeEventListener('scroll', scrollHandler); };
   }, [options, isExpanded, viewPortHeight, menuWrapperRef]);
 
-  useEffect(() => {
-    if (menuWrapperRef.current !== undefined) {
-      initialPositioning = true;
-
-      menuWrapperRef.current!.scrollTop = wrapperScrollTop.scrollTop;
-
-      if (menuWrapperRef.current!.scrollTop === (menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight)
-          || menuRef.current?.clientHeight === menuWrapperRef.current?.clientHeight) {
-        // at bottom
-        setCanScrollDown(false);
-      } else {
-        setCanScrollDown(true);
-      }
-
-      if (menuWrapperRef.current!.scrollTop === 0) {
-        // at top
-        setCanScrollUp(false);
-      } else {
-        setCanScrollUp(true);
-      }
-    }
-  }, [wrapperScrollTop]);
-
-  useEffect(() => {
+  /* useEffect(() => {
     if (menuWrapperRef.current !== undefined) {
       if (menuWrapperRef.current!.scrollTop === (menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight)
           || menuRef.current?.clientHeight === menuWrapperRef.current?.clientHeight) {
@@ -178,7 +306,7 @@ export default function Select({
         setCanScrollUp(true);
       }
     }
-  }, [containerBox]);
+  }, [containerBox]); */
 
   useEffect(() => {
     if (onChange && selectedOption) {
@@ -190,72 +318,8 @@ export default function Select({
     onSelectOption(defaultValue);
   }, [defaultValue]);
 
-  let lastScrollPos = 0;
-
   useEffect(() => {
-    const scrollHandler = () => {
-      if (initialPositioning) {
-        initialPositioning = false;
-        return;
-      }
 
-      const diff = menuWrapperRef.current!.scrollTop - lastScrollPos;
-      // menuWrapperRef.current!.scrollTop = lastScrollPos;
-      lastScrollPos = menuWrapperRef.current!.scrollTop;
-
-      if (menuWrapperRef.current!.scrollTop === (menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight)
-          || menuRef.current?.clientHeight === menuWrapperRef.current?.clientHeight) {
-        // at bottom
-        setCanScrollDown(false);
-      } else {
-        setCanScrollDown(true);
-      }
-
-      if (menuWrapperRef.current!.scrollTop === 0) {
-        // at top
-        setCanScrollUp(false);
-      } else {
-        setCanScrollUp(true);
-      }
-
-      if (diff < 0) {
-        setContainerBox((box) => {
-          if (box.height - diff > wrapperMaxHeight) {
-            return {
-              height: wrapperMaxHeight,
-              top: box.top,
-            };
-          }
-          // scroll up - grow by setting height and reposition to top
-          return {
-            height: box.height - diff,
-            top: box.top,
-          };
-        });
-      } else {
-        setContainerBox((box) => {
-          if (box.height + diff > wrapperMaxHeight) {
-            return {
-              height: wrapperMaxHeight,
-              top: box.top,
-            };
-          }
-
-          // scroll down - only grow by setting height
-          return {
-            height: box.height + diff,
-            top: box.top - diff,
-          };
-        });
-      }
-    };
-
-    if (menuWrapperRef.current) {
-      lastScrollPos = menuWrapperRef.current!.scrollTop;
-      menuWrapperRef.current.addEventListener('scroll', scrollHandler);
-    }
-
-    return () => { menuWrapperRef.current?.removeEventListener('scroll', scrollHandler); };
   });
 
   useEffect(() => {
@@ -273,16 +337,22 @@ export default function Select({
   }, []); // Empty array ensures that effect is only run on mount
 
   useEffect(() => {
-    let timeInterval = undefined as any;
-
     const startScrollUp = () => {
-      timeInterval = setInterval(() => {
-        menuWrapperRef.current!.scrollTop = menuWrapperRef.current!.scrollTop - 4;
-      }, 20);
+      console.log('attemüt to start');
+      if (startScrollUpTimeInterval.current === -1) {
+        console.log('SELECT starting scroll up');
+        startScrollUpTimeInterval.current = setInterval(() => {
+          console.log(`SELECT setting to ${menuWrapperRef.current!.scrollTop - 4}`);
+          menuWrapperRef.current!.scrollTop = menuWrapperRef.current!.scrollTop - 4;
+          console.log('SELECT setting done');
+        }, 20);
+      }
     };
 
     const stopScrollUp = () => {
-      clearInterval(timeInterval);
+      console.log('SELECT stopping scroll up');
+      clearInterval(startScrollUpTimeInterval.current);
+      startScrollUpTimeInterval.current = -1;
     };
 
     if (scrollUpRef.current !== undefined) {
@@ -297,16 +367,21 @@ export default function Select({
   }, [scrollUpRef]);
 
   useEffect(() => {
-    let timeInterval = undefined as any;
-
     const startScrollDown = () => {
-      timeInterval = setInterval(() => {
-        menuWrapperRef.current!.scrollTop = menuWrapperRef.current!.scrollTop + 4;
-      }, 20);
+      if (startScrollDownTimeInterval.current === -1) {
+        console.log('SELECT starting scroll down');
+        startScrollDownTimeInterval.current = setInterval(() => {
+          console.log(`SELECT setting to ${menuWrapperRef.current!.scrollTop - 4}`);
+          menuWrapperRef.current!.scrollTop = menuWrapperRef.current!.scrollTop + 4;
+          console.log('SELECT setting done');
+        }, 20);
+      }
     };
 
     const stopScrollDown = () => {
-      clearInterval(timeInterval);
+      console.log('SELECT stopping scroll down');
+      clearInterval(startScrollDownTimeInterval.current);
+      startScrollDownTimeInterval.current = -1;
     };
 
     if (scrollDownRef.current !== undefined) {
@@ -369,7 +444,7 @@ export default function Select({
           type="button"
         >
           {iconClass !== undefined && (
-            <div className={`svg-container ${iconClass}`} style={{marginRight: '8px'}}/>
+            <div className={`svg-container ${iconClass}`} style={{ marginRight: '8px' }} />
           )}
           <span className="select-menu__label select-menu__label-part1">
             {labelPart1}
@@ -382,12 +457,7 @@ export default function Select({
         <div
           ref={menuContainerRef}
           className="select-menu__menu_container"
-          style={
-            {
-              height: `${containerBox.height}px`,
-              top: `${containerBox.top}px`,
-            }
-}
+
         >
           <div
             ref={scrollUpRef}

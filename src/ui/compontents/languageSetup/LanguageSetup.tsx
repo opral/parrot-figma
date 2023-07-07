@@ -98,6 +98,7 @@ export default function LanguageSetup({
               display="contents"
             >
               <ReactSelect
+                filterOption={(option : any, input) => option.data.menuLabel.toLowerCase().indexOf(input.toLowerCase()) !== -1}
                 options={availableLanguages}
                 placeholder="Select Language"
                 defaultValue={selectedBaseLanguage}

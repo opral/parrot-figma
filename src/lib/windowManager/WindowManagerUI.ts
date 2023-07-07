@@ -1,5 +1,5 @@
 /* eslint-disable class-methods-use-this */
-import { WindowMode } from './WindowManagerSandbox';
+import { RESIZEDETECTION_OVERLAP_PX, WindowMode } from './WindowManagerSandbox';
 
 export default class WindowManagerUi extends EventTarget {
   sizeWrapper: HTMLElement;
@@ -54,6 +54,8 @@ export default class WindowManagerUi extends EventTarget {
       threshol.push(i);
     }
 
+    ((document.querySelector(':root')!) as HTMLElement).style.setProperty('--resize-detection-overlap', `${RESIZEDETECTION_OVERLAP_PX + 2}px`);
+
     let lastRatio = 0 as number;
     this.intersectionObserver = new IntersectionObserver((entries: IntersectionObserverEntry[]) => {
       if (this.isResizing || this.openRequest) {
@@ -70,7 +72,7 @@ export default class WindowManagerUi extends EventTarget {
           // console.log(`height detected: ${entries[0].intersectionRect.height}`);
           // this.contentEl!.style.height = `${intersectionHeight}px`;
           ((document.querySelector(':root')!) as HTMLElement).style.setProperty('--window-client-height', `${entries[0].intersectionRect.height}px`);
-
+          
           if (this.windowMode === WindowMode.Fullscreen) {
             if (this.fullscreenDragIdleInterval) {
               clearTimeout(this.fullscreenDragIdleInterval);
@@ -134,6 +136,11 @@ export default class WindowManagerUi extends EventTarget {
           }
           this.resizeHandelEl.classList.remove(...this.resizeHandelEl.classList);
           this.resizeHandelEl.classList.add(mode);
+
+          const currentModeClasses = [...this.contentEl.classList].filter((className) => className.startsWith('windowmanager-'));
+          this.contentEl.classList.remove(...currentModeClasses);
+          this.contentEl.classList.add(`windowmanager-${mode}`);
+
           this.windowMode = mode;
           if (this.openRequest && mode !== this.openRequest) {
             console.log(`WARNING: requested mode ${this.requestWindowMode} differs from received ${mode}`);
@@ -181,11 +188,8 @@ export default class WindowManagerUi extends EventTarget {
   startingOffsetX = -1;
 
   onResizeHandlePointerDown(e: any) {
-
     this.startingOffsetY = e.clientY;
     this.startingOffsetX = e.clientX;
-    console.log(e.clientY);
-    console.log(e.clientX);
     this.isResizing = true;
     e.target.onpointermove = this.onResizeHandleDrag.bind(this);
     e.target.setPointerCapture(e.pointerId);

@@ -34,6 +34,7 @@ import Tooltip from './compontents/tooltip/Tooltip';
 import Import from './views/import/Import';
 import Export from './views/export/Export';
 import FEATURES_FLAGS from './featuretoggle';
+import SetupView from './views/setup/SetupView';
 
 TimeAgo.addDefaultLocale(en);
 
@@ -201,14 +202,7 @@ function App() {
     );
   } else if (appScreen === 'settings') {
     view = (
-      <LanguageSetup
-        baseLanguage={undefined}
-        activeLanguages={ []}
-        onChange={(baselanguage, activeLanguages) => {
-          memoryTranslationKeyStore.setBaseLanguage(baselanguage);
-          memoryTranslationKeyStore.setLanguages(activeLanguages);
-        }}
-      />
+      <SetupView labelManager={localizedLabelManager} />
     );
   /* (
       <ConfigView

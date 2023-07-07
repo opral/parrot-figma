@@ -118,7 +118,7 @@ export default function Select({
     console.log('updateScrollButtons === ');
     console.log('updateScrollButtons menuWrapperRef.current?.clientHeight '+(menuWrapperRef.current?.clientHeight));
     if (
-      (menuWrapperRef.current!.scrollTop - (menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight) > 2)
+      (Math.abs((menuWrapperRef.current!.scrollTop - (menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight))) <= 2)
     || menuRef.current?.clientHeight === menuWrapperRef.current?.clientHeight) {
       // at bottom
       setCanScrollDown(false);

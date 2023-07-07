@@ -23,8 +23,10 @@ export class WindowManagerSandbox {
   // bottom sheet
 
   bottomSheetHeight = 300;
-  bottomSheetMarginRight = 3;
-  bottomSheetMarginLeft = 3;
+
+  bottomSheetMarginRight = 0;
+
+  bottomSheetMarginLeft = 0;
 
   // fullscreen
 

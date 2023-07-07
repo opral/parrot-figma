@@ -23,6 +23,8 @@ export class WindowManagerSandbox {
   // bottom sheet
 
   bottomSheetHeight = 300;
+  bottomSheetMarginRight = 3;
+  bottomSheetMarginLeft = 3;
 
   // fullscreen
 
@@ -207,10 +209,10 @@ export class WindowManagerSandbox {
       x = figma.viewport.bounds.x - ((leftPanelWidth) / figma.viewport.zoom) + (this.fullscreenMarginLeft / figma.viewport.zoom);
       y = figma.viewport.bounds.y + (this.fullscreenMarginTop / figma.viewport.zoom);
     } else if (this.windowMode === WindowMode.BottomSheet) {
-      width = figma.viewport.bounds.width * figma.viewport.zoom;
+      width = figma.viewport.bounds.width * figma.viewport.zoom - (this.bottomSheetMarginLeft + this.bottomSheetMarginRight);
       height = this.bottomSheetHeight; // in case of the bottom sheet we always keep the windows size equal to the viewport size
 
-      x = figma.viewport.bounds.x;
+      x = figma.viewport.bounds.x + (this.bottomSheetMarginLeft / figma.viewport.zoom);
       y = figma.viewport.bounds.y + figma.viewport.bounds.height - ((this.bottomSheetHeight + this.titleBarHeight - RESIZEDETECTION_OVERLAP_PX) / figma.viewport.zoom);
     } else if (this.windowMode === WindowMode.Window) {
       if (this.currentMode !== this.windowMode) {

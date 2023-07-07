@@ -28,6 +28,10 @@ body {
   height: calc(100% - var(--resize-detection-overlap)) !important;
 }
 
+.windowmanager-bottomSheet .toolbar-resize-handle {
+  cursor: ns-resize
+}
+
 .window-control {
   align-self: center;
   justify-self: flex-end;

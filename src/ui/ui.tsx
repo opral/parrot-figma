@@ -272,8 +272,10 @@ function App() {
           <div className={`tab ${appScreen === 'import' ? 'active' : ''}`} onClick={() => setAppScreen('import')}>Import</div>
           <div className={`tab ${appScreen === 'settings' ? 'active' : ''}`} onClick={() => setAppScreen('settings')}>Setup</div>
         </div>
-        <div
-          style={{ flexGrow: 1, cursor: 'ns-resize' }}
+        { windowMode === WindowMode.BottomSheet && (
+          <div
+          className='toolbar-resize-handle'
+          style={{ flexGrow: 1 }}
           onPointerDown={(event) => {
             event.preventDefault(); // Prevent the default behavior
             event.stopPropagation(); // Stop event bubbling
@@ -284,8 +286,14 @@ function App() {
             event.stopPropagation(); // Stop event bubbling
             resizeHandle.dispatchEvent(new PointerEvent('onpointerup', event as any));
           }}
-        >
-        </div>
+          onMouseEnter={(event) => {
+            event.preventDefault(); // Prevent the default behavior
+            event.stopPropagation(); // Stop event bubbling
+            resizeHandle.dispatchEvent(new PointerEvent('mouseenter', event as any));
+          }}
+        />
+        )}
+        
         <div className="window-control">
           <SegmentedControl
             segments={[{

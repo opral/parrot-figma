@@ -124,8 +124,11 @@ export default class WindowManagerUi extends EventTarget {
 
     this.intersectionObserver.observe(sizeWrapperEl!);
 
+
+    console.log(this.resizeHandelEl);
     this.resizeHandelEl.onpointerdown = this.onResizeHandlePointerDown.bind(this);
     this.resizeHandelEl.onpointerup = this.onResizeHandlePointerUp.bind(this);
+    this.resizeHandelEl.onmouseenter = this.onMouseEnter.bind(this); 
 
     window.addEventListener('message', (event : MessageEvent) => {
       if (event.data.pluginMessage.target === 'WindowManager') {
@@ -157,6 +160,10 @@ export default class WindowManagerUi extends EventTarget {
   }
 
   onResizeHandleDrag(e: any) {
+    if (e.buttons !== 1) {
+      return;
+    }
+
     const computedStyle = getComputedStyle(this.sizeWrapper);
     const height = parseInt(computedStyle.height, 10);
     const width = parseInt(computedStyle.width, 10);
@@ -193,6 +200,13 @@ export default class WindowManagerUi extends EventTarget {
     this.isResizing = true;
     e.target.onpointermove = this.onResizeHandleDrag.bind(this);
     e.target.setPointerCapture(e.pointerId);
+  }
+
+  onMouseEnter(e: any) {
+    if (e.buttons !== 1) {
+      this.isResizing = false;
+      e.target.onpointermove = null;
+    }
   }
 
   requestWindowMode(mode: WindowMode, fromDrag: boolean) {

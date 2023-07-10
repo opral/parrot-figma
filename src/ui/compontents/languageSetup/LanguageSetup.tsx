@@ -72,7 +72,7 @@ export default function LanguageSetup({
   baseLanguage,
   onChange,
 }: LanguageSetupProps) {
-  const [selectedLanguages, setSelectedLanguages] = useState<any[]>(toLanguageOptions(activeLanguages));
+  const [selectedLanguages, setSelectedLanguages] = useState<any[]>(toLanguageOptions(activeLanguages.filter((language) => language !== baseLanguage)));
   const [selectedBaseLanguage, setSelectedBaseLanguage] = useState(baseLanguage !== undefined ? toLanguageOption(baseLanguage) : undefined);
 
   const [changeBaseLanguage, setChangeBaseLanguage] = useState(baseLanguage === undefined);
@@ -83,19 +83,20 @@ export default function LanguageSetup({
   const onSelectedBaseLanguageChange = (
     value: any,
   ) => {
+    
     setChangeBaseLanguage(false);
 
-    if (selectedBaseLanguage?.value !== undefined && selectedBaseLanguage?.value !== value) {
+    if (selectedBaseLanguage?.value !== value) {
       const previousBaseLanguage = selectedBaseLanguage;
       const currentLanguages = selectedLanguages;
-      if (currentLanguages.findIndex((languageOption) => languageOption.value === previousBaseLanguage.value) === -1) {
+      if (previousBaseLanguage !== undefined && currentLanguages.findIndex((languageOption) => languageOption.value === previousBaseLanguage.value) === -1) {
         currentLanguages.push(previousBaseLanguage);
       }
-      const updatedLanguages = currentLanguages.filter((language) => language.value !== value.value);
+      const updatedLanguages = currentLanguages;
 
-      setSelectedLanguages(updatedLanguages);
+      setSelectedLanguages(updatedLanguages.filter((languageOption) => languageOption.value !== value.value));
+      
       setSelectedBaseLanguage(value);
-
       onChange(value.value as Language, updatedLanguages.map((languageOption: any) => languageOption.value as Language));
     }
   };
@@ -103,8 +104,13 @@ export default function LanguageSetup({
   const onSelectedLanguagesChange = (
     values: any,
   ) => {
+    const languagesWithBaseLanguage = [...values];
+    if (languagesWithBaseLanguage.findIndex((languageOption) => languageOption.value === selectedBaseLanguage!.value) === -1) {
+      languagesWithBaseLanguage.push(selectedBaseLanguage);
+    }
+
     setSelectedLanguages(values);
-    onChange(selectedBaseLanguage!.value as Language, values.map((languageOption: any) => languageOption.value as Language));
+    onChange(selectedBaseLanguage!.value as Language, languagesWithBaseLanguage.map((languageOption: any) => languageOption.value as Language));
   };
 
   return (

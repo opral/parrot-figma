@@ -268,8 +268,8 @@ function App() {
             Keys
 
           </div>
-          <div className={`tab ${appScreen === 'export' ? 'active' : ''}`} onClick={() => setAppScreen('export')}>{ FEATURES_FLAGS.versioning ? 'Versions & Export' : 'Export'}</div>
-          <div className={`tab ${appScreen === 'import' ? 'active' : ''}`} onClick={() => setAppScreen('import')}>Import</div>
+          { FEATURES_FLAGS.export && (<div className={`tab ${appScreen === 'export' ? 'active' : ''}`} onClick={() => setAppScreen('export')}>{ FEATURES_FLAGS.versioning ? 'Versions & Export' : 'Export'}</div>)}
+          { FEATURES_FLAGS.import && (<div className={`tab ${appScreen === 'import' ? 'active' : ''}`} onClick={() => setAppScreen('import')}>Import</div>)}
           <div className={`tab ${appScreen === 'settings' ? 'active' : ''}`} onClick={() => setAppScreen('settings')}>Setup</div>
         </div>
         { windowMode === WindowMode.BottomSheet && (

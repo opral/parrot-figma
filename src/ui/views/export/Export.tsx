@@ -73,9 +73,9 @@ export default function Export({
 
     const currentLanguageOption = {
       value: language,
-      label: t(`l_${language}`) ?? language,
+      label: (new Intl.DisplayNames('en', { type: 'language' }).of(language)) + ' - ' + language,
       // tooltip: 'select this',
-      icon: `flag-${language}`,
+      // icon: `flag-${language}`,
       forceSelected: language === exportLanguage,
       subLabel: language === exportLanguage ? '(base language)' : undefined,
     } as TileSelectOption<Language>;

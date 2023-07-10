@@ -30,6 +30,7 @@ export default function Onboarding({
 
   return (
     <div className="view">
+      
       <div className="setup-header">
         Set up your file
       </div>

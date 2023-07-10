@@ -24,6 +24,7 @@ export class WindowManagerSandbox {
 
   bottomSheetHeight = 300;
 
+  // NOTE:: margins set to 0 for now since ruler will make the margins look odd
   bottomSheetMarginRight = 0;
 
   bottomSheetMarginLeft = 0;

@@ -18,6 +18,29 @@ type LocalizedFrameGroupProps = {
   localizedLabelManager: LocalizedLabelManagerUI
 };
 
+function toLanguageOption(language: string, baseLanguage?: string) {
+  let languageNameInCurrentLanguage = 'no name found';
+  try {
+    languageNameInCurrentLanguage = new Intl.DisplayNames('en', { type: 'language' }).of(language) ?? languageNameInCurrentLanguage;
+  } catch (e) { /* empty */ }
+
+  let languageNameInForeignLanguage = 'no name found';
+  try {
+    languageNameInForeignLanguage = new Intl.DisplayNames(language, { type: 'language' }).of(language) ?? languageNameInForeignLanguage;
+  } catch (e) { /* empty */ }
+
+  if (baseLanguage && language === baseLanguage) {
+    return {
+      value: language,
+      label: `${languageNameInCurrentLanguage} - ${language}`
+    };
+  }
+  return {
+    value: language,
+    label: `${languageNameInCurrentLanguage} - ${language}`,
+  };
+}
+
 export default function LocalizedFrameGroup({
   showKey,
   localizedLabels,
@@ -36,9 +59,7 @@ export default function LocalizedFrameGroup({
   const languages = localizedLabelManager.keyStore.getLanugages()!;
 
   for (const language of languages) {
-    const currentLanguageOption = {
-      value: language, label: language, icon: `flag-${language}`,
-    };
+    const currentLanguageOption = toLanguageOption(language);
 
     if (language === firstTranslationState.rootFrameLanguage) {
       rootFrameLanguage = currentLanguageOption;

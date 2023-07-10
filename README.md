@@ -307,28 +307,16 @@ What we want from ui point of view:
     - [ ] make keys tab read onnly in dev mode
     - [ ] remvoe window mode button from dev mode
 
-- [ ] react select instead of select in settings screen
-- [ ] dropdown state based on input (only show dropdown on carret click or when something is typed)
+- [x] react select instead of select in settings screen
+- [x] dropdown state based on input (only show dropdown on carret click or when something is typed)
 
-
-    Offene fragen: 
-    welche sprachen bieten wir an?
--
- - [ ] window handling (sizes in different modes )
- - [ ] resize handler
- - [ ] right aling select arrow also in non hover state
- - [ ] rename placeholders to dynamic content 
- - [ ] alert once delete key button pressed to confirm action
- - [ ] esc for hiding modal views  
- - [ ] highlight row in key select on hover
- - [ ] add action button to create key when no result in search
- - [ ] provide filter current frame key
- - [ ] switching language with placeholder not working atm
+ - [x] window handling (sizes in different modes )
+ - [x] resize handler
+ - [x] right aling select arrow also in non hover state
+ - [x] rename placeholders to dynamic content  - reverted ;-)
+ - [x] highlight row in key select on hover
+ - [x] switching language with placeholder not working atm
     - hint: if placeholder is present in one language only it seems to work
- - [ ] command z not working for fillin change
- - [ ] changing a placeholder name in one lable - does not update other labels referencing the same key
- - [ ] override label text with translation from key and show toast if text changed
- - [ ] 
  - [x] remove option to undo changes in design
  - [x] leading linebreak in label - auto removal fix
  - [x] leading spaces 
@@ -337,6 +325,20 @@ What we want from ui point of view:
     - [x] toolbar button not working properly / setting mixin 
  - [x] styling
  - [x] disable placeholder button on selection of multiple placeholders / mixed approach
+ 
+ - [ ] alert once delete key button pressed to confirm action
+ - [ ] esc for hiding modal views  
+ - [ ] esc in panel - cancel
+ - [ ] esc key in drawer and call to action (cancel)
+ - [ ] enter in create key panel
+ - [ ] add sentry (see: https://github.com/tokens-studio/figma-plugin/tree/916a34f70d729cb3797a00bcffd78f1790695cb4)
+ - [ ] add mixpanel (see: https://github.com/tokens-studio/figma-plugin/tree/916a34f70d729cb3797a00bcffd78f1790695cb4)
+ 
+ - [ ] add action button to create key when no result in search
+ - [ ] provide filter current frame key
+ - [ ] command z not working for fillin change
+ - [ ] changing a placeholder name in one lable - does not update other labels referencing the same key
+ - [ ] override label text with translation from key and show toast if text changed
  - [ ] formatting label <-> key
     - [x] placeholder renaming hinders replacement in label
     - [x] placeholder not saved to key on creation
@@ -349,8 +351,6 @@ What we want from ui point of view:
     - [x] changing the placeholder value in the key leads to unsynced label (fillin part of the serialized key) -> remove fillin=\\"*\\" contenteditable=\\"false\\"
  - [x] placeholder not working when inserted before another one
  - [x] click on placeholder should select it
- - [ ] enter in create key panel
- - [ ] esc in panel - cancel
  - [ ] placeholder type and format not implemented
     - [ ] DateTime (Format) - check relative date format etc
     - [ ] Decimal number 
@@ -363,12 +363,9 @@ What we want from ui point of view:
  - [x] error when deleting the whole label text
  - [x] strikethrough/underline handling
  - [x] unsupported url - only allow relative urls with leading / or http / https / mailto prefix  
- - [ ] add sentry (see: https://github.com/tokens-studio/figma-plugin/tree/916a34f70d729cb3797a00bcffd78f1790695cb4)
- - [ ] add mixpanel (see: https://github.com/tokens-studio/figma-plugin/tree/916a34f70d729cb3797a00bcffd78f1790695cb4)
- - [ ] add feddback on invalid url via notification
+ - [x] add feddback on invalid url via notification
  - [ ] search and replace 
- - [ ] esc key in drawer and call to action (cancel)
- - [ ] Change language - auto translate of links - remove link 
+ - [x] Change language - auto translate of links - remove link 
  - [ ] how to handle attributes on localized text like class - we cant store them in the element
  - [ ] plural select - based on a quantity value
  - [ ] number based plurals (0 = no new messages, 1 = one new message, other = %n new messages)

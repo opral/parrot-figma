@@ -17,6 +17,7 @@ import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel'
 import PlaceholderEditorListItem from '../../compontents/placeholder/PlaceholderEditor';
 import { Fillins } from '../../../lib/keystore/TranslationKey';
 import FEATURES_FLAGS from '../../featuretoggle';
+import { track } from '../../utils/analytics';
 
 type LocalizedLabelListItemProps = {
   showKey: Function,
@@ -53,6 +54,7 @@ export default function LocalizedLabelListItem({
   }
 
   async function updateToLatestKeyVersion() {
+    track('updateToLatestKeyVersion');
     await localizedLabelManager.updateToLatestKeyVersion([localizedLabel]);
   }
 
@@ -284,7 +286,6 @@ export default function LocalizedLabelListItem({
                       type: 'action',
                     });
 
-
                     if (localizedLabel.key !== undefined) {
                       options.push({
                         label: 'show key...',
@@ -292,7 +293,6 @@ export default function LocalizedLabelListItem({
                         type: 'action',
                       });
                     }
-
 
                     options.push({
                       label: 'No Translation',
@@ -380,7 +380,7 @@ export default function LocalizedLabelListItem({
                 <span
                   className="layerIcon iconWrapper button"
                   data-tooltip-trigger="span"
-                  data-tooltip-content={`Update Label with latest version${labelState.behind} ${localizedLabel.language} ${localizedLabel.rootFrameLanguage}`}
+                  data-tooltip-content="Use Text from Translation key"
                   onClick={updateToLatestKeyVersion}
                 >
                   <span className="svg-container reset-instance-svg" />

@@ -59,7 +59,6 @@ export default function TranslationView({
   // 
   let htmlRepresentation = text;
   // TODO #23 updating the reder view
-  console.log('JO:: 23 TranslationView update label props wi text: \n [' + text + ']');
   htmlRepresentation = htmlRepresentation.split('\n').map((content, index, array) => {
     if (false && index === (array.length - 1) && content === '') {
       return '';
@@ -69,6 +68,5 @@ export default function TranslationView({
     }
     return '<p>' + content + '</p>'
   }).join('');
-  console.log('JO:: 23 TranslationView otml: \n[' + htmlRepresentation + ']');
   return <span dangerouslySetInnerHTML={{__html:htmlRepresentation }}/>;
 }

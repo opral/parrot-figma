@@ -2,83 +2,132 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const InlineChunkHtmlPlugin = require('react-dev-utils/InlineChunkHtmlPlugin');
 
 const path = require('path');
+const Dotenv = require('dotenv-webpack');
+const { sentryWebpackPlugin } = require("@sentry/webpack-plugin");
 const webpack = require('webpack');
+const dotenv = require('dotenv');
 
-module.exports = (env, argv) => ({
-  devtool: argv.mode === 'production' ? false : 'inline-source-map',
 
-  module: {
-    rules: [
-      // Converts TypeScript code to JavaScript
+const { version } = require('./package.json');
 
-      // Converts TypeScript code to JavaScript
-      { test: /\.tsx?$/, use: 'ts-loader', exclude: /node_modules/ },
+module.exports = (env, argv) => {
 
-      // Enables including CSS by doing "import './file.css'" in your TypeScript code
-      {
-        test: /\.css$/,
-        use: [
-          'style-loader',
-          'css-loader',
-        ],
-      },
-      {
-        test: /\.ejs$/,
-        use: [
-          'raw-loader',
-        ],
-      },
-      {
+  //Needed to load the process.env variables for sentry
+  dotenv.config({
+    path: argv.mode === 'production' ? '.env.production' : '.env',
+  });
 
-        test: /\.(png)$/,
-        use: {
-          loader: 'url-loader',
-          options: {
-            limit: 25000,
+  return {
+    mode: argv.mode === 'production' ? 'production' : 'development',
+
+    // This is necessary because Figma's 'eval' works differently than normal eval
+    devtool: argv.mode === 'production' ? 'source-map' : 'inline-source-map',
+
+    module: {
+      rules: [
+        // Converts TypeScript code to JavaScript
+  
+        // Converts TypeScript code to JavaScript
+        { test: /\.tsx?$/, use: 'ts-loader', exclude: /node_modules/ },
+  
+        // Enables including CSS by doing "import './file.css'" in your TypeScript code
+        {
+          test: /\.css$/,
+          use: [
+            'style-loader',
+            'css-loader',
+          ],
+        },
+        {
+          test: /\.ejs$/,
+          use: [
+            'raw-loader',
+          ],
+        },
+        {
+  
+          test: /\.(png)$/,
+          use: {
+            loader: 'url-loader',
+            options: {
+              limit: 25000,
+            },
           },
         },
-      },
-      {
-        test: /\.(png|jpe?g|gif|svg|eot|ttf|woff|woff2)$/i,
-        // More information here https://webpack.js.org/guides/asset-modules/
-        type: 'asset',
-      },
+        {
+          test: /\.(png|jpe?g|gif|svg|eot|ttf|woff|woff2)$/i,
+          // More information here https://webpack.js.org/guides/asset-modules/
+          type: 'asset',
+        },
+      ],
+    },
+  
+    // defie the entrypoints for compilation
+    entry: {
+      ui: './src/ui/ui.tsx',
+      code: './src/sandbox/code.ts',
+    },
+  
+    resolve: {
+      extensions: ['.js', '.jsx', '.tsx', '.ts'],
+      alias: {
+        fs: false, // or any other value that makes sense for your project
+        path: false, // or any other value that makes sense for your project
+      }
+    },
+    output: {
+      filename: '[name].js',
+      path: path.resolve(__dirname, 'dist'),
+    },
+    plugins: [
+
+      new Dotenv({
+        path: argv.mode === 'production' ? '.env.production' : '.env',
+      }),
+      process.env.SENTRY_AUTH_TOKEN ?
+        sentryWebpackPlugin({
+          org: process.env.SENTRY_ORG,
+          project: process.env.SENTRY_PROJECT,
+          debug: true,
+          // Auth tokens can be obtained from https://sentry.io/settings/account/api/auth-tokens/
+          // and need `project:releases` and `org:read` scopes
+          authToken: process.env.SENTRY_AUTH_TOKEN,
+          telemetry: false,
+          sourcemaps: {
+            filesToDeleteAfterUpload: ['dist/*.js.map', '*.js.map', 'ui.js']
+          },
+          release: {
+            name: 'figma-parrotss@' + version,
+            finalize: true,
+            cleanArtifacts: true,
+            deploy: {
+              name: 'plugin@' + version,
+              env: process.env.ENVIRONMENT
+            },
+            setCommits: {
+              auto: true,
+              ignoreMissing: true,
+            }
+          },
+        }) : () => {},
+
+      new webpack.DefinePlugin({
+        global: {}, // Fix missing symbol error when running in developer VM
+      }),
+  
+      new HtmlWebpackPlugin({
+        inject: 'body',
+  
+        template: './src/ui/ui.html',
+        filename: 'ui.html',
+        // inlineSource: '.(js)$',
+        cache: false,
+  
+        chunks: ['ui'],
+      }),
+      new InlineChunkHtmlPlugin(HtmlWebpackPlugin, [/ui/]),
+  
     ],
-  },
-
-  // defie the entrypoints for compilation
-  entry: {
-    ui: './src/ui/ui.tsx',
-    code: './src/sandbox/code.ts',
-  },
-
-  resolve: {
-    extensions: ['.js', '.jsx', '.tsx', '.ts'],
-    alias: {
-      fs: false, // or any other value that makes sense for your project
-      path: false, // or any other value that makes sense for your project
-    }
-  },
-  output: {
-    filename: '[name].js',
-    path: path.resolve(__dirname, 'dist'),
-  },
-  plugins: [
-    new webpack.DefinePlugin({
-      global: {}, // Fix missing symbol error when running in developer VM
-    }),
-
-    new HtmlWebpackPlugin({
-      inject: 'body',
-
-      template: './src/ui/ui.html',
-      filename: 'ui.html',
-      // inlineSource: '.(js)$',
-      cache: false,
-
-      chunks: ['ui'],
-    }),
-    new InlineChunkHtmlPlugin(HtmlWebpackPlugin, [/ui/]),
-
-  ],
-});
+  }
+  
+};

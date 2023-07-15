@@ -24,6 +24,10 @@ export default class FigmaUtil {
     figma.notify(message);
   }
 
+  async getUserId() {
+    return figma.currentUser?.id;
+  }
+
   async getImageFromFrame(nodeId: string, settings: ExportSettings) {
     const node = figma.getNodeById(nodeId) as TextNode;
     const imageAsUint8Array = await node.exportAsync(settings);

@@ -52,7 +52,7 @@ async function main() {
         } else {
           if (keys[key].plural) {
             for (let plural of Object.keys(keys[key].translations[language])) {
-              languages[language].translation[key+ '_' + plural] = keys[key].translations[language][plural].text.replace('[%i:count]', '{{count}}') ?? '';
+              languages[language].translation[key+ '_' + plural] = keys[key].translations[language][plural].text ?? ''; //.replace('[%i:count]', '{{count}}') ?? '';
             }
           } else {
             languages[language].translation[key] = keys[key].translations[language].other?.text.replace('[%i:count]', '{{count}}') ?? '';

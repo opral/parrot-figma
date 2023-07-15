@@ -8,6 +8,8 @@ import { useEffect, useState } from 'react';
 import * as ReactDOM from 'react-dom';
 import TimeAgo from 'javascript-time-ago';
 import en from 'javascript-time-ago/locale/en.json';
+import { initializeSentry } from './utils/sentry';
+import { initializeAnalytics, track, identify } from './utils/analytics';
 
 import LocalizedLabelsListView from './views/localizedlabelslist/LocalizedLabelsListView';
 import FigmaUtil from '../shared/FigmaUtil';
@@ -37,6 +39,10 @@ import FEATURES_FLAGS from './featuretoggle';
 import SetupView from './views/setup/SetupView';
 
 TimeAgo.addDefaultLocale(en);
+
+initializeSentry();
+
+initializeAnalytics();
 
 const monkeyPatchCommandExec = document.execCommand;
 // eslint-disable-next-line func-names
@@ -106,6 +112,10 @@ asyncFunctionProxy.proxyAsyncMethods(remoteLocalizedLabelManager);
 const figmaRemote = new FigmaUtil();
 asyncFunctionProxy.proxyAsyncMethods(figmaRemote);
 
+figmaRemote.getUserId().then((userId) => {
+  identify(userId!);
+});
+
 const figmaFileTranslationKeyStore = new FigmaFileTranslationKeyStore(true);
 asyncFunctionProxy.proxyAsyncMethods(figmaFileTranslationKeyStore);
 
@@ -142,6 +152,7 @@ function App() {
 
   useEffect(() => {
     if (appScreen) {
+      track(`app_screen__${appScreen}`);
       figmaRemote.setLocalFileConfig('lastView', appScreen);
     }
   }, [appScreen]);
@@ -167,7 +178,7 @@ function App() {
   };
 
   if (!appScreen) {
-    return <>Not ready</>;
+    return <>Loading Plugin</>;
   }
 
   let view;
@@ -274,26 +285,26 @@ function App() {
         </div>
         { windowMode === WindowMode.BottomSheet && (
           <div
-          className='toolbar-resize-handle'
-          style={{ flexGrow: 1 }}
-          onPointerDown={(event) => {
-            event.preventDefault(); // Prevent the default behavior
-            event.stopPropagation(); // Stop event bubbling
-            resizeHandle.dispatchEvent(new PointerEvent('pointerdown', event as any));
-          }}
-          onPointerUp={(event) => {
-            event.preventDefault(); // Prevent the default behavior
-            event.stopPropagation(); // Stop event bubbling
-            resizeHandle.dispatchEvent(new PointerEvent('onpointerup', event as any));
-          }}
-          onMouseEnter={(event) => {
-            event.preventDefault(); // Prevent the default behavior
-            event.stopPropagation(); // Stop event bubbling
-            resizeHandle.dispatchEvent(new PointerEvent('mouseenter', event as any));
-          }}
-        />
+            className="toolbar-resize-handle"
+            style={{ flexGrow: 1 }}
+            onPointerDown={(event) => {
+              event.preventDefault(); // Prevent the default behavior
+              event.stopPropagation(); // Stop event bubbling
+              resizeHandle.dispatchEvent(new PointerEvent('pointerdown', event as any));
+            }}
+            onPointerUp={(event) => {
+              event.preventDefault(); // Prevent the default behavior
+              event.stopPropagation(); // Stop event bubbling
+              resizeHandle.dispatchEvent(new PointerEvent('onpointerup', event as any));
+            }}
+            onMouseEnter={(event) => {
+              event.preventDefault(); // Prevent the default behavior
+              event.stopPropagation(); // Stop event bubbling
+              resizeHandle.dispatchEvent(new PointerEvent('mouseenter', event as any));
+            }}
+          />
         )}
-        
+
         <div className="window-control">
           <SegmentedControl
             segments={[{

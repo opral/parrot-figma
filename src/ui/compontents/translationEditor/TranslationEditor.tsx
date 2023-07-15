@@ -57,7 +57,7 @@ export default function TranslationEditor({
   const [textState, setTextState] = useState(translationHTML);
   const [fillinsState, setFillinsState] = useState(fillins);
 
-  console.log('#23 QuillEditor() \n [' + translationHTML + ']');
+  //console.log('#23 QuillEditor() \n [' + translationHTML + ']');
 
   const textRef = useRef(translationHTML);
   const fillinsRef = useRef(fillins);
@@ -74,7 +74,7 @@ export default function TranslationEditor({
     if (onChange !== undefined) {
       onChange(value, updatedFillins);
     }
-    console.log('#23 QuillEditor.handleChange  [' + value + ']');
+    //console.log('#23 QuillEditor.handleChange  [' + value + ']');
     setTextState(value);
     setFillinsState(updatedFillins);
 
@@ -85,13 +85,13 @@ export default function TranslationEditor({
   };
 
   const handleSave = () => {
-    console.log('#23 QuillEditor.handleSave  ');
+    //console.log('#23 QuillEditor.handleSave  ');
     setEditingState(false);
     onSave?.(textRef.current, fillinsRef.current);
   };
 
   const handleCancel = () => {
-    console.log('#23 QuillEditor.handleCancel');
+    //console.log('#23 QuillEditor.handleCancel');
 
     setTextState(translationHTML);
     setFillinsState(fillins);
@@ -108,7 +108,7 @@ export default function TranslationEditor({
   };
 
   useEffect(() => {
-    console.log('#23 QuillEditor.useEffect(translationHTML)  [' + translationHTML + ']');
+    //console.log('#23 QuillEditor.useEffect(translationHTML)  [' + translationHTML + ']');
     setTextState(translationHTML);
     textRef.current = translationHTML;
   }, [translationHTML]);

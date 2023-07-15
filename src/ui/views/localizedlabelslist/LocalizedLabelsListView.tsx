@@ -8,6 +8,64 @@ import LocalizedFrameGroup from './LocalizedFrameGroup';
 import './LocalizedLabelsListView.css';
 import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
 
+declare global {
+  interface Element {
+    scrollIntoViewIfNeeded: (bool?: boolean) => void;
+  }
+}
+
+if (!Element.prototype.scrollIntoViewIfNeeded) {
+  Element.prototype.scrollIntoViewIfNeeded = function (
+    this: HTMLElement,
+    centerIfNeeded?: boolean,
+  ) {
+    // eslint-disable-next-line no-param-reassign
+    centerIfNeeded = arguments.length === 0 ? true : !!centerIfNeeded;
+
+    const parent = this.parentNode! as HTMLElement;
+    const parentComputedStyle = window.getComputedStyle(parent, null);
+    const parentBorderTopWidth = parseInt(
+      parentComputedStyle.getPropertyValue('border-top-width'),
+    );
+    const parentBorderLeftWidth = parseInt(
+      parentComputedStyle.getPropertyValue('border-left-width'),
+    );
+    const overTop = this.offsetTop - parent.offsetTop < parent.scrollTop;
+    const overBottom = this.offsetTop
+          - parent.offsetTop
+          + this.clientHeight
+          - parentBorderTopWidth
+        > parent.scrollTop + parent.clientHeight;
+    const overLeft = this.offsetLeft - parent.offsetLeft < parent.scrollLeft;
+    const overRight = this.offsetLeft
+          - parent.offsetLeft
+          + this.clientWidth
+          - parentBorderLeftWidth
+        > parent.scrollLeft + parent.clientWidth;
+    const alignWithTop = overTop && !overBottom;
+
+    if ((overTop || overBottom) && centerIfNeeded) {
+      parent.scrollTop = this.offsetTop
+        - parent.offsetTop
+        - parent.clientHeight / 2
+        - parentBorderTopWidth
+        + this.clientHeight / 2;
+    }
+
+    if ((overLeft || overRight) && centerIfNeeded) {
+      parent.scrollLeft = this.offsetLeft
+        - parent.offsetLeft
+        - parent.clientWidth / 2
+        - parentBorderLeftWidth
+        + this.clientWidth / 2;
+    }
+
+    if ((overTop || overBottom || overLeft || overRight) && !centerIfNeeded) {
+      this.scrollIntoView(alignWithTop);
+    }
+  };
+}
+
 type LocalizedLabelsListViewProps = {
   showKey: Function,
   figmaRemote: FigmaUtil
@@ -93,7 +151,12 @@ export default function LocalizedLabelsListView({
     if (tableRef.current) {
       const firstSelected = tableRef.current.querySelector('.selected') as HTMLElement;
       if (firstSelected) {
-        (firstSelected.firstChild as any).scrollIntoViewIfNeeded({ block: 'center' });
+        const foundElement = (firstSelected.firstChild as any);
+        if (foundElement.scrollIntoViewIfNeeded) {
+          (firstSelected.firstChild as any).scrollIntoViewIfNeeded({ block: 'center' });
+        } else {
+
+        }
       }
     }
   }, [selection]);
@@ -107,7 +170,7 @@ export default function LocalizedLabelsListView({
           <div>
             Labels for localization
             <br />
-            will show up here when selected - Select a label in your Desing.
+            will show up here when selected - Select a label in your Design.
           </div>
         </div>
       </div>

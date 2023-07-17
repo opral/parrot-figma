@@ -11,7 +11,7 @@ import { KeyState } from '../lib/localizedlabels/LocalizedLabel';
 const defaultLinkStyleKey = 'defaultLinkStyle';
 
 export default class FigmaHelper {
-  public proxClassName = 'FigmaHelper';
+  public proxyClassName = 'FigmaHelper';
 
   figma: PluginAPI | undefined;
 

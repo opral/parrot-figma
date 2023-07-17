@@ -8,7 +8,7 @@ import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowMan
  * All public async functions only accept and return primitives and can be proxied between sandbox and iframe
  */
 export default class FigmaUtil {
-  public proxClassName = 'FigmaUtil';
+  public proxyClassName = 'FigmaUtil';
 
   private getFileKey(): string {
     let fileKey = figma.root.getPluginData('uniqFileKey');
@@ -234,7 +234,7 @@ export default class FigmaUtil {
 
     const viewportRect = figma.viewport.bounds;
     const virtualViewportRect = { ...viewportRect };
-    const heightCorrection = WindowManagerSandbox.instance!.currentMode === WindowMode.BottomSheet ? (WindowManagerSandbox.instance!.bottomSheetHeight + WindowManagerSandbox.instance!.titleBarHeight) / figma.viewport.zoom : 0;
+    const heightCorrection = WindowManagerSandbox.instance!.currentWindowMode === WindowMode.BottomSheet ? (WindowManagerSandbox.instance!.bottomSheetHeight + WindowManagerSandbox.instance!.titleBarHeight) / figma.viewport.zoom : 0;
     virtualViewportRect.height -= heightCorrection;
     // console.log(nodeRect);
     // console.log(viewportRect);

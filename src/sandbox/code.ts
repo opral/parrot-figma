@@ -20,7 +20,20 @@ const figmaRemote = new FigmaUtil();
 const fileConfigured = figma.root.getPluginData(FigmaFileTranslationKeyStore.configDataKey) !== '';
 const introShownToUser = true; // TODO change this to a config when implemented
 
-WindowManagerSandbox.init(800, 600, 300, WindowMode.Window, !introShownToUser || !fileConfigured);
+WindowManagerSandbox.init({
+  bottomSheet: {
+    height: 200,
+  },
+  introWindowSize: {
+    height: 200,
+    width: 200,
+  },
+  windowSize: {
+    width: 800,
+    height: 600,
+  },
+  windowMode: WindowMode.IntroWindow,
+});
 
 const asyncFunctionProxy = new AsyncFunctionProxy('SandboxAsyncFunctionProxy', (data: any) => {
   figma.ui.postMessage(data);

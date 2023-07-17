@@ -51,7 +51,7 @@ export class AsyncFunctionProxy {
      * @param instance
      */
   proxyAsyncMethods(instance: any) {
-    const instanceClassName = instance.proxClassName;
+    const instanceClassName = instance.proxyClassName;
 
     const instancePrototype = Object.getPrototypeOf(instance);
     for (const memberName of Object.getOwnPropertyNames(instancePrototype)) {
@@ -70,7 +70,7 @@ export class AsyncFunctionProxy {
   }
 
   registerInstance(instance: any) {
-    const instanceClassName = instance.proxClassName;
+    const instanceClassName = instance.proxyClassName;
 
     // console.log(this.name+ ' proxy class:' + instanceClassName + Object.getOwnPropertyNames(instance));
 

@@ -2,25 +2,56 @@ import { debug } from 'console';
 import { FigmaFileTranslationKeyStore } from '../keystore/FigmaFileTranslationKeyStore';
 
 export enum WindowMode {
-  IntroWindow = 'introWindow',
-  Window = 'window',
-  Mini = 'mini',
+  IntroWindow = 'introWindow', // fixed/auto sized window
+  Minimized = 'minimized', // minimized widged mode
+  Window = 'window', // resizable window
   BottomSheet = 'bottomSheet',
   Fullscreen = 'fullscreen',
+  DevPanel = 'devPanel',
+}
+
+interface InitialWindowConfig {
+  introWindowSize: {
+    width: number,
+    height: number,
+  },
+  windowSize: {
+    width: number,
+    height: number,
+  },
+  bottomSheet: {
+    height: number
+  },
+  windowMode: WindowMode
+}
+
+interface WindowRect {
+  width: number,
+  height: number,
+  x?: number,
+  y?: number,
 }
 
 export const RESIZEDETECTION_OVERLAP_PX = 5;
 
 export class WindowManagerSandbox {
-  public proxClassName = 'LocalizedLabelManager';
+  public proxyClassName = 'LocalizedLabelManager';
 
-  windowMode: WindowMode;
+  currentWindowMode: WindowMode;
 
-  size: any;
+  introModeSize: {
+    width: number,
+    height: number,
+  };
+
+  windowModeSize: {
+    width: number,
+    height: number,
+  };
 
   titleBarHeight = 40;
 
-  // bottom sheet
+  // ### bottom sheet
 
   bottomSheetHeight = 300;
 
@@ -29,7 +60,7 @@ export class WindowManagerSandbox {
 
   bottomSheetMarginLeft = 0;
 
-  // fullscreen
+  // #### fullscreen
 
   fullscreenMarginRight = 35;
 
@@ -47,6 +78,12 @@ export class WindowManagerSandbox {
 
   handlePluginY = -1;
 
+  viewPortState: {
+    zoom: number,
+    width: number,
+    height: number,
+  };
+
   handledViewportZoom = -1;
 
   handledViewportWidth = -1;
@@ -57,31 +94,54 @@ export class WindowManagerSandbox {
 
   windowResizing = false;
 
+  wasDragged = false;
+
   settleTime = 500;
 
   viewPortResizeSettleTimeout: any;
 
   windowResizeSettleTimeout: any;
 
-  currentMode: WindowMode | undefined;
-
   static instance: WindowManagerSandbox | undefined;
 
-  static init(initalWidth: number, initialHeight: number, initialBottomSheetHeight: number, initalWindowMode: WindowMode, enforceInitialConfig: boolean) {
+  static init(
+    config: InitialWindowConfig,
+    windowMode?: WindowMode,
+  ) {
     if (this.instance) {
       throw new Error('init called twice');
     }
 
-    this.instance = new WindowManagerSandbox(initalWidth, initialHeight, initialBottomSheetHeight, initalWindowMode, enforceInitialConfig);
+    // @ts-ignore --- figma does not provide this in ther typings yet
+    if (figma.editorType === 'dev') {
+      // eslint-disable-next-line no-param-reassign
+      windowMode = WindowMode.DevPanel;
+    }
+
+    this.instance = new WindowManagerSandbox(config, windowMode);
   }
 
-  private constructor(initalWidth: number, initialHeight: number, initialBottomSheetHeight: number, initalWindowMode: WindowMode, enforceInitialConfig: boolean) {
-    this.bottomSheetHeight = initialBottomSheetHeight;
-    this.windowMode = initalWindowMode;
+  /**
+   *
+   * @param initalWidnwoWidth the width to use when showing the window the very first time
+   * @param initialWindowModeHeight
+   * @param initialBottomSheetHeight
+   * @param initalWindowMode
+   * @param enforceInitialConfig
+   */
+  private constructor(
+    config: InitialWindowConfig,
+    windowMode?: WindowMode,
+  ) {
+    this.bottomSheetHeight = config.bottomSheet.height;
+    this.windowModeSize = config.windowSize;
+    this.introModeSize = config.introWindowSize;
+    this.currentWindowMode = config.windowMode;
 
-    this.size = {
-      width: initalWidth,
-      height: initialHeight,
+    this.viewPortState = {
+      width: figma.viewport.bounds.width,
+      height: figma.viewport.bounds.height,
+      zoom: figma.viewport.zoom,
     };
 
     Promise.all([
@@ -91,52 +151,34 @@ export class WindowManagerSandbox {
     ]).then((values) => {
       const [storedWindowSize, storedWindowBottomSheetHeight, storedWindowMode] = values;
 
-      if (!enforceInitialConfig) {
-        if (storedWindowSize) {
-          this.size = storedWindowSize;
-        }
-
-        if (storedWindowBottomSheetHeight) {
-          this.bottomSheetHeight = storedWindowBottomSheetHeight;
-        }
-
-        if (storedWindowMode) {
-          this.windowMode = storedWindowMode;
-        }
+      if (storedWindowSize) {
+        this.windowModeSize = storedWindowSize;
       }
 
-      figma.showUI(__html__, {
-        themeColors: true, width: this.size.width, height: this.size.height, visible: true,
+      if (storedWindowBottomSheetHeight) {
+        this.bottomSheetHeight = storedWindowBottomSheetHeight;
+      }
+
+      if (windowMode) {
+        this.currentWindowMode = windowMode;
+      } else {
+        this.currentWindowMode = storedWindowMode ?? config.windowMode;
+      }
+
+      const windowRect = this.calculateWindowRect(this.currentWindowMode);
+      const patchedHtml = __html__.split('__%%InitialWindowMode%%__').join(this.currentWindowMode);
+
+      figma.showUI(patchedHtml, {
+        themeColors: true, width: windowRect.width, height: windowRect.height, visible: false,
       });
 
+      // @ts-ignore -- figmas ui type does not expose the reposition atm
+      figma.ui.reposition(windowRect.x, windowRect.y);
+      figma.ui.show();
+
       this.viewportResizeCheckInterval = setInterval(() => {
-        if (this.handledViewportWidth !== figma.viewport.bounds.width
-                    || this.handledViewportHeight !== figma.viewport.bounds.height) {
-          // if we have a change in zoom we don't have a resize of the viewport
-          if (this.handledViewportZoom !== -1 // if never checked - it is not a zoom
-            && this.handledViewportZoom !== figma.viewport.zoom) {
-            this.handledViewportWidth = figma.viewport.bounds.width;
-            this.handledViewportHeight = figma.viewport.bounds.height;
-            this.handledViewportZoom = figma.viewport.zoom;
-            return;
-          }
-          // set flag to signal the user is currently changing the viewport (window size change)
-          this.viewPortResizing = true;
-
-          // we debounce this call since reposition can only be done by hiding and showing the window
-          if (this.viewPortResizeSettleTimeout) {
-            clearTimeout(this.viewPortResizeSettleTimeout);
-          }
-          this.viewPortResizeSettleTimeout = setTimeout(() => {
-            this.viewPortResizing = false;
-          }, this.settleTime);
-
-          this.repositionWindow(false);
-
-          this.handledViewportWidth = figma.viewport.bounds.width;
-          this.handledViewportHeight = figma.viewport.bounds.height;
-          this.handledViewportZoom = figma.viewport.zoom;
-        }
+        // check if the viewports width has changed
+        this.checkForViewPortResize(true);
       }, 1);
 
       figma.ui.on('message', (message) => {
@@ -144,115 +186,224 @@ export class WindowManagerSandbox {
           if (message.size) {
             this.handleSizeMessage(message);
           } else if (message.requestedWindowMode !== undefined) {
-            if (!this.viewPortResizing && this.windowMode !== message.requestedWindowMode) {
-              this.setWindowMode(message.requestedWindowMode, message.fromDrag);
-              setTimeout(() => {
-                figma.ui.postMessage({
-                  target: 'WindowManager',
-                  windowMode: this.windowMode,
-                });
-              }, 30);
-            }
-          } else if (message.uiInit) {
-            // while the ui is leading changes in the window mode - it needs to get informed about initial state
-            figma.ui.postMessage({
-              target: 'WindowManager',
-              windowMode: this.windowMode,
-            });
+            this.setWindowMode(message.requestedWindowMode);
+          } else if (message.windowOverlapChanged) {
+            this.onWindowOverlapChanged();
           }
         }
       });
     });
   }
 
-  private setWindowMode(mode: WindowMode, fromDrag: boolean) {
-    if (this.windowMode === WindowMode.BottomSheet
-      && mode === WindowMode.Window && fromDrag) {
-      const width = Math.ceil(figma.viewport.bounds.width * figma.viewport.zoom);
-      const height = this.bottomSheetHeight; // in case of the bottom sheet we always keep the windows size equal to the viewport size
-      this.size.width = width;
-      this.size.height = height;
+  private checkForViewPortResize(fromCheckInterval:boolean = false) {
+    const previousZoom = this.viewPortState.zoom;
+    const previousWidth = this.viewPortState.width;
+    const previousHeight = this.viewPortState.height;
 
-      figma.clientStorage.setAsync('windowSize', this.size);
+    this.viewPortState = {
+      width: figma.viewport.bounds.width,
+      height: figma.viewport.bounds.height,
+      zoom: figma.viewport.zoom,
+    };
 
-      this.windowMode = mode;
-      figma.clientStorage.setAsync('windowMode', mode);
-      // no resize needed
+    // its not possible to zoom and resize the viewport at the same time
+    // only if there is no change in zoom a window positioning is needed
+    if (previousZoom === figma.viewport.zoom
+      && (previousWidth !== figma.viewport.bounds.width
+        || previousHeight !== figma.viewport.bounds.height)) {
+      console.log(`[WM] resize deteceted from ${fromCheckInterval ? 'interval' : 'drag'}`);
+      this.onViewPortResize();
+      return true;
+    }
+    return false;
+  }
+
+  private onWindowOverlapChanged() {
+    if (this.reshowing) {
+      console.log('[WM] skipping becaus reshowing')
+      return;
+    }
+    if (!this.viewPortResizing && !this.checkForViewPortResize()) {
+      // drag detected! forces reshow
+      this.wasDragged = true;
+      if (this.currentWindowMode === WindowMode.BottomSheet) {
+        console.log('[WM] overlap changed - changing to window');
+        // in case of the bottom sheet we always keep the windows size equal to the viewport size
+        const width = Math.ceil(figma.viewport.bounds.width * figma.viewport.zoom);
+        const height = this.bottomSheetHeight;
+        this.windowModeSize.width = width;
+        this.windowModeSize.height = height;
+        figma.clientStorage.setAsync('windowSize', this.windowModeSize);
+
+        this.setWindowMode(WindowMode.Window, this.windowModeSize);
+        // no resize needed since we keep the windows size of the bottom sheet.
+      } /* else if (this.currentWindowMode === WindowMode.Minimized) {
+        console.log('[WM] overlap changed - changing to window');
+
+        const newRect = this.calculateWindowRect(WindowMode.Window);
+        this.windowModeSize.height = newRect.height;
+        this.windowModeSize.width = newRect.width;
+        this.setWindowMode(WindowMode.Window, this.windowModeSize);
+      } */
     } else {
-      this.windowMode = mode;
-      figma.clientStorage.setAsync('windowMode', mode);
-      this.repositionWindow(true);
+      console.log('[WM] overlap changed - viewport resize');
     }
   }
 
-  handleSizeMessage(message: any) {
-    if (this.windowMode === WindowMode.Window && message.source === 'dragging') {
-      this.size = message.size;
-      figma.clientStorage.setAsync('windowSize', this.size);
-    } else if (this.windowMode === WindowMode.BottomSheet) {
-      this.bottomSheetHeight = message.size.height;
-      figma.clientStorage.setAsync('windowBottomSheetHeight', message.size.height);
+  private onViewPortResize() {
+    console.log(`[WM] viewport resize ${this.currentWindowMode}`);
+    this.viewPortResizing = true;
+
+    // While viewport resizing is happening we don't accept window mode requests to not interferre with movement detection
+    if (this.viewPortResizeSettleTimeout) {
+      clearTimeout(this.viewPortResizeSettleTimeout);
     }
 
-    this.repositionWindow(false);
+    this.viewPortResizeSettleTimeout = setTimeout(() => {
+      this.viewPortResizing = false;
+    }, this.settleTime);
+
+    if (this.currentWindowMode === WindowMode.BottomSheet
+      // || this.currentWindowMode === WindowMode.Minimized
+      || this.currentWindowMode === WindowMode.Fullscreen) {
+      const windowRect = this.calculateWindowRect(this.currentWindowMode);
+
+      console.log(`[WM] viewport resize updating rect: ${JSON.stringify(windowRect)}`);
+      this.updateWindowRect(windowRect);
+    }
   }
 
-  repositionWindow(forceReshow: boolean) {
-    let { height, width } = this.size;
-    let x = undefined as number | undefined;
-    let y = undefined as number | undefined;
-
-    if (this.windowMode === WindowMode.Fullscreen) {
-      const leftPanelWidth = 240;
-      const rightPanelWidth = 240;
-
-      width = figma.viewport.bounds.width * figma.viewport.zoom + leftPanelWidth + rightPanelWidth - (this.fullscreenMarginLeft + this.fullscreenMarginRight);
-      height = figma.viewport.bounds.height * figma.viewport.zoom - (this.titleBarHeight + this.fullscreenMarginTop + this.fullscreenMarginBottom);
-
-      x = figma.viewport.bounds.x - ((leftPanelWidth) / figma.viewport.zoom) + (this.fullscreenMarginLeft / figma.viewport.zoom);
-      y = figma.viewport.bounds.y + (this.fullscreenMarginTop / figma.viewport.zoom);
-    } else if (this.windowMode === WindowMode.BottomSheet) {
-      width = figma.viewport.bounds.width * figma.viewport.zoom - (this.bottomSheetMarginLeft + this.bottomSheetMarginRight);
-      height = this.bottomSheetHeight; // in case of the bottom sheet we always keep the windows size equal to the viewport size
-
-      x = figma.viewport.bounds.x + (this.bottomSheetMarginLeft / figma.viewport.zoom);
-      y = figma.viewport.bounds.y + figma.viewport.bounds.height - ((this.bottomSheetHeight + this.titleBarHeight - RESIZEDETECTION_OVERLAP_PX) / figma.viewport.zoom);
-    } else if (this.windowMode === WindowMode.Window) {
-      if (this.currentMode !== this.windowMode) {
-        // center window on switch to window mode - there is no way to save the window position at the moment
-        x = figma.viewport.bounds.x + ((figma.viewport.bounds.width / 2) - ((width / 2) / figma.viewport.zoom));
-        y = figma.viewport.bounds.y + ((figma.viewport.bounds.height / 2) - (((height + this.titleBarHeight) / 2) / figma.viewport.zoom));
-      }
+  private async setWindowMode(targetWindowMode: WindowMode, windowRect?: WindowRect) {
+    const newWindowRect = windowRect ?? this.calculateWindowRect(targetWindowMode);
+    if (this.currentWindowMode !== WindowMode.BottomSheet
+      // && this.currentWindowMode !== WindowMode.Minimized
+      && this.currentWindowMode !== WindowMode.Fullscreen) {
+      // for screens without bottom overlap we asume it was draggeed
+      this.wasDragged = true;
     }
+    this.updateWindowRect(newWindowRect);
 
-    if (x !== undefined && y !== undefined && !this.windowResizing) {
-      // figma doesn't allow reposition after the user has moved the window manual once - by hiding and showing the ui it looses its corresponding state
-      this.reposition(x, y, forceReshow);
+    this.currentWindowMode = targetWindowMode;
+    figma.clientStorage.setAsync('windowMode', targetWindowMode);
+    console.log(`[WM] WINDOW MODE SET TO ${this.currentWindowMode}`);
+    figma.ui.postMessage({
+      target: 'WindowManager',
+      windowMode: this.currentWindowMode,
+    });
+    if (!(this.currentWindowMode !== WindowMode.BottomSheet
+      // && this.currentWindowMode !== WindowMode.Minimized
+      && this.currentWindowMode !== WindowMode.Fullscreen)) {
+      // for screens without bottom overlap we asume it was draggeed
+      this.wasDragged = false;
     }
-
-    // eslint-disable-next-line no-bitwise
-    figma.ui.resize(width | 0, height | 0);
-
-    this.currentMode = this.windowMode;
   }
 
-  lastReposition: any;
+  private handleSizeMessage(message: any) {
+    switch (this.currentWindowMode) {
+      case WindowMode.BottomSheet:
+        // apply the new height to the window and recalculate the new window rect
+        this.bottomSheetHeight = message.size.height;
+        // eslint-disable-next-line no-case-declarations
+        const windowRect = this.calculateWindowRect(WindowMode.BottomSheet);
+        figma.clientStorage.setAsync('windowBottomSheetHeight', message.size.height);
+        this.updateWindowRect(windowRect);
+        break;
+      case WindowMode.Window:
+        this.windowModeSize = message.size;
+        figma.clientStorage.setAsync('windowSize', this.windowModeSize);
+        this.updateWindowRect(this.windowModeSize);
+        break;
+      default:
+        throw new Error('resizing only supported in window and bottom sheet mode');
+    }
+  }
+
+  private calculateWindowRect(windowMode: WindowMode): WindowRect {
+    const leftPanelWidth = 240;
+    const rightPanelWidth = 240;
+
+    switch (windowMode) {
+      case WindowMode.DevPanel:
+        return {
+          width: rightPanelWidth,
+          height: 100,
+          x: 0,
+          y: 0,
+        }
+      case WindowMode.Fullscreen:
+        return {
+          width: figma.viewport.bounds.width * figma.viewport.zoom + leftPanelWidth + rightPanelWidth - (this.fullscreenMarginLeft + this.fullscreenMarginRight),
+          height: figma.viewport.bounds.height * figma.viewport.zoom - (this.titleBarHeight + this.fullscreenMarginTop + this.fullscreenMarginBottom),
+          x: figma.viewport.bounds.x - ((leftPanelWidth) / figma.viewport.zoom) + (this.fullscreenMarginLeft / figma.viewport.zoom),
+          y: figma.viewport.bounds.y + (this.fullscreenMarginTop / figma.viewport.zoom),
+        };
+      case WindowMode.BottomSheet:
+        return {
+          width: figma.viewport.bounds.width * figma.viewport.zoom - (this.bottomSheetMarginLeft + this.bottomSheetMarginRight),
+          height: this.bottomSheetHeight, // in case of the bottom sheet we always keep the windows size equal to the viewport size
+          x: figma.viewport.bounds.x + (this.bottomSheetMarginLeft / figma.viewport.zoom),
+          y: figma.viewport.bounds.y + figma.viewport.bounds.height - ((this.bottomSheetHeight + this.titleBarHeight - RESIZEDETECTION_OVERLAP_PX) / figma.viewport.zoom),
+        };
+      case WindowMode.Window:
+        // TODO center window on switch to window mode - there is no way to save the window position at the moment
+        return {
+          width: this.windowModeSize.width,
+          height: this.windowModeSize.height,
+          x: figma.viewport.bounds.x + ((figma.viewport.bounds.width / 2) - ((this.windowModeSize.width / 2) / figma.viewport.zoom)),
+          y: figma.viewport.bounds.y + ((figma.viewport.bounds.height / 2) - (((this.windowModeSize.height + this.titleBarHeight) / 2) / figma.viewport.zoom)),
+        };
+      case WindowMode.Minimized:
+        // eslint-disable-next-line no-case-declarations
+        const minimizedViewHeight = 42;
+        return {
+          width: 200,
+          height: minimizedViewHeight,
+          x: figma.viewport.bounds.x + (this.bottomSheetMarginLeft / figma.viewport.zoom),
+          y: figma.viewport.bounds.y + figma.viewport.bounds.height - ((minimizedViewHeight + this.titleBarHeight - RESIZEDETECTION_OVERLAP_PX) / figma.viewport.zoom),
+        };
+      case WindowMode.IntroWindow:
+        return {
+          width: this.introModeSize.width,
+          height: this.introModeSize.height,
+          x: figma.viewport.bounds.x + ((figma.viewport.bounds.width / 2) - ((this.introModeSize.width / 2) / figma.viewport.zoom)),
+          y: figma.viewport.bounds.y + ((figma.viewport.bounds.height / 2) - (((this.introModeSize.height + this.titleBarHeight) / 2) / figma.viewport.zoom)),
+        };
+      default:
+        throw new Error(`Unsupported Window mode ${windowMode}`);
+    }
+  }
 
   reshowing = false;
 
-  reposition(x: number, y: number, forceReshow: boolean) {
-    if ((forceReshow) && !this.reshowing) {
+  /**
+   * This function updates the windo rect (x, y, width, height)
+   * While resize is not a problem, reposition is broken when the window is manually moved
+   * once by the user. The problem can be workearound by hiding and showing the window.
+   * Since we can't know when the window was moved (we don't have an event nor acces to the postion of the window).
+   * We trigger it on every mode switch.
+   * @param windowRect the x, y to move the window (optional), width, height to apply to the window
+   * @param forceReshow pass false to skip the reshow workarround (for example in the bootom sheet)
+   */
+  updateWindowRect(windowRect: WindowRect) {
+    if (windowRect.x && windowRect.y && this.wasDragged) {
+      console.log('[WM] reshow needed');
       figma.ui.hide();
       this.reshowing = true;
       setTimeout(() => {
         figma.ui.show();
         setTimeout(() => {
+          console.log('[WM] reshow done');
           this.reshowing = false;
-        }, 1);
+        }, 100);
       }, 1);
     }
 
-    // @ts-ignore
-    figma.ui.reposition(x, y);
+    // here we are save to resize and reposition
+    figma.ui.resize(windowRect.width, windowRect.height);
+
+    if (windowRect.x && windowRect.y) {
+      // @ts-ignore
+      figma.ui.reposition(windowRect.x, windowRect.y);
+    }
   }
 }

@@ -61,7 +61,7 @@ export default class LocalizedLabelManager {
 
   private containerSizeThreashold = 3000;
 
-  public proxClassName = 'LocalizedLabelManager';
+  public proxyClassName = 'LocalizedLabelManager';
 
   public samplesPrefix = 'sample_values';
 

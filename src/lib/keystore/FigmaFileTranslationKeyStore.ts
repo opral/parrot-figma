@@ -17,7 +17,7 @@ const defaultDecimalFillinValue = 7;
 const defaultFloatFillinValue = Math.PI;
 
 export class FigmaFileTranslationKeyStore {
-  public proxClassName = 'FigmaFileTranslationKeyStore';
+  public proxyClassName = 'FigmaFileTranslationKeyStore';
 
   public static configDataKey = 'aar_c';
 

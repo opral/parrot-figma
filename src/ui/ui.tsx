@@ -80,7 +80,6 @@ document.addEventListener('keydown', (e) => {
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'z' && !e.shiftKey && !e.altKey && !(e.target! as any).classList.contains('cm-content')) {
-    console.log('sending undo');
     // Undo the action in Figma
     const isMac = navigator.userAgent.indexOf('Macintosh') >= 0;
     const isCmd = isMac && e.metaKey && !e.ctrlKey;
@@ -106,9 +105,6 @@ const asyncFunctionProxy = new AsyncFunctionProxy('UIAsyncFunctionProxy', (data:
   }, '*');
 }, window);
 
-const remoteLocalizedLabelManager = new LocalizedLabelManager(undefined);
-asyncFunctionProxy.proxyAsyncMethods(remoteLocalizedLabelManager);
-
 const figmaRemote = new FigmaUtil();
 asyncFunctionProxy.proxyAsyncMethods(figmaRemote);
 
@@ -118,9 +114,10 @@ figmaRemote.getUserId().then((userId) => {
 
 const figmaFileTranslationKeyStore = new FigmaFileTranslationKeyStore(true);
 asyncFunctionProxy.proxyAsyncMethods(figmaFileTranslationKeyStore);
-
 const memoryTranslationKeyStore = new MemoryTranslationKeyStore(figmaFileTranslationKeyStore);
 
+const remoteLocalizedLabelManager = new LocalizedLabelManager(undefined);
+asyncFunctionProxy.proxyAsyncMethods(remoteLocalizedLabelManager);
 const localizedLabelManager = new LocalizedLabelManagerUI(remoteLocalizedLabelManager, memoryTranslationKeyStore);
 
 function App() {
@@ -130,16 +127,12 @@ function App() {
   const [windowMode, setWindowMode] = useState(WindowManagerUi.instance!.windowMode);
   const [keyQuery, setKeyQuery] = useState(MemoryTranslationKeyStore.toQueryObject(''));
 
-  const [, setDefaultLinkStyle] = useState('' as string);
-
   useEffect(() => {
     // asynchronous fetch the state from figma helper
     (async () => {
       // console.log('load - keys');
       await memoryTranslationKeyStore.load();
       localizedLabelManager.startFillupCache();
-
-      setDefaultLinkStyle(await remoteLocalizedLabelManager.getLinkStyle());
 
       let initialScreen = (await figmaRemote.getLocalFileConfig('lastView')) ?? 'design';
       if (localizedLabelManager.keyStore.config?.baseLanguage === undefined
@@ -162,104 +155,118 @@ function App() {
       setWindowMode(WindowManagerUi.instance!.windowMode);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
     WindowManagerUi.instance!.addEventListener('changed', windowModeUpdated);
 
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
     return () => {
       WindowManagerUi.instance!.removeEventListener('changed', windowModeUpdated);
     };
   }, []);
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO implement this
-  const setLinkStyle = async (linkStyle: string) => {
-    remoteLocalizedLabelManager.setLinkStyle(linkStyle);
-    setDefaultLinkStyle(linkStyle);
-  };
 
   if (!appScreen) {
     return <>Loading Plugin</>;
   }
 
   let view;
-  if (appScreen === 'onboarding') {
+
+  if (windowMode === WindowMode.DevPanel) {
     return (
       <>
         <Tooltip triggerAttribute="data-tooltip-trigger" contentAttribute="data-tooltip-content" />
-        <Onboarding onFinishSetup={async (baseLanguage: Language, selectedLanguages: Language[]) => {
-        // put baselanguage to the first position
-          const languages = [baseLanguage, ...selectedLanguages.filter((lang) => lang !== baseLanguage)];
-          await memoryTranslationKeyStore.setLanguages(languages);
-          await memoryTranslationKeyStore.setBaseLanguage(baseLanguage);
-          WindowManagerUi.instance?.requestWindowMode(WindowMode.BottomSheet, false);
-          setAppScreen('design');
-        }}
-        />
-      </>
+        <div className="toolbar">
+          Dev Panel
 
+        </div>
+      </>
     );
   }
 
-  if (appScreen === 'keys') {
-    view = (
-      <TranslationKeyListView
-        showSearchBar={false}
-        initialSearchQuery={keyQuery}
-        translationKeyStore={memoryTranslationKeyStore}
-        localizedLabelManager={localizedLabelManager}
-        figmaRemote={figmaRemote}
+  if (windowMode === WindowMode.Minimized) {
+    return (
+      <>
+        <Tooltip triggerAttribute="data-tooltip-trigger" contentAttribute="data-tooltip-content" />
+        <div className="toolbar">
+          <select><option>test</option><option>test</option><option>test</option><option>test</option><option>test</option><option>test</option><option>test</option><option>test</option><option>test</option><option>test</option><option>test</option></select>
 
-      />
+          <div className="window-control">
+            <SegmentedControl
+              segments={[{
+                iconName: 'window-mode-window-svg',
+                value: WindowMode.Window,
+                tooltip: 'Window Mode',
+              }]}
+              selectedSegment={windowMode}
+              onChoose={(choosenWindowMode: WindowMode) => { WindowManagerUi.instance?.requestWindowMode(choosenWindowMode, false); }}
+            />
+
+          </div>
+
+        </div>
+      </>
     );
-  } else if (appScreen === 'settings') {
-    view = (
-      <SetupView labelManager={localizedLabelManager} />
-    );
-  /* (
-      <ConfigView
-        linkStyle={defaultLinkStyle}
-        setLinkStyle={setLinkStyle}
-        translationKeyStore={memoryTranslationKeyStore}
-      />
-    ); */
-  } else if (appScreen === 'import') {
-    view = (
-      <Import
-        figmaRemote={figmaRemote}
-        labelManager={localizedLabelManager}
-      />
-    );
-  /* (
-      <ConfigView
-        linkStyle={defaultLinkStyle}
-        setLinkStyle={setLinkStyle}
-        translationKeyStore={memoryTranslationKeyStore}
-      />
-    ); */
-  } else if (appScreen === 'export') {
-    view = (
-      <Export
-        translationKeyStore={memoryTranslationKeyStore}
-      />
-    );
-  /* (
-      <ConfigView
-        linkStyle={defaultLinkStyle}
-        setLinkStyle={setLinkStyle}
-        translationKeyStore={memoryTranslationKeyStore}
-      />
-    ); */
-  } else {
-    view = (
-      <LocalizedLabelsListView
-        showKey={(key: string) => {
-          setKeyQuery(MemoryTranslationKeyStore.toQueryObject(`key:${key}`));
-          setAppScreen('keys');
-        }}
-        localizedLabelManager={localizedLabelManager}
-        figmaRemote={figmaRemote}
-      />
-    );
+  }
+
+  switch (appScreen) {
+    case 'onboarding':
+      return (
+        <>
+          <Tooltip triggerAttribute="data-tooltip-trigger" contentAttribute="data-tooltip-content" />
+          <Onboarding onFinishSetup={async (baseLanguage: Language, selectedLanguages: Language[]) => {
+          // put baselanguage to the first position
+            const languages = [baseLanguage, ...selectedLanguages.filter((lang) => lang !== baseLanguage)];
+            await memoryTranslationKeyStore.setLanguages(languages);
+            await memoryTranslationKeyStore.setBaseLanguage(baseLanguage);
+            WindowManagerUi.instance?.requestWindowMode(WindowMode.BottomSheet, false);
+            setAppScreen('design');
+          }}
+          />
+        </>
+      );
+    case 'keys':
+      view = (
+        <TranslationKeyListView
+          showSearchBar={false}
+          initialSearchQuery={keyQuery}
+          translationKeyStore={memoryTranslationKeyStore}
+          localizedLabelManager={localizedLabelManager}
+          figmaRemote={figmaRemote}
+        />
+      );
+      break;
+    case 'settings':
+      view = (
+        <SetupView labelManager={localizedLabelManager} />
+      );
+      break;
+
+    case 'import':
+      view = (
+        <Import
+          figmaRemote={figmaRemote}
+          labelManager={localizedLabelManager}
+        />
+      );
+      break;
+    case 'export':
+      view = (
+        <Export
+          translationKeyStore={memoryTranslationKeyStore}
+        />
+      );
+      break;
+    case 'design':
+      view = (
+        <LocalizedLabelsListView
+          showKey={(key: string) => {
+            setKeyQuery(MemoryTranslationKeyStore.toQueryObject(`key:${key}`));
+            setAppScreen('keys');
+          }}
+          localizedLabelManager={localizedLabelManager}
+          figmaRemote={figmaRemote}
+        />
+      );
+      break;
+    default:
+      break;
   }
 
   return (
@@ -308,6 +315,10 @@ function App() {
         <div className="window-control">
           <SegmentedControl
             segments={[{
+              iconName: 'window-mode-bottom-attached-svg',
+              value: WindowMode.Minimized,
+              tooltip: 'Minimize',
+            }, {
               iconName: 'window-mode-window-svg',
               value: WindowMode.Window,
               tooltip: 'Window Mode',

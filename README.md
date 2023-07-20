@@ -402,6 +402,49 @@ What we want from ui point of view:
  - [ ] handle selection for keys as well (provide an option to only show keys of current selection)
  - [ ] add show difference toggle to history view
 
+#### TODO's Official release version
+
+- [ ] dev mode 
+    - [ ] ** active plugin
+        - dev first prototype @Martin
+        - design cleanup @Hanna
+    - [ ] * inactive plugin (file not configured yet)
+        - show what it would look like
+        - explain what value it brings 
+        - Call to action to run it in design mode
+            - playground file!
+                - tech details - will it create a copy?, - are plugin data copied as well
+                - desing / setup of the file 
+- [ ] intro - explain what parrot is
+    - [ ] tbd what is part of the first version
+- [ ] export secreen
+    - [ ] single file export for selected language + platform
+- [ ] import
+    - [x] summary 
+
+- [ ] add more events to mixed panel
+    - [ ] discuss what we need to look at
+- [ ] allo to use parrot with textnodes withouth parent 
+- [ ] design for minimized view
+
+ Bugs:
+ - [ ] window resize handle is missing on first start
+ - [ ] minimized window position not saved
+ 
+ UX Flaws:
+ - [ ] meaning of the language picker for a frame not clear
+ - [ ] button meaning of revert not clear
+ - [x] choosing frame language in case of unsynced labels not clear
+    - "to faar away from the frame title to visually connect it on large screen" - box on hover?
+ ~~- [x] meaning of the columns not clear in design tab~~
+
+ - [x] text selection does not lead to something in design view
+   - [x] allow to translate labels without frame
+   - [X] show clear info why it does nnot work for the selected label
+ - [x] the need to select a text node when the plugin is started is not nice
+    - [x] select the first visible text node on the screen on first apearance?
+    - [ ] keep the last selected frame always visible in the design tab?
+   
 
 #### Searching
 
@@ -516,3 +559,14 @@ UI / UX runthrough
 Content design
 https://www.youtube.com/watch?v=A0yOXuSeX68&ab_channel=Figma
 https://www.linkedin.com/in/candiwilliamswriter/
+
+
+# Marketing 
+
+While everyone here is writing about AI and quantum computers, the small details like proper translations in applications are not solved even at a giant like LinkedIn... The Language extension Parrot for Figma can fix that... pssssst a little bit of AI is hiding here too ;-) 
+
+
+
+Find the plugin in Figma now! 
+
+https://www.figma.com/community/plugin/1205803482754362456/Parrot-Beta

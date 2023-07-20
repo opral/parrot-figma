@@ -17,14 +17,15 @@
   align-items: center;
   flex-shrink: 0;
   height: 40px;
+  color: var(--figma-color-text-secondary);
 }
 
 .tab:hover {
-  font-weight: 600;
+  color: var(--figma-color-text-hover);
 }
 
 .tab.active {
-  font-weight: 600;
+  color: var(--figma-color-text);
 }
 
   

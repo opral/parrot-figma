@@ -33,7 +33,7 @@ import LanguageSetup from './compontents/languageSetup/LanguageSetup';
 import Onboarding from './views/onboarding/Onboarding';
 import { Language } from '../lib/base/Language';
 import Tooltip from './compontents/tooltip/Tooltip';
-import Import from './views/import/Import';
+
 import Export from './views/export/Export';
 import FEATURES_FLAGS from './featuretoggle';
 import SetupView from './views/setup/SetupView';
@@ -133,10 +133,10 @@ function App() {
       // console.log('load - keys');
       await memoryTranslationKeyStore.load();
       localizedLabelManager.startFillupCache();
+      const fileSetupCompleted = await figmaRemote.getRootPluginData('fileSetupCompleted');
 
       let initialScreen = (await figmaRemote.getLocalFileConfig('lastView')) ?? 'design';
-      if (localizedLabelManager.keyStore.config?.baseLanguage === undefined
-        || localizedLabelManager.keyStore.config?.enabledLanguages === undefined) {
+      if (fileSetupCompleted === undefined || fileSetupCompleted === '') {
         initialScreen = 'onboarding';
       }
       setAppScreen(initialScreen);
@@ -185,7 +185,19 @@ function App() {
       <>
         <Tooltip triggerAttribute="data-tooltip-trigger" contentAttribute="data-tooltip-content" />
         <div className="toolbar">
-          <select><option>test</option><option>test</option><option>test</option><option>test</option><option>test</option><option>test</option><option>test</option><option>test</option><option>test</option><option>test</option><option>test</option></select>
+          <select>
+            <option>test</option>
+            <option>test</option>
+            <option>test</option>
+            <option>test</option>
+            <option>test</option>
+            <option>test</option>
+            <option>test</option>
+            <option>test</option>
+            <option>test</option>
+            <option>test</option>
+            <option>test</option>
+          </select>
 
           <div className="window-control">
             <SegmentedControl
@@ -210,14 +222,13 @@ function App() {
       return (
         <>
           <Tooltip triggerAttribute="data-tooltip-trigger" contentAttribute="data-tooltip-content" />
-          <Onboarding onFinishSetup={async (baseLanguage: Language, selectedLanguages: Language[]) => {
-          // put baselanguage to the first position
-            const languages = [baseLanguage, ...selectedLanguages.filter((lang) => lang !== baseLanguage)];
-            await memoryTranslationKeyStore.setLanguages(languages);
-            await memoryTranslationKeyStore.setBaseLanguage(baseLanguage);
-            WindowManagerUi.instance?.requestWindowMode(WindowMode.BottomSheet, false);
-            setAppScreen('design');
-          }}
+          <Onboarding
+            labelManager={localizedLabelManager}
+            onFinishSetup={async () => {
+              await figmaRemote.setRootPluginData('fileSetupCompleted', 'true');
+              WindowManagerUi.instance?.requestWindowMode(WindowMode.BottomSheet, false);
+              setAppScreen('design');
+            }}
           />
         </>
       );
@@ -238,14 +249,7 @@ function App() {
       );
       break;
 
-    case 'import':
-      view = (
-        <Import
-          figmaRemote={figmaRemote}
-          labelManager={localizedLabelManager}
-        />
-      );
-      break;
+    
     case 'export':
       view = (
         <Export
@@ -287,7 +291,6 @@ function App() {
 
           </div>
           { FEATURES_FLAGS.export && (<div className={`tab ${appScreen === 'export' ? 'active' : ''}`} onClick={() => setAppScreen('export')}>{ FEATURES_FLAGS.versioning ? 'Versions & Export' : 'Export'}</div>)}
-          { FEATURES_FLAGS.import && (<div className={`tab ${appScreen === 'import' ? 'active' : ''}`} onClick={() => setAppScreen('import')}>Import</div>)}
           <div className={`tab ${appScreen === 'settings' ? 'active' : ''}`} onClick={() => setAppScreen('settings')}>Setup</div>
         </div>
         { windowMode === WindowMode.BottomSheet && (
@@ -315,9 +318,13 @@ function App() {
         <div className="window-control">
           <SegmentedControl
             segments={[{
-              iconName: 'window-mode-bottom-attached-svg',
+              iconName: 'window-mode-minimized-svg',
               value: WindowMode.Minimized,
               tooltip: 'Minimize',
+            }, {
+              iconName: 'window-mode-bottom-attached-svg',
+              value: WindowMode.BottomSheet,
+              tooltip: 'Dock to bottom',
             }, {
               iconName: 'window-mode-window-svg',
               value: WindowMode.Window,
@@ -326,10 +333,6 @@ function App() {
               iconName: 'window-mode-fullscreen-svg',
               value: WindowMode.Fullscreen,
               tooltip: 'Fullscreen Mode',
-            }, {
-              iconName: 'window-mode-bottom-attached-svg',
-              value: WindowMode.BottomSheet,
-              tooltip: 'Dock to bottom',
             }]}
             selectedSegment={windowMode}
             onChoose={(choosenWindowMode: WindowMode) => { WindowManagerUi.instance?.requestWindowMode(choosenWindowMode, false); }}

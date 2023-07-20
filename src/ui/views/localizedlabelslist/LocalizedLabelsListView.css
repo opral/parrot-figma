@@ -61,6 +61,24 @@
     align-items: center;
 }
 
+.nodes-parent {
+    border: solid 1px;
+    border-color: transparent;
+} 
+
+.nodes-parent:hover {
+    border-color: var(--figma-color-border-selected);
+} 
+
+
+.nodes-parent.selected {
+    border-color: transparent;
+    background-color: var(--figma-color-bg-selected);
+} 
+
+.nodes-parent.selected:hover {
+    border-color: transparent;
+} 
 
 .row-actions .row-action-icon {
     display: flex;
@@ -89,6 +107,18 @@
     border-color: transparent;
     background-color: var(--figma-color-bg-selected);
 }
+
+.row.selected-by-parent  .column-1, .row.selected-by-parent  .column-2  {
+    border-color: transparent;
+    background-color: var(--figma-color-bg-selected-secondary);
+    scroll-margin-top: 32px;
+}
+
+.row.selected-by-parent:hover  .column-1, .row.selected-by-parent:hover .column-2  {
+    border-color: transparent;
+    background-color: var(--figma-color-bg-selected-secondary);
+}
+
 
 
 .row .column-1 {
@@ -129,8 +159,13 @@
 
 
 .element-symbol .svg-container {
+    background-color: var(--figma-color-icon-tertiary);
+}
+
+.nodes-parent .element-symbol .svg-container {
     background-color: var(--figma-color-icon);
 }
+
 
 .selected .element-symbol .svg-container {
     background-color: var(--figma-color-icon);
@@ -241,17 +276,19 @@ margin-left: auto;
 
 .top-drawer {
     overflow: scroll;
-    height: calc(100% - 50px);
+    max-width: calc(100% - 20px);
+    max-height: calc(100% - 10px);
     background: var(--figma-color-bg);
     position: fixed;
     top: 0;
     right: 0;
-    width: 90%;
-    left: 5%;
+    left: 0;
+    margin: auto;
     z-index: 200;
     box-shadow: 0 0px 0px rgba(0,0,0,0.15);
     transform: translateY(-100%);
     transition: box-shadow 0.3s ease-out, transform 0.3s ease-out;
+    width: max-content;
     
   }
   
@@ -260,10 +297,4 @@ margin-left: auto;
     box-shadow: 1px 0px 7px rgba(0, 0, 0, 0.5);
     transform: translateY(0);
     transition: box-shadow 0.3s ease-out, transform 0.3s ease-out;
-  }
-
-  .top-drawer.create-key {
-    left: 40%;
-    width: 400px;
-    height: auto;
   }

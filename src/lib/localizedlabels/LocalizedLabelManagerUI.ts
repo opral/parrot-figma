@@ -10,6 +10,7 @@ import { ILocalizedLabelManagerUI, UILocalizedLabel } from './UILocalizedLabel';
 import { Fillins } from '../keystore/TranslationKey';
 import LinksLoadedEvent from './LinksLoadedEvent';
 import { placeholder } from '@codemirror/view';
+import { ImportTranslationKey } from '../import/ImportTranslationKey';
 
 export default class LocalizedLabelManagerUI extends EventTarget implements ILocalizedLabelManagerUI {
   // mapping from nodeId to localizied label instance
@@ -387,7 +388,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
       // TODO check if design is sync with translation - if not offer update with prompt
     } else {
-      
       translationKey = await this.keyStore.createKey(keyToLinkTo, [{
         language,
         plural,
@@ -536,5 +536,31 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   async getSelection() {
     const selection = await this.localizedLabelMangerSandbox.getSelection();
     return selection;
+  }
+
+  async import(keysToImport: ImportTranslationKey[], language: Language) {
+    function toChangeArray(importKey: ImportTranslationKey, languageToUse: Language) {
+      return [{
+        language: languageToUse,
+        plural: importKey.plural,
+        text: importKey.text,
+        skip: false,
+      }] as { language: Language; plural: Plural; text: string | undefined; skip: boolean }[];
+    }
+
+    for (const keyToImport of keysToImport) {
+      const currentKey = this.keyStore.getKey(keyToImport.keyName);
+      if (!currentKey) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        console.log(`creating key${keyToImport.keyName}`);
+        // TODO #8 implement import logic for placeholders and quantities
+        // eslint-disable-next-line no-await-in-loop
+        await this.keyStore.createKey(keyToImport.keyName, toChangeArray(keyToImport, language), false);
+      } else {
+        console.log(`updateing key${keyToImport.keyName}`);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-await-in-loop
+        await this.updateKey(keyToImport.keyName, toChangeArray(keyToImport, language));
+      }
+    }
   }
 }

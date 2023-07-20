@@ -84,6 +84,9 @@ export default class WindowManagerUi extends EventTarget {
     this.resizeHandelEl.onpointerup = this.onResizeHandlePointerUp.bind(this);
     this.resizeHandelEl.onmouseenter = this.onMouseEnter.bind(this); 
 
+    this.resizeHandelEl.classList.remove(...this.resizeHandelEl.classList);
+    this.resizeHandelEl.classList.add(this.windowMode);
+
     window.addEventListener('message', (event : MessageEvent) => {
       if (event.data.pluginMessage.target === 'WindowManager') {
         if (event.data.pluginMessage.windowMode) {

@@ -74,7 +74,6 @@ export default function Select({
     }
 
     const intersectionObserver = new IntersectionObserver((entries: IntersectionObserverEntry[]) => {
-      console.log(`SELECT useEffect.[] setting viewport height to ${entries[0].intersectionRect.height}`);
       setViewPortHeight(entries[0].intersectionRect.height);
     }, {
       root: null, // default is the viewport
@@ -109,14 +108,7 @@ export default function Select({
   }, [isExpanded]);
 
   function updateScrollButtons() {
-    console.log('updateScrollButtons ==================================================================================== ');
-    console.log('updateScrollButtons menuWrapperRef.current!.scrollTop '+Math.ceil(menuWrapperRef.current!.scrollTop));
-    console.log('updateScrollButtons === ');
-    console.log('updateScrollButtons menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight '+(menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight));
-    console.log('updateScrollButtons || ');
-    console.log('updateScrollButtons menuRef.current?.clientHeight '+(menuRef.current?.clientHeight));
-    console.log('updateScrollButtons === ');
-    console.log('updateScrollButtons menuWrapperRef.current?.clientHeight '+(menuWrapperRef.current?.clientHeight));
+    
     if (
       (Math.abs((menuWrapperRef.current!.scrollTop - (menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight))) <= 2)
     || menuRef.current?.clientHeight === menuWrapperRef.current?.clientHeight) {
@@ -126,10 +118,6 @@ export default function Select({
       setCanScrollDown(true);
     }
 
-    console.log('updateScrollButtons ============================');
-    console.log('updateScrollButtons menuWrapperRef.current!.scrollTop '+Math.ceil(menuWrapperRef.current!.scrollTop));
-    console.log('updateScrollButtons === 0');
-    
     if (menuWrapperRef.current!.scrollTop === 0) {
       // at top
       setCanScrollUp(false);
@@ -145,8 +133,6 @@ export default function Select({
       const rect = buttonRef.current!.getBoundingClientRect();
       menuWrapperRef.current!.style.left = `${rect.left}px`;
 
-      console.log(`SELECT.useEffect[...] button bounding rect ${JSON.stringify(rect)}`);
-
       const menuPadding = 8;
       const menuEntryHeight = 24;
       const maxSpaceToTop = rect.top;
@@ -160,23 +146,27 @@ export default function Select({
       const spaceNeededOnBottom = (options.length - menuPositionIndex - 1) * menuEntryHeight + menuPadding;
 
       let height = Math.min(maxSpaceToTop, spaceNeededOnTop) + menuEntryHeight + Math.min(maxSpaceToBottom, spaceNeededOnBottom);
-      console.log('SCROLL height ' + height);
       
       let top = maxSpaceToTop - spaceNeededOnTop;
 
       if (top < 0) {
-        console.log('SCROLL - over the top - reducing height');
         height = maxSpaceToTop + menuEntryHeight + Math.min(maxSpaceToBottom, spaceNeededOnBottom);
         top = 0;
       }
-      console.log('SCROLL height corrected' + height);
-
+      
       const scrollTop = spaceNeededOnTop - maxSpaceToTop;
       
-      console.log('SCROLL height to (init) ' + height);
       menuContainerRef.current!.style.height = `${height}px`;
-      console.log('SCROLL top to (init) ' + top);
       menuContainerRef.current!.style.top = `${top}px`;
+
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+      const isOverlappingRight = menuContainerRef.current!.getBoundingClientRect().right > viewportWidth;
+      if (isOverlappingRight) {
+        menuContainerRef.current!.style.right = `${3}px`;
+      }
+      
+      //
+      
 
       wrapperMaxHeight.current = maxSpaceToTop + menuEntryHeight + maxSpaceToBottom;
       wrapperMaxHeightBottom.current = maxSpaceToBottom;
@@ -190,7 +180,7 @@ export default function Select({
     }
 
     const scrollHandler = () => {
-      console.log('SCROLL scroll event')
+      
       // if (initialPositioning.current) {
       //   console.log('SELECT initial positioning done')
       //   initialPositioning.current = false;
@@ -204,12 +194,9 @@ export default function Select({
         height: menuContainerRef.current!.clientHeight,
         top: menuContainerRef.current!.offsetTop,
       };
-      console.log(`SELECT${JSON.stringify(box)}`);
-
+      
       const setContainer = (pos: { height: Number, top: Number }) => {
-        console.log('SCROLL top to (scroll) ' + pos.top);
         menuContainerRef.current!.style.top = `${pos.top}px`;
-        console.log('SCROLL height to (scroll) ' + pos.height);
         menuContainerRef.current!.style.height = `${pos.height}px`;
 
         updateScrollButtons();
@@ -217,25 +204,21 @@ export default function Select({
 
       if (scrollDiff < 0) { // scroll down (container is at the top of the screen
         const pxScrolledDown = -scrollDiff;
-        console.log('SCROLL DOWN');
         // setContainerBox((box) => {
 
         // setContainerBox((box) => {
         if (box.top - pxScrolledDown < 0 && (box.height + pxScrolledDown) < (wrapperMaxHeight.current)) {
-          console.log('SCROLL DOWN - growing');
           setContainer({
             height: box.height + pxScrolledDown,
             top: 0,
           });
         } else if (box.height + pxScrolledDown > (wrapperMaxHeight.current)) {
-          console.log('SCROLL DOWN - no change in measures');
           // scrolling should do the trick?
           setContainer({
             height: wrapperMaxHeight.current,
             top: 0,
           });
         } else {
-          console.log('SCROLL DOWN - increase height and move top up / sync scroll pos');
           // scroll down - only grow by setting height
           setContainer({
             height: box.height + scrollDiff,
@@ -246,8 +229,7 @@ export default function Select({
         // });
       } else if (scrollDiff > 0) { // scroll up (container is at the bottom of the screen)
         const pxScrolledUp = scrollDiff;
-        console.log('SCROLL UP');
-        console.log('at bottom and beyoind');
+        
         if (box.top - pxScrolledUp > 0) {
           console.log('SCROLL UP - growing');
           setContainer({
@@ -256,13 +238,11 @@ export default function Select({
           });
           menuWrapperRef.current!.scrollTop = lastScrollPos.current;
         } else if (box.height + pxScrolledUp > (wrapperMaxHeight.current)) {
-          console.log('SCROLL UP - no change in measure');
           setContainer({
             height: wrapperMaxHeight.current,
             top: 0,
           });
         } else {
-          console.log(`SCROLL UP - growing height - keep top as it is and don't scroll`);
           // console.log(`SCROLL UP - can expand top ${box.top} height  ${box.height} scrollUp: ${pxScrolledUp} scrollTop: ${menuWrapperRef.current!.scrollTop}`);
           // scroll up - grow by setting height and reposition to top
           setContainer({
@@ -276,12 +256,10 @@ export default function Select({
 
         // });
       }
-      console.log('SCROLL - setting last scorlllpos inner');
       lastScrollPos.current = menuWrapperRef.current!.scrollTop;
     };
 
     if (menuWrapperRef.current) {
-      console.log('SCROLL - setting last scorlllpos outer');
       lastScrollPos.current = menuWrapperRef.current!.scrollTop;
       menuWrapperRef.current.addEventListener('scroll', scrollHandler);
     }
@@ -338,19 +316,14 @@ export default function Select({
 
   useEffect(() => {
     const startScrollUp = () => {
-      console.log('attemüt to start');
       if (startScrollUpTimeInterval.current === -1) {
-        console.log('SELECT starting scroll up');
         startScrollUpTimeInterval.current = setInterval(() => {
-          console.log(`SELECT setting to ${menuWrapperRef.current!.scrollTop - 4}`);
           menuWrapperRef.current!.scrollTop = menuWrapperRef.current!.scrollTop - 4;
-          console.log('SELECT setting done');
         }, 20);
       }
     };
 
     const stopScrollUp = () => {
-      console.log('SELECT stopping scroll up');
       clearInterval(startScrollUpTimeInterval.current);
       startScrollUpTimeInterval.current = -1;
     };
@@ -369,17 +342,13 @@ export default function Select({
   useEffect(() => {
     const startScrollDown = () => {
       if (startScrollDownTimeInterval.current === -1) {
-        console.log('SELECT starting scroll down');
         startScrollDownTimeInterval.current = setInterval(() => {
-          console.log(`SELECT setting to ${menuWrapperRef.current!.scrollTop - 4}`);
           menuWrapperRef.current!.scrollTop = menuWrapperRef.current!.scrollTop + 4;
-          console.log('SELECT setting done');
         }, 20);
       }
     };
 
     const stopScrollDown = () => {
-      console.log('SELECT stopping scroll down');
       clearInterval(startScrollDownTimeInterval.current);
       startScrollDownTimeInterval.current = -1;
     };

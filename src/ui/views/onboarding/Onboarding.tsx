@@ -8,36 +8,43 @@ import LanguageSetup from '../../compontents/languageSetup/LanguageSetup';
 
 import './Onboarding.css';
 import { Language } from '../../../lib/base/Language';
+import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 
 type OnboardingProps = {
+  labelManager: LocalizedLabelManagerUI,
   onFinishSetup: Function,
 };
 
 export default function Onboarding({
+  labelManager,
   onFinishSetup,
 }: OnboardingProps) {
-  const [selectedLanguages, setSelectedLanguages] = useState<Language[]>([]);
-  const [selectedBaseLanguage, setSelectedBaseLanguage] = useState<Language | undefined>(undefined);
-
-  const handleChange = (newBaseLanguage: Language, newSelectedLanguages: Language[]) => {
-    setSelectedBaseLanguage(newBaseLanguage);
-    setSelectedLanguages(newSelectedLanguages);
-  };
+  const [selectedLanguages, setSelectedLanguages] = useState<Language[]>(labelManager.keyStore.getLanugages() ?? []);
+  const [selectedBaseLanguage, setSelectedBaseLanguage] = useState<Language | undefined>(labelManager.keyStore.getBaseLanugage());
 
   const finishSetupClick = () => {
-    onFinishSetup(selectedBaseLanguage, selectedLanguages);
+    onFinishSetup();
   };
 
   return (
     <div className="view">
-      
       <div className="setup-header">
         Set up your file
       </div>
       <div className="setup-text">
         Let Parrot know which language your design file is mainly using. You can then define target locales to translate to.
       </div>
-      <LanguageSetup activeLanguages={[]} baseLanguage={undefined} onChange={handleChange} />
+      <LanguageSetup
+        labelManager={labelManager}
+        activeLanguages={[]}
+        baseLanguage={undefined}
+        onChange={(baselanguage: Language, activeLanguages: Language[]) => {
+          setSelectedBaseLanguage(baselanguage);
+          setSelectedLanguages(activeLanguages);
+          labelManager.keyStore.setBaseLanguage(baselanguage);
+          labelManager.keyStore.setLanguages(activeLanguages);
+        }}
+      />
       <div className="onboarding-buttonbar">
         <button className="button button--buttonPrimary" disabled={selectedBaseLanguage === undefined || selectedLanguages.length === 0} type="button" onClick={finishSetupClick}>
           <span data-tooltip-type="text">

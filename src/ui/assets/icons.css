@@ -274,7 +274,13 @@
     mask-image: url(./window_mode_fullscreen.svg);
   }
 
+  .window-mode-minimized-svg {
+    -webkit-mask-image: url(./window_mode_minimized.svg);
+    mask-image: url(./window_mode_minimized.svg);
+  }
+
   .window-mode-bottom-attached-svg {
-    -webkit-mask-image: url(./window_mode_bottom_attached.svg);
-    mask-image: url(./window_mode_bottom_attached.svg);
+      width: 10px !important;
+      -webkit-mask-image: url(./window_mode_bottom_attached.svg);
+      mask-image: url(./window_mode_bottom_attached.svg);
   }

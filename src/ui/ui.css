@@ -36,14 +36,32 @@ body {
   align-self: center;
   justify-self: flex-end;
   margin-left: auto;
-  margin-right: 10px;
+  margin-right: 7px;
 }
 
 .window-control:hover {
   align-self: center;
   justify-self: flex-end;
   margin-left: auto;
-  margin-right: 10px;
+}
+
+.window-control .segmented-control-segment:hover {
+  background-color: var(--figma-color-bg-hover);
+}
+
+
+.window-control .segmented-control-segment.selected {
+  box-shadow: inset 0 0 0 1px transparent;
+  background-color: transparent;
+}
+
+
+.window-control .segmented-control-segment.selected .svg-container {
+  background-color: var(--figma-color-icon);
+}
+
+.window-control .segmented-control-segment .svg-container {
+  background-color: var(--figma-color-text-disabled);
 }
 
 .key-frame {

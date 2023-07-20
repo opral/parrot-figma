@@ -11,16 +11,16 @@ import { UITranslationKey } from './UITranslationKey';
 import { NodeSelection } from '../localizedlabels/LocalizedLabelManager';
 
 export type SearchQuery = {
-  selected: 'FRAME' | 'LABEL' | undefined,
-  hasLabel: string[],
-  oneLabelOf: string[],
-  unverified?: boolean,
-  missingTranslation?: boolean,
-  key?: string, // suggestion n with key
-  keyAtEnd: boolean,
-  text: string,
-  exactText: boolean,
-  searchString: string,
+  selected?: 'FRAME' | 'LABEL' | undefined,
+  hasLabel?: string[] | undefined,
+  oneLabelOf?: string[] | undefined,
+  unverified?: boolean | undefined,
+  missingTranslation?: boolean | undefined,
+  key?: string | undefined, // suggestion n with key
+  keyAtEnd?: boolean | undefined,
+  text?: string | undefined,
+  exactText?: boolean | undefined,
+  searchString?: string | undefined,
 };
 
 export type SearchResult = {
@@ -28,6 +28,9 @@ export type SearchResult = {
   inKeys: Set<string>,
   inText: Set<string>,
   withMissingTranslations: Set<string>,
+  withMissingTranslationsPerLanguage: {
+    [language in Language]? : Set<string>
+  },
   withMissingReview: Set<string>,
   matchingKeys: Set<string>,
   referencedInFrame: Set<string>,
@@ -205,12 +208,12 @@ export default class MemoryTranslationKeyStore extends EventTarget {
       searchString += 'selected:LABEL ';
     }
 
-    if (searchQuery.hasLabel.length > 0) {
+    if (searchQuery.hasLabel && searchQuery.hasLabel.length > 0) {
       searchString += `label:${searchQuery.hasLabel.join(' label:')} `;
     }
 
-    if (searchQuery.oneLabelOf.length > 0) {
-      searchString += `one_label_of:${searchQuery.hasLabel.join(',')} `;
+    if (searchQuery.oneLabelOf && searchQuery.oneLabelOf.length > 0) {
+      searchString += `one_label_of:${searchQuery.oneLabelOf.join(',')} `;
     }
 
     if (searchQuery.unverified !== undefined) {
@@ -267,7 +270,6 @@ export default class MemoryTranslationKeyStore extends EventTarget {
     const filterRe = /((\b\w+:[\w,*:]+))\s/g;
     const filterMatches = processedInputString.match(filterRe);
     const filters = [] as string[];
-    
 
     if (filterMatches) {
       for (const filterMatch of filterMatches!.sort((match) => match.length)) {
@@ -279,9 +281,9 @@ export default class MemoryTranslationKeyStore extends EventTarget {
             searchQueryObj.selected = 'LABEL';
           }
         } else if (filterParts[0] === 'label' && filterParts.length > 1) {
-          searchQueryObj.hasLabel.push(filterParts[1]);
+          searchQueryObj.hasLabel!.push(filterParts[1]);
         } else if (filterParts[0] === 'one_label_of' && filterParts.length > 1) {
-          searchQueryObj.oneLabelOf = searchQueryObj.oneLabelOf.concat(filterParts[1].split(','));
+          searchQueryObj.oneLabelOf = searchQueryObj.oneLabelOf!.concat(filterParts[1].split(','));
         } else if (filterParts[0] === 'missing_translation' && filterParts.length > 1) {
           searchQueryObj.missingTranslation = filterParts[1] === 'true';
         } else if (filterParts[0] === 'unverified' && filterParts.length > 1) {
@@ -362,6 +364,9 @@ export default class MemoryTranslationKeyStore extends EventTarget {
       inKeys: new Set<string>(),
       inText: new Set<string>(),
       withMissingTranslations: new Set<string>(),
+      withMissingTranslationsPerLanguage: { } as {
+        [language in Language]? : Set<string>
+      },
       withMissingReview: new Set<string>(),
       matchingKeys: new Set<string>(),
       referencedInFrame: new Set<string>(),
@@ -389,7 +394,7 @@ export default class MemoryTranslationKeyStore extends EventTarget {
       for (const language of this.getLanugages()!) {
         const plurals = key.translations[language];
         for (const plural of getPluralFormsByLanguage(language as Language)) {
-          if (query.text === '') {
+          if (query.text === undefined || query.text === '') {
             results.matchingKeys.add(key.keyName);
           } else if (plurals?.[plural]?.text !== undefined) {
             const matchStartText = plurals[plural]!.text!.toLowerCase().indexOf(query.text.toLowerCase());
@@ -414,6 +419,11 @@ export default class MemoryTranslationKeyStore extends EventTarget {
                 if ((!plurals?.[plural]?.text || plurals?.[plural]?.text === '')) {
                   if (key.plural || plural === Plural.OTHER) {
                     results.withMissingTranslations.add(key.keyName);
+
+                    if (results.withMissingTranslationsPerLanguage[language] === undefined) {
+                      results.withMissingTranslationsPerLanguage[language] = new Set<string>();
+                    }
+                    results.withMissingTranslationsPerLanguage[language]!.add(key.keyName);
                   }
                 }
               }
@@ -441,7 +451,7 @@ export default class MemoryTranslationKeyStore extends EventTarget {
             results.inKeys.add(key.keyName);
           }
         }
-      } else if (query.text !== '') {
+      } else if (query.text !== undefined && query.text !== '') {
         const keyMatchStart = key.keyName.toLowerCase().indexOf(query.text.toLowerCase());
         if (keyMatchStart !== -1) {
           if (!results.matches[key.keyName]) {

@@ -18,6 +18,7 @@ export default function SetupView({
 }: SetupViewProps) {
   return (
     <LanguageSetup
+      labelManager={labelManager}
       baseLanguage={labelManager.keyStore.getBaseLanugage()}
       activeLanguages={labelManager.keyStore.getLanugages()!}
       onChange={(baselanguage: Language, activeLanguages: Language[]) => {

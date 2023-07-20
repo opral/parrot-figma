@@ -9,11 +9,12 @@ import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKe
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import { Language } from '../../../lib/base/Language';
 import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
+import { NodeSelection } from '../../../lib/localizedlabels/LocalizedLabelManager';
 
 type LocalizedFrameGroupProps = {
   showKey: Function,
   localizedLabels: UILocalizedLabel[],
-  selectedNodes: string[]
+  selectedNodes: NodeSelection,
   figmaRemote: FigmaUtil
   localizedLabelManager: LocalizedLabelManagerUI
 };
@@ -32,7 +33,7 @@ function toLanguageOption(language: string, baseLanguage?: string) {
   if (baseLanguage && language === baseLanguage) {
     return {
       value: language,
-      label: `${languageNameInCurrentLanguage} - ${language}`
+      label: `${languageNameInCurrentLanguage} - ${language}`,
     };
   }
   return {
@@ -51,7 +52,7 @@ export default function LocalizedFrameGroup({
   if (localizedLabels.length === 0) return null;
 
   const firstTranslationState = localizedLabels[0];
-  const { rootFrameName } = firstTranslationState;
+  const { rootFrameName, rootFrameId } = firstTranslationState;
 
   let rootFrameLanguage: SelectOption | undefined;
   const languageOptiones = [] as SelectOption[];
@@ -75,7 +76,7 @@ export default function LocalizedFrameGroup({
 
       const placeholderIndexMapping = [] as string[];
       let currentIndex = 0;
-      
+
       // const wholeMatch = paramMatch[0];
       // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
       // const name = paramMatch[2];
@@ -153,11 +154,18 @@ export default function LocalizedFrameGroup({
     localizedLabelManager.setFrameLanguage(firstLocalizedLabelInFrame.rootFrameId, language, translationProvider);
   }
 
+
+  async function onNodeSelect(nodeId: string) {
+    await figmaRemote.scrollIntoViewIfNeeded(nodeId, true);
+  }
+
+  console.log(selectedNodes);
+
   return (
     <>
 
       <div className="header">
-        <div className="column-1">
+        <div className={`column-1 nodes-parent${selectedNodes[rootFrameId]?.directSelection ? ' selected' : ''}`} onClick={() => { onNodeSelect(rootFrameId); }}>
           <div className="spacer" />
           <div className="element-symbol">
             <div className="svg-container number-sign-svg" />
@@ -175,16 +183,27 @@ export default function LocalizedFrameGroup({
         </div>
       </div>
 
-      {rootFrameLanguage?.value && localizedLabels.map((translationState) => (
-        <LocalizedLabelListItem
-          showKey={showKey}
-          key={translationState.nodeId}
-          figmaRemote={figmaRemote}
-          localizedLabelManager={localizedLabelManager}
-          selected={selectedNodes.includes(translationState.nodeId)}
-          localizedLabel={translationState}
-        />
-      ))}
+      {rootFrameLanguage?.value && localizedLabels.map((translationState) => {
+        let selection = 'unselected' as 'unselected' | 'selected' | 'selected-by-parent';
+        if (selectedNodes[translationState.nodeId] !== undefined) {
+          if (selectedNodes[translationState.nodeId].directSelection) {
+            selection = 'selected';
+          } else {
+            selection = 'selected-by-parent';
+          }
+        }
+
+        return (
+          <LocalizedLabelListItem
+            showKey={showKey}
+            key={translationState.nodeId}
+            figmaRemote={figmaRemote}
+            localizedLabelManager={localizedLabelManager}
+            selected={selection}
+            localizedLabel={translationState}
+          />
+        );
+      })}
 
       {rootFrameLanguage?.value === undefined
               && <div>choose current design language</div>}

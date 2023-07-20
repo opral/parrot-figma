@@ -18,13 +18,14 @@ import PlaceholderEditorListItem from '../../compontents/placeholder/Placeholder
 import { Fillins } from '../../../lib/keystore/TranslationKey';
 import FEATURES_FLAGS from '../../featuretoggle';
 import { track } from '../../utils/analytics';
+import Drawer from '../../compontents/drawer/Drawer';
 
 type LocalizedLabelListItemProps = {
   showKey: Function,
   localizedLabel: UILocalizedLabel,
   figmaRemote: FigmaUtil,
   localizedLabelManager: LocalizedLabelManagerUI,
-  selected: boolean
+  selected: 'selected-by-parent' | 'selected' | 'unselected'
 };
 
 export default function LocalizedLabelListItem({
@@ -118,57 +119,46 @@ export default function LocalizedLabelListItem({
         </div>
       </OutsideClickHandler>
 
-      <OutsideClickHandler
-        onOutsideClick={() => { setNewKey(undefined); }}
-        disabled={newKey === undefined}
-        display="contents"
+      <Drawer
+        position="top"
+        buttons={[
+          {
+            type: 'secondary',
+            text: 'Cancel',
+            key: 'escape',
+            callback: () => {
+              setNewKey(undefined);
+            },
+          },
+          {
+            type: 'primary',
+            text: 'Create Key',
+            key: 'enter',
+            callback: () => {
+              localizedLabelManager.linkKey(localizedLabel, newKey!, localizedLabel.rootFrameLanguage!, Plural.OTHER);
+              setNewKey(undefined);
+            },
+          },
+
+        ]}
+        shown={newKey !== undefined}
       >
-        <div className={`top-drawer${newKey !== undefined ? ' open' : ' '} create-key`}>
-          <div className="history_view--topHeader">
-            Create a new Key
-          </div>
-          <div className="text-field-text editing ">
-            <input
-              style={{
-                position: 'inherit',
-              }}
-              defaultValue={localizedLabel.name}
-              onChange={(e) => { setNewKey(e.target.value); }}
-              placeholder="Keyname"
-            />
-          </div>
-
-          <div className="buttonGroup buttonGroup-reversed">
-            <button
-              className="button button-primary"
-              type="button"
-              onClick={() => {
-                localizedLabelManager.linkKey(localizedLabel, newKey!, localizedLabel.rootFrameLanguage!, Plural.OTHER);
-                setNewKey(undefined);
-              }}
-              disabled={false}
-            >
-              <span data-tooltip-type="text">
-                Create Key
-              </span>
-            </button>
-            <button
-              className="button button-secondary"
-              type="button"
-              onClick={() => {
-                // set back to head
-                setNewKey(undefined);
-              }}
-            >
-              <span data-tooltip-type="text">
-                Cancel
-              </span>
-            </button>
-          </div>
+        <div className="history_view--topHeader">
+          Create a new Key
         </div>
-      </OutsideClickHandler>
+        <div className="text-field-text editing ">
+          <input
+            style={{
+              position: 'inherit',
+            }}
+            value={newKey}
+            onChange={(e) => { setNewKey(e.target.value); }}
+            placeholder="Keyname"
+          />
+        </div>
+      </Drawer>
 
-      <div className={`row${selected ? ' selected ' : ''}${localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? ' key-set ' : ' key-unset '}`} onClick={() => { onNodeSelect(localizedLabel.nodeId); }}>
+      <div className={`row ${selected}${localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? ' key-set ' : ' key-unset '}`} onClick={() => { onNodeSelect(localizedLabel.nodeId); }}>
         <div className="column-1">
           <div className="localized-label">
             <div className="spacer" />
@@ -350,7 +340,7 @@ export default function LocalizedLabelListItem({
                           keyName={localizedLabel.key}
                           translationKeyStore={translationKeyStore}
                         />
-                        { selected && (
+                        { selected !== 'unselected' && (
                           <div className="placeholder-view-grid" style={{ display: Object.keys(localizedLabel.getPlaceholders()).length > 0 ? undefined : 'none' }}>
 
                             <div />
@@ -380,7 +370,7 @@ export default function LocalizedLabelListItem({
                 <span
                   className="layerIcon iconWrapper button"
                   data-tooltip-trigger="span"
-                  data-tooltip-content="Use Text from Translation key"
+                  data-tooltip-content="Reset all changes"
                   onClick={updateToLatestKeyVersion}
                 >
                   <span className="svg-container reset-instance-svg" />
@@ -402,7 +392,7 @@ export default function LocalizedLabelListItem({
                 <span
                   className="layerIcon iconWrapper button"
                   data-tooltip-trigger="span"
-                  data-tooltip-content="Save Design state as new Version"
+                  data-tooltip-content={`Push changes to (${localizedLabel.language}) Translation`}
                   onClick={createNewVersionFromDesign}
                 >
                   <span className="svg-container use-label-svg" />

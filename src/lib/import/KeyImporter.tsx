@@ -21,9 +21,23 @@ function toChangeArray(importKey: ImportTranslationKey, language: Language) {
   }] as { language: Language; plural: Plural; text: string | undefined; skip: boolean }[];
 }
 
+export enum ImportType {
+  UNSUPPORTED = 'not supported',
+  IOS_STRINGS = 'iOS Strings File',
+  ANDROID_XML = 'Android resource XML',
+  KEYVALUE_JSON = 'L18Next',
+}
+
+export type ImportResult = {
+  fileName: string,
+  type: ImportType,
+  keys: ImportTranslationKey[] | undefined,
+};
+
 export default class KeyImporter {
   static getImportStatistics(keyStore: MemoryTranslationKeyStore, importKeys: ImportTranslationKey[], language: Language) {
     const changedKeys = {
+      language,
       newKeys: [] as ImportTranslationKey[],
       newTranslations: [] as ImportTranslationKey[],
       updatedTranslations: [] as ImportTranslationKey[],
@@ -46,28 +60,34 @@ export default class KeyImporter {
     return changedKeys;
   }
 
-  static processFile(fileName: string, content: string) {
+  static processFile(fileName: string, content: string): ImportResult {
     console.log(`processing file${fileName} content: ${content}`);
 
     const results = {
-      type: 'unsupported',
+      fileName,
+      type: ImportType.UNSUPPORTED,
       keys: undefined as ImportTranslationKey[] | undefined,
     };
 
     let importObject = AppleStringsFileImporter.toImportObject(fileName, content);
     if (importObject) {
-      results.type = 'ios-strings';
+      results.type = ImportType.IOS_STRINGS;
       results.keys = importObject;
-    } else {
-      importObject = AndroidXMLImporter.toImportObject(fileName, content);
-      if (importObject) {
-        results.type = 'android-xml';
-        results.keys = importObject;
-      } else {
-        importObject = JsonKeyValueImporter.toImportObject(fileName, content);
-        results.type = 'keyvalue-json';
-        results.keys = importObject;
-      }
+      return results;
+    }
+
+    importObject = AndroidXMLImporter.toImportObject(fileName, content);
+    if (importObject) {
+      results.type = ImportType.ANDROID_XML;
+      results.keys = importObject;
+      return results;
+    }
+
+    importObject = JsonKeyValueImporter.toImportObject(fileName, content);
+    if (importObject) {
+      results.type = ImportType.KEYVALUE_JSON;
+      results.keys = importObject;
+      return results;
     }
 
     return results;

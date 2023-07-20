@@ -7,6 +7,7 @@ import FigmaUtil from '../../../shared/FigmaUtil';
 import LocalizedFrameGroup from './LocalizedFrameGroup';
 import './LocalizedLabelsListView.css';
 import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
+import { NodeSelection } from '../../../lib/localizedlabels/LocalizedLabelManager';
 
 declare global {
   interface Element {
@@ -81,16 +82,15 @@ export default function LocalizedLabelsListView({
 
   const tableRef = useRef<HTMLDivElement>(null);
 
-  const [selection, setSelection] = useState({} as {
-    [rootFrameId: string]: string[]
-  });
+  const [selection, setSelection] = useState({} as NodeSelection);
+  
+
+  const [parentIds, setParentIds] = useState(new Set<string>());
 
   async function refreshSelection() {
     const selectedNodes = await localizedLabelManager.getSelection();
-
-    const selectedByFrame = {} as {
-      [rootFrameId: string]: string[]
-    };
+    setSelection(selectedNodes);
+    const updatedParentIds = new Set<string>();
 
     let selectedLabels = [] as UILocalizedLabel[];
 
@@ -100,7 +100,7 @@ export default function LocalizedLabelsListView({
         continue;
       }
 
-      if (!selectedByFrame[selectedNode.rootFrameId]) {
+      if (!updatedParentIds.has(selectedNode.rootFrameId)) {
         // console.log('getting labels from manager');
         // eslint-disable-next-line no-await-in-loop -- parallizing would not bring any advantage here
         const selectedLabelsByFrame = await localizedLabelManager.getLocalizedLabelsByFrame(selectedNode.rootFrameId);
@@ -108,14 +108,11 @@ export default function LocalizedLabelsListView({
         if (selectedLabelsByFrame) {
           selectedLabels = selectedLabels.concat(selectedLabelsByFrame);
         }
-
-        selectedByFrame[selectedNode.rootFrameId] = [selectedNode.selectedNodeId];
-      } else {
-        selectedByFrame[selectedNode.rootFrameId].push(selectedNode.selectedNodeId);
+        updatedParentIds.add(selectedNode.rootFrameId);
       }
     }
+    setParentIds(updatedParentIds);
     setLocalizedLabels(selectedLabels);
-    setSelection(selectedByFrame);
   }
 
   function messageHandler(event: any) {
@@ -165,12 +162,12 @@ export default function LocalizedLabelsListView({
     <>
       {localizedLabels.length === 0 && (
       <div className="emptyState">
-        <div className="emptyStateTitle">No Textnodes selected</div>
+        <div className="emptyStateTitle">No Frame or Section selected</div>
         <div className="emptyStateSubtitle">
           <div>
             Labels for localization
             <br />
-            will show up here when selected - Select a label in your Design.
+            will show up here when selected - Select a Frame or Section in your Design.
           </div>
         </div>
       </div>
@@ -179,14 +176,14 @@ export default function LocalizedLabelsListView({
       <div>
 
         <div className="table" ref={tableRef}>
-          {Object.keys(selection).map((mainFrameId) => (
+          {[...parentIds].map((parentId) => (
             <LocalizedFrameGroup
               showKey={showKey}
-              localizedLabels={localizedLabels.filter((l) => l.rootFrameId === mainFrameId).sort((a, b) => Math.hypot(a.x, a.y * (2) - Math.hypot(b.x, b.y * 2)))}
-              selectedNodes={selection[mainFrameId]}
+              localizedLabels={localizedLabels.filter((l) => l.rootFrameId === parentId).sort((a, b) => Math.hypot(a.x, a.y * (2) - Math.hypot(b.x, b.y * 2)))}
+              selectedNodes={selection}
               figmaRemote={figmaRemote}
               localizedLabelManager={localizedLabelManager}
-              key={mainFrameId}
+              key={parentId}
             />
           ))}
         </div>

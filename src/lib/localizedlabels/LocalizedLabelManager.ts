@@ -93,6 +93,8 @@ export default class LocalizedLabelManager {
     [nodeId: string]: string
   };
 
+  firstTextnodeInViewport: undefined | string;
+
   private refreshLabelKeyLinkCache(textNodeId: string, key: string | undefined) {
     const currentKey = this.labelToKey[textNodeId];
     if (key === undefined || key === '') {
@@ -404,6 +406,18 @@ export default class LocalizedLabelManager {
     for (const textNode of textNodesToPrcoess) {
       const keyType = textNode.getPluginData(this.keyTypeDataKey);
       if (keyType !== '' && (keyType as KeyState) === KeyState.Linked) {
+        if (this.firstTextnodeInViewport === undefined && textNode.absoluteBoundingBox) {
+          if (textNode.absoluteBoundingBox.x > figma.viewport.bounds.x
+             && textNode.absoluteBoundingBox.x < figma.viewport.bounds.x + figma.viewport.bounds.width
+             && textNode.absoluteBoundingBox.y > figma.viewport.bounds.y
+             && textNode.absoluteBoundingBox.y < figma.viewport.bounds.y + figma.viewport.bounds.height) {
+            this.firstTextnodeInViewport = textNode.id;
+            if (figma.currentPage.selection.length === 0) {
+              figma.currentPage.selection = [textNode];
+            }
+          }
+        }
+
         const key = textNode.getPluginData(this.keyDataKey);
         if (key !== '') {
           const textNodeId = textNode.id;
@@ -910,7 +924,7 @@ export default class LocalizedLabelManager {
 
     // 1562ms -> 1071ms ~ 1/4
     const text = node.characters;
-    
+
     const fillins = node.getPluginData(this.fillinsKey) === '' ? {} : JSON.parse(node.getPluginData(this.fillinsKey));
     const tokenizedTextResult = this.extractDeltaOpsAndLabelStyles(node, fillins);
 

@@ -176,7 +176,25 @@ export default function LanguageSetup({
         </div>
         <div>
           { importResult && importResult.type === ImportType.UNSUPPORTED && (
-          <div>File Type currently not supported</div>
+          <div>
+            File Type currently not supported.
+            <br />
+            {' '}
+            Supported are Apple's
+            {' '}
+            <b>.stringsdict</b>
+            ,
+            {' '}
+            <b>.strings</b>
+            {' '}
+            and Android's
+            {' '}
+            <b>.xml</b>
+            {' '}
+            file.
+            {' '}
+
+          </div>
           )}
 
           { importResult && importResult.type !== ImportType.UNSUPPORTED && importKeysByState && (
@@ -215,6 +233,7 @@ export default function LanguageSetup({
         <div className="setup-header">
           <div className="setup-header-title">Main file language</div>
           { !changeBaseLanguage && (
+          // eslint-disable-next-line jsx-a11y/no-static-element-interactions
           <div className="choosen-language-change" onClick={() => { setChangeBaseLanguage(true); }}>Change</div>
           )}
         </div>
@@ -359,7 +378,6 @@ export default function LanguageSetup({
           </div>
         </div>
         )}
-        <div style={{ height: '50px' }} />
       </div>
     </div>
   );

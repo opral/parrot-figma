@@ -17,23 +17,26 @@ import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager'
 
 const figmaRemote = new FigmaUtil();
 
-const fileConfigured = figma.root.getPluginData(FigmaFileTranslationKeyStore.configDataKey) !== '';
+const fileConfigured = figmaRemote.getRootPluginDataSync('fileSetupCompleted') !== '';
 const introShownToUser = true; // TODO change this to a config when implemented
+
+
 
 WindowManagerSandbox.init({
   bottomSheet: {
     height: 200,
   },
   introWindowSize: {
-    height: 200,
-    width: 200,
+    centerHeight: 488,
+    height: 364,
+    width: 415,
   },
   windowSize: {
     width: 800,
     height: 600,
   },
   windowMode: WindowMode.IntroWindow,
-});
+}, (!fileConfigured || !introShownToUser) ? WindowMode.IntroWindow : undefined);
 
 const asyncFunctionProxy = new AsyncFunctionProxy('SandboxAsyncFunctionProxy', (data: any) => {
   figma.ui.postMessage(data);

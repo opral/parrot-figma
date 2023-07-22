@@ -24,7 +24,6 @@ export default function FileDropZone({
   };
 
   const handleFiles = async function (files : FileList) {
-    
     const filesReceived = {} as any;
 
     const contentPromises = [] as Promise<void>[];

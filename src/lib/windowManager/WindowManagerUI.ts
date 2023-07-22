@@ -78,11 +78,10 @@ export default class WindowManagerUi extends EventTarget {
 
     this.intersectionObserver.observe(sizeWrapperEl!);
 
-
     console.log(this.resizeHandelEl);
     this.resizeHandelEl.onpointerdown = this.onResizeHandlePointerDown.bind(this);
     this.resizeHandelEl.onpointerup = this.onResizeHandlePointerUp.bind(this);
-    this.resizeHandelEl.onmouseenter = this.onMouseEnter.bind(this); 
+    this.resizeHandelEl.onmouseenter = this.onMouseEnter.bind(this);
 
     this.resizeHandelEl.classList.remove(...this.resizeHandelEl.classList);
     this.resizeHandelEl.classList.add(this.windowMode);
@@ -114,6 +113,10 @@ export default class WindowManagerUi extends EventTarget {
 
     // eslint-disable-next-line no-restricted-globals
     parent.postMessage({ pluginMessage: { target: 'WindowManager', uiInit: true } }, '*');
+  }
+
+  requestResize(size: { height?: number, width?: number }) {
+    parent.postMessage({ pluginMessage: { target: 'WindowManager', size } }, '*');
   }
 
   onResizeHandleDrag(e: any) {

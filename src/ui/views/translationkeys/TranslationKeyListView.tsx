@@ -5,7 +5,6 @@ import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
-import { color } from '@uiw/react-codemirror';
 import { Language } from '../../../lib/base/Language';
 
 import MemoryTranslationKeyStore, { SearchQuery, UITranslationKeys } from '../../../lib/keystore/MemoryTranslationKeyStore';
@@ -15,7 +14,6 @@ import { Plural } from '../../../lib/base/Plural';
 
 import './TranslationKeyView.css';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
-import { KeyState, LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
 import { NodeSelection } from '../../../lib/localizedlabels/LocalizedLabelManager';
 
 type TranslationKeyListViewProps = {
@@ -25,6 +23,8 @@ type TranslationKeyListViewProps = {
   localizedLabelManager: LocalizedLabelManagerUI
   figmaRemote: FigmaUtil
   select?: (key: string, language: Language, plural: Plural) => void
+  selectedKey?: string,
+  highlightSelectedNodes: boolean
 };
 
 export default function TranslationKeyListView({
@@ -34,6 +34,8 @@ export default function TranslationKeyListView({
   localizedLabelManager,
   figmaRemote,
   select,
+  selectedKey,
+  highlightSelectedNodes,
 }: TranslationKeyListViewProps) {
   const { t } = useTranslation();
   const [, setTrigger] = useState(0);
@@ -49,10 +51,12 @@ export default function TranslationKeyListView({
   const tableRef = useRef<HTMLDivElement>(null);
 
   async function refreshSelection(triggerHighlight: boolean) {
-    const freshSelectedNodes = await localizedLabelManager.getSelection();
-
-    setSelectedNodes(freshSelectedNodes);
-    setHighlightSelection(triggerHighlight);
+    if (highlightSelectedNodes) {
+      const freshSelectedNodes = await localizedLabelManager.getSelection();
+  
+      setSelectedNodes(freshSelectedNodes);
+      setHighlightSelection(triggerHighlight);
+    }
   }
 
   useEffect(() => {
@@ -175,7 +179,7 @@ export default function TranslationKeyListView({
         )}
 
         { searchQuery.key === undefined && (
-          <div style={{paddingRight: '5px'}}>
+          <div style={{ paddingRight: '5px' }}>
             <span>
               {filteredKeys.matchingKeys.size}
               {' '}
@@ -193,12 +197,18 @@ export default function TranslationKeyListView({
                 {' '}
                 Missing Translations
               </span>
-              <span style={{ color: '#1DA1F2', cursor: 'pointer' }}
-              onClick={() => {
-                const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-                newQuery.missingTranslation = true;
-                updateQuery(newQuery);
-              }}> filter</span>
+              <span
+                style={{ color: '#1DA1F2', cursor: 'pointer' }}
+                onClick={() => {
+                  const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
+                  newQuery.missingTranslation = true;
+                  updateQuery(newQuery);
+                }}
+              >
+                {' '}
+                filter
+
+              </span>
             </>
             )}
 
@@ -316,18 +326,18 @@ export default function TranslationKeyListView({
 
       <div className="grid" ref={tableRef}>
         {/* helper row for css to set the width when partially rendered */}
-        
-          <TranslationKeyListItem
-            key="max-width-helper-row"
-            rowClassNames='hidden-helper-row'
-            translationKeyStore={translationKeyStore}
-            localizedLabelManager={localizedLabelManager}
-            searchMatch={undefined}
-            translationKey={translationKeyStore.translationKeys[longestKey]}
-            figmaRemote={figmaRemote}
-            select={select}
-            labelSelected={false}
-          />
+
+        <TranslationKeyListItem
+          key="max-width-helper-row"
+          rowClassNames="hidden-helper-row"
+          translationKeyStore={translationKeyStore}
+          localizedLabelManager={localizedLabelManager}
+          searchMatch={undefined}
+          translationKey={translationKeyStore.translationKeys[longestKey]}
+          figmaRemote={figmaRemote}
+          select={select}
+          keySelected={false}
+        />
         {[...filteredKeys.matchingKeys].map((keyName) => {
           if (rendered > renderEntries) {
             return;
@@ -344,7 +354,7 @@ export default function TranslationKeyListView({
               translationKey={translationKeyStore.translationKeys[keyName]}
               figmaRemote={figmaRemote}
               select={select}
-              labelSelected={Object.values(selectedNodes).map((selectedNode) => selectedNode.key).includes(keyName)}
+              keySelected={Object.values(selectedNodes).map((selectedNode) => selectedNode.key).includes(keyName) || selectedKey === keyName}
             />
           );
         })}

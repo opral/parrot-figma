@@ -135,7 +135,7 @@
 }
 
 .rowText {
-  padding-left: 0px;
+  padding-left: 8px;
   padding-right: 8px;
   font-feature-settings: "ss02" on, "liga" on, "calt" on;
   line-height: 32px;
@@ -250,9 +250,7 @@
 .grid-item-border-left {
   border-left-width: 1px;
 }
-.grid-item-border-top .grid-item-plural {
-  border-top-width: 1px;
-}
+
 .grid-item-border-rigth {
   border-right-width: 1px;
 }

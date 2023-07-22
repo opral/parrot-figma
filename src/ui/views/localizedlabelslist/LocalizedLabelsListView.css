@@ -225,17 +225,17 @@
     align-self: self-start;
 }
 
-.key-panel .select-menu.key-select {
+.key-panel .input-select-menu.key-select {
     min-width: 160px;
     max-width: 160px;
     align-self: self-start;
     display: flex;
 }
-.key-panel .select-menu.key-select {
+.key-panel .input-select-menu.key-select {
 margin-left: auto;
 }
 
-.key-panel .select-menu__caret {
+.key-panel .input-select-menu__caret {
     /* margin-left: auto; */
 }
 

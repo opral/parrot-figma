@@ -153,6 +153,11 @@ body {
     height: 100%;
   }
 
+  .view.filesetup {
+    overflow: visible;
+    height: auto;
+  }
+
   .view {
     overflow: auto;
     
@@ -190,7 +195,7 @@ body {
   }
   
   .toolbar {
-    border-bottom: 1px solid var(--figma-color-border);
+    /* border-bottom: 1px solid var(--figma-color-border); */
     flex-direction: row;
     display: flex;
   }
@@ -330,4 +335,15 @@ button:disabled {
 
 button:focus:not(:disabled), .basic_form--btn--t7Y67:active:not(:disabled) {
   
+}
+
+.view.dev-panel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.comming-soon {
+  flex: 0 0 150px;
+  text-align: center;
 }

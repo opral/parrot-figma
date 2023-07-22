@@ -20,6 +20,22 @@ export default class FigmaUtil {
     return fileKey;
   }
 
+  public async setRootPluginData(key: string, value: string) {
+    this.setRootPluginDataSync(key, value);
+  }
+
+  public setRootPluginDataSync(key: string, value: string) {
+    figma.root.setPluginData(key, value);
+  }
+
+  public async getRootPluginData(key: string): Promise<string> {
+    return this.getRootPluginDataSync(key);
+  }
+
+  public getRootPluginDataSync(key: string): string {
+    return figma.root.getPluginData(key);
+  }
+
   async notify(message: string) {
     figma.notify(message);
   }

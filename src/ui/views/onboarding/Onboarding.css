@@ -42,3 +42,14 @@ button.button--buttonPrimary:disabled {
     color: var(--figma-color-text-ondisabled);
     border-color: var(--figma-color-border-disabled);
 }
+
+.space-filler {
+    flex: 1
+}
+
+.view-wrapper {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    overflow: scroll;
+}

@@ -21,9 +21,10 @@ export default function SetupView({
       labelManager={labelManager}
       baseLanguage={labelManager.keyStore.getBaseLanugage()}
       activeLanguages={labelManager.keyStore.getLanugages()!}
-      onChange={(baselanguage: Language, activeLanguages: Language[]) => {
-        labelManager.keyStore.setBaseLanguage(baselanguage);
-        labelManager.keyStore.setLanguages(activeLanguages);
+      onChange={async (baselanguage: Language, activeLanguages: Language[]) => {
+        
+        await labelManager.keyStore.setBaseLanguage(baselanguage);
+        await labelManager.keyStore.setLanguages(activeLanguages);
       }}
     />
   );

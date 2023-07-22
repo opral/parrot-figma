@@ -83,12 +83,12 @@ export default class KeyImporter {
       return results;
     }
 
-    importObject = JsonKeyValueImporter.toImportObject(fileName, content);
-    if (importObject) {
-      results.type = ImportType.KEYVALUE_JSON;
-      results.keys = importObject;
-      return results;
-    }
+    // importObject = JsonKeyValueImporter.toImportObject(fileName, content);
+    // if (importObject) {
+    //   results.type = ImportType.KEYVALUE_JSON;
+    //   results.keys = importObject;
+    //   return results;
+    // }
 
     return results;
   }

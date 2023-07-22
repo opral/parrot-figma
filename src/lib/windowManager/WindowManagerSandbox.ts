@@ -14,6 +14,7 @@ interface InitialWindowConfig {
   introWindowSize: {
     width: number,
     height: number,
+    centerHeight?: number,
   },
   windowSize: {
     width: number,
@@ -42,6 +43,7 @@ export class WindowManagerSandbox {
   introModeSize: {
     width: number,
     height: number,
+    centerHeight?: number,
   };
 
   windowModeSize: {
@@ -144,14 +146,21 @@ export class WindowManagerSandbox {
       zoom: figma.viewport.zoom,
     };
 
+    console.log('awaiting promises');
+
     Promise.all([
       figma.clientStorage.getAsync('windowSize'),
       figma.clientStorage.getAsync('windowBottomSheetHeight'),
       figma.clientStorage.getAsync('windowMode'),
     ]).then((values) => {
+      console.log('awaiting promises donef');
       const [storedWindowSize, storedWindowBottomSheetHeight, storedWindowMode] = values;
 
-      if (storedWindowSize) {
+      if (storedWindowSize
+        && storedWindowSize.width !== undefined
+        && !Number.isNaN(storedWindowSize.width)
+        && storedWindowSize.height !== undefined
+        && !Number.isNaN(storedWindowSize.height)) {
         this.windowModeSize = storedWindowSize;
       }
 
@@ -174,6 +183,7 @@ export class WindowManagerSandbox {
 
       // @ts-ignore -- figmas ui type does not expose the reposition atm
       figma.ui.reposition(windowRect.x, windowRect.y);
+      console.log('calling show');
       figma.ui.show();
 
       this.viewportResizeCheckInterval = setInterval(() => {
@@ -189,7 +199,7 @@ export class WindowManagerSandbox {
             this.setWindowMode(message.requestedWindowMode);
           } else if (message.windowOverlapChanged) {
             this.onWindowOverlapChanged();
-          }
+          } 
         }
       });
     });
@@ -220,7 +230,7 @@ export class WindowManagerSandbox {
 
   private onWindowOverlapChanged() {
     if (this.reshowing) {
-      console.log('[WM] skipping becaus reshowing')
+      console.log('[WM] skipping becaus reshowing');
       return;
     }
     if (!this.viewPortResizing && !this.checkForViewPortResize()) {
@@ -309,12 +319,29 @@ export class WindowManagerSandbox {
         this.updateWindowRect(windowRect);
         break;
       case WindowMode.Window:
+        if (message.size.width === undefined) {
+          throw new Error('width not provided handleSizeMessage for window mode')
+        }
+        if (message.size.height === undefined) {
+          throw new Error('height not provided handleSizeMessage for window mode')
+        }
         this.windowModeSize = {
           width: Math.floor(message.size.width),
           height: Math.floor(message.size.height),
         };
         figma.clientStorage.setAsync('windowSize', this.windowModeSize);
         this.updateWindowRect(this.windowModeSize);
+        break;
+      case WindowMode.IntroWindow:
+        if (message.size.width) {
+          this.introModeSize.width = message.size.width;
+        }
+        if (message.size.height) {
+          this.introModeSize.height = message.size.height;
+        }
+
+        console.log('updating intor window size to ' + JSON.stringify(this.introModeSize));
+        this.updateWindowRect(this.introModeSize);
         break;
       default:
         throw new Error('resizing only supported in window and bottom sheet mode');
@@ -332,7 +359,7 @@ export class WindowManagerSandbox {
           height: 100,
           x: 0,
           y: 0,
-        }
+        };
       case WindowMode.Fullscreen:
         return {
           width: Math.floor(figma.viewport.bounds.width * figma.viewport.zoom + leftPanelWidth + rightPanelWidth - (this.fullscreenMarginLeft + this.fullscreenMarginRight)),
@@ -365,11 +392,14 @@ export class WindowManagerSandbox {
           y: Math.floor(figma.viewport.bounds.y + figma.viewport.bounds.height - ((minimizedViewHeight + this.titleBarHeight - RESIZEDETECTION_OVERLAP_PX) / figma.viewport.zoom)),
         };
       case WindowMode.IntroWindow:
+
+        // eslint-disable-next-line no-case-declarations
+        const centerHeight = this.introModeSize.centerHeight ?? this.introModeSize.height;
         return {
           width: Math.floor(this.introModeSize.width),
           height: Math.floor(this.introModeSize.height),
           x: Math.floor(figma.viewport.bounds.x + ((figma.viewport.bounds.width / 2) - ((this.introModeSize.width / 2) / figma.viewport.zoom))),
-          y: Math.floor(figma.viewport.bounds.y + ((figma.viewport.bounds.height / 2) - (((this.introModeSize.height + this.titleBarHeight) / 2) / figma.viewport.zoom))),
+          y: Math.floor(figma.viewport.bounds.y + ((figma.viewport.bounds.height / 2) - (((centerHeight + this.titleBarHeight) / 2) / figma.viewport.zoom))),
         };
       default:
         throw new Error(`Unsupported Window mode ${windowMode}`);

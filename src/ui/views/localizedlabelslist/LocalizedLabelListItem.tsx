@@ -1,11 +1,12 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 import * as React from 'react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import OutsideClickHandler from 'react-outside-click-handler';
 import { Plural } from '../../../lib/base/Plural';
 import { KeyState, LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
 import FigmaUtil from '../../../shared/FigmaUtil';
+import InputSelect, { InputSelectOption, InputSelectionOptionType } from '../../compontents/selectInput/inputselect';
 import Select, { SelectOption } from '../../compontents/select/select';
 import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
 import { Language } from '../../../lib/base/Language';
@@ -43,7 +44,9 @@ export default function LocalizedLabelListItem({
   const labelState = localizedLabel.state!;
 
   const [searchKey, setSearchKey] = useState(undefined as any);
-  const [newKey, setNewKey] = useState<string | undefined>(undefined);
+  const drawerSelectedKey = useRef<string | undefined>(undefined);
+  // Dummy state variable to trigger re-render when currentHighlightIndex.current changes
+  const [, setDummyState] = useState<any>();
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO remove when we implemented the design != keystore resolution
   const translations = translatedKey?.translations[localizedLabel.language];
@@ -80,45 +83,14 @@ export default function LocalizedLabelListItem({
     });
   }
 
-  let keyValue;
+  let keyValue = '';
 
   if (localizedLabel.keyType === KeyState.Linked && localizedLabel.key) {
-    keyValue = { icon: 'key-svg', label: localizedLabel.key, value: localizedLabel.key };
-  } else if (localizedLabel.keyType === KeyState.NoKey) {
-    keyValue = {
-      label: 'no Translation',
-      value: 'no-translation',
-      type: 'action',
-    };
+    keyValue = localizedLabel.key;
   }
 
   return (
     <>
-      <OutsideClickHandler
-        onOutsideClick={() => { setSearchKey(undefined); }}
-        disabled={searchKey === undefined}
-        display="contents"
-      >
-        <div className={`top-drawer${searchKey !== undefined ? ' open' : ' '}`}>
-          <div className="history_view--topHeader">
-            Select Key
-          </div>
-          { searchKey !== undefined && (
-          <TranslationKeyListView
-            showSearchBar
-            translationKeyStore={translationKeyStore}
-            localizedLabelManager={localizedLabelManager}
-            figmaRemote={figmaRemote}
-            initialSearchQuery={MemoryTranslationKeyStore.toQueryObject(`key:* ${searchKey.search}`)}
-            select={(key: string, language: Language, plural: Plural) => {
-              localizedLabelManager.linkKey(localizedLabel, key, language, plural);
-              setSearchKey(undefined);
-            }}
-          />
-          )}
-        </div>
-      </OutsideClickHandler>
-
       <Drawer
         position="top"
         buttons={[
@@ -127,35 +99,42 @@ export default function LocalizedLabelListItem({
             text: 'Cancel',
             key: 'escape',
             callback: () => {
-              setNewKey(undefined);
+              setSearchKey(undefined);
             },
           },
           {
             type: 'primary',
-            text: 'Create Key',
+            text: 'Use Key',
             key: 'enter',
             callback: () => {
-              localizedLabelManager.linkKey(localizedLabel, newKey!, localizedLabel.rootFrameLanguage!, Plural.OTHER);
-              setNewKey(undefined);
+              localizedLabelManager.linkKey(localizedLabel, drawerSelectedKey.current!, localizedLabel.rootFrameLanguage!, Plural.OTHER);
+              setSearchKey(undefined);
             },
+            disabled: drawerSelectedKey.current === undefined,
           },
 
         ]}
-        shown={newKey !== undefined}
+        shown={searchKey !== undefined}
       >
-        <div className="history_view--topHeader">
-          Create a new Key
+        <div className="history_view--topHeader" style={{ width: '3000px' }}>
+          Select Key
         </div>
-        <div className="text-field-text editing ">
-          <input
-            style={{
-              position: 'inherit',
-            }}
-            value={newKey}
-            onChange={(e) => { setNewKey(e.target.value); }}
-            placeholder="Keyname"
-          />
-        </div>
+        { searchKey !== undefined && (
+        <TranslationKeyListView
+          showSearchBar
+          translationKeyStore={translationKeyStore}
+          localizedLabelManager={localizedLabelManager}
+          figmaRemote={figmaRemote}
+          selectedKey={drawerSelectedKey.current}
+          initialSearchQuery={MemoryTranslationKeyStore.toQueryObject(`key:* ${searchKey.search}`)}
+          select={(key: string, language: Language, plural: Plural) => {
+            drawerSelectedKey.current = key;
+            setDummyState({});
+          }}
+          highlightSelectedNodes={false}
+        />
+        )}
+
       </Drawer>
 
       <div className={`row ${selected}${localizedLabel.keyType === KeyState.Linked && translatedKey !== undefined ? ' key-set ' : ' key-unset '}`} onClick={() => { onNodeSelect(localizedLabel.nodeId); }}>
@@ -181,11 +160,24 @@ export default function LocalizedLabelListItem({
           <div className="translation-container" ref={rowRef}>
             <div className="localized-label-details">
               <div className="key-panel">
-                <Select
+                <InputSelect
                   className="key-select"
                   placeholder="Select Key"
                   onChange={(selectedOption) => {
-                    if (selectedOption.type === 'action') {
+                    if (selectedOption.type === InputSelectionOptionType.ACTION) {
+                      if (selectedOption.value === 'select-key') {
+                        setSearchKey({
+                          search: localizedLabel.characters,
+                        });
+                      } else if (selectedOption.value === 'show-key') {
+                        showKey(localizedLabel.key!);
+                      }
+                    } else if (selectedOption.type === InputSelectionOptionType.ADD) {
+                      localizedLabelManager.linkKey(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!, Plural.OTHER);
+                    } else if (selectedOption.type === InputSelectionOptionType.SUGGESTION) {
+                      localizedLabelManager.linkKey(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!, Plural.OTHER);
+                    }
+                    /* if (selectedOption.type === 'action') {
                       if (selectedOption.value === 'no-translation') {
                         localizedLabelManager.setNoKey(localizedLabel);
                       } else if (selectedOption.value === 'select-key') {
@@ -199,96 +191,80 @@ export default function LocalizedLabelListItem({
                       }
                     } else if (selectedOption.type === 'key') {
                       localizedLabelManager.linkKey(localizedLabel, selectedOption.value as string, selectedOption.language!, selectedOption.plural!);
-                    }
+                    } */
                   }}
+                  valueReplaceFn={(value) => value.replace(/[ .]/g, (match) => (match === '.' ? '__' : '_'))}
                   defaultValue={keyValue}
-                  getOptions={() => {
-                    const options = [] as SelectOption[];
+                  getOptions={(enteredValue: string) => {
+                    let options = [] as InputSelectOption[];
 
-                    let noMatch = true;
-                    let defaulValueFound = false;
+                    const keySearch = enteredValue === '' ? '*' : enteredValue;
+                    const textMatchQuery = MemoryTranslationKeyStore.toQueryObject(`exact_text:true key:${keySearch} ${localizedLabel.characters}`);
+                    const { matchingKeys: suggestedKeys } = translationKeyStore.findKeys(textMatchQuery);
+                    const keyMatchQuery = MemoryTranslationKeyStore.toQueryObject(`key:${keySearch}`);
+                    const { matchingKeys: matchingKeysByName } = translationKeyStore.findKeys(keyMatchQuery);
 
-                    const query = MemoryTranslationKeyStore.toQueryObject(`exact_text:true key:* ${localizedLabel.characters}`);
-                    const { matches } = translationKeyStore.findKeys(query);
-                    for (const key of Object.keys(matches)) {
-                      // try to use the language of the root frame
-                      if (matches[key].textMatches[localizedLabel.rootFrameLanguage]) {
-                        const language = localizedLabel.rootFrameLanguage as Language;
-                        let plural = Object.keys(matches[key].textMatches[language]!)[0]! as Plural;
-                        if (matches[key].textMatches[language]![Plural.OTHER]) {
-                          plural = Plural.OTHER;
-                        }
-                        options.push({
-                          icon: 'key-svg',
-                          label: `${key} (${language} - ${plural})`,
-                          value: key,
-                          language,
-                          plural,
-                          type: 'key',
-                        });
-                        noMatch = false;
+                    const isValidKey = enteredValue.length >= 0 && /^[a-zA-Z0-9]$/.test(enteredValue[enteredValue.length - 1]);
 
-                        if (localizedLabel.key === key) {
-                          defaulValueFound = true;
-                        }
-                        // eslint-disable-next-line no-continue
-                        continue;
-                      }
-
-                      // use first match
-                      const langs = Object.keys(matches[key].textMatches);
-                      if (langs.length > 0) {
-                        const language = langs[0] as Language;
-                        const plural = Object.keys(matches[key].textMatches[language]!)[0]! as Plural;
-                        options.push({
-                          icon: 'key-svg',
-                          label: `${key} (${language} - ${plural})`,
-                          value: key,
-                          language,
-                          plural,
-                          type: 'key',
-                        });
-                        noMatch = false;
-                      }
-                    }
-
-                    if (!defaulValueFound && localizedLabel.key) {
-                      options.push({ label: localizedLabel.key, value: localizedLabel.key, type: 'key' });
-                    }
-
-                    if (!noMatch || !defaulValueFound) {
+                    if (isValidKey && !suggestedKeys.has(enteredValue) && !matchingKeysByName.has(enteredValue)) {
                       options.push({
-                        divider: true,
+                        type: InputSelectionOptionType.ADD,
+                        value: enteredValue,
+                        label: '',
+                      });
+                    }
+
+                    if (suggestedKeys.size > 0) {
+                      options.push({
+                        type: InputSelectionOptionType.DIVIDER,
+                        value: '',
+                        label: 'Text matches',
+                      });
+                    }
+
+                    options = options.concat([...suggestedKeys].map((key) => {
+                      matchingKeysByName.delete(key);
+                      return {
+                        type: InputSelectionOptionType.SUGGESTION,
+                        value: key,
+                        label: key,
+                      };
+                    }));
+
+                    if (matchingKeysByName.size > 0) {
+                      options.push({
+                        type: InputSelectionOptionType.DIVIDER,
+                        value: '',
+                        label: 'Keys',
+                      });
+                    }
+                    options = options.concat([...matchingKeysByName].map((key) => ({
+                      type: InputSelectionOptionType.SUGGESTION,
+                      value: key,
+                      label: key,
+                    })));
+
+                    if (options.length > 1) {
+                      options.push({
+                        type: InputSelectionOptionType.DIVIDER,
                         value: '',
                         label: '',
                       });
                     }
 
                     options.push({
-                      label: 'search key...',
+                      label: 'Full Search...',
                       value: 'select-key',
-                      type: 'action',
+                      type: InputSelectionOptionType.ACTION,
                     });
 
-                    options.push({
-                      label: 'create key...',
-                      value: 'create-key',
-                      type: 'action',
-                    });
-
-                    if (localizedLabel.key !== undefined) {
+                    if (keyValue && keyValue !== '') {
                       options.push({
-                        label: 'show key...',
+                        label: 'Go to Translation key...',
                         value: 'show-key',
-                        type: 'action',
+                        type: InputSelectionOptionType.ACTION,
                       });
                     }
-
-                    options.push({
-                      label: 'No Translation',
-                      value: 'no-translation',
-                      type: 'action',
-                    });
 
                     return options;
                   }}

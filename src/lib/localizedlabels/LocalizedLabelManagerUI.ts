@@ -382,8 +382,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         language,
         keyVersion: translationKey.latestVersion,
         // showSampleValues: localizedLabel.rootFrameUseSampleValues,
-        // For now we dont update the text - we just link
-        translationHTML: localizedLabel.translationHTML,
+        translationHTML: translationKey.translations[language]?.[plural]?.text ?? 'no translation',
       });
 
       // TODO check if design is sync with translation - if not offer update with prompt

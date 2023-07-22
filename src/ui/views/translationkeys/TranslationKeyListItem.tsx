@@ -47,7 +47,7 @@ type TranslationKeyListItemProps = {
   translationKeyStore: MemoryTranslationKeyStore,
   localizedLabelManager: LocalizedLabelManagerUI,
   select?: Function,
-  labelSelected: boolean,
+  keySelected: boolean,
 };
 
 export default function TranslationKeyListItem({
@@ -58,7 +58,7 @@ export default function TranslationKeyListItem({
   translationKeyStore,
   localizedLabelManager,
   select,
-  labelSelected,
+  keySelected,
 }: TranslationKeyListItemProps) {
   const { t } = useTranslation();
   const [selected, setSelected] = useState(false);
@@ -192,7 +192,7 @@ export default function TranslationKeyListItem({
   return (
     <div
       ref={rowRef}
-      className={`row row-key ${selected || labelSelected ? 'selected' : ''} ${rowClassNames !== undefined ? rowClassNames : ''}`}
+      className={`row row-key ${selected || keySelected ? 'selected' : ''} ${rowClassNames !== undefined ? rowClassNames : ''}`}
       onClick={() => {
         if (select) {
           select(translationKey.keyName);
@@ -200,7 +200,7 @@ export default function TranslationKeyListItem({
       }}
     >
       <div className="grid-full-height-helper" />
-      <div className={'column column-key grid-item-key ' + (labelSelected ? ' selected' : '')}>
+      <div className={'column column-key grid-item-key ' + (keySelected ? ' selected' : '')}>
         <div className="grid-item-key-header">
           <div className="spacer" />
           <span className="rowText"><MatchView text={translationKey.keyName} match={searchMatch?.keyMatch} /></span>

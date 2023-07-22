@@ -3,6 +3,7 @@
 /* eslint-disable no-continue */
 import React, { ReactNode, useRef, useEffect } from 'react';
 import OutsideClickHandler from 'react-outside-click-handler';
+import './Drawer.css';
 
 type ButtonConfig = {
   text: string,
@@ -90,7 +91,7 @@ export default function Drawer({
               onClick={() => {
                 button.callback();
               }}
-              disabled={false}
+              disabled={button.disabled}
             >
               <span data-tooltip-type="text">
                 {button.text}

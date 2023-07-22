@@ -172,8 +172,17 @@ function App() {
     return (
       <>
         <Tooltip triggerAttribute="data-tooltip-trigger" contentAttribute="data-tooltip-content" />
-        <div className="toolbar">
-          Dev Panel
+        <div className="view dev-panel">
+          <div className="comming-soon">
+            Parrot´s Dev Mode version is comming soon...
+            {' '}
+            <br />
+            <br />
+            Translate your Designs with Parrot in Design Mode in the meantime!
+            <br />
+            <br />
+            🦜
+          </div>
 
         </div>
       </>
@@ -240,6 +249,7 @@ function App() {
           translationKeyStore={memoryTranslationKeyStore}
           localizedLabelManager={localizedLabelManager}
           figmaRemote={figmaRemote}
+          highlightSelectedNodes
         />
       );
       break;
@@ -249,7 +259,6 @@ function App() {
       );
       break;
 
-    
     case 'export':
       view = (
         <Export
@@ -317,23 +326,23 @@ function App() {
 
         <div className="window-control">
           <SegmentedControl
-            segments={[{
+            segments={[/* {
               iconName: 'window-mode-minimized-svg',
               value: WindowMode.Minimized,
               tooltip: 'Minimize',
-            }, {
-              iconName: 'window-mode-bottom-attached-svg',
-              value: WindowMode.BottomSheet,
-              tooltip: 'Dock to bottom',
-            }, {
-              iconName: 'window-mode-window-svg',
-              value: WindowMode.Window,
-              tooltip: 'Window Mode',
-            }, {
-              iconName: 'window-mode-fullscreen-svg',
-              value: WindowMode.Fullscreen,
-              tooltip: 'Fullscreen Mode',
-            }]}
+            }, */ {
+                iconName: 'window-mode-bottom-attached-svg',
+                value: WindowMode.BottomSheet,
+                tooltip: 'Dock to bottom',
+              }, {
+                iconName: 'window-mode-window-svg',
+                value: WindowMode.Window,
+                tooltip: 'Window Mode',
+              }, {
+                iconName: 'window-mode-fullscreen-svg',
+                value: WindowMode.Fullscreen,
+                tooltip: 'Fullscreen Mode',
+              }]}
             selectedSegment={windowMode}
             onChoose={(choosenWindowMode: WindowMode) => { WindowManagerUi.instance?.requestWindowMode(choosenWindowMode, false); }}
           />

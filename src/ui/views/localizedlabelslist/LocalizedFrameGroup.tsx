@@ -58,15 +58,18 @@ export default function LocalizedFrameGroup({
   let rootFrameLanguage: SelectOption | undefined;
   const languageOptiones = [] as SelectOption[];
 
-  const languages = localizedLabelManager.keyStore.getLanugages()!;
+  const languages = localizedLabelManager.keyStore.getLanugages()!.sort();
+
+  languageOptiones.push(toLanguageOption(localizedLabelManager.keyStore.getBaseLanugage()!));
 
   for (const language of languages) {
     const currentLanguageOption = toLanguageOption(language);
-
     if (language === firstTranslationState.rootFrameLanguage) {
       rootFrameLanguage = currentLanguageOption;
     }
-    languageOptiones.push(currentLanguageOption);
+    if (localizedLabelManager.keyStore.getBaseLanugage()! !== language) {
+      languageOptiones.push(currentLanguageOption);
+    }
   }
 
   async function onLanguageSelectionClick(firstLocalizedLabelInFrame: LocalizedLabel, language: Language) {

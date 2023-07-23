@@ -1,6 +1,6 @@
 import { Language } from '../base/Language';
 import { Plural } from '../base/Plural';
-import { Fillins } from '../keystore/TranslationKey';
+import { Fillins, TranslationEntry } from '../keystore/TranslationKey';
 import { DeltaOp } from './LocalizedLabelManager';
 
 export enum KeyState {
@@ -92,4 +92,5 @@ export interface LocalizedLabel {
 
   derivedKey?: string;
 
+  unlinkedTranslations: TranslationEntry;
 }

@@ -231,18 +231,19 @@ export default function LocalizedLabelListItem({
                       };
                     }));
 
-                    if (matchingKeysByName.size > 0) {
+                    if (keySearch.length > 2 && matchingKeysByName.size > 0) {
                       options.push({
                         type: InputSelectionOptionType.DIVIDER,
                         value: '',
                         label: 'Keys',
                       });
+
+                      options = options.concat([...matchingKeysByName].map((key) => ({
+                        type: InputSelectionOptionType.SUGGESTION,
+                        value: key,
+                        label: key,
+                      })));
                     }
-                    options = options.concat([...matchingKeysByName].map((key) => ({
-                      type: InputSelectionOptionType.SUGGESTION,
-                      value: key,
-                      label: key,
-                    })));
 
                     if (options.length > 1) {
                       options.push({

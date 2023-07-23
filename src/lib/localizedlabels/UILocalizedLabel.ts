@@ -1,10 +1,11 @@
 import Quill, { Delta as DeltaType, DeltaOperation } from 'quill';
+import blake from 'blakejs';
 import { Language } from '../base/Language';
 import { Plural } from '../base/Plural';
 import { KeyState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
 import { UITranslationKey } from '../keystore/UITranslationKey';
 import {
-  Fillins, Placeholder, PlaceholderType, PlaceholdersByName, TranslationKey,
+  Fillins, Placeholder, PlaceholderType, PlaceholdersByName, TranslationEntry, TranslationKey,
 } from '../keystore/TranslationKey';
 import LocalizedLabelManager, { DeltaOp, MARKER_CHARACTER } from './LocalizedLabelManager';
 
@@ -81,6 +82,8 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   labelStyle: LabelStyle;
 
+  unlinkedTranslations: TranslationEntry; // | undefined;
+
   // utils
   // to manage the label within the UI keep a reference of the Label manager
   manager: ILocalizedLabelManagerUI;
@@ -114,6 +117,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     this.warnings = localizedLabel.warnings;
     this.labelStyle = localizedLabel.labelStyle;
     this.translationHTML = UILocalizedLabel.toHtml(localizedLabel.characters, localizedLabel.ops, this.fillins, true);
+    this.unlinkedTranslations = localizedLabel.unlinkedTranslations;
     this.state = this.getState();
   }
 
@@ -450,6 +454,28 @@ export class UILocalizedLabel implements LocalizedLabel {
     missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | undefined>,
   ) {
     if (this.keyType === KeyState.Unset) {
+      const baseLanguage = this.manager.keyStore.getBaseLanugage()! as Language;
+      // TODO check if the target language is avaialable and up to date
+      let translationUpToDate = false;
+      const baseLanguageHTML = this.language === baseLanguage ? this.translationHTML : this.unlinkedTranslations.translations?.[baseLanguage]?.[this.pluralId]?.text!;
+
+      if (this.unlinkedTranslations
+        && this.unlinkedTranslations.translations?.[targetLanguage]?.[this.pluralId]?.text) {
+        const currentTranslationBaseLangHash = this.unlinkedTranslations.translations?.[targetLanguage]?.[this.pluralId]?.baseLangHash;
+        if (baseLanguageHTML && blake.blake2sHex(baseLanguageHTML) === currentTranslationBaseLangHash) {
+          translationUpToDate = true;
+        }
+      }
+      let translationHTML = undefined as string | undefined;
+      if (!translationUpToDate) {
+        translationHTML = await missingTranslationProvider(baseLanguageHTML, baseLanguage as string, targetLanguage);
+      }
+
+      await this.manager.updateLabelProperties(this.nodeId, {
+        language: targetLanguage,
+        plural: this.pluralId,
+        translationHTML,
+      });
       return;
     }
 
@@ -468,7 +494,8 @@ export class UILocalizedLabel implements LocalizedLabel {
     let translationKey = this.manager.keyStore.getKey(translationKeyName);
     // check if key exists
     if (translationKey === undefined) {
-      const translation = await missingTranslationProvider(this.translationHTML!, this.language, targetLanguage);
+      throw new Error('Key linked to label does not exist - not removed when key was deleted?');
+      /* const translation = await missingTranslationProvider(this.translationHTML!, this.language, targetLanguage);
 
       // ok we have a fresh key to create - no translation to expect
       translationKey = await this.manager.keyStore.createKey(translationKeyName, [{
@@ -482,7 +509,7 @@ export class UILocalizedLabel implements LocalizedLabel {
         text: translation,
         skip: false,
       }], this.pluralId !== Plural.OTHER);
-      labelVersion = translationKey.latestVersion;
+      labelVersion = translationKey.latestVersion; */
     } else {
       if (labelState.behind === 0) {
         // updating key
@@ -522,6 +549,7 @@ export class UILocalizedLabel implements LocalizedLabel {
         key: translationKeyName,
         keyType: KeyState.Linked,
         language: targetLanguage,
+        plural: this.pluralId,
         translationHTML: versionToApply?.translations?.[targetLanguage]?.[this.pluralId]?.text,
         keyVersion: labelVersion,
       });

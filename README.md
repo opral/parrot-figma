@@ -430,6 +430,8 @@ What we want from ui point of view:
  Bugs:
  - [ ] window resize handle is missing on first start
  - [ ] minimized window position not saved
+ - [ ] key still linked after deletion
+ - [ ] no confirmation for deletion
  
  UX Flaws:
  - [ ] meaning of the language picker for a frame not clear

@@ -3,7 +3,7 @@ const FEATURES_FLAGS = {
   versioning: false,
   disableKeyLanguage: false,
   export: false,
-  import: false,
+  import: true,
 };
 
 export default FEATURES_FLAGS;

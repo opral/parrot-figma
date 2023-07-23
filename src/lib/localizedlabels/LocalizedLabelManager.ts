@@ -8,7 +8,7 @@ import { KeyState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../base/Plural';
 import ChangeEvent from './ChangeEvent';
 import { FigmaFileTranslationKeyStore } from '../keystore/FigmaFileTranslationKeyStore';
-import { Fillins } from '../keystore/TranslationKey';
+import { Fillins, TranslationEntry } from '../keystore/TranslationKey';
 import VirtualTree, { VirtualTreeNode } from './VirtualTree';
 import LinksLoadedEvent from './LinksLoadedEvent';
 
@@ -34,6 +34,7 @@ export interface SandboxUpdateLabelProperties {
   ops?: any
   fillins?: Fillins,
   showSampleValues?: boolean,
+  unlinkedTranslations?: TranslationEntry | null
 }
 
 export interface DeltaOp {
@@ -73,6 +74,8 @@ export default class LocalizedLabelManager {
 
   public sampleValuesDataKey = 'sv';
 
+  public unlinkedTranslationsDataKey = 'ut';
+
   public fillinsKey = 'fi';
 
   public languageDataKey = 'l';
@@ -82,6 +85,8 @@ export default class LocalizedLabelManager {
   public keyVersionDataKey = 'kv';
 
   public keyPluralDataKey = 'kp';
+
+  public autoRenameHashKey = 'arh';
 
   public keyDataKey = 'key';
 
@@ -404,24 +409,24 @@ export default class LocalizedLabelManager {
     const keysLoaded = new Set<string>();
 
     for (const textNode of textNodesToPrcoess) {
-      const keyType = textNode.getPluginData(this.keyTypeDataKey);
-      if (keyType !== '' && (keyType as KeyState) === KeyState.Linked) {
-        if (this.firstTextnodeInViewport === undefined && textNode.absoluteBoundingBox) {
-          if (textNode.absoluteBoundingBox.x > figma.viewport.bounds.x
-             && textNode.absoluteBoundingBox.x < figma.viewport.bounds.x + figma.viewport.bounds.width
-             && textNode.absoluteBoundingBox.y > figma.viewport.bounds.y
-             && textNode.absoluteBoundingBox.y < figma.viewport.bounds.y + figma.viewport.bounds.height) {
-            this.firstTextnodeInViewport = textNode.id;
-            if (figma.currentPage.selection.length === 0) {
-              figma.currentPage.selection = [textNode];
-            }
+      if (this.firstTextnodeInViewport === undefined && textNode.absoluteBoundingBox) {
+        if (textNode.absoluteBoundingBox.x > figma.viewport.bounds.x
+           && textNode.absoluteBoundingBox.x < figma.viewport.bounds.x + figma.viewport.bounds.width
+           && textNode.absoluteBoundingBox.y > figma.viewport.bounds.y
+           && textNode.absoluteBoundingBox.y < figma.viewport.bounds.y + figma.viewport.bounds.height) {
+          this.firstTextnodeInViewport = textNode.id;
+          if (figma.currentPage.selection.length === 0) {
+            figma.currentPage.selection = [textNode];
           }
         }
+      }
+      const textNodeId = textNode.id;
+      this.virtualTree.addNode(textNode, textNodeId);
 
+      const keyType = textNode.getPluginData(this.keyTypeDataKey);
+      if (keyType !== '' && (keyType as KeyState) === KeyState.Linked) {
         const key = textNode.getPluginData(this.keyDataKey);
         if (key !== '') {
-          const textNodeId = textNode.id;
-          this.virtualTree.addNode(textNode, textNodeId);
           const previousKey = this.refreshLabelKeyLinkCache(textNodeId, key);
           if (previousKey) {
             keysLoaded.add(previousKey);
@@ -649,6 +654,7 @@ export default class LocalizedLabelManager {
       // console.log('setting name');
       textNode.name = changedProperties.labelName;
       textNode.autoRename = false;
+      textNode.setPluginData(this.autoRenameHashKey, '');
     }
 
     if (changedProperties.key !== undefined) {
@@ -669,6 +675,31 @@ export default class LocalizedLabelManager {
 
     if (changedProperties.fillins !== undefined) {
       textNode.setPluginData(this.fillinsKey, JSON.stringify(changedProperties.fillins));
+    }
+
+    if (changedProperties.unlinkedTranslations !== undefined) {
+      if (changedProperties.unlinkedTranslations === null) {
+        // clean up the unlinked translation
+        textNode.setPluginData(this.unlinkedTranslationsDataKey, '');
+      } else {
+        textNode.setPluginData(this.unlinkedTranslationsDataKey, JSON.stringify(changedProperties.unlinkedTranslations));
+      }
+    }
+
+    if (changedProperties.plural !== undefined) {
+      textNode.setPluginData(this.keyPluralDataKey, changedProperties.plural ? changedProperties.plural : '');
+    }
+
+    if (changedProperties.language !== undefined) {
+      if (changedProperties.language !== (await this.translationKeyStore!.getConfig()).baseLanguage) {
+        if (textNode.autoRename) {
+          textNode.setPluginData(this.autoRenameHashKey, textNode.characters);
+          textNode.autoRename = false;
+        }
+      } else if (textNode.getPluginData(this.autoRenameHashKey) === textNode.name) {
+        textNode.autoRename = true;
+      }
+      textNode.setPluginData(this.languageDataKey, changedProperties.language ? changedProperties.language : '');
     }
 
     if (changedProperties.characters !== undefined) {
@@ -781,14 +812,6 @@ export default class LocalizedLabelManager {
           textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, boldItalicFontName);
         }
       }
-    }
-
-    if (changedProperties.plural !== undefined) {
-      textNode.setPluginData(this.keyPluralDataKey, changedProperties.plural ? changedProperties.plural : '');
-    }
-
-    if (changedProperties.language !== undefined) {
-      textNode.setPluginData(this.languageDataKey, changedProperties.language ? changedProperties.language : '');
     }
 
     // allow this function to return sucessfully before we start the next update in the queue
@@ -946,6 +969,7 @@ export default class LocalizedLabelManager {
     const useSampleValues = node.getPluginData(this.sampleValuesDataKey) !== '';
 
     const filledTemplateHash = node.getPluginData(this.filledTemplateHashDataKey) !== '' ? node.getPluginData(this.filledTemplateHashDataKey) : undefined;
+    const unlinkedTranslations = node.getPluginData(this.unlinkedTranslationsDataKey) !== '' ? JSON.parse(node.getPluginData(this.unlinkedTranslationsDataKey)) : undefined;
 
     // eslint-disable-next-line consistent-return
     return {
@@ -975,6 +999,7 @@ export default class LocalizedLabelManager {
       ops: tokenizedTextResult.deltaOps,
       warnings: tokenizedTextResult.warnings,
       labelStyle: tokenizedTextResult.labelStyle,
+      unlinkedTranslations,
     };
   }
 

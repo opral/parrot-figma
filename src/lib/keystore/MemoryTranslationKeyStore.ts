@@ -440,15 +440,15 @@ export default class MemoryTranslationKeyStore extends EventTarget {
         if (query.key !== '*') {
           const keyMatchStart = key.keyName.toLowerCase().indexOf(query.key.toLowerCase());
 
-          if (keyMatchStart === -1) {
-            // eslint-disable-next-line no-continue
-            results.matchingKeys.delete(key.keyName);
-          } else {
+          if (keyMatchStart === 0) {
             if (!results.matches[key.keyName]) {
               results.matches[key.keyName] = { textMatches: {}, keyMatch: undefined };
             }
             results.matches[key.keyName].keyMatch = { start: keyMatchStart, length: query.key.length };
             results.inKeys.add(key.keyName);
+          } else {
+            // eslint-disable-next-line no-continue
+            results.matchingKeys.delete(key.keyName);
           }
         }
       } else if (query.text !== undefined && query.text !== '') {

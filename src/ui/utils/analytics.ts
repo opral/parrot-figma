@@ -5,7 +5,7 @@ export function track(name: string, opts = {}) {
   if (process.env.MIXPANEL_ACCESS_TOKEN) {
     mixpanel.track(name, opts);
   } else {
-    console.log(`tracking: ${name} ${JSON.stringify(opts)}`);
+    console.log('tracking: ' + name + ' ' + JSON.stringify(opts));
   }
 }
 

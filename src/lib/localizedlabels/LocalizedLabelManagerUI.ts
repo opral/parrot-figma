@@ -1,4 +1,5 @@
 import blake from 'blakejs';
+import { placeholder } from '@codemirror/view';
 import { KeyState, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../base/Plural';
 import LocalizedLabelManager, { SandboxUpdateLabelProperties } from './LocalizedLabelManager';
@@ -7,9 +8,8 @@ import MemoryTranslationKeyStore from '../keystore/MemoryTranslationKeyStore';
 import ChangeEvent from './ChangeEvent';
 
 import { ILocalizedLabelManagerUI, UILocalizedLabel } from './UILocalizedLabel';
-import { Fillins } from '../keystore/TranslationKey';
+import { Fillins, TranslationEntry } from '../keystore/TranslationKey';
 import LinksLoadedEvent from './LinksLoadedEvent';
-import { placeholder } from '@codemirror/view';
 import { ImportTranslationKey } from '../import/ImportTranslationKey';
 
 export default class LocalizedLabelManagerUI extends EventTarget implements ILocalizedLabelManagerUI {
@@ -355,6 +355,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         keyVersion: translationKey.latestVersion,
         translationHTML: historyEntryForVersion!.translations?.[localizedLabel.rootFrameLanguage]?.[localizedLabel.pluralId]?.text,
         language: localizedLabel.rootFrameLanguage,
+        plural: localizedLabel.pluralId,
         fillins,
       }));
     }
@@ -387,12 +388,22 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
       // TODO check if design is sync with translation - if not offer update with prompt
     } else {
-      translationKey = await this.keyStore.createKey(keyToLinkTo, [{
-        language,
-        plural,
-        text: localizedLabel.translationHTML,
-        skip: false,
-      }], plural !== Plural.OTHER, localizedLabel.fillins);
+      if (localizedLabel.unlinkedTranslations) {
+        const translations = Object.entries(localizedLabel.unlinkedTranslations.translations!).flatMap(([languageFound, pluralsFound]) => Object.entries(pluralsFound).map(([pluralFound, { text }]) => {
+          if (languageFound === language && plural === pluralFound) {
+            return ({ language: languageFound, plural: pluralFound, text: localizedLabel.translationHTML } as { language: Language, plural: Plural, text: string, skip: false })
+          }
+          return ({ language: languageFound, plural: pluralFound, text } as { language: Language, plural: Plural, text: string, skip: false });
+        }));
+        translationKey = await this.keyStore.createKey(keyToLinkTo, translations, localizedLabel.unlinkedTranslations.plural, localizedLabel.fillins);
+      } else {
+        translationKey = await this.keyStore.createKey(keyToLinkTo, [{
+          language,
+          plural,
+          text: localizedLabel.translationHTML,
+          skip: false,
+        }], plural !== Plural.OTHER, localizedLabel.fillins);
+      }
       await this.updateLabelProperties(localizedLabel.nodeId, {
         key: keyToLinkTo,
         keyType: KeyState.Linked,
@@ -478,7 +489,8 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     plural?: Plural,
     translationHTML?: string,
     fillins?: Fillins,
-    filledTemplateHash?: string
+    filledTemplateHash?: string,
+    interimsTranslationEntry?: TranslationEntry
   }) {
     const localizedLabelCached = this.cachedLocalisedLabels[nodeId]!;
     const labelFillins = changedProperties.fillins ?? localizedLabelCached.fillins;
@@ -498,15 +510,35 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
     changedPropertiesToForwared.fillins = localizedLabelCached.getFillins(changedProperties.key, labelFillins);
 
+    if (localizedLabelCached.keyType === KeyState.Linked) {
+      changedPropertiesToForwared.unlinkedTranslations = null;
+    }
+
     if (!changedProperties.translationHTML) {
       if (changedProperties.language !== undefined
         || changedProperties.plural !== undefined
         || changedProperties.keyVersion !== undefined) {
+        // only language, plural have changed eventually
+        const language = changedProperties.language ?? localizedLabelCached.language;
+        const plural = changedProperties.plural ?? localizedLabelCached.pluralId;
+        const version = changedProperties.keyVersion ?? localizedLabelCached.keyVersion;
+
         if (localizedLabelCached.keyType === KeyState.Linked) {
-          const language = changedProperties.language ?? localizedLabelCached.language;
-          const plural = changedProperties.plural ?? localizedLabelCached.pluralId;
-          const version = changedProperties.keyVersion ?? localizedLabelCached.keyVersion;
           const translationHTML = translationKey?.getInVersion(version).translations[language]?.[plural]?.text ?? 'TODO Missinng Translation when setting Version';
+          const textAndOps = UILocalizedLabel.toTextAndOps(translationHTML, labelFillins);
+
+          // TODO handle placeholders
+
+          changedPropertiesToForwared.ops = textAndOps.ops;
+          changedPropertiesToForwared.characters = textAndOps.text;
+          changedPropertiesToForwared.filledTemplateHash = blake.blake2sHex(translationHTML);
+        } else {
+          // we expect to have an interims key already because otherwise we expect a new translationHTML from the provider or a fallback
+          if (localizedLabelCached.unlinkedTranslations === undefined) {
+            throw new Error('unlinked translation expected when no translation HTML is passed...');
+          }
+          // NOTE instead of missing translation we could mark the label and use the base language...
+          const translationHTML = localizedLabelCached.unlinkedTranslations!.translations![language]?.[plural]?.text ?? 'TODO Missinng Translation when setting Version';
           const textAndOps = UILocalizedLabel.toTextAndOps(translationHTML, labelFillins);
 
           // TODO handle placeholders
@@ -519,10 +551,56 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     } else {
       // TODO handle placeholders
       // const translationHtml = UILocalizedLabel.toText(translation, labelFillins); // TODO #9 how to deal with missing translations?
+
       const textAndOps = UILocalizedLabel.toTextAndOps(changedProperties.translationHTML, labelFillins);
       changedPropertiesToForwared.ops = textAndOps.ops;
       changedPropertiesToForwared.characters = textAndOps.text;
       changedPropertiesToForwared.filledTemplateHash = blake.blake2sHex(`${textAndOps.text}||||${JSON.stringify(textAndOps.ops)}`);
+
+      if (localizedLabelCached.keyType !== KeyState.Linked) {
+        // key is not linked yet - store translation in labels unlinkedTranslations until its linked to one
+        const baseLanguage = this.keyStore.getBaseLanugage()!;
+        const currentPlural = (localizedLabelCached.pluralId ?? Plural.OTHER);
+        let { unlinkedTranslations } = localizedLabelCached as any;
+        if (unlinkedTranslations === undefined || unlinkedTranslations.translations === undefined) {
+          // create interims translations in label using its current state for the baselang - we always start with the base lang so this is posible :)
+          unlinkedTranslations = {
+            translations: {} as any,
+            plural: false,
+          } as any;
+          unlinkedTranslations.translations[baseLanguage] = {};
+          unlinkedTranslations.translations[baseLanguage][currentPlural] = {
+            text: localizedLabelCached.translationHTML,
+          };
+        }
+
+        let baseLanguageHTML = unlinkedTranslations.translations[baseLanguage][currentPlural].text;
+
+        if (localizedLabelCached.language === baseLanguage) {
+          baseLanguageHTML = localizedLabelCached.translationHTML;
+          unlinkedTranslations.translations[baseLanguage][currentPlural] = {
+            text: baseLanguageHTML,
+          };
+        }
+        // TODO #23 Interims key update/create an entry in the interims translation for the language/plural passed - store base language hash to know if base language changed
+
+        const targetLanguage = changedProperties.language ?? localizedLabelCached.language;
+        const targetPlural = changedProperties.plural ?? currentPlural;
+        if (!unlinkedTranslations.translations[targetLanguage]) {
+          unlinkedTranslations.translations[targetLanguage] = {};
+        }
+
+        if (!unlinkedTranslations.translations[targetLanguage][targetPlural]) {
+          unlinkedTranslations.translations[targetLanguage][targetPlural] = {};
+        }
+
+        unlinkedTranslations.translations[targetLanguage][targetPlural].text = changedProperties.translationHTML;
+        if (targetLanguage !== baseLanguage) {
+          unlinkedTranslations.translations[targetLanguage][targetPlural].baseLangHash = blake.blake2sHex(baseLanguageHTML);
+        }
+
+        changedPropertiesToForwared.unlinkedTranslations = unlinkedTranslations;
+      }
     }
 
     const localizedLabel = await this.localizedLabelMangerSandbox.updateLabelProperties(nodeId, changedPropertiesToForwared);

@@ -15,6 +15,7 @@ export type TranslationEntry = {
     [language in Language]? : {
       [plural in Plural]? : {
         text?: string,
+        baseLangHash?: string,
         verified: boolean,
         skip?: boolean
       }

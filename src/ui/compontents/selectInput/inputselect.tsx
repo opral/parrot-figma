@@ -534,8 +534,7 @@ export default function InputSelect({
                   case 'Enter':
                     selectHighlight();
                     break;
-                  case 'Esapec':
-                    debugger;
+                  case 'Escape':
                     onExpandedStateChange(false);
                     break;
 

@@ -8,7 +8,7 @@ import './Drawer.css';
 type ButtonConfig = {
   text: string,
   callback: Function,
-  type: 'primary' | 'secondary' | 'descructive',
+  type: 'primary' | 'primary-destructive' | 'secondary' | 'secondary-destructive',
   key: undefined | 'enter' | 'escape'
   disabled?: boolean
 };

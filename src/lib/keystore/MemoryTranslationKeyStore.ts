@@ -291,7 +291,6 @@ export default class MemoryTranslationKeyStore extends EventTarget {
         } else if (filterParts[0] === 'exact_text' && filterParts.length > 1) {
           searchQueryObj.exactText = filterParts[1] === 'true';
         } else if (filterParts[0] === 'key' && filterParts.length > 1) {
-          console.log(filterParts);
           // eslint-disable-next-line prefer-destructuring
           searchQueryObj.key = filterParts[1];
         } else {

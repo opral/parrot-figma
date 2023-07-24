@@ -180,7 +180,7 @@ export default function LanguageSetup({
             File Type currently not supported.
             <br />
             {' '}
-            Supported are Apple's
+            Supported are l18next Json Files, Apple's
             {' '}
             <b>.stringsdict</b>
             ,

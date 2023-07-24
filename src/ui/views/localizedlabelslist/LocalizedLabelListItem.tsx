@@ -1,7 +1,7 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 import * as React from 'react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import OutsideClickHandler from 'react-outside-click-handler';
 import { Plural } from '../../../lib/base/Plural';
 import { KeyState, LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
@@ -83,11 +83,20 @@ export default function LocalizedLabelListItem({
     });
   }
 
+  
   let keyValue = '';
 
   if (localizedLabel.keyType === KeyState.Linked && localizedLabel.key) {
     keyValue = localizedLabel.key;
   }
+
+  console.log('collecting information' + keyValue);
+
+  useEffect(() => {
+    setDummyState({});
+    console.log('dummy state set');
+  }, [localizedLabel]);
+
 
   return (
     <>
@@ -162,8 +171,13 @@ export default function LocalizedLabelListItem({
               <div className="key-panel">
                 <InputSelect
                   className="key-select"
-                  placeholder="Select Key"
-                  onChange={(selectedOption) => {
+                  placeholder="Link Translation Key"
+                  inputPlaceholder="e.g. home__tagline"
+                  tooltip="Link a Translation Key to this Text to reuse translations and straight forwaredd Developer handover."
+                  onCancel={() => {
+                    setDummyState({});
+                  }}
+                  onChange={async (selectedOption) => {
                     if (selectedOption.type === InputSelectionOptionType.ACTION) {
                       if (selectedOption.value === 'select-key') {
                         setSearchKey({
@@ -171,11 +185,13 @@ export default function LocalizedLabelListItem({
                         });
                       } else if (selectedOption.value === 'show-key') {
                         showKey(localizedLabel.key!);
+                      } else if (selectedOption.value === 'reset') {
+                        await localizedLabelManager.unsetLabel(localizedLabel);
                       }
                     } else if (selectedOption.type === InputSelectionOptionType.ADD) {
-                      localizedLabelManager.linkKey(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!, Plural.OTHER);
+                      await localizedLabelManager.linkKey(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!, Plural.OTHER);
                     } else if (selectedOption.type === InputSelectionOptionType.SUGGESTION) {
-                      localizedLabelManager.linkKey(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!, Plural.OTHER);
+                      await localizedLabelManager.linkKey(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!, Plural.OTHER);
                     }
                     /* if (selectedOption.type === 'action') {
                       if (selectedOption.value === 'no-translation') {
@@ -274,7 +290,9 @@ export default function LocalizedLabelListItem({
                 <div className="grid">
 
                   <div className="languageWrapper" key={localizedLabel.language}>
-                    <div className="grid-item-language"><span className="rowText">{localizedLabel.keyType === KeyState.Linked ? localizedLabel.language : localizedLabel.rootFrameLanguage}</span></div>
+                    <div className="grid-item-language" 
+                          data-tooltip-trigger="div"
+                          data-tooltip-content="Current Language of this Label"><span className="rowText">{localizedLabel.keyType === KeyState.Linked ? localizedLabel.language : localizedLabel.rootFrameLanguage}</span></div>
                     <div key={localizedLabel.pluralId} className={`keyPluralWrapper ${translatedKey?.plural ? 'onePlural' : ' multiplePlurals'}`}>
                       { FEATURES_FLAGS.plurals
                       && (

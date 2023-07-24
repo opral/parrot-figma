@@ -162,12 +162,12 @@ export default function LocalizedLabelsListView({
     <>
       {localizedLabels.length === 0 && (
       <div className="emptyState">
-        <div className="emptyStateTitle">No Frame or Section selected</div>
+        <div className="emptyStateTitle">No Frame selected</div>
         <div className="emptyStateSubtitle">
           <div>
             Labels for localization
             <br />
-            will show up here when selected - Select a Frame or Section in your Design.
+            will show up here when selected - Select a Frame containing Text in your Design.
           </div>
         </div>
       </div>

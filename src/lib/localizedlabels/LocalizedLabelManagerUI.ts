@@ -372,6 +372,24 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     await this.localizedLabelMangerSandbox.commitUndo();
   }
 
+  async deleteKey(keyToDelete: string) {
+    await this.unlinLabelsWithKey(keyToDelete);
+    await this.keyStore.deleteKey(keyToDelete);
+
+    await this.localizedLabelMangerSandbox.commitUndo();
+  }
+
+  async unlinLabelsWithKey(keyToUnlink: string) {
+    const labelsWithKey = await this.getWithKey(keyToUnlink);
+
+    for (const labelWithKey of labelsWithKey) {
+      // eslint-disable-next-line no-await-in-loop
+      await this.updateLabelProperties(labelWithKey.nodeId, {
+        keyType: KeyState.Unset,
+      });
+    }
+  }
+
   async linkKey(localizedLabel: UILocalizedLabel, keyToLinkTo: string, language: Language, plural: Plural) {
     let translationKey = this.keyStore.getKey(keyToLinkTo);
 
@@ -426,7 +444,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     await this.localizedLabelMangerSandbox.commitUndo();
   }
 
-  async resetLabel(localizedLabel: LocalizedLabel) {
+  async unsetLabel(localizedLabel: LocalizedLabel) {
     await this.updateLabelProperties(localizedLabel.nodeId, {
       keyType: KeyState.Unset,
     });

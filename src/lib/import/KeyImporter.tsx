@@ -10,7 +10,7 @@ import AndroidXMLImporter from './AndroidXmlImporter';
 
 import { ImportTranslationKey } from './ImportTranslationKey';
 import LocalizedLabelManagerUI from '../localizedlabels/LocalizedLabelManagerUI';
-import JsonKeyValueImporter from './JsonKeyValueImporter';
+import I18NextKeyValueImporter from './I18Next';
 
 function toChangeArray(importKey: ImportTranslationKey, language: Language) {
   return [{
@@ -25,7 +25,7 @@ export enum ImportType {
   UNSUPPORTED = 'not supported',
   IOS_STRINGS = 'iOS Strings File',
   ANDROID_XML = 'Android resource XML',
-  KEYVALUE_JSON = 'L18Next',
+  L18N_JSON = 'l18next JSON',
 }
 
 export type ImportResult = {
@@ -83,12 +83,12 @@ export default class KeyImporter {
       return results;
     }
 
-    // importObject = JsonKeyValueImporter.toImportObject(fileName, content);
-    // if (importObject) {
-    //   results.type = ImportType.KEYVALUE_JSON;
-    //   results.keys = importObject;
-    //   return results;
-    // }
+    importObject = I18NextKeyValueImporter.toImportObject(fileName, content);
+    if (importObject) {
+      results.type = ImportType.L18N_JSON;
+      results.keys = importObject;
+      return results;
+    }
 
     return results;
   }

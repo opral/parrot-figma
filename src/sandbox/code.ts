@@ -20,7 +20,7 @@ const figmaRemote = new FigmaUtil();
 const fileConfigured = figmaRemote.getRootPluginDataSync('fileSetupCompleted') !== '';
 const introShownToUser = true; // TODO change this to a config when implemented
 
-
+figma.root.setRelaunchData({ open: 'Let Your Design Speak all Languages' });
 
 WindowManagerSandbox.init({
   bottomSheet: {

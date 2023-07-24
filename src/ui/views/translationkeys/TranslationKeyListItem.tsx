@@ -4,7 +4,7 @@
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 /* eslint-disable jsx-a11y/label-has-associated-control */
 import * as React from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
 import OutsideClickHandler from 'react-outside-click-handler';
@@ -25,6 +25,8 @@ import { PlaceholderView } from '../../compontents/translationEditor/Placeholder
 import PlaceholderEditorListItem from '../../compontents/placeholder/PlaceholderEditor';
 import AsyncImage from './AsyncImage';
 import FEATURES_FLAGS from '../../featuretoggle';
+import { ImportType } from '../../../lib/import/KeyImporter';
+import Drawer from '../../compontents/drawer/Drawer';
 // import ReactQuill from 'react-quill';
 
 interface VersionEntry {
@@ -66,6 +68,8 @@ export default function TranslationKeyListItem({
   const [showPlaceholderEditor, setShowPlaceholderEditor] = useState(false);
   const [defaultFillins, setDefaultFillins] = useState(translationKey.defaultFillins);
   const [history, setHistory] = useState<undefined | VersionEntry[]>(undefined);
+  const [keyToDelete, setKeyToDelete] = useState<undefined | string>(undefined);
+  const [keyToDeleteReferences, setKeyToDeleteReferences] = useState<undefined | number>(undefined);
 
   const [showHistory, setShowHistory] = useState<undefined | { language: Language, plural: Plural }>(undefined);
 
@@ -76,6 +80,17 @@ export default function TranslationKeyListItem({
   async function onNodeSelect(nodeId: string) {
     await figmaRemote.scrollIntoViewIfNeeded(nodeId, true);
   }
+
+  useEffect(() => {
+    const updateReferenceCount = async () => {
+      const referenceCount = (await localizedLabelManager.getWithKey(keyToDelete!)).length;
+      setKeyToDeleteReferences(referenceCount);
+    };
+
+    if (keyToDelete) {
+      updateReferenceCount();
+    }
+  }, [keyToDelete]);
 
   async function showAll() {
     // TODO check in which page the label is in
@@ -210,8 +225,10 @@ export default function TranslationKeyListItem({
           <>
             <span
               className="layerIcon iconWrapper button"
+              data-tooltip-trigger="span"
+              data-tooltip-content="Delete this translation key"
               onClick={() => {
-                translationKeyStore.deleteKey(translationKey.keyName);
+                setKeyToDelete(translationKey.keyName);
               }}
             >
               <span className="svg-container trash-svg" />
@@ -459,6 +476,62 @@ export default function TranslationKeyListItem({
           />
         </div>
       </OutsideClickHandler>
+      <Drawer
+        position="top"
+        buttons={[
+          {
+            type: 'secondary',
+            text: 'Cancel',
+            key: 'escape',
+            callback: () => {
+              // set back to head
+              setKeyToDelete(undefined);
+            },
+          },
+          {
+            type: 'primary-destructive',
+            text: 'Delete Key',
+            key: 'enter',
+            disabled: keyToDelete === undefined,
+            callback: () => {
+              localizedLabelManager.deleteKey(translationKey.keyName);
+              setKeyToDelete(undefined);
+            },
+          },
+
+        ]}
+        shown={keyToDelete !== undefined}
+      >
+        <div className="history_view--topHeader">
+          Delete
+          {' '}
+          {keyToDelete}
+        </div>
+        <div>
+          {keyToDeleteReferences !== undefined && keyToDeleteReferences > 0 && (
+            <>
+              Deletion of the key
+              {keyToDelete}
+              {' '}
+              will unlink
+              {' '}
+              {keyToDeleteReferences}
+              {' '}
+              referencing labels.
+
+            </>
+          )}
+          {keyToDeleteReferences === 0 && (
+          <>
+            Key
+            {' '}
+            {keyToDelete}
+            {' '}
+            is not refrenced by a label
+          </>
+          )}
+        </div>
+      </Drawer>
     </div>
   );
 }

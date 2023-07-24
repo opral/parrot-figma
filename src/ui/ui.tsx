@@ -337,11 +337,11 @@ function App() {
               }, {
                 iconName: 'window-mode-window-svg',
                 value: WindowMode.Window,
-                tooltip: 'Window Mode',
+                tooltip: 'Use as Window',
               }, {
                 iconName: 'window-mode-fullscreen-svg',
                 value: WindowMode.Fullscreen,
-                tooltip: 'Fullscreen Mode',
+                tooltip: 'Switch to Fullscreen',
               }]}
             selectedSegment={windowMode}
             onChoose={(choosenWindowMode: WindowMode) => { WindowManagerUi.instance?.requestWindowMode(choosenWindowMode, false); }}

@@ -6,6 +6,7 @@ import React, {
 } from 'react';
 import OutsideClickHandler from 'react-outside-click-handler';
 import './inputselect.css';
+import { debug } from 'console';
 import { Plural } from '../../../lib/base/Plural';
 import { Language } from '../../../lib/base/Language';
 
@@ -30,12 +31,15 @@ export interface InputSelectOption {
 export interface InputSelectProps {
   className?: string;
   iconClass?: string,
+  tooltip?: string,
   getOptions: (inputValue: string) => InputSelectOption[];
   placeholder: string;
+  inputPlaceholder: string;
   isDisabled?: boolean;
   defaultValue?: string;
   onExpand?: (state: boolean) => void;
   onChange?: (option: InputSelectOption) => void;
+  onCancel?: () => void;
   valueReplaceFn?: (value: string) => string,
 }
 
@@ -47,11 +51,14 @@ export default function InputSelect({
   className = '',
   iconClass,
   getOptions,
+  tooltip,
   placeholder,
+  inputPlaceholder,
   isDisabled,
   defaultValue,
   onExpand,
   onChange,
+  onCancel,
   valueReplaceFn,
 }: InputSelectProps) {
   const menuRef = useRef<HTMLUListElement>(null);
@@ -156,11 +163,21 @@ export default function InputSelect({
 
   const handleOutsideClick = () => {
     onExpandedStateChange(false);
+    setValue(defaultValue);
+    onCancel?.();
   };
 
   const selectHighlight = () => {
     const i = currentMouseOverHighlightIndex.current ?? currentHighlightIndex.current;
     if (i === undefined) {
+      if (value === '') {
+        onExpandedStateChange(false);
+        onChange?.({
+          type: InputSelectionOptionType.ACTION,
+          value: 'reset',
+          label: '',
+        });
+      }
       return;
     }
 
@@ -427,8 +444,6 @@ export default function InputSelect({
     };
   }, [scrollDownRef]);
 
-  
-
   const expandButtonClass = isExpanded ? 'input-select-menu__button--active' : '';
   const expanListClass = isExpanded ? 'input-select-menu__menu--active' : '';
   const disabledColorClass = isDisabled ? 'icon--black-3' : '';
@@ -448,13 +463,23 @@ export default function InputSelect({
 
   const addActive = ((currentMouseOverHighlightIndex.current === undefined && currentHighlightIndex.current === addOptionIndex) || (currentMouseOverHighlightIndex.current !== undefined && currentMouseOverHighlightIndex.current === addOptionIndex));
 
+  let suggestionFieldValue = inputPlaceholder;
+  if (suggestion !== undefined) {
+    suggestionFieldValue = suggestion;
+  } else if (value !== undefined && value !== '') {
+    suggestionFieldValue = value;
+  }
+
   return (
     <OutsideClickHandler
       display="contents"
       onOutsideClick={handleOutsideClick}
       disabled={!isExpanded}
     >
-      <div className={`input-select-menu ${className}`}>
+      <div className={`input-select-menu ${className}`}
+      data-tooltip-trigger="div"
+      data-tooltip-content={tooltip}
+      >
         <button
           ref={buttonRef}
           className={`input-select-menu__button ${expandButtonClass} ${disabledColorClass} ${value ? '' : 'placeholder'}`}
@@ -480,7 +505,7 @@ export default function InputSelect({
             <p
               className="suggestion"
             >
-              { suggestion === undefined ? value : suggestion }
+              { suggestionFieldValue }
             </p>
             { addOptionIndex !== -1 && (
             // eslint-disable-next-line jsx-a11y/mouse-events-have-key-events
@@ -508,6 +533,8 @@ export default function InputSelect({
               onBlur={(evt) => {
                 if (!evt.relatedTarget?.classList.contains('input-select-menu__item') && !evt.relatedTarget?.classList.contains('input-select-menu-add')) {
                   onExpandedStateChange(false);
+                  setValue(defaultValue);
+                  onCancel?.();
                 }
               }}
               onKeyDown={(evt: React.KeyboardEvent<HTMLInputElement>) => {
@@ -536,6 +563,8 @@ export default function InputSelect({
                     break;
                   case 'Escape':
                     onExpandedStateChange(false);
+                    setValue(defaultValue);
+                    onCancel?.();
                     break;
 
                   default:

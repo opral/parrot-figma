@@ -93,8 +93,13 @@ export default function LocalizedFrameGroup({
           <div className="element-symbol">
             <div className="svg-container number-sign-svg" />
           </div>
-          <div className="element-name font-body-24-bold">{rootFrameName}</div>
-          <div className="row-actions">
+          <div className="element-name font-body-24-bold"
+          >{rootFrameName}</div>
+          <div
+            className="row-actions"
+            data-tooltip-trigger="div"
+            data-tooltip-content="Container Frame Langueage"
+          >
             <Select
               placeholder="Select item"
               onChange={(value) => { onLanguageSelectionClick(firstTranslationState, value.value as Language); }}

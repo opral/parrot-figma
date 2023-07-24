@@ -124,7 +124,7 @@ export default function TranslationKeyListView({
           <div>
             Localized Keys
             <br />
-            will show up here.
+            will show up here. - Create one by Linking a Translation Key on a Text in the Design Tab or Import your existing Keys in the Setup Tab.
           </div>
         </div>
       </div>

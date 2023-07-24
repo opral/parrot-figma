@@ -1,6 +1,6 @@
 {
   "name": "assets-and-resources",
-  "version": "0.9.29",
+  "version": "0.9.31",
   "description": "Plugin to handle assets and resources directly within figma",
   "main": "code.js",
   "scripts": {

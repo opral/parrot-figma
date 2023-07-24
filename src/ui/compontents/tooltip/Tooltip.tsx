@@ -124,8 +124,6 @@ export default function Tooltip({ triggerAttribute, contentAttribute }: TooltipP
         setTooltipVisible(false);
       }
     }
-
-   
   }, [tooltipPlacement]);
 
   useEffect(() => {

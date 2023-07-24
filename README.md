@@ -428,10 +428,8 @@ What we want from ui point of view:
 - [ ] design for minimized view
 
  Bugs:
- - [ ] window resize handle is missing on first start
+ - [x] window resize handle is missing on first start
  - [ ] minimized window position not saved
- - [ ] key still linked after deletion
- - [ ] no confirmation for deletion
  
  UX Flaws:
  - [ ] meaning of the language picker for a frame not clear
@@ -447,6 +445,14 @@ What we want from ui point of view:
     - [x] select the first visible text node on the screen on first apearance?
     - [ ] keep the last selected frame always visible in the design tab?
    
+ - [ ] add key suggestion and placeholder to key input
+ - [ ] key still linked after deletion
+ - [ ] no confirmation for deletion
+ - [ ] tooltip for key deletion
+ - [ ] clear search on key select and hide option when no keys stored or give better feedback
+ - [x] add figma to right side bar
+
+ 
 
 #### Searching
 

@@ -5,6 +5,7 @@ import React, {
 } from 'react';
 import OutsideClickHandler from 'react-outside-click-handler';
 import './select.css';
+import { createPortal } from 'react-dom';
 import { Plural } from '../../../lib/base/Plural';
 import { Language } from '../../../lib/base/Language';
 
@@ -108,7 +109,6 @@ export default function Select({
   }, [isExpanded]);
 
   function updateScrollButtons() {
-    
     if (
       (Math.abs((menuWrapperRef.current!.scrollTop - (menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight))) <= 2)
     || menuRef.current?.clientHeight === menuWrapperRef.current?.clientHeight) {
@@ -124,14 +124,13 @@ export default function Select({
     } else {
       setCanScrollUp(true);
     }
-
   }
 
   useEffect(() => {
     if (isExpanded && menuWrapperRef.current !== undefined) {
       // on expand calculate starting position
       const rect = buttonRef.current!.getBoundingClientRect();
-      menuWrapperRef.current!.style.left = `${rect.left}px`;
+      menuContainerRef.current!.style.left = `${rect.left}px`;
 
       const menuPadding = 8;
       const menuEntryHeight = 24;
@@ -146,27 +145,27 @@ export default function Select({
       const spaceNeededOnBottom = (options.length - menuPositionIndex - 1) * menuEntryHeight + menuPadding;
 
       let height = Math.min(maxSpaceToTop, spaceNeededOnTop) + menuEntryHeight + Math.min(maxSpaceToBottom, spaceNeededOnBottom);
-      
+
       let top = maxSpaceToTop - spaceNeededOnTop;
 
       if (top < 0) {
         height = maxSpaceToTop + menuEntryHeight + Math.min(maxSpaceToBottom, spaceNeededOnBottom);
         top = 0;
       }
-      
+
       const scrollTop = spaceNeededOnTop - maxSpaceToTop;
-      
+
       menuContainerRef.current!.style.height = `${height}px`;
       menuContainerRef.current!.style.top = `${top}px`;
 
       const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-      const isOverlappingRight = menuContainerRef.current!.getBoundingClientRect().right > viewportWidth;
-      if (isOverlappingRight) {
-        menuContainerRef.current!.style.right = `${3}px`;
+      const isOverlappingRight = menuContainerRef.current!.getBoundingClientRect().right - viewportWidth;
+       
+      if (isOverlappingRight > 0) {
+        menuContainerRef.current!.style.left = `${rect.left - isOverlappingRight}px`;
       }
-      
+
       //
-      
 
       wrapperMaxHeight.current = maxSpaceToTop + menuEntryHeight + maxSpaceToBottom;
       wrapperMaxHeightBottom.current = maxSpaceToBottom;
@@ -180,7 +179,6 @@ export default function Select({
     }
 
     const scrollHandler = () => {
-      
       // if (initialPositioning.current) {
       //   console.log('SELECT initial positioning done')
       //   initialPositioning.current = false;
@@ -194,12 +192,12 @@ export default function Select({
         height: menuContainerRef.current!.clientHeight,
         top: menuContainerRef.current!.offsetTop,
       };
-      
+
       const setContainer = (pos: { height: Number, top: Number }) => {
         menuContainerRef.current!.style.top = `${pos.top}px`;
         menuContainerRef.current!.style.height = `${pos.height}px`;
 
-        updateScrollButtons();
+        updateScrollButtons(); 
       };
 
       if (scrollDiff < 0) { // scroll down (container is at the top of the screen
@@ -229,7 +227,7 @@ export default function Select({
         // });
       } else if (scrollDiff > 0) { // scroll up (container is at the bottom of the screen)
         const pxScrolledUp = scrollDiff;
-        
+
         if (box.top - pxScrolledUp > 0) {
           console.log('SCROLL UP - growing');
           setContainer({
@@ -403,6 +401,7 @@ export default function Select({
       onOutsideClick={handleOutsideClick}
       disabled={!isExpanded}
     >
+
       <div className={`select-menu ${className}`}>
         <button
           ref={buttonRef}
@@ -423,36 +422,36 @@ export default function Select({
           </span>
           <span className="select-menu__caret svg-container caret-svg" />
         </button>
-        <div
-          ref={menuContainerRef}
-          className="select-menu__menu_container"
-
-        >
+        {createPortal(
           <div
-            ref={scrollUpRef}
-            className="select-menu__menu-scroll-up"
-            style={{
-              visibility: canScrollUp ? 'visible' : 'hidden',
-            }}
+            ref={menuContainerRef}
+            className={`select-menu__menu_container ${isExpanded ? 'select-menu__menu_container-expanded' : ''}`}
           >
-            <div className="svg-container arrow-up-svg" />
-          </div>
-          <div
-            ref={scrollDownRef}
-            className="select-menu__menu-scroll-down"
-            style={{
-              visibility: canScrollDown ? 'visible' : 'hidden',
-            }}
-          >
-            <div className="svg-container arrow-down-svg" />
-          </div>
-          <div ref={menuWrapperRef} className="select-menu__menu_wrapper">
-            <ul
-              ref={menuRef}
-              className={`select-menu__menu ${expanListClass} ${disabledColorClass}`}
-
+            <div
+              ref={scrollUpRef}
+              className="select-menu__menu-scroll-up"
+              style={{
+                visibility: canScrollUp ? 'visible' : 'hidden',
+              }}
             >
-              {options
+              <div className="svg-container arrow-up-svg" />
+            </div>
+            <div
+              ref={scrollDownRef}
+              className="select-menu__menu-scroll-down"
+              style={{
+                visibility: canScrollDown ? 'visible' : 'hidden',
+              }}
+            >
+              <div className="svg-container arrow-down-svg" />
+            </div>
+
+            <div ref={menuWrapperRef} className="select-menu__menu_wrapper">
+              <ul
+                ref={menuRef}
+                className={`select-menu__menu ${expanListClass} ${disabledColorClass}`}
+              >
+                {options
                 && options.map(({
                   value, label: optionLabel, divider, title, icon,
                 }, i) => (divider ? (
@@ -492,9 +491,12 @@ export default function Select({
                     <span className="select-menu__item-label">{optionLabel}</span>
                   </li>
                 )))}
-            </ul>
-          </div>
-        </div>
+              </ul>
+            </div>
+
+          </div>,
+          document.body,
+        )}
       </div>
     </OutsideClickHandler>
   );

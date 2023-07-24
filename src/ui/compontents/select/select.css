@@ -338,9 +338,15 @@ select.select-menu {
   margin: 8px 0 7px 0;
 }
 
+
+.select-menu__menu_container.select-menu__menu_container-expanded {
+  display: inherit;
+}
+
 .select-menu__menu_container {
+  display: none;
   height: 30px;
-  position: fixed;
+  position: absolute;
   /*
   gets calculated
   width: 100px;

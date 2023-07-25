@@ -13,9 +13,7 @@ const { version } = require('./package.json');
 module.exports = (env, argv) => {
 
   //Needed to load the process.env variables for sentry
-  dotenv.config({
-    path: argv.mode === 'production' ? '.env.production' : '.env',
-  });
+
 
   return {
     mode: argv.mode === 'production' ? 'production' : 'development',
@@ -81,9 +79,6 @@ module.exports = (env, argv) => {
     },
     plugins: [
 
-      new Dotenv({
-        path: argv.mode === 'production' ? '.env.production' : '.env',
-      }),
       process.env.SENTRY_AUTH_TOKEN ?
         sentryWebpackPlugin({
           org: process.env.SENTRY_ORG,

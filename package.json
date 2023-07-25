@@ -1,6 +1,6 @@
 {
   "name": "assets-and-resources",
-  "version": "0.9.35",
+  "version": "0.9.36",
   "description": "Plugin to handle assets and resources directly within figma",
   "main": "code.js",
   "scripts": {
@@ -77,7 +77,6 @@
     "react-select": "^5.7.3",
     "react-time-ago": "^7.2.1",
     "react-usestateref": "^1.0.8",
-    
     "svg-url-loader": "^8.0.0"
   }
 }

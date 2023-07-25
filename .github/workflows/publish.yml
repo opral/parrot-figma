@@ -1,0 +1,41 @@
+name: NodeJS with Webpack
+
+on:
+  push:
+    branches: [ "production" ]
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Use Node.js 18.x
+      uses: actions/setup-node@v3
+    
+    - name: Set next Figma version
+      run: | 
+        node ./util/update-version-number.js
+      
+    - name: Build plugin and publish to MixedPannel (part of webpack)
+      run: |
+        npm install
+        npm run build
+
+    - name: Publish new Version to Figma
+      run: | 
+        node ./util/publish-release.js
+        
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v3.1.2
+      with:
+        # Artifact name
+        name: Figma plugin
+        # A file, directory or wildcard pattern that describes what to upload
+        path: |
+          ./dist/*          
+          ./manifest.json
+        # The desired behavior if no files are found using the provided path.
+   
+        retention-days: 90

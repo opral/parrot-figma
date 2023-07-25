@@ -1,4 +1,4 @@
-name: NodeJS with Webpack
+name: Publish to Figma store
 
 on:
   push:

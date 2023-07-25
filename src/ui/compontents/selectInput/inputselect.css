@@ -453,7 +453,7 @@ select.input-select-menu {
   /* Apply the styles only in Firefox */
   .input-select-menu__input input {
     padding-left: 8px !important;
-    padding-top: 11px !important;
+    padding-top: 8px !important;
   }
 }
 .input-select-menu__input input {

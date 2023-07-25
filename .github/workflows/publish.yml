@@ -16,7 +16,7 @@ jobs:
     
 
     - name: Set secret as environment variable
-        run: | 
+      run: | 
         echo "SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}" >> $GITHUB_ENV
         echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}" >> $GITHUB_ENV
         echo "FIGMA_WEB_AUTHN=${{ secrets.FIGMA_WEB_AUTHN }}" >> $GITHUB_ENV

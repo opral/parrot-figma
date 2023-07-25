@@ -40,6 +40,8 @@ jobs:
     - name: Publish new Version to Figma
       run: | 
         node ./util/publish-release.js
+      env: 
+        FIGMA_TEXT_FILE: "Tbs7VmbiQk7k72ztMklHub"
         
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v3.1.2

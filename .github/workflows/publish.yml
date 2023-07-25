@@ -21,13 +21,18 @@ jobs:
         echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}" >> $GITHUB_ENV
         echo "FIGMA_WEB_AUTHN=${{ secrets.FIGMA_WEB_AUTHN }}" >> $GITHUB_ENV
 
+
+    - name: Install dependencies
+      run: | 
+        npm install
+
+
     - name: Set next Figma version
       run: | 
         node ./util/update-version-number.js
       
     - name: Build plugin and publish to MixedPannel (part of webpack)
       run: |
-        npm install
         npm run build
 
     - name: Publish new Version to Figma

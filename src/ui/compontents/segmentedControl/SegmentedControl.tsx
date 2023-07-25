@@ -37,7 +37,6 @@ export default function SegmentedControl<Type>({
     <div className="segmented-control">
       {segments.map((segment) => (
         <div
-          data-tooltip-trigger={segment.tooltip ? 'div' : undefined}
           data-tooltip-content={segment.tooltip}
           key={segment.value}
           className={`segmented-control-segment${segment.value === selectedSegmentState ? ' selected' : ''}`}

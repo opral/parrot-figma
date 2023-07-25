@@ -23,6 +23,7 @@ export interface SelectOption {
 export interface SelectProps {
   className?: string;
   iconClass?: string,
+  tooltip?: string,
   getOptions: () => SelectOption[];
   placeholder: string;
   isDisabled?: boolean;
@@ -34,6 +35,7 @@ export interface SelectProps {
 export default function Select({
   className = '',
   iconClass,
+  tooltip,
   getOptions,
   placeholder,
   isDisabled,
@@ -160,7 +162,7 @@ export default function Select({
 
       const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
       const isOverlappingRight = menuContainerRef.current!.getBoundingClientRect().right - viewportWidth;
-       
+
       if (isOverlappingRight > 0) {
         menuContainerRef.current!.style.left = `${rect.left - isOverlappingRight}px`;
       }
@@ -197,7 +199,7 @@ export default function Select({
         menuContainerRef.current!.style.top = `${pos.top}px`;
         menuContainerRef.current!.style.height = `${pos.height}px`;
 
-        updateScrollButtons(); 
+        updateScrollButtons();
       };
 
       if (scrollDiff < 0) { // scroll down (container is at the top of the screen
@@ -402,7 +404,10 @@ export default function Select({
       disabled={!isExpanded}
     >
 
-      <div className={`select-menu ${className}`}>
+      <div
+        className={`select-menu ${className}`}
+        data-tooltip-content={!isExpanded ? tooltip : undefined}
+      >
         <button
           ref={buttonRef}
           className={`select-menu__button ${expandButtonClass} ${disabledColorClass} ${selectedOption ? '' : 'placeholder'}`}

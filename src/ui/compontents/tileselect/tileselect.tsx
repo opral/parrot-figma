@@ -62,7 +62,6 @@ export default function TileSelect<T>({
     <div className="tile-container">
       {options.map((option) => (
         <div
-          data-tooltip-trigger={option.tooltip ? 'div' : undefined}
           data-tooltip-content={option.tooltip}
           className={`tile${(selectedOptions.findIndex((v) => v === option.value) !== -1 || option.forceSelected === true) ? ' selected' : ''}`}
           key={`${option.value}`}

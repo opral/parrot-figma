@@ -449,6 +449,13 @@ select.input-select-menu {
   width: calc(100% - 32px);
 }
 
+@-moz-document url-prefix() {
+  /* Apply the styles only in Firefox */
+  .input-select-menu__input input {
+    padding-left: 8px !important;
+    padding-top: 11px !important;
+  }
+}
 .input-select-menu__input input {
   position:absolute;
   padding-left: 6px;

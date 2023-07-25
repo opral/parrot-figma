@@ -225,7 +225,6 @@ export default function TranslationKeyListItem({
           <>
             <span
               className="layerIcon iconWrapper button"
-              data-tooltip-trigger="span"
               data-tooltip-content="Delete this translation key"
               onClick={() => {
                 setKeyToDelete(translationKey.keyName);

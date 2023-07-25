@@ -83,7 +83,6 @@ export default function HistoryEntryView({
               <div
                 className="history_view--label ellipsis--ellipsis--70pHK text--fontPos11--rO47d text--_fontBase--VaHfk"
                 dir="auto"
-                data-tooltip-trigger="div"
                 data-tooltip-content="Created by ... at... "
                 style={{ maxWidth: '165px' }}
               >

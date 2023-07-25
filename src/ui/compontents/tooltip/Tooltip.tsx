@@ -3,13 +3,12 @@ import OutsideClickHandler from 'react-outside-click-handler';
 import './Tooltip.css';
 
 interface TooltipProps {
-  triggerAttribute: string;
   contentAttribute: string;
 }
 
 interface Placement { top: number, left: number, position: string, transformX?: number}
 
-export default function Tooltip({ triggerAttribute, contentAttribute }: TooltipProps) {
+export default function Tooltip({ contentAttribute }: TooltipProps) {
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [tooltipPlacement, setTooltipPlacement] = useState<any | Placement>({ top: 0, left: 0, position: 'none' });
   const [tooltipSourceRect, setTooltipSourceRect] = useState<DOMRect | undefined>(undefined);
@@ -150,9 +149,8 @@ export default function Tooltip({ triggerAttribute, contentAttribute }: TooltipP
         return;
       }
 
-      const trigger = tooltipSource.getAttribute(triggerAttribute);
       const content = tooltipSource.getAttribute(contentAttribute);
-      if (trigger && content) {
+      if (content) {
         if (!tooltipVisibleRef.current) {
           // we can reset the hide timeout and directly show the new one
           if (showTooltipTimeoutRef.current !== undefined) {

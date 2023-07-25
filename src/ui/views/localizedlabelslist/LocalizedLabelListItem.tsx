@@ -90,11 +90,8 @@ export default function LocalizedLabelListItem({
     keyValue = localizedLabel.key;
   }
 
-  console.log('collecting information' + keyValue);
-
   useEffect(() => {
     setDummyState({});
-    console.log('dummy state set');
   }, [localizedLabel]);
 
 
@@ -291,7 +288,6 @@ export default function LocalizedLabelListItem({
 
                   <div className="languageWrapper" key={localizedLabel.language}>
                     <div className="grid-item-language" 
-                          data-tooltip-trigger="div"
                           data-tooltip-content="Current Language of this Label"><span className="rowText">{localizedLabel.keyType === KeyState.Linked ? localizedLabel.language : localizedLabel.rootFrameLanguage}</span></div>
                     <div key={localizedLabel.pluralId} className={`keyPluralWrapper ${translatedKey?.plural ? 'onePlural' : ' multiplePlurals'}`}>
                       { FEATURES_FLAGS.plurals
@@ -364,7 +360,6 @@ export default function LocalizedLabelListItem({
                 { (localizedLabel.keyType === KeyState.Linked && (labelState.modified || labelState.behind > 0 || localizedLabel.language !== localizedLabel.rootFrameLanguage)) && ( // allow the user to catch up with the keys version
                 <span
                   className="layerIcon iconWrapper button"
-                  data-tooltip-trigger="span"
                   data-tooltip-content="Reset all changes"
                   onClick={updateToLatestKeyVersion}
                 >
@@ -375,7 +370,6 @@ export default function LocalizedLabelListItem({
                 { ((false && localizedLabel.keyType === KeyState.Linked && labelState.modified && labelState.orginalTranslationHTML !== undefined)) && ( // allow the user revert the changes in design to the last versioned text
                 <span
                   className="layerIcon iconWrapper button"
-                  data-tooltip-trigger="span"
                   data-tooltip-content="Revert changes in Design"
                   onClick={revertDesignChanges}
                 >
@@ -386,7 +380,6 @@ export default function LocalizedLabelListItem({
                 { ((localizedLabel.keyType === KeyState.Linked && labelState.modified)) && (
                 <span
                   className="layerIcon iconWrapper button"
-                  data-tooltip-trigger="span"
                   data-tooltip-content={`Push changes to (${localizedLabel.language}) Translation`}
                   onClick={createNewVersionFromDesign}
                 >
@@ -402,7 +395,6 @@ export default function LocalizedLabelListItem({
             { ((localizedLabel.keyType === KeyState.Linked && localizedLabel.rootFrameLanguage !== localizedLabel.language)) && (
             <span
               className="row-action-icon"
-              data-tooltip-trigger="span"
               data-tooltip-content="Frame Language differs from Label"
             >
               <span className="svg-container warning-svg" />

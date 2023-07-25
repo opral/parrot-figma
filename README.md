@@ -327,18 +327,18 @@ What we want from ui point of view:
  - [x] disable placeholder button on selection of multiple placeholders / mixed approach
  
  - [ ] alert once delete key button pressed to confirm action
- - [ ] esc for hiding modal views  
- - [ ] esc in panel - cancel
- - [ ] esc key in drawer and call to action (cancel)
- - [ ] enter in create key panel
- - [ ] add sentry (see: https://github.com/tokens-studio/figma-plugin/tree/916a34f70d729cb3797a00bcffd78f1790695cb4)
- - [ ] add mixpanel (see: https://github.com/tokens-studio/figma-plugin/tree/916a34f70d729cb3797a00bcffd78f1790695cb4)
+ - [x] esc for hiding modal views  
+ - [x] esc in panel - cancel
+ - [x] esc key in drawer and call to action (cancel)
+ - [x] enter in create key panel
+ - [x] add sentry (see: https://github.com/tokens-studio/figma-plugin/tree/916a34f70d729cb3797a00bcffd78f1790695cb4)
+ - [x] add mixpanel (see: https://github.com/tokens-studio/figma-plugin/tree/916a34f70d729cb3797a00bcffd78f1790695cb4)
  
- - [ ] add action button to create key when no result in search
+ - [x] add action button to create key when no result in search
  - [ ] provide filter current frame key
  - [ ] command z not working for fillin change
  - [ ] changing a placeholder name in one lable - does not update other labels referencing the same key
- - [ ] override label text with translation from key and show toast if text changed
+ - [x] override label text with translation from key and show toast if text changed
  - [ ] formatting label <-> key
     - [x] placeholder renaming hinders replacement in label
     - [x] placeholder not saved to key on creation
@@ -432,8 +432,7 @@ What we want from ui point of view:
  - [ ] minimized window position not saved
  
  UX Flaws:
- - [ ] meaning of the language picker for a frame not clear
- - [ ] button meaning of revert not clear
+ - [x] meaning of the language picker for a frame not clear
  - [x] choosing frame language in case of unsynced labels not clear
     - "to faar away from the frame title to visually connect it on large screen" - box on hover?
  ~~- [x] meaning of the columns not clear in design tab~~
@@ -445,11 +444,11 @@ What we want from ui point of view:
     - [x] select the first visible text node on the screen on first apearance?
     - [ ] keep the last selected frame always visible in the design tab?
    
- - [ ] add key suggestion and placeholder to key input
- - [ ] key still linked after deletion
- - [ ] no confirmation for deletion
- - [ ] tooltip for key deletion
- - [ ] clear search on key select and hide option when no keys stored or give better feedback
+ - [x] add key suggestion and placeholder to key input
+ - [x] key still linked after deletion
+ - [x] no confirmation for deletion
+ - [x] tooltip for key deletion
+ - [x] clear search on key select and hide option when no keys stored or give better feedback
  - [x] add figma to right side bar
 
  
@@ -578,3 +577,36 @@ While everyone here is writing about AI and quantum computers, the small details
 Find the plugin in Figma now! 
 
 https://www.figma.com/community/plugin/1205803482754362456/Parrot-Beta
+
+
+Pricing
+ Owner 
+    - design (link labels)
+    - translation review
+    - import
+    - export
+    - team accessmanagement
+    - dev mode
+      - see linked keys
+      - export
+
+ Translator 
+   - translation
+   - translation review
+
+ Developer
+   - dev mode
+   - export via api
+
+ Solo performance - Free
+    - one owner 
+    - 5.000 characters per month
+ Small team 
+    - one owner
+    - one reviewer
+    - two developer
+ Ultimate 
+    - one owner
+    - one reviewer
+    - two developer
+

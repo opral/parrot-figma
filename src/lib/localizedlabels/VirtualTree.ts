@@ -89,7 +89,7 @@ export default class VirtualTree {
   public moveNode(identifier: string, newParent: BaseNode): VirtualTreeNode[] {
     const virtualNode = this.lookupTable.get(identifier);
     if (virtualNode === undefined) {
-      console.log('VirtualTree: NOTING TO MOVE');
+     //  console.log('VirtualTree: NOTING TO MOVE');
       return [];
     }
     const parentId = newParent.id;
@@ -102,7 +102,7 @@ export default class VirtualTree {
     virtualNode.parent!.children = virtualNode.parent!.children.filter((child) => child !== virtualNode);
 
     if (virtualNode.parent!.children.length === 0) {
-      console.log('VirtualTree: NO NEED OF PARENT - removing cache');
+      // console.log('VirtualTree: NO NEED OF PARENT - removing cache');
       this.lookupTable.delete(virtualNode.parent!.id);
     }
 
@@ -115,7 +115,7 @@ export default class VirtualTree {
   public getAllNodesInBranchByRootId(id: string) : VirtualTreeNode[] {
     const virtualNode = this.lookupTable.get(id);
     if (virtualNode === undefined) {
-      console.log('VirtualTree: no node to get branch from');
+      // console.log('VirtualTree: no node to get branch from');
       return [];
     }
 
@@ -128,7 +128,7 @@ export default class VirtualTree {
     for (const child of node.children) {
       nodesInBranch = nodesInBranch.concat(this.getAllNodesInBranch(child));
     }
-    console.log(`VirtualTree: found nodesInBranch ${nodesInBranch.length}`);
+    // console.log(`VirtualTree: found nodesInBranch ${nodesInBranch.length}`);
     return nodesInBranch;
   }
 }

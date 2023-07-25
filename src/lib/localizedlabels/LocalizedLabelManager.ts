@@ -263,7 +263,7 @@ export default class LocalizedLabelManager {
             if (change.properties.includes('parent')) {
               changedVirtualNodes = this.virtualTree.moveNode(changedNode!.id, changedNode!.parent!);
               // console.log(`Node changed - parent ${change.id} moved in vt affacted: ${JSON.stringify(changedVirtualNodes.length)}`);
-            } else if (change.properties.includes('name')) {
+            } else if (change.properties.includes('name') || change.properties.includes('pluginData')) {
               // if the name changed we have to update all childs since naming changes the key abrivation
               changedVirtualNodes = this.virtualTree.getAllNodesInBranchByRootId(changedNode!.id);
               // console.log(`Node changed - ${change.id} name in vt affacted: ${JSON.stringify(changedVirtualNodes.length)}`);

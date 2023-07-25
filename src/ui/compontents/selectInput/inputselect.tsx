@@ -476,9 +476,9 @@ export default function InputSelect({
       onOutsideClick={handleOutsideClick}
       disabled={!isExpanded}
     >
-      <div className={`input-select-menu ${className}`}
-      data-tooltip-trigger="div"
-      data-tooltip-content={tooltip}
+      <div
+        className={`input-select-menu ${className}`}
+        data-tooltip-content={!isExpanded ? tooltip : undefined}
       >
         <button
           ref={buttonRef}

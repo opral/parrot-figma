@@ -171,7 +171,7 @@ function App() {
   if (windowMode === WindowMode.DevPanel) {
     return (
       <>
-        <Tooltip triggerAttribute="data-tooltip-trigger" contentAttribute="data-tooltip-content" />
+        <Tooltip contentAttribute="data-tooltip-content" />
         <div className="view dev-panel">
           <div className="comming-soon">
             Parrot´s Dev Mode version is comming soon...
@@ -192,7 +192,7 @@ function App() {
   if (windowMode === WindowMode.Minimized) {
     return (
       <>
-        <Tooltip triggerAttribute="data-tooltip-trigger" contentAttribute="data-tooltip-content" />
+        <Tooltip contentAttribute="data-tooltip-content" />
         <div className="toolbar">
           <select>
             <option>test</option>
@@ -230,7 +230,7 @@ function App() {
     case 'onboarding':
       return (
         <>
-          <Tooltip triggerAttribute="data-tooltip-trigger" contentAttribute="data-tooltip-content" />
+          <Tooltip contentAttribute="data-tooltip-content" />
           <Onboarding
             labelManager={localizedLabelManager}
             onFinishSetup={async () => {
@@ -285,7 +285,7 @@ function App() {
   return (
 
     <>
-      <Tooltip triggerAttribute="data-tooltip-trigger" contentAttribute="data-tooltip-content" />
+      <Tooltip contentAttribute="data-tooltip-content" />
       <div className="toolbar">
         <div className="tabHeader">
           <div className={`tab ${appScreen === 'design' ? 'active' : ''}`} onClick={() => setAppScreen('design')}>Design</div>

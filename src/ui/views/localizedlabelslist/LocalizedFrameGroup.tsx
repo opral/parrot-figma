@@ -82,8 +82,6 @@ export default function LocalizedFrameGroup({
     await figmaRemote.scrollIntoViewIfNeeded(nodeId, true);
   }
 
-  console.log(selectedNodes);
-
   return (
     <>
 
@@ -93,14 +91,15 @@ export default function LocalizedFrameGroup({
           <div className="element-symbol">
             <div className="svg-container number-sign-svg" />
           </div>
-          <div className="element-name font-body-24-bold"
-          >{rootFrameName}</div>
+          <div className="element-name font-body-24-bold">
+            {rootFrameName}
+
+          </div>
           <div
             className="row-actions"
-            data-tooltip-trigger="div"
-            data-tooltip-content="Container Frame Langueage"
           >
             <Select
+              tooltip="Container Frame Langueage"
               placeholder="Select item"
               onChange={(value) => { onLanguageSelectionClick(firstTranslationState, value.value as Language); }}
               defaultValue={languageOptiones.find((opt) => opt.value === rootFrameLanguage?.value)}

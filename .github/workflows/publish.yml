@@ -5,10 +5,10 @@ on:
     branches: [ "production" ]
 
 env:
-  ENVIRONMENT: ${{ env.ENVIRONMENT }}
-  SENTRY_ORG: ${{ env.SENTRY_ORG }}
-  SENTRY_PROJECT: ${{ env.SENTRY_PROJECT }}
-  FIGMA_TEXT_FILE: ${{ FIGMA_TEXT_FILE }}
+  ENVIRONMENT: ${{ vars.ENVIRONMENT }}
+  SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+  SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+  FIGMA_TEXT_FILE: ${{ vars.FIGMA_TEXT_FILE }}
   SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
   SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
   FIGMA_WEB_AUTHN: ${{ secrets.FIGMA_WEB_AUTHN }}

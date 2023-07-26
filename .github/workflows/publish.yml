@@ -11,7 +11,7 @@ env:
   FIGMA_TEXT_FILE: ${{ vars.FIGMA_TEXT_FILE }}
   SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
   SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-  FIGMA_WEB_AUTHN: ${{ secrets.FIGMA_WEB_AUTHN }}
+  FIGMA_WEB_AUTHN_TOKEN: ${{ secrets.FIGMA_WEB_AUTHN_TOKEN }}
 
 
 jobs:

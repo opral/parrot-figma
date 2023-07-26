@@ -1,5 +1,4 @@
 import blake from 'blakejs';
-import { placeholder } from '@codemirror/view';
 import { KeyState, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../base/Plural';
 import LocalizedLabelManager, { SandboxUpdateLabelProperties } from './LocalizedLabelManager';

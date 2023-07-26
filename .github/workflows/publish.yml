@@ -3,7 +3,17 @@ name: Publish to Figma store
 on:
   push:
     branches: [ "production" ]
-  
+
+env:
+  ENVIRONMENT: ${{ env.ENVIRONMENT }}
+  SENTRY_ORG: ${{ env.SENTRY_ORG }}
+  SENTRY_PROJECT: ${{ env.SENTRY_PROJECT }}
+  FIGMA_TEXT_FILE: ${{ FIGMA_TEXT_FILE }}
+  SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+  SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+  FIGMA_WEB_AUTHN: ${{ secrets.FIGMA_WEB_AUTHN }}
+
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -14,34 +24,23 @@ jobs:
     - name: Use Node.js 18.x
       uses: actions/setup-node@v3
     
-
-    - name: Set secret as environment variable
-      run: | 
-        echo "SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}" >> $GITHUB_ENV
-        echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}" >> $GITHUB_ENV
-        echo "FIGMA_WEB_AUTHN=${{ secrets.FIGMA_WEB_AUTHN }}" >> $GITHUB_ENV
-
-
     - name: Install dependencies
       run: | 
         npm install
 
-
-    - name: Set next Figma version
+    - name: Set next Figma version as minor version in package.js
       run: | 
-        node ./util/update-version-number.js
+        npx figcd prepare
       
-    - name: Build plugin and publish to MixedPannel (part of webpack)
+    - name: Build plugin and publish to Sentry (part of webpack)
       run: |
         npm run build
-      env: 
-        ENVIRONMENT: "production"
+          
+    - name: Prepare 
 
     - name: Publish new Version to Figma
       run: | 
-        node ./util/publish-release.js
-      env: 
-        FIGMA_TEXT_FILE: "Tbs7VmbiQk7k72ztMklHub"
+        npx figcd release --release-notes changelog-{{VERSION}}.txt
         
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v3.1.2

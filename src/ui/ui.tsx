@@ -17,10 +17,10 @@ import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
 import './ui.css';
 import WindowManagerUi from '../lib/windowManager/WindowManagerUI';
 import { WindowMode } from '../lib/windowManager/WindowManagerSandbox';
-import { TranslationKeys } from '../lib/keystore/TranslationKey';
+
 import TranslationKeyListView from './views/translationkeys/TranslationKeyListView';
 
-import MemoryTranslationKeyStore, { UITranslationKeys } from '../lib/keystore/MemoryTranslationKeyStore';
+import MemoryTranslationKeyStore from '../lib/keystore/MemoryTranslationKeyStore';
 import { FigmaFileTranslationKeyStore } from '../lib/keystore/FigmaFileTranslationKeyStore';
 
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
@@ -29,9 +29,7 @@ import LocalizedLabelManagerUI from '../lib/localizedlabels/LocalizedLabelManage
 import './tabbar.css';
 import './assets/icons.css';
 import SegmentedControl from './compontents/segmentedControl/SegmentedControl';
-import LanguageSetup from './compontents/languageSetup/LanguageSetup';
 import Onboarding from './views/onboarding/Onboarding';
-import { Language } from '../lib/base/Language';
 import Tooltip from './compontents/tooltip/Tooltip';
 
 import Export from './views/export/Export';

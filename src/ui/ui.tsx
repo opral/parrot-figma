@@ -37,6 +37,7 @@ import Tooltip from './compontents/tooltip/Tooltip';
 import Export from './views/export/Export';
 import FEATURES_FLAGS from './featuretoggle';
 import SetupView from './views/setup/SetupView';
+import * as pjs from '../../package.json';
 
 TimeAgo.addDefaultLocale(en);
 
@@ -111,6 +112,25 @@ asyncFunctionProxy.proxyAsyncMethods(figmaRemote);
 figmaRemote.getUserId().then((userId) => {
   identify(userId!);
 });
+
+const checkVersion = async () => {
+  const minVersionRequest = await fetch('https://parrots-design.github.io/parrot/min-version.json');
+  const { minVersion } = await minVersionRequest.json();
+  const figVersion = Number.parseInt(pjs.version.split('.')[2], 10);
+  if (minVersion > figVersion) {
+    if (document.getElementById('version-outdated')) {
+      document.getElementById('version-outdated')!.classList.remove('gone');
+      document.getElementById('version-outdated')!.classList.add('visible');
+    }
+  }
+};
+
+const versionCheckInterval = 1000 * 40;
+// we use any here since NodeJS.Timout - the suggested type by the ide is not correct
+checkVersion().catch(console.log);
+setInterval(() => {
+  checkVersion().catch(console.log);
+}, versionCheckInterval);
 
 const figmaFileTranslationKeyStore = new FigmaFileTranslationKeyStore(true);
 asyncFunctionProxy.proxyAsyncMethods(figmaFileTranslationKeyStore);

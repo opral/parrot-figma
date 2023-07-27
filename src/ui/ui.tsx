@@ -115,6 +115,7 @@ const checkVersion = async () => {
   const minVersionRequest = await fetch('https://parrots-design.github.io/parrot/min-version.json');
   const { minVersion } = await minVersionRequest.json();
   const figVersion = Number.parseInt(pjs.version.split('.')[2], 10);
+  console.log(`Current Version: ${figVersion} Minimum version ${minVersion}`);
   if (minVersion > figVersion) {
     if (document.getElementById('version-outdated')) {
       document.getElementById('version-outdated')!.classList.remove('gone');

@@ -37,6 +37,8 @@ import FEATURES_FLAGS from './featuretoggle';
 import SetupView from './views/setup/SetupView';
 import * as pjs from '../../package.json';
 
+console.log(`Starting Figma UI - Version ${pjs.version}`);
+
 TimeAgo.addDefaultLocale(en);
 
 initializeSentry();

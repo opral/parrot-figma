@@ -946,12 +946,12 @@ export default class LocalizedLabelManager {
     derivedName = this.extractKeyName(rootFrame.name) + this.separator + derivedName;
 
     // 1562ms -> 1071ms ~ 1/4
-    const text = node.characters;
+    const labelText = node.characters;
 
     const fillins = node.getPluginData(this.fillinsKey) === '' ? {} : JSON.parse(node.getPluginData(this.fillinsKey));
     const tokenizedTextResult = this.extractDeltaOpsAndLabelStyles(node, fillins);
 
-    if (text.length === 1 && !/[0-9a-zA-Z\n\s]/.test(text)) {
+    if (labelText.length === 1 && !/[0-9a-zA-Z\n\s]/.test(labelText)) {
       return;
     }
 
@@ -995,7 +995,7 @@ export default class LocalizedLabelManager {
       fillins,
       derivedKey: derivable ? derivedName : undefined,
       pluralId: pluralId as Plural,
-      characters: text,
+      characters: labelText,
       ops: tokenizedTextResult.deltaOps,
       warnings: tokenizedTextResult.warnings,
       labelStyle: tokenizedTextResult.labelStyle,
@@ -1205,6 +1205,7 @@ export default class LocalizedLabelManager {
     } as LabelStyle;
 
     const deltaOps = this.getDeltaOps(node, fillins);
+    
 
     // get label styles
     for (const deltaOp of deltaOps) {

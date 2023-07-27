@@ -2,7 +2,6 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const InlineChunkHtmlPlugin = require('react-dev-utils/InlineChunkHtmlPlugin');
 
 const path = require('path');
-const Dotenv = require('dotenv-webpack');
 const { sentryWebpackPlugin } = require("@sentry/webpack-plugin");
 const webpack = require('webpack');
 const dotenv = require('dotenv');
@@ -20,11 +19,16 @@ module.exports = (env, argv) => {
 
     // This is necessary because Figma's 'eval' works differently than normal eval
     devtool: argv.mode === 'production' ? 'source-map' : 'inline-source-map',
+    
+    // defie the entrypoints for compilation
+    entry: {
+      ui: './src/ui/ui.tsx',
+      code: './src/sandbox/code.ts',
+    },
 
     module: {
+      
       rules: [
-        // Converts TypeScript code to JavaScript
-  
         // Converts TypeScript code to JavaScript
         { test: /\.tsx?$/, use: 'ts-loader', exclude: /node_modules/ },
   
@@ -43,7 +47,6 @@ module.exports = (env, argv) => {
           ],
         },
         {
-  
           test: /\.(png)$/,
           use: {
             loader: 'url-loader',
@@ -59,15 +62,10 @@ module.exports = (env, argv) => {
         },
       ],
     },
-  
-    // defie the entrypoints for compilation
-    entry: {
-      ui: './src/ui/ui.tsx',
-      code: './src/sandbox/code.ts',
-    },
-  
+
     resolve: {
       extensions: ['.js', '.jsx', '.tsx', '.ts'],
+      // TODO document aliases i think i needed this for some library to work...
       alias: {
         fs: false, // or any other value that makes sense for your project
         path: false, // or any other value that makes sense for your project
@@ -78,7 +76,24 @@ module.exports = (env, argv) => {
       path: path.resolve(__dirname, 'dist'),
     },
     plugins: [
-
+      new webpack.DefinePlugin({
+        global: {}, // Fix missing symbol error when running in developer VM
+        process: '(' +JSON.stringify({
+          env: {
+            ENVIRONMENT: argv.mode,
+            
+            // provide sentry process env variables
+            SENTRY_ORG: process.env.SENTRY_ORG,
+            SENTRY_PROJECT: process.env.SENTRY_PROJECT,
+            SENTRY_DSN: process.env.SENTRY_DSN,
+            
+            // mixed panel key must be added to the client :-(
+            MIXPANEL_ACCESS_TOKEN: process.env.MIXPANEL_ACCESS_TOKEN,
+          }
+        }) + ')',
+      }),
+      
+      // TODO fail build if we are in a release build and the token is missing!
       process.env.SENTRY_AUTH_TOKEN ?
         sentryWebpackPlugin({
           org: process.env.SENTRY_ORG,
@@ -106,9 +121,6 @@ module.exports = (env, argv) => {
           },
         }) : () => {},
 
-      new webpack.DefinePlugin({
-        global: {}, // Fix missing symbol error when running in developer VM
-      }),
   
       new HtmlWebpackPlugin({
         inject: 'body',

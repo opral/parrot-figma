@@ -19,4 +19,4 @@ export default class LinkBlot extends Inline {
 }
 LinkBlot.blotName = 'link';
 LinkBlot.tagName = 'a';
-Quill.register(LinkBlot);
+Quill.register(LinkBlot, true);

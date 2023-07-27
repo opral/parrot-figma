@@ -132,7 +132,9 @@ export class UILocalizedLabel implements LocalizedLabel {
     const lastTwoCharsBreaks = text.length > 1 && text[text.length - 1] === '\n' && text[text.length - 2] === '\n';
 
     // allways add an additional line break at the end
-    ops[ops.length - 1].end += 1;
+    if (ops.length > 0) {
+      ops[ops.length - 1].end += 1;
+    }
     const rawtext = `${text}\n`;
 
     // s

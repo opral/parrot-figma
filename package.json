@@ -1,6 +1,6 @@
 {
   "name": "assets-and-resources",
-  "version": "0.9.38",
+  "version": "0.9.47",
   "description": "Plugin to handle assets and resources directly within figma",
   "main": "code.js",
   "scripts": {
@@ -53,7 +53,7 @@
     "dotenv": "^16.3.1",
     "dotenv-webpack": "^8.0.1",
     "ejs": "^3.1.9",
-    "figcd": "^0.0.6",
+    "figcd": "^0.0.10",
     "figma-plugin-ds": "^1.0.1",
     "i18next": "^22.4.14",
     "install": "^0.13.0",

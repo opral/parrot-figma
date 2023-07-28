@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/browser';
+
 export default class GoogleTranslator {
   static async translate(text: string, sourceLanguage: string, targetLanguage: string) {
     // replace placeholder with numbers to not translate them
@@ -38,6 +40,11 @@ export default class GoogleTranslator {
                 'origin-when-cross-origin': '*',
               }, */
       });
+
+      if (!result.ok) {
+        Sentry.captureMessage(`Translation of ${text} failed. Status code (${result.status}).`);
+        return null;
+      }
       // eslint-disable-next-line no-await-in-loop
       const translationResults = await result.json();
       translatedSentences.push(translationResults[0][0][0].split('{{dot}}').join('.').split('{{route}}').join('#')

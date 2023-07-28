@@ -275,7 +275,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     return [...this.cachedFrames[frameId].localizedLabelIds].map((labelId) => this.cachedLocalisedLabels[labelId]!);
   }
 
-  async setFrameLanguage(frameId: string, targetLanguage: Language, missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | undefined>) {
+  async setFrameLanguage(frameId: string, targetLanguage: Language, missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | null>) {
     const version = undefined as undefined | number; // todo fill with fixed version of the frame if set
 
     await this.localizedLabelMangerSandbox.updateFrameProperties(frameId, {
@@ -312,7 +312,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     cachedLabel: LocalizedLabel,
     targetLanguage: Language,
     version: number | undefined,
-    missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | undefined>,
+    missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | null>,
   ) {
     (new UILocalizedLabel(this, cachedLabel)).setLanguage(targetLanguage, version, missingTranslationProvider);
   }

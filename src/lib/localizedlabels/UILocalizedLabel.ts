@@ -453,7 +453,7 @@ export class UILocalizedLabel implements LocalizedLabel {
   async setLanguage(
     targetLanguage: Language,
     version: number | undefined,
-    missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | undefined>,
+    missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | null>,
   ) {
     if (this.keyType === KeyState.Unset) {
       const baseLanguage = this.manager.keyStore.getBaseLanugage()! as Language;
@@ -470,7 +470,7 @@ export class UILocalizedLabel implements LocalizedLabel {
       }
       let translationHTML = undefined as string | undefined;
       if (!translationUpToDate) {
-        translationHTML = await missingTranslationProvider(baseLanguageHTML, baseLanguage as string, targetLanguage);
+        translationHTML = await missingTranslationProvider(baseLanguageHTML, baseLanguage as string, targetLanguage) ?? 'no translation';
       }
 
       await this.manager.updateLabelProperties(this.nodeId, {
@@ -497,21 +497,6 @@ export class UILocalizedLabel implements LocalizedLabel {
     // check if key exists
     if (translationKey === undefined) {
       throw new Error('Key linked to label does not exist - not removed when key was deleted?');
-      /* const translation = await missingTranslationProvider(this.translationHTML!, this.language, targetLanguage);
-
-      // ok we have a fresh key to create - no translation to expect
-      translationKey = await this.manager.keyStore.createKey(translationKeyName, [{
-        language: this.language,
-        plural: this.pluralId,
-        text: this.translationHTML,
-        skip: false,
-      }, {
-        language: targetLanguage,
-        plural: this.pluralId,
-        text: translation,
-        skip: false,
-      }], this.pluralId !== Plural.OTHER);
-      labelVersion = translationKey.latestVersion; */
     } else {
       if (labelState.behind === 0) {
         // updating key
@@ -534,7 +519,7 @@ export class UILocalizedLabel implements LocalizedLabel {
             originText = translationKey.translations[this.language]![this.pluralId]?.text!;
           }
 
-          const translation = await missingTranslationProvider(originText, originLanguage as string, targetLanguage);
+          const translation = await missingTranslationProvider(originText, originLanguage as string, targetLanguage) ?? 'no translation';
           translationKey = await this.manager.keyStore.updateKey(translationKeyName, [{
             language: targetLanguage,
             plural: this.pluralId,

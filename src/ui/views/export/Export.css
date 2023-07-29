@@ -73,3 +73,9 @@
 .buttonGroup-reversed {
     flex-direction: row-reverse;
 }
+
+.language-export-action  {
+    
+    margin-right: 8px;
+    margin-left: auto;
+}

@@ -189,7 +189,7 @@ export default function InputSelect({
   };
 
   const highlightMouseOverIndex = (i: number | undefined) => {
-    if (i === undefined || options[i].type !== InputSelectionOptionType.DIVIDER) {
+    if (i === undefined || options[i].type !== InputSelectionOptionType.DIVIDER) {
       updateCurrentMouseOverHighlightIndex(i);
     }
   };
@@ -304,8 +304,8 @@ export default function InputSelect({
     if (isExpanded && menuWrapperRef.current !== undefined) {
       // on expand calculate starting position
       const rect = buttonRef.current!.getBoundingClientRect();
+      const bodyHeight = (document as any).body.clientHeight;
       // menuWrapperRef.current!.style.left = `${rect.left}px`;
-
       const menuPadding = 8;
       const menuMargin = 8;
       const menuEntryHeight = 24;
@@ -336,7 +336,7 @@ export default function InputSelect({
         menuOverlayRef.current!.style.bottom = 'unset';
       } else {
         menuOverlayRef.current!.style.top = 'unset';
-        menuOverlayRef.current!.style.bottom = `${viewPortHeight - rect.bottom}px`;
+        menuOverlayRef.current!.style.bottom = `${bodyHeight - rect.bottom}px`;
         menuOverlayRef.current!.style.flexDirection = 'column-reverse';
       }
 

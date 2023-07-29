@@ -398,7 +398,7 @@ What we want from ui point of view:
     - [ ] think about edgecases here 
  - [ ] qa handling of translation
 
- - [ ] use base language for translation if possible
+ - [x] use base language for translation if possible
  - [ ] handle selection for keys as well (provide an option to only show keys of current selection)
  - [ ] add show difference toggle to history view
 

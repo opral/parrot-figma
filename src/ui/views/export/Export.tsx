@@ -3,7 +3,7 @@
 /* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 import * as React from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
 import OutsideClickHandler from 'react-outside-click-handler';
@@ -15,9 +15,40 @@ import TileSelect, { TileSelectOption } from '../../compontents/tileselect/tiles
 import { Language } from '../../../lib/base/Language';
 import KeyExporter from '../../../lib/export/KeyExporter';
 import FEATURES_FLAGS from '../../featuretoggle';
+import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
+
+function toLanguageOption(language: string, baseLanguage?: string) {
+  let languageNameInCurrentLanguage = 'no name found';
+  try {
+    languageNameInCurrentLanguage = new Intl.DisplayNames('en', { type: 'language' }).of(language) ?? languageNameInCurrentLanguage;
+  } catch (e) { /* empty */ }
+
+  let languageNameInForeignLanguage = 'no name found';
+  try {
+    languageNameInForeignLanguage = new Intl.DisplayNames(language, { type: 'language' }).of(language) ?? languageNameInForeignLanguage;
+  } catch (e) { /* empty */ }
+
+  if (baseLanguage && language === baseLanguage) {
+    return {
+      value: language,
+      label: `${languageNameInCurrentLanguage} - ${language}`,
+      menuLabel: `${languageNameInCurrentLanguage} - ${language} (${languageNameInForeignLanguage})`,
+      isDisabled: true,
+    };
+  }
+  return {
+    value: language,
+    label: `${languageNameInCurrentLanguage} - ${language}`,
+    menuLabel: `${languageNameInCurrentLanguage} - ${language} (${languageNameInForeignLanguage})`,
+  };
+}
+
+function toLanguageOptions(languages: string[], baseLanguage?: string) {
+  return languages.map((language) => toLanguageOption(language, baseLanguage));
+}
 
 type ExportProps = {
-  translationKeyStore: MemoryTranslationKeyStore
+  labelManager: LocalizedLabelManagerUI,
 };
 /**
  * Select versionTag (allow to tag current Version)
@@ -25,9 +56,14 @@ type ExportProps = {
  * Select platform (ios/android) / export format
  */
 export default function Export({
-  translationKeyStore,
+  labelManager,
 }: ExportProps) {
   const { t } = useTranslation();
+  const translationKeyStore = labelManager.keyStore;
+
+  const baseLanguage = labelManager.keyStore.getBaseLanugage()!;
+  const selectedLanguages = toLanguageOptions(labelManager.keyStore.getLanugages()!.filter((language) => language !== baseLanguage));
+  const selectedBaseLanguage = toLanguageOption(baseLanguage);
 
   const defaultOptions = [{
     label: 'Current Version',
@@ -52,36 +88,19 @@ export default function Export({
   const [title, setTitle] = useState('test');
   const [description, setDescription] = useState('');
   const [tagOptions, setTagOptions] = useState(initTagOptions);
-  const [exportLanguage, setExportLanguage] = useState<Language | undefined>(undefined);
-  const [exportPlatform, setExportPlatform] = useState<string | undefined>(undefined);
 
-  const exportLanguageOptions = [] as TileSelectOption<Language>[];
-  const exportPlatformOptions = [{
-    label: 'Android',
-    value: 'android',
-    subLabel: 'strings.xml',
-    forceSelected: false,
-  }, {
-    label: 'iOS',
-    value: 'ios',
-    subLabel: 'strings.dict, language.strings',
-    forceSelected: false,
-  }] as TileSelectOption<string>[];
+  const [exportTarget, setExportTarget] = useState<string | undefined>(undefined);
 
-  for (const language of translationKeyStore.getLanugages()!) {
-    // const untypedStrings = strings as any;
-
-    const currentLanguageOption = {
-      value: language,
-      label: (new Intl.DisplayNames('en', { type: 'language' }).of(language)) + ' - ' + language,
-      // tooltip: 'select this',
-      // icon: `flag-${language}`,
-      forceSelected: language === exportLanguage,
-      subLabel: language === exportLanguage ? '(base language)' : undefined,
-    } as TileSelectOption<Language>;
-
-    exportLanguageOptions.push(currentLanguageOption);
-  }
+  const exportPlatformOptions = [ /* {
+    label: 'i18next - json format',
+    value: 'i18next',
+  }, */ {
+      label: 'Android - Resource XML',
+      value: 'android-xml',
+    }, {
+      label: 'iOS - .strings File',
+      value: 'apple-strings',
+    }] as SelectOption[];
 
   const downloadFile = (fileName: string, fileType: string, content: string) => {
     const contentBlob = new Blob([content], { type: fileType });
@@ -111,6 +130,26 @@ export default function Export({
     setSelectedVersion(newTag.versionId!);
   };
 
+  const doExport = async (exportLanguage: Language, format: string) => {
+    const exportedFile = KeyExporter.export(translationKeyStore, exportLanguage, format, selectedVersion);
+    if (exportedFile) {
+      downloadFile(exportedFile.fileName, exportedFile.fileType, exportedFile.content);
+    }
+  };
+
+  const [keySummary, setKeySummary] = useState(labelManager.keyStore.findKeys({}, undefined));
+
+  useEffect(() => {
+    const updateSummary = () => { setKeySummary(labelManager.keyStore.findKeys({}, undefined)); };
+
+    labelManager.keyStore.addEventListener('updated', updateSummary);
+
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
+    return () => {
+      labelManager.keyStore.removeEventListener('updated', updateSummary);
+    };
+  }, []);
+
   return (
     <div>
       { FEATURES_FLAGS.versioning && (
@@ -124,152 +163,88 @@ export default function Export({
         />
       </div>
       )}
-      <div>
-        Select Language
-        <TileSelect<Language>
-          onChange={(selectedLang: Language[]) => {
-            if (selectedLang.length === 1) {
-              setExportLanguage(selectedLang[0]);
-            } else {
-              setExportLanguage(undefined);
-            }
-          }}
-            // defaultValue={rootFrameLanguage?.value}
-          options={exportLanguageOptions}
-          defaultSelection={exportLanguage ? [exportLanguage] : undefined}
-          multiselect={false}
-        />
+      <div style={{ display: 'flex' }}>
+        <div className="setup-header-title">
+          Export
+        </div>
+        <div style={{ marginLeft: 'auto', marginRight: '8px' }}>
+          <Select
+            placeholder="Export Target"
+            onChange={(value) => { setExportTarget(value.value as string); }}
+            getOptions={() => exportPlatformOptions}
+          />
+        </div>
       </div>
       <div>
-        select platform
-        <TileSelect<string>
-          onChange={(selectedPlatform: string[]) => {
-            if (selectedPlatform.length === 1) {
-              setExportPlatform(selectedPlatform[0]);
-            } else {
-              setExportPlatform(undefined);
-            }
-          }}
-            // defaultValue={rootFrameLanguage?.value}
-          options={exportPlatformOptions}
-          defaultSelection={exportLanguage ? [exportLanguage] : undefined}
-          multiselect={false}
-        />
-      </div>
-      <div>
-        { exportPlatform === 'ios' && (
-        <>
-          <button
-            className="button button--buttonSecondary"
-            type="button"
-            onClick={async () => {
-              const exportedFile = KeyExporter.export(translationKeyStore, exportLanguage!, 'apple-strings', selectedVersion);
+        <div className="setup-header">
+          <div className="setup-header-title">Main file language</div>
+        </div>
+        <div className="choosen-language-control">
+          <div className="change-control">
+            <div className="svg-container world-svg" />
 
-              if (exportedFile) {
-                downloadFile(exportedFile.fileName, exportedFile.fileType, exportedFile.content);
-              }
-            }}
-          >
-            <span data-tooltip-type="text">
-              Export to strings file
-            </span>
-          </button>
-          <button
-            className="button button--buttonSecondary"
-            type="button"
-            onClick={async () => {
-              const exportedFile = KeyExporter.export(translationKeyStore, exportLanguage!, 'apple-dict', selectedVersion);
-
-              if (exportedFile) {
-                downloadFile(exportedFile.fileName, exportedFile.fileType, exportedFile.content);
-              }
-            }}
-          >
-            <span data-tooltip-type="text">
-              Export dict file
-            </span>
-          </button>
-
-        </>
-        )}
-        { exportPlatform === 'android' && (
-        <button
-          className="button button--buttonSecondary"
-          type="button"
-          onClick={async () => {
-            const exportedFile = KeyExporter.export(translationKeyStore, exportLanguage!, 'android-xml', selectedVersion);
-
-            if (exportedFile) {
-              downloadFile(exportedFile.fileName, exportedFile.fileType, exportedFile.content);
-            }
-          }}
-        >
-          <span data-tooltip-type="text">
-            Export to strings.xml file
-          </span>
-        </button>
-        )}
-      </div>
-      { selectedVersion === 'tag-current' && (
-      <div className="modal-window-background">
-        <OutsideClickHandler
-          onOutsideClick={() => setSelectedVersion('head')}
-          display="contents"
-        >
-          <div className="modal-window">
-            <div className="modal-window-title">Tag current version</div>
-            <div>
-              <div className="modal-window-section">
-
-                <input
-                  type="text"
-                  className="modal-window-input"
-                  placeholder="Titel"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
+            <div className="choosen-languages">
+              <div className="language-name"><div>{selectedBaseLanguage?.label}</div></div>
+              <div className="language-summary">
+                {keySummary.matchingKeys.size}
+                {' '}
+                Translation Keys
+                {keySummary.withMissingTranslationsPerLanguage[selectedBaseLanguage!.value as Language]
+                 && keySummary.withMissingTranslationsPerLanguage[selectedBaseLanguage!.value as Language]!.size > 0 && (
+                 <div>
+                   (
+                   {keySummary.withMissingTranslationsPerLanguage[selectedBaseLanguage!.value as Language]!.size}
+                   {' '}
+                   Missing Translations)
+                 </div>
+                )}
               </div>
-              <div className="modal-window-section">
-                <textarea
-                  className="modal-window-input"
-                  style={{ minHeight: '90px', minWidth: '300px' }}
-                  placeholder="Description what changed"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-              </div>
-              <div className="modal-window-button-row">
-                <div className="buttonGroup buttonGroup-reversed">
-                  <button
-                    className="button button-primary"
-                    type="button"
-                    onClick={() => onTagCurrentVersionClick()}
-                    disabled={title.length === 0}
-                  >
-                    <span data-tooltip-type="text">
-                      Tag
-                    </span>
-                  </button>
-                  <button
-                    className="button button-secondary"
-                    type="button"
-                    onClick={() => {
-                      // set back to head
-                      setSelectedVersion('head');
-                    }}
-                  >
-                    <span data-tooltip-type="text">
-                      Cancel
-                    </span>
-                  </button>
-                </div>
+              <div className="language-export-action">
+                <button className="button button--buttonSecondary" disabled={exportTarget === undefined} type="button" onClick={() => { doExport(selectedBaseLanguage.value as Language, exportTarget!); }}>
+                  <span data-tooltip-type="text">
+                    Export
+                  </span>
+                </button>
               </div>
             </div>
-          </div>
 
-        </OutsideClickHandler>
+          </div>
+        </div>
+        <div style={{ height: '8px' }} />
+        <div className="setup-header needs-base-language">
+          <div className="setup-header-title">Target locales</div>
+        </div>
+        <div className="choosen-language-control">
+          <div className="change-control">
+            <div className="svg-container world-svg" />
+            <div className="choosen-languages">
+              { selectedLanguages.map((languageOption) => (
+                <>
+                  <div className="language-name-wrapper"><div className="language-name"><div>{languageOption.label}</div></div></div>
+                  <div className="language-summary">
+
+                    <div>
+
+                      {keySummary.withMissingTranslationsPerLanguage[languageOption.value as Language]?.size ?? 0}
+                      {' '}
+                      Missing Translations
+                    </div>
+
+                  </div>
+                  <div className="language-export-action">
+                    <button className="button button--buttonSecondary" disabled={exportTarget === undefined} type="button" onClick={() => { doExport(languageOption.value as Language, exportTarget!); }}>
+                      <span data-tooltip-type="text">
+                        Export
+                      </span>
+                    </button>
+                  </div>
+                </>
+              ))}
+            </div>
+            {/* <div className="choosen-language-change" onClick={() => { setChangeLanguages(true); }}>Change</div> */}
+          </div>
+        </div>
       </div>
-      )}
     </div>
   );
 }

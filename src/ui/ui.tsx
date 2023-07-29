@@ -288,7 +288,7 @@ function App() {
     case 'export':
       view = (
         <Export
-          translationKeyStore={memoryTranslationKeyStore}
+          labelManager={localizedLabelManager}
         />
       );
       break;

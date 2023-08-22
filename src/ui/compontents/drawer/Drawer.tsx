@@ -1,7 +1,7 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-plusplus */
 /* eslint-disable no-continue */
-import React, { ReactNode, useRef, useEffect } from 'react';
+import React, { ReactNode, useRef, useEffect, useState } from 'react';
 import OutsideClickHandler from 'react-outside-click-handler';
 import './Drawer.css';
 
@@ -15,6 +15,8 @@ type ButtonConfig = {
 
 type DrawerProps = {
   buttons: ButtonConfig[],
+  beforeShow?: () => Promise<void> | undefined,
+  onCancel?: () => void
   children: ReactNode,
   shown: boolean,
   position: 'top' | 'left' | 'right'
@@ -24,9 +26,14 @@ export default function Drawer({
   buttons,
   children,
   shown,
+  onCancel,
+  beforeShow,
   position = 'top',
 }: DrawerProps) {
   const drawerDiv = useRef<HTMLDivElement | null>(null);
+  const showPromise = useRef<Promise<void> | undefined>(undefined);
+
+  const [isShown, setIsShown] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -37,6 +44,7 @@ export default function Drawer({
             break;
           }
         }
+        onCancel?.();
       } else if (event.key === 'Enter') {
         for (const button of buttons) {
           if (button.key === 'enter') {
@@ -60,11 +68,27 @@ export default function Drawer({
   }, [buttons]);
 
   useEffect(() => {
-    if (shown) {
+    if (isShown) {
       const firstInputElement = drawerDiv.current?.querySelector('input');
       if (firstInputElement instanceof HTMLElement) {
         firstInputElement.focus();
       }
+    }
+  }, [isShown]);
+
+  useEffect(() => {
+    if (shown) {
+      if (beforeShow !== undefined) {
+        showPromise.current = beforeShow();
+        showPromise.current!.then(() => {
+          setIsShown(true);
+        });
+      } else {
+        setIsShown(true);
+      }
+    } else {
+      setIsShown(false);
+      showPromise.current = undefined;
     }
   }, [shown]);
 
@@ -77,11 +101,12 @@ export default function Drawer({
             break;
           }
         }
+        onCancel?.();
       }}
-      disabled={!shown}
+      disabled={!isShown}
       display="contents"
     >
-      <div ref={drawerDiv} className={`${position}-drawer${shown ? ' open' : ' '}`}>
+      <div ref={drawerDiv} className={`${position}-drawer${isShown ? ' open' : ' '}`}>
         {children}
         <div className="buttonGroup buttonGroup-reversed">
           {buttons.reverse().map((button) => (

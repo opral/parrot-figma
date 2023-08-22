@@ -14,7 +14,7 @@ import FigmaUtil from '../shared/FigmaUtil';
 import FigmaHelper from '../shared/FigmaHelper';
 import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowManagerSandbox';
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
-import UsageManager from '../lib/usage/UsageManager';
+import UserManager from '../lib/usage/UsageManager';
 
 const figmaRemote = new FigmaUtil();
 
@@ -23,7 +23,7 @@ const introShownToUser = true; // TODO change this to a config when implemented
 
 figma.root.setRelaunchData({ open: 'Let Your Design Speak all Languages' });
 
-const usageManager = new UsageManager();
+
 
 WindowManagerSandbox.init({
   bottomSheet: {
@@ -46,6 +46,9 @@ const asyncFunctionProxy = new AsyncFunctionProxy('SandboxAsyncFunctionProxy', (
 }, figma.ui);
 
 asyncFunctionProxy.registerInstance(figmaRemote);
+
+const usageManager = new UserManager(false);
+asyncFunctionProxy.registerInstance(usageManager);
 
 const localizationState = new FigmaFileTranslationKeyStore(false);
 asyncFunctionProxy.registerInstance(localizationState);

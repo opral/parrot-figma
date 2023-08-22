@@ -36,6 +36,12 @@ import Export from './views/export/Export';
 import FEATURES_FLAGS from './featuretoggle';
 import SetupView from './views/setup/SetupView';
 import * as pjs from '../../package.json';
+import UserManager, { PluginUser, UserRole } from '../lib/usage/UsageManager';
+import UserManagerUI from '../lib/usage/UsageManagerUI';
+import UserManagement from './views/usermanagement/Usermanagement';
+import Drawer from './compontents/drawer/Drawer';
+import ConsumptionPaywall from './compontents/plans/ConsumptionPaywall';
+import ComparisonChart from './compontents/plans/ComparisonChart';
 
 console.log(`Starting Figma UI - Version ${pjs.version}`);
 
@@ -135,6 +141,10 @@ setInterval(() => {
   checkVersion().catch(console.log);
 }, versionCheckInterval);
 
+const userStateManagerSandbox = new UserManager(true);
+asyncFunctionProxy.proxyAsyncMethods(userStateManagerSandbox);
+const userStateManagerUi = new UserManagerUI(userStateManagerSandbox);
+
 const figmaFileTranslationKeyStore = new FigmaFileTranslationKeyStore(true);
 asyncFunctionProxy.proxyAsyncMethods(figmaFileTranslationKeyStore);
 const memoryTranslationKeyStore = new MemoryTranslationKeyStore(figmaFileTranslationKeyStore);
@@ -146,6 +156,10 @@ const localizedLabelManager = new LocalizedLabelManagerUI(remoteLocalizedLabelMa
 function App() {
   // initial app screen is startup until we initialy loaded the data
   const [appScreen, setAppScreen] = useState(undefined as String | undefined);
+  const [consumptionPayWallFeature, setCunsumptionPayWallFeature] = useState(undefined as String | undefined);
+  const [showAllFeatures, setShowAllFeatures] = useState(false);
+
+  const [user, setUser] = useState(undefined as PluginUser | undefined);
 
   const [windowMode, setWindowMode] = useState(WindowManagerUi.instance!.windowMode);
   const [keyQuery, setKeyQuery] = useState(MemoryTranslationKeyStore.toQueryObject(''));
@@ -153,7 +167,44 @@ function App() {
   useEffect(() => {
     // asynchronous fetch the state from figma helper
     (async () => {
-      // console.log('load - keys');
+      console.log('load - userState');
+      await userStateManagerUi.loadUserState();
+
+      if (windowMode === WindowMode.DevPanel) {
+        const updatedUser = await userStateManagerUi.requestUserRole(UserRole.developer);
+        setUser(updatedUser);
+      } else {
+        const updatedUser = await userStateManagerUi.requestUserRole(UserRole.designer);
+        setUser(updatedUser);
+      }
+    })();
+
+    const onUsersUpdated = (event: any) => {
+      console.log('onUsersUpdated');
+    };
+
+    const onCurrentUserUpdated = (event: any) => {
+      setUser(userStateManagerUi.getCurrentUser());
+    };
+
+    const onPlanUpgradeNeeded = (event: any) => {
+      setCunsumptionPayWallFeature(event.detail as String);
+    };
+
+    userStateManagerUi.addEventListener('planUpgradeNeeded', onPlanUpgradeNeeded);
+    userStateManagerUi.addEventListener('usersUpdated', onUsersUpdated);
+    userStateManagerUi.addEventListener('currentUserUpdated', onCurrentUserUpdated);
+    return () => {
+      userStateManagerUi.removeEventListener('usersUpdated', onUsersUpdated);
+      userStateManagerUi.removeEventListener('currentUserUpdated', onCurrentUserUpdated);
+      userStateManagerUi.removeEventListener('planUpgradeNeeded', onPlanUpgradeNeeded);
+    };
+  }, []);
+
+  useEffect(() => {
+    // asynchronous fetch the state from figma helper
+    (async () => {
+      console.log('load - keys');
       await memoryTranslationKeyStore.load();
       localizedLabelManager.startFillupCache();
       const fileSetupCompleted = await figmaRemote.getRootPluginData('fileSetupCompleted');
@@ -185,10 +236,9 @@ function App() {
     };
   }, []);
 
-  if (!appScreen) {
+  if (!appScreen || !user) {
     return <>Loading Plugin</>;
   }
-
   let view;
 
   if (windowMode === WindowMode.DevPanel) {
@@ -208,6 +258,17 @@ function App() {
           </div>
 
         </div>
+      </>
+    );
+  }
+  console.log(user.userRole);
+
+  if (user.userRole !== UserRole.designer && user.userRole !== UserRole.owner) {
+    return (
+      <>
+        Not the permission to view
+        {' '}
+        {user.openUserRoleRequest !== undefined ? (`${user.openUserRoleRequest} requested`) : ' -'}
       </>
     );
   }
@@ -285,6 +346,7 @@ function App() {
     case 'export':
       view = (
         <Export
+          userManager={userStateManagerUi}
           labelManager={localizedLabelManager}
         />
       );
@@ -301,8 +363,19 @@ function App() {
         />
       );
       break;
+    case 'users':
+      view = (
+        <UserManagement
+          userManager={userStateManagerUi}
+        />
+      );
+      break;
     default:
       break;
+  }
+
+  function upgradePlan() {
+    console.log('TODO UPGRADE PLAN!');
   }
 
   return (
@@ -324,6 +397,7 @@ function App() {
           </div>
           { FEATURES_FLAGS.export && (<div className={`tab ${appScreen === 'export' ? 'active' : ''}`} onClick={() => setAppScreen('export')}>{ FEATURES_FLAGS.versioning ? 'Versions & Export' : 'Export'}</div>)}
           <div className={`tab ${appScreen === 'settings' ? 'active' : ''}`} onClick={() => setAppScreen('settings')}>Setup</div>
+          <div className={`tab ${appScreen === 'users' ? 'active' : ''}`} onClick={() => setAppScreen('users')}>Users</div>
         </div>
         { windowMode === WindowMode.BottomSheet && (
           <div
@@ -369,7 +443,6 @@ function App() {
             selectedSegment={windowMode}
             onChoose={(choosenWindowMode: WindowMode) => { WindowManagerUi.instance?.requestWindowMode(choosenWindowMode, false); }}
           />
-
         </div>
 
       </div>
@@ -378,6 +451,93 @@ function App() {
         {view}
       </div>
       <a id="focusHelper" href="" />
+      <Drawer
+        shown={consumptionPayWallFeature !== undefined}
+        beforeShow={async () => {
+          const waitOneFrame = () => new Promise<void>((resolve) => {
+            setTimeout(() => {
+              resolve();
+            }, 30);
+          });
+          WindowManagerUi.instance?.requestWindowMode(WindowMode.Fullscreen, false);
+          return waitOneFrame();
+        }}
+        buttons={[]}
+        position="top"
+      >
+        <ConsumptionPaywall
+          showAllFeatures={() => {
+            setCunsumptionPayWallFeature(undefined);
+            setShowAllFeatures(true);
+          }}
+          upgradePlan={() => {
+            setCunsumptionPayWallFeature(undefined);
+            upgradePlan();
+          }}
+        />
+
+      </Drawer>
+      <Drawer
+        shown={showAllFeatures}
+        beforeShow={async () => {
+          const waitOneFrame = () => new Promise<void>((resolve) => {
+            setTimeout(() => {
+              resolve();
+            }, 30);
+          });
+          WindowManagerUi.instance?.requestWindowMode(WindowMode.Fullscreen, false);
+          return waitOneFrame();
+        }}
+        buttons={[]}
+        onCancel={() => {
+          setShowAllFeatures(false);
+        }}
+        position="top"
+      >
+        <ComparisonChart
+          upgradePlan={() => {
+            setCunsumptionPayWallFeature(undefined);
+            upgradePlan();
+          }}
+        />
+
+      </Drawer>
+
+      {/* <Drawer
+        shown={showUpgradePlan}
+        beforeShow={async () => {
+          const waitOneFrame = () => new Promise<void>((resolve) => {
+            setTimeout(() => {
+              resolve();
+            }, 30);
+          });
+          WindowManagerUi.instance?.requestWindowMode(WindowMode.Fullscreen, false);
+          return waitOneFrame();
+        }}
+        buttons={[]}
+        position="top"
+      >
+        <ConsumptionPaywall showAllFeatures={() => {}} upgradePlan={() => {}}/>
+
+      </Drawer> */}
+
+      {/* <Drawer
+        shown={showThanksForYourSupport}
+        beforeShow={async () => {
+          const waitOneFrame = () => new Promise<void>((resolve) => {
+            setTimeout(() => {
+              resolve();
+            }, 30);
+          });
+          WindowManagerUi.instance?.requestWindowMode(WindowMode.Fullscreen, false);
+          return waitOneFrame();
+        }}
+        buttons={[]}
+        position="top"
+      >
+        <div>Thanks for your support!</div>
+
+      </Drawer> */}
 
     </>
   );

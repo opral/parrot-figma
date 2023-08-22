@@ -16,6 +16,7 @@ import { Language } from '../../../lib/base/Language';
 import KeyExporter from '../../../lib/export/KeyExporter';
 import FEATURES_FLAGS from '../../featuretoggle';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
+import UserManagerUI from '../../../lib/usage/UsageManagerUI';
 
 function toLanguageOption(language: string, baseLanguage?: string) {
   let languageNameInCurrentLanguage = 'no name found';
@@ -49,6 +50,7 @@ function toLanguageOptions(languages: string[], baseLanguage?: string) {
 
 type ExportProps = {
   labelManager: LocalizedLabelManagerUI,
+  userManager: UserManagerUI,
 };
 /**
  * Select versionTag (allow to tag current Version)
@@ -57,6 +59,7 @@ type ExportProps = {
  */
 export default function Export({
   labelManager,
+  userManager,
 }: ExportProps) {
   const { t } = useTranslation();
   const translationKeyStore = labelManager.keyStore;
@@ -88,6 +91,7 @@ export default function Export({
   const [title, setTitle] = useState('test');
   const [description, setDescription] = useState('');
   const [tagOptions, setTagOptions] = useState(initTagOptions);
+  const [featureEnabled, setFeatureEnabled] = useState(false);
 
   const [exportTarget, setExportTarget] = useState<string | undefined>(undefined);
 
@@ -131,6 +135,11 @@ export default function Export({
   };
 
   const doExport = async (exportLanguage: Language, format: string) => {
+    const precondition = await userManager.requestFeature('export');
+    if (!precondition) {
+      console.log('nope');
+      return
+    }
     const exportedFile = KeyExporter.export(translationKeyStore, exportLanguage, format, selectedVersion);
     if (exportedFile) {
       downloadFile(exportedFile.fileName, exportedFile.fileType, exportedFile.content);

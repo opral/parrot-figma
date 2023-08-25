@@ -1,9 +1,9 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-continue */
 /* eslint-disable no-plusplus */
-import { Language } from '../base/Language';
-import { Plural } from '../base/Plural';
-import MemoryTranslationKeyStore from '../keystore/MemoryTranslationKeyStore';
+import { Language } from '../message/variants/Language';
+import { Plural } from '../message/variants/Plural';
+import MemoryTranslationKeyStore from '../message/MemoryTranslationKeyStore';
 
 import AppleStringsFileImporter from './AppleStringsFileImporter';
 import AndroidXMLImporter from './AndroidXmlImporter';

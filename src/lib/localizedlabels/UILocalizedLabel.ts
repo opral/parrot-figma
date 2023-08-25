@@ -1,12 +1,12 @@
 import Quill, { Delta as DeltaType, DeltaOperation } from 'quill';
 import blake from 'blakejs';
-import { Language } from '../base/Language';
-import { Plural } from '../base/Plural';
+import { Language } from '../message/variants/Language';
+import { Plural } from '../message/variants/Plural';
 import { KeyState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
-import { UITranslationKey } from '../keystore/UITranslationKey';
+import { UITranslationKey } from '../message/UITranslationKey';
 import {
   Fillins, Placeholder, PlaceholderType, PlaceholdersByName, TranslationEntry, TranslationKey,
-} from '../keystore/TranslationKey';
+} from '../message/TranslationKey';
 import LocalizedLabelManager, { DeltaOp, MARKER_CHARACTER } from './LocalizedLabelManager';
 
 const Delta = Quill.import('delta') as typeof DeltaType;

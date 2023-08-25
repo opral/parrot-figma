@@ -1,13 +1,13 @@
 import blake from 'blakejs';
 import { KeyState, LocalizedLabel } from './LocalizedLabel';
-import { Plural } from '../base/Plural';
+import { Plural } from '../message/variants/Plural';
 import LocalizedLabelManager, { SandboxUpdateLabelProperties } from './LocalizedLabelManager';
-import { Language } from '../base/Language';
-import MemoryTranslationKeyStore from '../keystore/MemoryTranslationKeyStore';
+import { Language } from '../message/variants/Language';
+import MemoryTranslationKeyStore from '../message/MemoryTranslationKeyStore';
 import ChangeEvent from './ChangeEvent';
 
 import { ILocalizedLabelManagerUI, UILocalizedLabel } from './UILocalizedLabel';
-import { Fillins, TranslationEntry } from '../keystore/TranslationKey';
+import { Fillins, TranslationEntry } from '../message/TranslationKey';
 import LinksLoadedEvent from './LinksLoadedEvent';
 import { ImportTranslationKey } from '../import/ImportTranslationKey';
 

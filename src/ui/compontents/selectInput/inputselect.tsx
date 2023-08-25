@@ -7,8 +7,8 @@ import React, {
 import OutsideClickHandler from 'react-outside-click-handler';
 import './inputselect.css';
 import { debug } from 'console';
-import { Plural } from '../../../lib/base/Plural';
-import { Language } from '../../../lib/base/Language';
+import { Plural } from '../../../lib/message/variants/Plural';
+import { Language } from '../../../lib/message/variants/Language';
 
 export enum InputSelectionOptionType {
   SUGGESTION,

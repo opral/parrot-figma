@@ -1,6 +1,6 @@
 /* eslint-disable no-plusplus */
-import { Language } from '../base/Language';
-import { Plural, getPluralFormsByLanguage } from '../base/Plural';
+import { Language } from '../message/variants/Language';
+import { Plural, getPluralFormsByLanguage } from '../message/variants/Plural';
 import {
   Fillins, HistoryEntry, Placeholder, PlaceholderType, PlaceholdersByName, TranslationKey, Translations,
 } from './TranslationKey';

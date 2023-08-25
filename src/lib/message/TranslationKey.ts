@@ -1,5 +1,6 @@
-import { Language } from '../base/Language';
-import { Plural } from '../base/Plural';
+import { Language } from './variants/Language';
+import { Plural } from './variants/Plural';
+import { Gender } from './variants/Gender';
 
 export type HistoryTag = {
   user: string,

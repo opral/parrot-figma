@@ -11,10 +11,10 @@ import OutsideClickHandler from 'react-outside-click-handler';
 import './TranslationEditor.css';
 
 import Quill from 'quill';
-import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
+import MemoryTranslationKeyStore from '../../../lib/message/MemoryTranslationKeyStore';
 import TranslationView from './TranslationView';
 import QuillEditor from './QuillEditor';
-import { Fillins } from '../../../lib/keystore/TranslationKey';
+import { Fillins } from '../../../lib/message/TranslationKey';
 
 type TranslationEditorProps = {
   translationHTML?: string,

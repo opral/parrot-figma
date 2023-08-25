@@ -5,12 +5,12 @@ import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
-import { Language } from '../../../lib/base/Language';
+import { Language } from '../../../lib/message/variants/Language';
 
-import MemoryTranslationKeyStore, { SearchQuery, UITranslationKeys } from '../../../lib/keystore/MemoryTranslationKeyStore';
+import MemoryTranslationKeyStore, { SearchQuery } from '../../../lib/message/MemoryTranslationKeyStore';
 import FigmaUtil from '../../../shared/FigmaUtil';
 import TranslationKeyListItem from './TranslationKeyListItem';
-import { Plural } from '../../../lib/base/Plural';
+import { Plural } from '../../../lib/message/variants/Plural';
 
 import './TranslationKeyView.css';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';

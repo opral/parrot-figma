@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import ReactTimeAgo from 'react-time-ago';
 import StringDiff from './DiffView';
 import './HistoryEntryView.css';
-import { HistoryTag } from '../../../lib/keystore/TranslationKey';
+import { HistoryTag } from '../../../lib/message/TranslationKey';
 
 interface HistoryEntryViewProps {
   first: boolean,

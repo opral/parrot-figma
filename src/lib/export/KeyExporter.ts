@@ -1,6 +1,6 @@
 import ejs from 'ejs';
-import { Language } from '../base/Language';
-import MemoryTranslationKeyStore from '../keystore/MemoryTranslationKeyStore';
+import { Language } from '../message/variants/Language';
+import MemoryTranslationKeyStore from '../message/MemoryTranslationKeyStore';
 
 const androidXmlExporterTmpl = ejs.compile(require('./templates/AndroidXmlExporter.ejs').default); // include the EJS template as a string
 const appleStringsFileExporterTmpl = ejs.compile(require('./templates/AppleStringsFileExporter.ejs').default);

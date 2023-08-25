@@ -1,6 +1,6 @@
 /* eslint-disable consistent-return */
-import { Language } from '../base/Language';
-import { Plural } from '../base/Plural';
+import { Language } from './variants/Language';
+import { Plural } from './variants/Plural';
 import { HistoryEntry, TranslationKey, TranslationKeys } from './TranslationKey';
 
 export interface TranslationKeyStore {

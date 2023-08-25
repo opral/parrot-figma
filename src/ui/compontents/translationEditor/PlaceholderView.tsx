@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { PlaceholderType } from '../../../lib/keystore/TranslationKey';
+import { PlaceholderType } from '../../../lib/message/TranslationKey';
 
 export type PlaceholderViewProps = {
   name: string,

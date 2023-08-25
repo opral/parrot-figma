@@ -2,8 +2,8 @@
 /* eslint-disable no-continue */
 /* eslint-disable no-plusplus */
 
-import { Language } from '../base/Language';
-import { Plural } from '../base/Plural';
+import { Language } from '../message/variants/Language';
+import { Plural } from '../message/variants/Plural';
 import { ImportTranslationKey } from './ImportTranslationKey';
 
 export default class AndroidXmlImporter {

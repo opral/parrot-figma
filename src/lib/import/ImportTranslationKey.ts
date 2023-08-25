@@ -1,4 +1,4 @@
-import { Plural } from '../base/Plural';
+import { Plural } from '../message/variants/Plural';
 
 export type ImportTranslationKey = {
   keyName: string,

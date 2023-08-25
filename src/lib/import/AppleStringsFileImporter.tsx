@@ -2,7 +2,7 @@
 /* eslint-disable no-continue */
 /* eslint-disable no-plusplus */
 
-import { Plural } from '../base/Plural';
+import { Plural } from '../message/variants/Plural';
 import { ImportTranslationKey } from './ImportTranslationKey';
 
 export default class AppleStringsFileImporter {

@@ -1,10 +1,10 @@
 /* eslint-disable -- TODO remove this when most of the class is used again */
-import { TranslationKeyStore } from '../lib/keystore/BaseTranslationKeyStore';
+import { TranslationKeyStore } from '../lib/message/BaseTranslationKeyStore';
 
 import FigmaUtil from './FigmaUtil';
-import { Language } from '../lib/base/Language';
-import { Plural } from '../lib/base/Plural';
-import { FigmaFileTranslationKeyStore } from '../lib/keystore/FigmaFileTranslationKeyStore';
+import { Language } from '../lib/message/variants/Language';
+import { Plural } from '../lib/message/variants/Plural';
+import { FigmaFileTranslationKeyStore } from '../lib/message/FigmaFileTranslationKeyStore';
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
 import { KeyState } from '../lib/localizedlabels/LocalizedLabel';
 

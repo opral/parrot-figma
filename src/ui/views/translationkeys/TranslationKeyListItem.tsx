@@ -21,12 +21,12 @@ import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabel
 import MatchView from '../../compontents/matchview/MatchView';
 import HistoryEntryView from '../../compontents/history/HistoryEntryView';
 import { UITranslationKey } from '../../../lib/keystore/UITranslationKey';
-import { PlaceholderView } from '../../compontents/translationEditor/PlaceholderView';
 import PlaceholderEditorListItem from '../../compontents/placeholder/PlaceholderEditor';
 import AsyncImage from './AsyncImage';
 import FEATURES_FLAGS from '../../featuretoggle';
 import { ImportType } from '../../../lib/import/KeyImporter';
 import Drawer from '../../compontents/drawer/Drawer';
+import TextField from '../../compontents/textfield/TextField';
 // import ReactQuill from 'react-quill';
 
 interface VersionEntry {
@@ -210,7 +210,7 @@ export default function TranslationKeyListItem({
       className={`row row-key ${selected || keySelected ? 'selected' : ''} ${rowClassNames !== undefined ? rowClassNames : ''}`}
       onClick={() => {
         if (select) {
-          select(translationKey.keyName);
+          select(translationKey.id);
         }
       }}
     >
@@ -218,7 +218,18 @@ export default function TranslationKeyListItem({
       <div className={'column column-key grid-item-key ' + (keySelected ? ' selected' : '')}>
         <div className="grid-item-key-header">
           <div className="spacer" />
-          <span className="rowText"><MatchView text={translationKey.keyName} match={searchMatch?.keyMatch} /></span>
+          <span className="rowText">
+            <TextField
+              singleClick={false}
+              onSave={async (messageName: string) => {
+                localizedLabelManager.updateKey(translationKey.id, {
+                  translations: [],
+                  name: messageName,
+                });
+              }}
+              text={translationKey.keyName}
+            />
+          </span>
         </div>
         <div className="grid-item-actions">
           { select === undefined && (
@@ -227,7 +238,7 @@ export default function TranslationKeyListItem({
               className="layerIcon iconWrapper button"
               data-tooltip-content="Delete this translation key"
               onClick={() => {
-                setKeyToDelete(translationKey.keyName);
+                setKeyToDelete(translationKey.id);
               }}
             >
               <span className="svg-container trash-svg" />
@@ -236,7 +247,7 @@ export default function TranslationKeyListItem({
             <span
               className="layerIcon iconWrapper button"
               onClick={() => {
-                localizedLabelManager.updateKey(translationKey.keyName, [], !translationKey.plural);
+                localizedLabelManager.updateKey(translationKey.id, { translations: [], plural: !translationKey.plural });
               }}
             >
               <span className={'svg-container ' + (translationKey.plural ? 'plural-svg' : 'no-plural-svg')} />
@@ -301,7 +312,6 @@ export default function TranslationKeyListItem({
                   <div className="column column-plural grid-item-plural grid-item-border"><span className="rowText">{translationKey.plural ? plural : ''}</span></div>
                   <div className="column  column-translation grid-item-translation grid-item-border translation-container translation">
                     <TranslationEditor
-                      keyName={translationKey.keyName}
                       fillins={translationKey.defaultFillins}
                       editable={select === undefined}
                       match={searchMatch?.textMatches[language]?.[plural as Plural]}
@@ -311,9 +321,12 @@ export default function TranslationKeyListItem({
                         if (text !== undefined && text !== '') {
                           skip = false;
                         }
-                        await localizedLabelManager.updateKey(translationKey.keyName!, [{
-                          language, plural: plural as Plural, text, skip,
-                        }], undefined, fillins);
+                        await localizedLabelManager.updateKey(translationKey.id!, {
+                          translations: [{
+                            language, plural: plural as Plural, text, skip,
+                          }],
+                          fillins,
+                        });
                       }}
                       translationHTML={translationKey.translations[language as Language]?.[plural as Plural]?.text}
                       translationKeyStore={translationKeyStore}
@@ -329,12 +342,14 @@ export default function TranslationKeyListItem({
                         className="layerIcon iconWrapper button"
                         onClick={async () => {
                           // disable a translation
-                          await localizedLabelManager.updateKey(translationKey.keyName!, [{
-                            language,
-                            plural,
-                            text: translationKey.translations[language as Language]?.[plural as Plural]?.text,
-                            skip: translationKey.translations[language as Language]?.[plural as Plural]?.skip === undefined ? true : !translationKey.translations[language as Language]![plural as Plural]!.skip,
-                          }]);
+                          await localizedLabelManager.updateKey(translationKey.id!, {
+                            translations: [{
+                              language,
+                              plural,
+                              text: translationKey.translations[language as Language]?.[plural as Plural]?.text,
+                              skip: translationKey.translations[language as Language]?.[plural as Plural]?.skip === undefined ? true : !translationKey.translations[language as Language]![plural as Plural]!.skip,
+                            }],
+                          });
                         }}
                       >
                         <span className={'svg-container' + (translationKey.translations[language as Language]?.[plural as Plural]?.skip === true ? ' eye-closed-svg' : ' eye-svg')} />
@@ -404,9 +419,11 @@ export default function TranslationKeyListItem({
               onReuse={i === 0 ? undefined : async (text: string) => {
                 if (showHistory === undefined) return;
 
-                await localizedLabelManager.updateKey(translationKey.keyName!, [{
-                  language: showHistory.language, plural: showHistory.plural as Plural, text, skip: false,
-                }]);
+                await localizedLabelManager.updateKey(translationKey.id!, {
+                  translations: [{
+                    language: showHistory.language, plural: showHistory.plural as Plural, text, skip: false,
+                  }],
+                });
                 setShowHistory(undefined);
               }}
             />
@@ -462,7 +479,10 @@ export default function TranslationKeyListItem({
             value="Save"
             disabled={false}
             onClick={() => {
-              localizedLabelManager.updateKey(translationKey.keyName, [], undefined, defaultFillins, undefined);
+              localizedLabelManager.updateKey(translationKey.id, {
+                fillins: defaultFillins,
+                translations: [],
+              });
             }}
           />
           <input
@@ -493,7 +513,7 @@ export default function TranslationKeyListItem({
             key: 'enter',
             disabled: keyToDelete === undefined,
             callback: () => {
-              localizedLabelManager.deleteKey(translationKey.keyName);
+              localizedLabelManager.deleteKey(translationKey.id);
               setKeyToDelete(undefined);
             },
           },

@@ -10,6 +10,8 @@ export interface UITranslationKeyStore {
 }
 
 export class UITranslationKey implements TranslationKey {
+  id: string;
+
   keyName: string;
 
   latestVersion: number;
@@ -48,7 +50,7 @@ export class UITranslationKey implements TranslationKey {
 
   constructor(keyStore: UITranslationKeyStore, key: TranslationKey) {
     this.keyStore = keyStore;
-
+    this.id = key.id;
     this.keyName = key.keyName;
     this.latestVersion = key.latestVersion;
     this.historyTags = key.historyTags;
@@ -99,7 +101,6 @@ export class UITranslationKey implements TranslationKey {
     //                     (\d+) captures one or more digits as decimalPlaces
     // \]\]                Matches the closing double square brackets
 
-    
     // <ph type="s" format=".3" arg="" unnamed >unnamed_arg</ph>
     const pattern = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;
 
@@ -109,7 +110,7 @@ export class UITranslationKey implements TranslationKey {
     // unnamed -> 7
     // name -> -> 10
     // name, argumentPosition, unnamed, decimalplaces
-    // 
+    //
 
     const parameters = [] as Placeholder[];
     let parameterNumber = 0;
@@ -328,6 +329,7 @@ export class UITranslationKey implements TranslationKey {
    */
   getInVersion(version: number) {
     const translationKeyInVersion = {
+      id: this.id,
       keyName: this.keyName,
       latestVersion: this.latestVersion,
       historyTags: this.historyTags,
@@ -390,11 +392,11 @@ export class UITranslationKey implements TranslationKey {
             continue;
           }
 
-          // problem to solve: 
+          // problem to solve:
           // the strings from the design and from the keys provided do not match:
           // 1. a word is not starting with an upper case -> solved by comparing the lowercase version
           // 2. some characters don't match like a . is used instead of a !
-          // 3. the key contains placeholders and the design contains fillins 
+          // 3. the key contains placeholders and the design contains fillins
           // fuzzy match uses the distance of two strings -
 
           text
@@ -445,5 +447,5 @@ export class UITranslationKey implements TranslationKey {
     }
     return arr[t.length][s.length];
   };
-  **/
+  * */
 }

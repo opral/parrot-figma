@@ -8,17 +8,18 @@
 
 // This shows the HTML page in "ui.html".
 
+
 import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
 import { FigmaFileTranslationKeyStore } from '../lib/keystore/FigmaFileTranslationKeyStore';
 import FigmaUtil from '../shared/FigmaUtil';
 import FigmaHelper from '../shared/FigmaHelper';
 import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowManagerSandbox';
-import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
+import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager'; // TODO change this to a config when implemented
 
 const figmaRemote = new FigmaUtil();
 
 const fileConfigured = figmaRemote.getRootPluginDataSync('fileSetupCompleted') !== '';
-const introShownToUser = true; // TODO change this to a config when implemented
+const introShownToUser = true;
 
 figma.root.setRelaunchData({ open: 'Let Your Design Speak all Languages' });
 

@@ -37,7 +37,7 @@ export default function LocalizedLabelListItem({
   selected,
 }: LocalizedLabelListItemProps) {
   const translationKeyStore = localizedLabelManager.keyStore;
-  const translatedKey = localizedLabel.keyType !== KeyState.Unset ? translationKeyStore.getKey(localizedLabel.key!) : undefined;
+  const translatedKey = localizedLabel.keyType !== KeyState.Unset ? translationKeyStore.getKey(localizedLabel.keyId!) : undefined;
 
   const rowRef = React.useRef<HTMLDivElement>(null);
 
@@ -86,8 +86,8 @@ export default function LocalizedLabelListItem({
   
   let keyValue = '';
 
-  if (localizedLabel.keyType === KeyState.Linked && localizedLabel.key) {
-    keyValue = localizedLabel.key;
+  if (localizedLabel.keyType === KeyState.Linked && localizedLabel.keyId) {
+    keyValue = localizedLabel.getMessageName()!;
   }
 
   useEffect(() => {
@@ -181,7 +181,7 @@ export default function LocalizedLabelListItem({
                           search: localizedLabel.characters,
                         });
                       } else if (selectedOption.value === 'show-key') {
-                        showKey(localizedLabel.key!);
+                        showKey(localizedLabel.keyId!);
                       } else if (selectedOption.value === 'reset') {
                         await localizedLabelManager.unsetLabel(localizedLabel);
                       }
@@ -239,8 +239,8 @@ export default function LocalizedLabelListItem({
                       matchingKeysByName.delete(key);
                       return {
                         type: InputSelectionOptionType.SUGGESTION,
-                        value: key,
-                        label: key,
+                        value: translationKeyStore.getKey(key)!.keyName,
+                        label: translationKeyStore.getKey(key)!.keyName,
                       };
                     }));
 
@@ -253,8 +253,8 @@ export default function LocalizedLabelListItem({
 
                       options = options.concat([...matchingKeysByName].map((key) => ({
                         type: InputSelectionOptionType.SUGGESTION,
-                        value: key,
-                        label: key,
+                        value: translationKeyStore.getKey(key)!.keyName,
+                        label: translationKeyStore.getKey(key)!.keyName,
                       })));
                     }
 
@@ -328,7 +328,6 @@ export default function LocalizedLabelListItem({
                           }}
                           fillins={localizedLabel.getFillins()}
                           translationHTML={localizedLabel.translationHTML}
-                          keyName={localizedLabel.key}
                           translationKeyStore={translationKeyStore}
                         />
                         { selected !== 'unselected' && (

@@ -25,7 +25,7 @@ export interface NodeSelection {
 export interface SandboxUpdateLabelProperties {
   labelName?: string,
   keyType?: KeyState,
-  key?: string,
+  keyId?: string,
   language?: Language,
   plural?: Plural,
   keyVersion?: number,
@@ -86,6 +86,7 @@ export default class LocalizedLabelManager {
 
   public keyPluralDataKey = 'kp';
 
+  // hash that allows detection of autorename
   public autoRenameHashKey = 'arh';
 
   public keyDataKey = 'key';
@@ -157,12 +158,12 @@ export default class LocalizedLabelManager {
             if (localizedLabel) {
               this.virtualTree.addNode(createdNode, createdNode.id);
               if (localizedLabel.keyType === KeyState.Linked) {
-                const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, localizedLabel.key!);
-                if (previousKey !== localizedLabel.key!) {
+                const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, localizedLabel.keyId!);
+                if (previousKey !== localizedLabel.keyId!) {
                   if (previousKey) {
                     keysChanged.add(previousKey);
                   }
-                  keysChanged.add(localizedLabel.key!);
+                  keysChanged.add(localizedLabel.keyId!);
                 }
               } else {
                 const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, undefined);
@@ -182,12 +183,12 @@ export default class LocalizedLabelManager {
               if (localizedLabel) {
                 this.virtualTree.addNode(createdNode, createdNode.id);
                 if (localizedLabel.keyType === KeyState.Linked) {
-                  const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, localizedLabel.key!);
-                  if (previousKey !== localizedLabel.key!) {
+                  const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, localizedLabel.keyId!);
+                  if (previousKey !== localizedLabel.keyId!) {
                     if (previousKey) {
                       keysChanged.add(previousKey);
                     }
-                    keysChanged.add(localizedLabel.key!);
+                    keysChanged.add(localizedLabel.keyId!);
                   }
                 } else {
                   const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, undefined);
@@ -243,12 +244,12 @@ export default class LocalizedLabelManager {
             const localizedLabel = this.toLocalizedLabelOrUndefined(changedNode as TextNode);
             if (localizedLabel) {
               if (localizedLabel.keyType === KeyState.Linked) {
-                const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, localizedLabel.key!);
-                if (previousKey !== localizedLabel.key!) {
+                const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, localizedLabel.keyId!);
+                if (previousKey !== localizedLabel.keyId!) {
                   if (previousKey) {
                     keysChanged.add(previousKey);
                   }
-                  keysChanged.add(localizedLabel.key!);
+                  keysChanged.add(localizedLabel.keyId!);
                 }
               } else {
                 const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, undefined);
@@ -276,12 +277,12 @@ export default class LocalizedLabelManager {
                   const localizedLabel = this.toLocalizedLabelOrUndefined(movedFigmaNode as TextNode);
                   if (localizedLabel) {
                     if (localizedLabel.keyType === KeyState.Linked) {
-                      const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, localizedLabel.key!);
-                      if (previousKey !== localizedLabel.key!) {
+                      const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, localizedLabel.keyId!);
+                      if (previousKey !== localizedLabel.keyId!) {
                         if (previousKey) {
                           keysChanged.add(previousKey);
                         }
-                        keysChanged.add(localizedLabel.key!);
+                        keysChanged.add(localizedLabel.keyId!);
                       }
                     } else {
                       const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, undefined);
@@ -326,6 +327,7 @@ export default class LocalizedLabelManager {
   }
 
   async fillUpCache() {
+
     let start = Date.now();
     const containers = [];
     let textNodesToPrcoess = [] as TextNode[];
@@ -464,7 +466,7 @@ export default class LocalizedLabelManager {
           directSelection: true,
           isLabel: selectedNode.type === 'TEXT',
           selectedNodeId: selectedNode.id,
-          key: textNode?.keyType === KeyState.Linked ? textNode?.key : undefined,
+          key: textNode?.keyType === KeyState.Linked ? textNode?.keyId : undefined,
         };
       } else {
         selectionEnhanced[selectedNode.id] = {
@@ -486,7 +488,7 @@ export default class LocalizedLabelManager {
                 isLabel: true,
                 rootFrameId: rootFrame?.id,
                 selectedNodeId: virtualNode.id,
-                key: textNode?.keyType === KeyState.Linked ? textNode?.key : undefined,
+                key: textNode?.keyType === KeyState.Linked ? textNode?.keyId : undefined,
               };
             }
           });
@@ -657,8 +659,8 @@ export default class LocalizedLabelManager {
       textNode.setPluginData(this.autoRenameHashKey, '');
     }
 
-    if (changedProperties.key !== undefined) {
-      textNode.setPluginData(this.keyDataKey, changedProperties.key);
+    if (changedProperties.keyId !== undefined) {
+      textNode.setPluginData(this.keyDataKey, changedProperties.keyId);
     }
 
     if (changedProperties.keyType !== undefined) {
@@ -990,7 +992,7 @@ export default class LocalizedLabelManager {
       x,
       y,
       keyType,
-      key,
+      keyId: key,
       keyVersion,
       fillins,
       derivedKey: derivable ? derivedName : undefined,

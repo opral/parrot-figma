@@ -109,7 +109,7 @@ export default class FigmaUtil {
       // Set bigger font size and red color
       textNode.fontSize = 18;
       textNode.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
-      textNode.characters = nodeWithKey.key!;
+      textNode.characters = nodeWithKey.keyId!;
 
       maxRight = Math.max(textNode.x + textNode.width, maxRight);
       maxBottom = Math.max(textNode.y + textNode.height, maxBottom);
@@ -141,7 +141,7 @@ export default class FigmaUtil {
       const line = figma.createLine();
       line.x = x1;
       line.y = y1;
-      line.name = nodeWithKey.key!;
+      line.name = nodeWithKey.keyId!;
 
       // Make line 200px long
       line.resize(length, 0);

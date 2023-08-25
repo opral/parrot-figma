@@ -17,7 +17,6 @@ import QuillEditor from './QuillEditor';
 import { Fillins } from '../../../lib/keystore/TranslationKey';
 
 type TranslationEditorProps = {
-  keyName?: string,
   translationHTML?: string,
   fillins: Fillins,
   /**
@@ -44,7 +43,6 @@ type TranslationEditorProps = {
 
 export default function TranslationEditor({
   translationHTML,
-  keyName,
   fillins,
   onSave,
   onCancel,

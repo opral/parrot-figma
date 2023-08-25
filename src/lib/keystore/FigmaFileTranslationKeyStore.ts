@@ -1,11 +1,17 @@
 /* eslint-disable class-methods-use-this */
 /* eslint-disable no-await-in-loop */
+
+import TextEncoding from 'text-encoding';
+
+import blake from 'blakejs';
 import { Language } from '../base/Language';
 import { Plural } from '../base/Plural';
 import {
   HistoryTag, HistoryEntry, TranslationKey, TranslationKeys, PlaceholdersByName, Fillins, PlaceholderType,
 } from './TranslationKey';
 import { UITranslationKey } from './UITranslationKey';
+
+const encoder = new TextEncoding.TextEncoder();
 
 export interface Config {
   baseLanguage?: Language,
@@ -30,7 +36,7 @@ export class FigmaFileTranslationKeyStore {
   public static tagsDataKey = 'aar_t';
 
   /**
-   * Prefix for keys - the head version of a key ist stored withing a key of the root node of the document prefixed with the keyPrefix followed by the keyname
+   * Prefix for keys - the head version of a key is stored withing a key of the root node of the document prefixed with the keyPrefix followed by the keyname
    */
   keyPrefix = 'aar_k__';
 
@@ -72,16 +78,18 @@ export class FigmaFileTranslationKeyStore {
             };
 
             for (const currentFileStorageKey of currentFileStorageKeys) {
-              const keyName = currentFileStorageKey.slice(this.keyHistoryPrefix.length);
+              const id = currentFileStorageKey.slice(this.keyHistoryPrefix.length);
 
-              if (this.keyState[keyName] === undefined) {
-                changedKeys.added.push(keyName);
+              if (this.keyState[id] === undefined) {
+                if (JSON.parse(figma.root.getPluginData(currentFileStorageKey)).ref === undefined) {
+                  changedKeys.added.push(id);
+                }
               } else {
-                if (figma.root.getPluginData(currentFileStorageKey).length !== this.keyState[keyName]) {
-                  changedKeys.updated.push(keyName);
+                if (figma.root.getPluginData(currentFileStorageKey).length !== this.keyState[id]) {
+                  changedKeys.updated.push(id);
                 }
 
-                currentCachedKeys = currentCachedKeys.filter((key) => key !== keyName);
+                currentCachedKeys = currentCachedKeys.filter((key) => key !== id);
               }
             }
             changedKeys.deleted = currentCachedKeys;
@@ -159,7 +167,13 @@ export class FigmaFileTranslationKeyStore {
       if (keyWithPrefix.startsWith(this.keyPrefix)) {
         const keyData = figma.root.getPluginData(keyWithPrefix);
         if (keyData && keyData !== '') {
-          const key = JSON.parse(keyData) as TranslationKey;
+          const keyAny = JSON.parse(keyData) as any;
+          if (keyAny.ref !== undefined) {
+            // eslint-disable-next-line no-continue
+            continue;
+          }
+
+          const key = keyAny as TranslationKey;
           if (!key.historyTags) {
             key.historyTags = [];
           }
@@ -202,14 +216,72 @@ export class FigmaFileTranslationKeyStore {
     };
   }
 
-  getKey(keyName: string): TranslationKey | undefined {
-    const keyRaw = figma.root.getPluginData(this.keyPrefix + keyName);
+  private createKeyId(keyName: string, bucket: number) {
+    
+    const messageNameHash = blake.blake2sHex(encoder.encode(keyName), undefined, 5);
+    // debugging: const messageNameHash = keyName;
+    return `${bucket}_${messageNameHash}`;
+  }
+
+  private findUnusedId(messageName: string) {
+    let currentBuket = 0;
+    let idToTest = this.createKeyId(messageName, currentBuket);
+    while (figma.root.getPluginData(`${this.keyPrefix}${idToTest}`) !== '') {
+      currentBuket += 1;
+      idToTest = this.createKeyId(messageName, currentBuket);
+    }
+    return idToTest;
+  }
+
+  getKeyByName(keyName: string) {
+    let currentBuket = 0;
+    let id = this.createKeyId(keyName, currentBuket);
+    let message = undefined as TranslationKey | undefined;
+
+    while (figma.root.getPluginData(`${this.keyPrefix}${id}`) !== '') {
+      message = this.resolveMessageReference(id, keyName);
+      if (message !== undefined) {
+        return message;
+      }
+      currentBuket += 1;
+      id = this.createKeyId(keyName, currentBuket);
+    }
+    return undefined;
+  }
+
+  resolveMessageReference(id: string, name: string): TranslationKey | undefined {
+    const referencedMessageRaw = figma.root.getPluginData(`${this.keyPrefix}${id}`);
+    if (referencedMessageRaw === '' || !referencedMessageRaw) {
+      return undefined;
+    }
+    const referencedMessage = JSON.parse(referencedMessageRaw) as any;
+    if (referencedMessage.ref) {
+      return this.resolveMessageReference(referencedMessage.ref, name);
+    }
+    if (referencedMessage.keyName && referencedMessage.keyName === name) {
+      return this.getKey(id);
+    }
+    return undefined;
+  }
+
+  getKey(id: string): TranslationKey | undefined {
+    const keyRaw = figma.root.getPluginData(this.keyPrefix + id);
 
     if (keyRaw === '' || !keyRaw) {
       return undefined;
     }
 
-    const key = JSON.parse(keyRaw) as TranslationKey;
+    const keyAny = JSON.parse(keyRaw) as any;
+
+    if (keyAny.ref !== undefined) {
+      return undefined;
+    }
+
+    const key = keyAny as TranslationKey;
+
+
+    // this is where we add the id from the bucket it was found in
+    key.id = id;
 
     const defaultFillins = {} as Fillins;
     const placeholders = key.placeholders ?? {};
@@ -239,26 +311,27 @@ export class FigmaFileTranslationKeyStore {
     if (!key.labels) {
       key.labels = [];
     }
-    const historyObj = this.getHistorySync(keyName);
+    const historyObj = this.getHistorySync(id);
     key.history = historyObj.keyHistory;
     key.latestVersion = key.history.length - 1;
-    key.referencingTextNodes = this.keyToLabels[key.keyName] ? [...this.keyToLabels[key.keyName]] : [];
-    this.keyState[keyName] = historyObj.state;
+    key.referencingTextNodes = this.keyToLabels[key.id] ? [...this.keyToLabels[key.id]] : [];
+    this.keyState[id] = historyObj.state;
 
     return key;
   }
 
-  async getKeyAsync(keyName: string) {
-    return this.getKey(keyName);
+  async getKeyAsync(id: string) {
+    return this.getKey(id);
   }
 
   private async persistKey(translationKeyPased: TranslationKey): Promise<TranslationKey> {
     const translationKey = translationKeyPased;
-    const keyCurrentVersion = this.getKey(translationKey.keyName);
+    const keyCurrentVersion = this.getKey(translationKey.id);
 
     let historyEntry: HistoryEntry | undefined;
     const userId = figma.currentUser?.id ?? 'anonymous';
     const dateOfChange = Date.now();
+
     // find differences
     for (const language of Object.keys(translationKey.translations)) {
       const currentLanguage = language as Language;
@@ -313,6 +386,25 @@ export class FigmaFileTranslationKeyStore {
       historyEntry.labels = translationKey.labels;
     }
 
+    let createMessageNameRef = undefined as string | undefined;
+
+    if (keyCurrentVersion && keyCurrentVersion.keyName !== translationKey.keyName) {
+      const existingKeyWithName = this.getKeyByName(translationKey.keyName);
+      if (existingKeyWithName && existingKeyWithName.id !== translationKey.id) {
+        throw new Error(`Key with name ${translationKey.keyName} exists already.`);
+      }
+
+      if (existingKeyWithName === undefined) {
+        createMessageNameRef = translationKey.keyName;
+      }
+
+      if (!historyEntry) {
+        historyEntry = { user: userId, date: dateOfChange };
+      }
+
+      historyEntry.name = translationKey.keyName;
+    }
+
     if (!historyEntry) {
       // no differences found!
       return translationKey;
@@ -323,25 +415,41 @@ export class FigmaFileTranslationKeyStore {
     translationKey.history.push(historyEntry);
 
     if (translationKey.keyName === undefined) {
-      throw new Error('key name must be defined');
-    }
-
-    if (translationKey.keyName === 'undefined') {
-      throw new Error('key name must not be "undefined"');
+      throw new Error('key name must be defined ');
     }
 
     const serializableTranslationKey = translationKey as any;
     const { history } = serializableTranslationKey;
     delete serializableTranslationKey.history;
+    const messageId = translationKey.id;
+    delete serializableTranslationKey.id;
 
-    figma.root.setPluginData(this.keyPrefix + translationKey.keyName, JSON.stringify(serializableTranslationKey));
-    figma.root.setPluginData(this.keyHistoryPrefix + translationKey.keyName, JSON.stringify(history));
+    figma.root.setPluginData(this.keyPrefix + messageId, JSON.stringify(serializableTranslationKey));
+    figma.root.setPluginData(this.keyHistoryPrefix + messageId, JSON.stringify(history));
+
+    if (createMessageNameRef !== undefined) {
+      // we don't have a reference that acutally points to the name create a new one in the next free bucket.
+      // NOTE: we can't reuse buckets that no longer point the the correct key since labels eventually still use the reference...
+      const unusedId = this.findUnusedId(translationKey.keyName);
+      figma.root.setPluginData(this.keyPrefix + unusedId, JSON.stringify({ ref: messageId }));
+    }
+
+    // storage idea:
+    // Use KEYNAME as initial Message id and store the data in arr_k_KEYNAME
+    // on rename to NEW_KEYNAME keep KEYNAME as Message Id - since labels referencing to it already and we want to keep the history
+    // But: Store a "reference" entity within arr_k_NEW_KEYNAME this allows us to detect collision on keynames without checking all message for id collision
+    // If the place arr_k_NEW_KEYNAME is taken we potentially have a conflict:
+    // - check what is stored within arr_k_NEW_KEYNAME.
+    //   - if it is a key - check the current key name - if it is != arr_k_NEW_KEYNAME the key has been renamed in the meantime - no collision on this enitity
+    //   - if it is a reference: - resolve the reference and check its  current key - if it is != arr_k_NEW_KEYNAME the key has been renamed in the meantime - no collision on this enitity
+    //      - check what is stored within arr_k_NEW_KEYNAME_1
+    //   - else we have a conflict
 
     // TODO #8 handle history for placeholder, fillins and quantity!
     // TODO key history: pause event event handling using a flag;
 
     translationKey.history = history;
-
+    translationKey.id = messageId;
     return translationKey;
   }
 
@@ -359,7 +467,7 @@ export class FigmaFileTranslationKeyStore {
   }
 
   async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean, quantity?: { value: number } | { placeholder: string }, defaultFillins?: Fillins): Promise<TranslationKey> {
-    const existingKey = this.getKey(keyName);
+    const existingKey = this.getKeyByName(keyName);
     if (existingKey) {
       throw Error('tried to create a key that already existed');
     }
@@ -379,7 +487,9 @@ export class FigmaFileTranslationKeyStore {
 
     const placeholders = UITranslationKey.extractParameters(translationsObj, this.getConfigSync().baseLanguage!, plural);
 
+    const unusedId = this.findUnusedId(keyName);
     const createdKey = {
+      id: unusedId,
       latestVersion: 0,
       keyName,
       labels: [],
@@ -395,16 +505,22 @@ export class FigmaFileTranslationKeyStore {
     return this.persistKey(createdKey);
   }
 
-  async updateKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], plural?: boolean, quantity?: { value: number } | { placeholder: string }, defaultFillins?: Fillins): Promise<TranslationKey> {
+  async updateKey(keyId: string, properties: {
+    name?: string,
+    translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], 
+    plural?: boolean, 
+    quantity?: { value: number } | { placeholder: string }, 
+    defaultFillins?: Fillins
+  }): Promise<TranslationKey> {
     // this one gets a deep clone of the key
-    const keyToUpdate = this.getKey(keyName);
+    const keyToUpdate = this.getKey(keyId);
     let changeFound = false;
 
     if (keyToUpdate === undefined) {
-      throw new Error(`Key [${keyName}] not found!`);
+      throw new Error(`Key [${keyId}] not found!`);
     }
 
-    for (const translation of translations) {
+    for (const translation of properties.translations) {
       // if no key for the given language exists - create an empty one for plural 'other' with version -1
       if (!keyToUpdate.translations[translation.language]) {
         keyToUpdate.translations[translation.language] = {
@@ -435,9 +551,9 @@ export class FigmaFileTranslationKeyStore {
       }
     }
 
-    if (plural !== undefined && plural !== null && keyToUpdate.plural !== plural) {
+    if (properties.plural !== undefined && properties.plural !== null && keyToUpdate.plural !== properties.plural) {
       changeFound = true;
-      keyToUpdate.plural = plural;
+      keyToUpdate.plural = properties.plural;
     }
 
     const placeholders = UITranslationKey.extractParameters(keyToUpdate.translations, this.getConfigSync().baseLanguage!, keyToUpdate.plural);
@@ -447,14 +563,19 @@ export class FigmaFileTranslationKeyStore {
       keyToUpdate.placeholders = placeholders;
     }
 
-    if (quantity !== undefined && quantity !== null && JSON.stringify(keyToUpdate.quantity) !== JSON.stringify(quantity)) {
+    if (properties.quantity !== undefined && properties.quantity !== null && JSON.stringify(keyToUpdate.quantity) !== JSON.stringify(properties.quantity)) {
       changeFound = true;
-      keyToUpdate.quantity = quantity;
+      keyToUpdate.quantity = properties.quantity;
     }
 
-    if (defaultFillins !== undefined && defaultFillins !== null && JSON.stringify(keyToUpdate.defaultFillins) !== JSON.stringify(defaultFillins)) {
+    if (properties.defaultFillins !== undefined && properties.defaultFillins !== null && JSON.stringify(keyToUpdate.defaultFillins) !== JSON.stringify(properties.defaultFillins)) {
       changeFound = true;
-      keyToUpdate.defaultFillins = defaultFillins;
+      keyToUpdate.defaultFillins = properties.defaultFillins;
+    }
+
+    if (properties.name !== undefined && keyToUpdate.keyName !== properties.name) {
+      changeFound = true;
+      keyToUpdate.keyName = properties.name;
     }
 
     if (!changeFound) {
@@ -463,9 +584,9 @@ export class FigmaFileTranslationKeyStore {
     return this.persistKey(keyToUpdate);
   }
 
-  async deleteKey(keyName: string): Promise<void> {
-    figma.root.setPluginData(this.keyPrefix + keyName, '');
-    figma.root.setPluginData(this.keyHistoryPrefix + keyName, '');
+  async deleteKey(keyId: string): Promise<void> {
+    figma.root.setPluginData(this.keyPrefix + keyId, '');
+    figma.root.setPluginData(this.keyHistoryPrefix + keyId, '');
   }
 
   async load(): Promise<TranslationKeys> {
@@ -473,7 +594,10 @@ export class FigmaFileTranslationKeyStore {
     for (const keyWithPrefix of figma.root.getPluginDataKeys()) {
       if (keyWithPrefix.startsWith(this.keyPrefix)) {
         const key = keyWithPrefix.substring(this.keyPrefix.length, keyWithPrefix.length);
-        translationKeys[key] = this.getKey(key)!;
+        const message = this.getKey(key);
+        if (message !== undefined) {
+          translationKeys[key] = message;
+        }
       }
     }
     return translationKeys;

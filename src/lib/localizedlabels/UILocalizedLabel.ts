@@ -27,6 +27,7 @@ export interface ILocalizedLabelManagerUI {
 }
 
 export class UILocalizedLabel implements LocalizedLabel {
+
   pageId: string;
 
   pageName: string;
@@ -57,7 +58,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   keyType: KeyState;
 
-  key?: string | undefined;
+  keyId?: string | undefined;
 
   keyVersion: number;
 
@@ -106,7 +107,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     this.rootFrameUseSampleValues = localizedLabel.rootFrameUseSampleValues;
     this.useSampleValues = localizedLabel.useSampleValues;
     this.keyType = localizedLabel.keyType;
-    this.key = localizedLabel.key;
+    this.keyId = localizedLabel.keyId;
     this.keyVersion = localizedLabel.keyVersion;
     this.pluralId = localizedLabel.pluralId;
     this.characters = localizedLabel.characters;
@@ -126,6 +127,16 @@ export class UILocalizedLabel implements LocalizedLabel {
   ops: DeltaOp[];
 
   filledTemplateHash?: string | undefined;
+
+  getMessageName(): string | undefined {
+    if (this.keyId === undefined) return undefined;
+    const key = this.manager.keyStore.getKey(this.keyId);
+    if (key) {
+      return key.keyName;
+    }
+
+    return undefined;
+  }
 
   static toHtml(text: string, ops: DeltaOp[], fillins: Fillins, trimLabelStyles: boolean) {
     const deltaOps = [] as DeltaOperation[];
@@ -262,7 +273,7 @@ export class UILocalizedLabel implements LocalizedLabel {
   }
 
   getFillins(keyToUse?: string, fillins?: Fillins) {
-    const key = keyToUse ?? this.key;
+    const key = keyToUse ?? this.keyId;
     const translationKey = key ? this.manager.keyStore.getKey(key) : undefined;
 
     const defaultFillIns = translationKey ? { ...translationKey.defaultFillins } : {} as Fillins;
@@ -315,70 +326,6 @@ export class UILocalizedLabel implements LocalizedLabel {
     });
   }
 
-  /*
-  private toTranslation() {
-    // if we have no linked key we fall back to name only for now
-    let orginalPlaceholders = [] as Placeholder[];
-
-    if (this.keyType === KeyState.Linked) {
-      const translatedKey = this.manager.keyStore.getKey(this.key!)!;
-      const currentKeyVersion = translatedKey.getHistoryEntry(this.language, this.pluralId, this.keyVersion);
-      const currentTranslation = currentKeyVersion?.translations?.[this.language]?.[this.pluralId]?.text;
-      // extract the placeholder from the current translation
-      orginalPlaceholders = UITranslationKey.extractPlaceholdersInText(currentTranslation);
-    }
-
-    // takes the text of the label and replaces all fillins with the placeholders
-    const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(this.fillins);
-
-    let translation = this.characters;
-    // eslint-disable-next-line for-direction, no-plusplus
-    for (let i = placeholderByFillin.length - 1; i >= 0; i--) {
-      const currentPlaceholderName = placeholderByFillin[i];
-      const filinValue = this.fillins[currentPlaceholderName].value;
-      const nonPlaceholderParts = translation.split(filinValue + MARKER_CHARACTER.repeat(i + 1));
-      const placeholdersInKey = orginalPlaceholders.filter((orgPlaceholder) => orgPlaceholder.name === currentPlaceholderName);
-
-      // eslint-disable-next-line prefer-destructuring
-      translation = nonPlaceholderParts[0];
-      // eslint-disable-next-line no-plusplus
-      for (let nonPlaceHolderPartIndex = 1; nonPlaceHolderPartIndex < nonPlaceholderParts.length; nonPlaceHolderPartIndex++) {
-        if (placeholdersInKey.length === 0) {
-          translation = `${translation}[[${currentPlaceholderName}]]`;
-        } else {
-          const nextPlacehoderIndex = Math.min(placeholdersInKey.length - 1, nonPlaceHolderPartIndex - 1);
-          const placeholder = placeholdersInKey[nextPlacehoderIndex];
-          let renderedPlaceholder = '';
-          if (placeholder.type === PlaceholderType.string) {
-            if (placeholder.specifiedArgumentPosition !== undefined) {
-              renderedPlaceholder = `[[${placeholder.name}#${placeholder.specifiedArgumentPosition}]]`;
-            } else {
-              renderedPlaceholder = `[[${placeholder.name}]]`;
-            }
-          } else if (placeholder.type === PlaceholderType.integer) {
-            if (placeholder.specifiedArgumentPosition !== undefined) {
-              renderedPlaceholder = `[[${placeholder.name}#${placeholder.specifiedArgumentPosition}:d]]`;
-            } else {
-              renderedPlaceholder = `[[${placeholder.name}:d]]`;
-            }
-          } else { // float
-            const decimalPlaces = placeholder.decimalPlaces ? `.${placeholder.decimalPlaces}` : '';
-            if (placeholder.specifiedArgumentPosition !== undefined) {
-              renderedPlaceholder = `[[${placeholder.name}#${placeholder.specifiedArgumentPosition}:f${decimalPlaces}]]`;
-            } else {
-              renderedPlaceholder = `[[${placeholder.name}:f${decimalPlaces}]]`;
-            }
-          }
-
-          translation = `${translation}${renderedPlaceholder}${nonPlaceholderParts[nonPlaceHolderPartIndex]}`;
-        }
-      }
-    }
-
-    return translation;
-  }
-  */
-
   /**
    * The state of a label is represented by two main properties:
    * modified: was the labels text changed in the design compared to the version of the key which the label is pointing to
@@ -400,7 +347,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     };
 
     // debugger;
-    const translatedKey = this.keyType !== KeyState.Unset ? this.manager.keyStore.getKey(this.key!) : undefined;
+    const translatedKey = this.keyType !== KeyState.Unset ? this.manager.keyStore.getKey(this.keyId!) : undefined;
 
     if (translatedKey) {
       const currentVersion = translatedKey.getHistoryEntry(this.language, this.pluralId, this.keyVersion);
@@ -428,7 +375,7 @@ export class UILocalizedLabel implements LocalizedLabel {
       return;
     }
 
-    const translationKey = this.manager.keyStore.getKey(this.key!);
+    const translationKey = this.manager.keyStore.getKey(this.keyId!);
 
     if (this.keyType !== KeyState.Linked
       || this.state!.modified
@@ -479,7 +426,7 @@ export class UILocalizedLabel implements LocalizedLabel {
       return;
     }
 
-    const translationKeyName = this.key ?? this.derivedKey;
+    const translationKeyName = this.keyId ?? this.derivedKey;
     const labelState = this.state!;
     let labelVersion = this.keyVersion;
 

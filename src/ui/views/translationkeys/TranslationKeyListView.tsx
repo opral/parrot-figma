@@ -47,6 +47,7 @@ export default function TranslationKeyListView({
 
   // const [keys, setKeys] = useState: UITranslationKeys,
   const [searchQuery, setSearchQuery] = useState<SearchQuery>(initialSearchQuery);
+  debugger;
   const filteredKeys = translationKeyStore.findKeys(searchQuery, selectedNodes);
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -114,7 +115,7 @@ export default function TranslationKeyListView({
       }
     }
   }, [highlightSelection]);
-
+  
   const fileHasKeys = Object.keys(translationKeyStore.translationKeys).length > 0;
   if (!fileHasKeys) {
     return (
@@ -338,7 +339,7 @@ export default function TranslationKeyListView({
           select={select}
           keySelected={false}
         />
-        {[...filteredKeys.matchingKeys].map((keyName) => {
+        {[...filteredKeys.matchingKeys].map((messageId) => {
           if (rendered > renderEntries) {
             return;
           }
@@ -347,14 +348,14 @@ export default function TranslationKeyListView({
           // eslint-disable-next-line consistent-return
           return (
             <TranslationKeyListItem
-              key={keyName}
+              key={messageId}
               translationKeyStore={translationKeyStore}
               localizedLabelManager={localizedLabelManager}
-              searchMatch={filteredKeys.matches[keyName]}
-              translationKey={translationKeyStore.translationKeys[keyName]}
+              searchMatch={filteredKeys.matches[messageId]}
+              translationKey={translationKeyStore.translationKeys[messageId]}
               figmaRemote={figmaRemote}
               select={select}
-              keySelected={Object.values(selectedNodes).map((selectedNode) => selectedNode.key).includes(keyName) || selectedKey === keyName}
+              keySelected={Object.values(selectedNodes).map((selectedNode) => selectedNode.key).includes(messageId) || selectedKey === messageId}
             />
           );
         })}

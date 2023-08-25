@@ -1,5 +1,4 @@
 import blake from 'blakejs';
-import { placeholder } from '@codemirror/view';
 import { KeyState, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../base/Plural';
 import LocalizedLabelManager, { SandboxUpdateLabelProperties } from './LocalizedLabelManager';
@@ -83,7 +82,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
       } else if (!stateDiffers
           && cachedLabel.derivedKey === label.derivedKey
           && cachedLabel.height === label.height
-          && cachedLabel.key === label.key
+          && cachedLabel.keyId === label.keyId
           && cachedLabel.keyType === label.keyType
           && cachedLabel.keyVersion === label.keyVersion
           && cachedLabel.language === label.language
@@ -177,7 +176,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     let cacheUpdated = false;
 
     for (const labelToUpdate of Object.values(this.cachedLocalisedLabels)) {
-      if (labelToUpdate.key === keyId) {
+      if (labelToUpdate.keyId === keyId) {
         if (this.refreshCachedLabel(labelToUpdate)) {
           cacheUpdated = true;
         }
@@ -293,17 +292,21 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   }
 
   async updateKey(
-    keyName: string,
-    translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[],
-    plural?: boolean,
-    fillins?: Fillins,
-    quantity?: { value: number } | { placeholder: string },
+    keyId: string,
+    properties: {
+      name?: string,
+      translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[],
+      plural?: boolean,
+      fillins?: Fillins,
+      quantity?: { value: number } | { placeholder: string },
+    },
+
   ) {
-    const originalKey = await this.keyStore.getKey(keyName);
-    const updatedKey = await this.keyStore.updateKey(keyName, translations, plural, fillins, quantity);
+    const originalKey = await this.keyStore.getKey(keyId);
+    const updatedKey = await this.keyStore.updateKey(keyId, properties);
 
     if (originalKey?.latestVersion !== updatedKey.latestVersion) {
-      await this.updateUnpinnedLabelsWithKey(keyName);
+      await this.updateUnpinnedLabelsWithKey(keyId);
 
       this.keyStore.parentKeyStore.commitUndo();
     }
@@ -319,15 +322,18 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   }
 
   async createNewVersionFromLabelState(localizedLabel: UILocalizedLabel) {
-    const localizedKey = await this.keyStore.updateKey(localizedLabel.key!, [{
-      language: localizedLabel.language as Language, plural: localizedLabel.pluralId as Plural, text: localizedLabel.translationHTML, skip: false,
-    }], undefined, localizedLabel.fillins);
+    const localizedKey = await this.keyStore.updateKey(localizedLabel.keyId!, {
+      translations: [{
+        language: localizedLabel.language as Language, plural: localizedLabel.pluralId as Plural, text: localizedLabel.translationHTML, skip: false,
+      }],
+      fillins: localizedLabel.fillins,
+    });
 
     await this.updateLabelProperties(localizedLabel.nodeId, {
       keyVersion: localizedKey.latestVersion,
     });
 
-    await this.updateUnpinnedLabelsWithKey(localizedLabel.key!);
+    await this.updateUnpinnedLabelsWithKey(localizedLabel.keyId!);
 
     await this.localizedLabelMangerSandbox.commitUndo();
   }
@@ -335,7 +341,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   async updateToLatestKeyVersion(localizedLabels: LocalizedLabel[]) {
     const updatePromises = [];
     for (const localizedLabel of localizedLabels) {
-      const translationKey = this.keyStore.getKey(localizedLabel.key!)!;
+      const translationKey = this.keyStore.getKey(localizedLabel.keyId!)!;
       const historyEntryForVersion = translationKey.getHistoryEntry(localizedLabel.rootFrameLanguage, localizedLabel.pluralId, translationKey.latestVersion);
 
       const fillins = { ...localizedLabel.fillins };
@@ -390,12 +396,12 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     }
   }
 
-  async linkKey(localizedLabel: UILocalizedLabel, keyToLinkTo: string, language: Language, plural: Plural) {
-    let translationKey = this.keyStore.getKey(keyToLinkTo);
+  async linkKey(localizedLabel: UILocalizedLabel, keyNameToLinkTo: string, language: Language, plural: Plural) {
+    let translationKey = this.keyStore.getKeyByName(keyNameToLinkTo);
 
     if (translationKey !== undefined) {
       await this.updateLabelProperties(localizedLabel.nodeId, {
-        key: keyToLinkTo,
+        keyId: translationKey.id,
         keyType: KeyState.Linked,
         plural,
         language,
@@ -409,13 +415,13 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
       if (localizedLabel.unlinkedTranslations) {
         const translations = Object.entries(localizedLabel.unlinkedTranslations.translations!).flatMap(([languageFound, pluralsFound]) => Object.entries(pluralsFound).map(([pluralFound, { text }]) => {
           if (languageFound === language && plural === pluralFound) {
-            return ({ language: languageFound, plural: pluralFound, text: localizedLabel.translationHTML } as { language: Language, plural: Plural, text: string, skip: false })
+            return ({ language: languageFound, plural: pluralFound, text: localizedLabel.translationHTML } as { language: Language, plural: Plural, text: string, skip: false });
           }
           return ({ language: languageFound, plural: pluralFound, text } as { language: Language, plural: Plural, text: string, skip: false });
         }));
-        translationKey = await this.keyStore.createKey(keyToLinkTo, translations, localizedLabel.unlinkedTranslations.plural, localizedLabel.fillins);
+        translationKey = await this.keyStore.createKey(keyNameToLinkTo, translations, localizedLabel.unlinkedTranslations.plural, localizedLabel.fillins);
       } else {
-        translationKey = await this.keyStore.createKey(keyToLinkTo, [{
+        translationKey = await this.keyStore.createKey(keyNameToLinkTo, [{
           language,
           plural,
           text: localizedLabel.translationHTML,
@@ -423,7 +429,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         }], plural !== Plural.OTHER, localizedLabel.fillins);
       }
       await this.updateLabelProperties(localizedLabel.nodeId, {
-        key: keyToLinkTo,
+        keyId: translationKey.id,
         keyType: KeyState.Linked,
         keyVersion: translationKey.latestVersion, // its save to use latest version here since we created a whole new key here.
         language,
@@ -501,7 +507,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   async updateLabelProperties(nodeId: string, changedProperties: {
     labelName?: string,
     keyType?: KeyState,
-    key?: string,
+    keyId?: string,
     keyVersion?: number,
     language?: Language,
     plural?: Plural,
@@ -513,8 +519,8 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     const localizedLabelCached = this.cachedLocalisedLabels[nodeId]!;
     const labelFillins = changedProperties.fillins ?? localizedLabelCached.fillins;
 
-    const key = changedProperties.key ?? localizedLabelCached.key;
-    const translationKey = key ? this.keyStore.getKey(key) : undefined;
+    const keyId = changedProperties.keyId ?? localizedLabelCached.keyId;
+    const translationKey = keyId ? this.keyStore.getKey(keyId) : undefined;
 
     if (translationKey?.defaultFillins) {
       for (const [placeholderName, fillin] of Object.entries(translationKey.defaultFillins)) {
@@ -526,7 +532,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
     const changedPropertiesToForwared = changedProperties as SandboxUpdateLabelProperties;
 
-    changedPropertiesToForwared.fillins = localizedLabelCached.getFillins(changedProperties.key, labelFillins);
+    changedPropertiesToForwared.fillins = localizedLabelCached.getFillins(changedProperties.keyId, labelFillins);
 
     if (localizedLabelCached.keyType === KeyState.Linked) {
       changedPropertiesToForwared.unlinkedTranslations = null;
@@ -644,7 +650,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     }
 
     for (const keyToImport of keysToImport) {
-      const currentKey = this.keyStore.getKey(keyToImport.keyName);
+      const currentKey = this.keyStore.getKeyByName(keyToImport.keyName);
       if (!currentKey) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         console.log(`creating key${keyToImport.keyName}`);
@@ -654,7 +660,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
       } else {
         console.log(`updateing key${keyToImport.keyName}`);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-await-in-loop
-        await this.updateKey(keyToImport.keyName, toChangeArray(keyToImport, language));
+        await this.updateKey(currentKey.id, { translations: toChangeArray(keyToImport, language) });
       }
     }
   }

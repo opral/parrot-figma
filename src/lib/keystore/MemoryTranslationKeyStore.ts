@@ -87,7 +87,7 @@ export default class MemoryTranslationKeyStore extends EventTarget {
     this.dispatchEvent(event);
   }
 
-  private async processCacheUpdate(changedKeys: { deleted: string[], added: string[], updated: string[] }, updatedHistoryTags: HistoryTag[] | undefined) {
+  private async processCacheUpdate(changedKeys: { deleted: string[], added: string[], updated: string[] }, updatedHistoryTags: HistoryTag[] | undefined) {
     const changes = {
       deleted: [] as string[],
       updated: [] as string[],
@@ -133,12 +133,13 @@ export default class MemoryTranslationKeyStore extends EventTarget {
   }
 
   private async upsertCache(translationKey: TranslationKey): Promise<UITranslationKey> {
-    this.translationKeys[translationKey.keyName] = new UITranslationKey(this, translationKey);
-    return this.translationKeys[translationKey.keyName];
+    debugger;
+    this.translationKeys[translationKey.id] = new UITranslationKey(this, translationKey);
+    return this.translationKeys[translationKey.id];
   }
 
-  private removeCache(keyName: string) {
-    delete this.translationKeys[keyName];
+  private removeCache(id: string) {
+    delete this.translationKeys[id];
   }
 
   getLanugages(): Language[] | undefined {
@@ -174,28 +175,38 @@ export default class MemoryTranslationKeyStore extends EventTarget {
     return tagIndex;
   }
 
-  getTranslations(language: Language, versionId: string | undefined): { [keyName: string]: TranslationEntry } {
-    const translationKeys = {} as { [keyName: string]: TranslationKey };
+  getTranslationsByKeyName(language: Language, versionId: string | undefined): { [keyName: string]: TranslationEntry } {
+    const translationKeys = {} as { [id: string]: TranslationKey };
 
     const tagIndex = versionId ? this.getTagIndexByVersionId(versionId) : -1;
 
-    for (const keyName of Object.keys(this.translationKeys)) {
-      const currentKey = this.translationKeys[keyName];
+    for (const keyId of Object.keys(this.translationKeys)) {
+      const currentKey = this.translationKeys[keyId];
       if (tagIndex >= 0) {
         const keyVerson = currentKey.getKeyVersionByTagIndex(tagIndex);
         if (keyVerson !== undefined) {
-          translationKeys[keyName] = currentKey.getInVersion(keyVerson);
+          const keyInVersion = currentKey.getInVersion(keyVerson);
+          translationKeys[keyInVersion.keyName] = keyInVersion;
         }
       } else if (currentKey.translations[language]) {
-        translationKeys[keyName] = currentKey;
+        translationKeys[currentKey.keyName] = currentKey;
       }
     }
 
     return translationKeys;
   }
 
-  getKey(keyName: string) : UITranslationKey | undefined {
-    return this.translationKeys[keyName];
+  getKey(id: string) : UITranslationKey | undefined {
+    return this.translationKeys[id];
+  }
+
+  getKeyByName(messageName: string) : UITranslationKey | undefined {
+    for (const message of Object.values(this.translationKeys)) {
+      if (message.keyName === messageName) {
+        return message;
+      }
+    }
+    return undefined;
   }
 
   static toSearchString(searchQuery: SearchQuery): string {
@@ -394,21 +405,21 @@ export default class MemoryTranslationKeyStore extends EventTarget {
         const plurals = key.translations[language];
         for (const plural of getPluralFormsByLanguage(language as Language)) {
           if (query.text === undefined || query.text === '') {
-            results.matchingKeys.add(key.keyName);
+            results.matchingKeys.add(key.id);
           } else if (plurals?.[plural]?.text !== undefined) {
             const matchStartText = plurals[plural]!.text!.toLowerCase().indexOf(query.text.toLowerCase());
             if ((query.exactText && matchStartText === 0 && plurals[plural]!.text!.length === query.text.length)
               || (!query.exactText && matchStartText !== -1)) {
-              if (!results.matches[key.keyName]) {
-                results.matches[key.keyName] = { textMatches: {}, keyMatch: undefined };
+              if (!results.matches[key.id]) {
+                results.matches[key.id] = { textMatches: {}, keyMatch: undefined };
               }
 
-              if (!results.matches[key.keyName].textMatches![language as Language]) {
-                results.matches[key.keyName].textMatches![language as Language]! = {};
+              if (!results.matches[key.id].textMatches![language as Language]) {
+                results.matches[key.id].textMatches![language as Language]! = {};
               }
-              results.matches[key.keyName].textMatches![language as Language]![plural as Plural] = { start: matchStartText, length: query.text.length };
-              results.matchingKeys.add(key.keyName);
-              results.inText.add(key.keyName);
+              results.matches[key.id].textMatches![language as Language]![plural as Plural] = { start: matchStartText, length: query.text.length };
+              results.matchingKeys.add(key.id);
+              results.inText.add(key.id);
             }
           }
 
@@ -417,12 +428,12 @@ export default class MemoryTranslationKeyStore extends EventTarget {
               if (key.plural || plural === Plural.OTHER) {
                 if ((!plurals?.[plural]?.text || plurals?.[plural]?.text === '')) {
                   if (key.plural || plural === Plural.OTHER) {
-                    results.withMissingTranslations.add(key.keyName);
+                    results.withMissingTranslations.add(key.id);
 
                     if (results.withMissingTranslationsPerLanguage[language] === undefined) {
                       results.withMissingTranslationsPerLanguage[language] = new Set<string>();
                     }
-                    results.withMissingTranslationsPerLanguage[language]!.add(key.keyName);
+                    results.withMissingTranslationsPerLanguage[language]!.add(key.id);
                   }
                 }
               }
@@ -430,7 +441,7 @@ export default class MemoryTranslationKeyStore extends EventTarget {
           }
 
           if (plurals?.[plural] && !plurals[plural]!.verified) {
-            results.withMissingReview.add(key.keyName);
+            results.withMissingReview.add(key.id);
           }
         }
       }
@@ -440,25 +451,25 @@ export default class MemoryTranslationKeyStore extends EventTarget {
           const keyMatchStart = key.keyName.toLowerCase().indexOf(query.key.toLowerCase());
 
           if (keyMatchStart === 0) {
-            if (!results.matches[key.keyName]) {
-              results.matches[key.keyName] = { textMatches: {}, keyMatch: undefined };
+            if (!results.matches[key.id]) {
+              results.matches[key.id] = { textMatches: {}, keyMatch: undefined };
             }
-            results.matches[key.keyName].keyMatch = { start: keyMatchStart, length: query.key.length };
-            results.inKeys.add(key.keyName);
+            results.matches[key.id].keyMatch = { start: keyMatchStart, length: query.key.length };
+            results.inKeys.add(key.id);
           } else {
             // eslint-disable-next-line no-continue
-            results.matchingKeys.delete(key.keyName);
+            results.matchingKeys.delete(key.id);
           }
         }
       } else if (query.text !== undefined && query.text !== '') {
         const keyMatchStart = key.keyName.toLowerCase().indexOf(query.text.toLowerCase());
         if (keyMatchStart !== -1) {
-          if (!results.matches[key.keyName]) {
-            results.matches[key.keyName] = { textMatches: {}, keyMatch: undefined };
+          if (!results.matches[key.id]) {
+            results.matches[key.id] = { textMatches: {}, keyMatch: undefined };
           }
-          results.matches[key.keyName].keyMatch = { start: keyMatchStart, length: query.text.length };
-          results.inKeys.add(key.keyName);
-          results.matchingKeys.add(key.keyName);
+          results.matches[key.id].keyMatch = { start: keyMatchStart, length: query.text.length };
+          results.inKeys.add(key.id);
+          results.matchingKeys.add(key.id);
         }
       }
     }
@@ -493,6 +504,7 @@ export default class MemoryTranslationKeyStore extends EventTarget {
   }
 
   async createTag(title: string, description: string | undefined) {
+    // TODO #11 we update the translation keys here - shouldn't we wait for the messaage bus instead?
     const tagId = this.historyTags.length;
     for (const key of Object.keys(this.translationKeys)) {
       this.translationKeys[key].historyTags[tagId] = this.translationKeys[key].latestVersion;
@@ -502,22 +514,28 @@ export default class MemoryTranslationKeyStore extends EventTarget {
     return this.historyTags[tagId];
   }
 
-  async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean, fillins?: Fillins, quantity?: { value: number } | { placeholder: string }): Promise<UITranslationKey> {
-    if (keyName === '') {
+  async createKey(messageName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean, fillins?: Fillins, quantity?: { value: number } | { placeholder: string }): Promise<UITranslationKey> {
+    if (messageName === '') {
       throw new Error('keys mus have at least one character');
     }
-    const createdKey = await this.parentKeyStore.createKey(keyName, translations, plural, quantity, fillins);
+    const createdKey = await this.parentKeyStore.createKey(messageName, translations, plural, quantity, fillins);
     return this.upsertCache(createdKey);
   }
 
-  async updateKey(keyName: string, translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[], plural?: boolean, fillins?: Fillins, quantity?: { value: number } | { placeholder: string }) {
-    const updatedKey = await this.parentKeyStore.updateKey(keyName, translations, plural, quantity, fillins);
+  async updateKey(id: string, properties: {
+    name?: string,
+    translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[],
+    plural?: boolean,
+    fillins?: Fillins,
+    quantity?: { value: number } | { placeholder: string }
+  }) {
+    const updatedKey = await this.parentKeyStore.updateKey(id, properties);
     return this.upsertCache(updatedKey);
   }
 
-  async deleteKey(keyName: string) {
-    await this.parentKeyStore.deleteKey(keyName);
-    this.removeCache(keyName);
+  async deleteKey(id: string) {
+    await this.parentKeyStore.deleteKey(id);
+    this.removeCache(id);
   }
 
   async load(): Promise<UITranslationKeys> {
@@ -526,9 +544,9 @@ export default class MemoryTranslationKeyStore extends EventTarget {
     this.translationKeys = {} as UITranslationKeys;
 
     const allTranslationKeys = await this.parentKeyStore.load();
-
+    
     for (const key of Object.values(allTranslationKeys)) {
-      this.translationKeys[key.keyName] = new UITranslationKey(this, key);
+      this.translationKeys[key.id] = new UITranslationKey(this, key);
     }
     return this.translationKeys;
   }

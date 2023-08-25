@@ -44,7 +44,7 @@ export default class KeyImporter {
     };
 
     for (const keyToImport of importKeys) {
-      const currentKey = keyStore.getKey(keyToImport.keyName);
+      const currentKey = keyStore.getKeyByName(keyToImport.keyName);
       if (!currentKey) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         changedKeys.newKeys.push(keyToImport);
@@ -95,7 +95,7 @@ export default class KeyImporter {
 
   static async import(labelManager: LocalizedLabelManagerUI, keysToImport: ImportTranslationKey[], language: Language) {
     for (const keyToImport of keysToImport) {
-      const currentKey = labelManager.keyStore.getKey(keyToImport.keyName);
+      const currentKey = labelManager.keyStore.getKeyByName(keyToImport.keyName);
       if (!currentKey) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         console.log(`creating key${keyToImport.keyName}`);
@@ -104,7 +104,7 @@ export default class KeyImporter {
       } else {
         console.log(`updateing key${keyToImport.keyName}`);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const updatedKey = await labelManager.updateKey(keyToImport.keyName, toChangeArray(keyToImport, language));
+        const updatedKey = await labelManager.updateKey(currentKey.id, { translations: toChangeArray(keyToImport, language) });
       }
     }
     // TODO keyStore.commit();

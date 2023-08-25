@@ -38,7 +38,7 @@ export interface LocalizedLabel {
 
   useSampleValues: boolean;
   keyType: KeyState
-  key?: string;
+  keyId?: string;
   keyVersion: number,
   pluralId: Plural;
   characters: string;

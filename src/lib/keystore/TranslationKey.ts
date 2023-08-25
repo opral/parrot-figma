@@ -26,6 +26,7 @@ export type TranslationEntry = {
 export type HistoryEntry = {
   user: string,
   date: number,
+  name?: string,
   plural?: boolean,
   labels?: string[],
   translations?: {
@@ -91,7 +92,8 @@ export type Translations = {
 //
 
 export interface SerializableTranslationKey {
-  keyName: string
+  id: string,
+  keyName: string,
   latestVersion: number,
   historyTags: {
     // map a tag identifier (we use a number for size reasons) to a version index of a key

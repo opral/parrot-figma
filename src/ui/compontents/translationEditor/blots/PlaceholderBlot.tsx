@@ -1,6 +1,6 @@
 import Quill from 'quill';
 
-import { PlaceholderType } from '../../../../lib/message/TranslationKey';
+import { PlaceholderType } from '../../../../lib/message/Message';
 
 interface PlaceholderValue {
   name: string,

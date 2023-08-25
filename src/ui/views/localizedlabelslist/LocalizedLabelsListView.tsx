@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
-import MemoryTranslationKeyStore from '../../../lib/message/MemoryTranslationKeyStore';
+import MemoryTranslationKeyStore from '../../../lib/message/store/MessageStoreMemory';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import FigmaUtil from '../../../shared/FigmaUtil';
 import LocalizedFrameGroup from './LocalizedFrameGroup';

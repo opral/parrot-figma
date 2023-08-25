@@ -1,14 +1,14 @@
 /* eslint-disable no-plusplus */
 /* eslint-disable no-await-in-loop */
-import { Language } from '../message/variants/Language';
-import { Plural, getPluralFormsByLanguage } from '../message/variants/Plural';
+import { Language } from '../variants/Locale';
+import { Plural, getPluralFormsByLanguage } from '../variants/Plural';
 import {
   Fillins,
   HistoryEntry, HistoryTag, PlaceholdersByName, TranslationEntry, TranslationKey, TranslationKeys,
-} from '../message/TranslationKey';
-import { Config, FigmaFileTranslationKeyStore } from './FigmaFileTranslationKeyStore';
-import { UITranslationKey } from './UITranslationKey';
-import { NodeSelection } from '../localizedlabels/LocalizedLabelManager';
+} from '../Message';
+import { Config, FigmaFileTranslationKeyStore } from './MessageStoreFigmaRoot';
+import { UITranslationKey } from '../MessageUI';
+import { NodeSelection } from '../../localizedlabels/LocalizedLabelManager';
 
 export type SearchQuery = {
   selected?: 'FRAME' | 'LABEL' | undefined,

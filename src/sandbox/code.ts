@@ -10,7 +10,7 @@
 
 
 import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
-import { FigmaFileTranslationKeyStore } from '../lib/message/FigmaFileTranslationKeyStore';
+import { FigmaFileTranslationKeyStore } from '../lib/message/store/MessageStoreFigmaRoot';
 import FigmaUtil from '../shared/FigmaUtil';
 import FigmaHelper from '../shared/FigmaHelper';
 import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowManagerSandbox';

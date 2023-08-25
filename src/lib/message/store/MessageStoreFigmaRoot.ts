@@ -4,12 +4,12 @@
 import TextEncoding from 'text-encoding';
 
 import blake from 'blakejs';
-import { Language } from '../message/variants/Language';
-import { Plural } from '../message/variants/Plural';
+import { Language } from '../variants/Locale';
+import { Plural } from '../variants/Plural';
 import {
   HistoryTag, HistoryEntry, TranslationKey, TranslationKeys, PlaceholdersByName, Fillins, PlaceholderType,
-} from '../message/TranslationKey';
-import { UITranslationKey } from './UITranslationKey';
+} from '../Message';
+import { UITranslationKey } from '../MessageUI';
 
 const encoder = new TextEncoding.TextEncoder();
 

@@ -7,7 +7,7 @@ import OutsideClickHandler from 'react-outside-click-handler';
 import './select.css';
 import { createPortal } from 'react-dom';
 import { Plural } from '../../../lib/message/variants/Plural';
-import { Language } from '../../../lib/message/variants/Language';
+import { Language } from '../../../lib/message/variants/Locale';
 
 export interface SelectOption {
   divider?: string | boolean;

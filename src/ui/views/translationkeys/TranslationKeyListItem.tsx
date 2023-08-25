@@ -9,10 +9,10 @@ import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
 import OutsideClickHandler from 'react-outside-click-handler';
 import { fileLoader } from 'ejs';
-import { Language } from '../../../lib/message/variants/Language';
+import { Language } from '../../../lib/message/variants/Locale';
 import { Plural, getPluralFormsByLanguage } from '../../../lib/message/variants/Plural';
-import { Fillins, HistoryTag, Placeholder } from '../../../lib/message/TranslationKey';
-import MemoryTranslationKeyStore from '../../../lib/message/MemoryTranslationKeyStore';
+import { Fillins, HistoryTag, Placeholder } from '../../../lib/message/Message';
+import MemoryTranslationKeyStore from '../../../lib/message/store/MessageStoreMemory';
 
 import FigmaUtil from '../../../shared/FigmaUtil';
 
@@ -20,7 +20,7 @@ import TranslationEditor from '../../compontents/translationEditor/TranslationEd
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import MatchView from '../../compontents/matchview/MatchView';
 import HistoryEntryView from '../../compontents/history/HistoryEntryView';
-import { UITranslationKey } from '../../../lib/message/UITranslationKey';
+import { UITranslationKey } from '../../../lib/message/MessageUI';
 import PlaceholderEditorListItem from '../../compontents/placeholder/PlaceholderEditor';
 import AsyncImage from './AsyncImage';
 import FEATURES_FLAGS from '../../featuretoggle';

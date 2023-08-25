@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Placeholder } from '../../../lib/message/TranslationKey';
+import { Placeholder } from '../../../lib/message/Message';
 
 // placeholder editor should be able to:
 // - change the name of a placeholder

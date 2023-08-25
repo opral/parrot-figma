@@ -1,5 +1,5 @@
 /* eslint-disable import/prefer-default-export */
-import { Language } from './Language';
+import { Language } from './Locale';
 
 export enum Plural {
   ZERO = 'zero',

@@ -1,9 +1,9 @@
 /* eslint-disable no-plusplus */
-import { Language } from '../message/variants/Language';
-import { Plural, getPluralFormsByLanguage } from '../message/variants/Plural';
+import { Language } from './variants/Locale';
+import { Plural, getPluralFormsByLanguage } from './variants/Plural';
 import {
   Fillins, HistoryEntry, Placeholder, PlaceholderType, PlaceholdersByName, TranslationKey, Translations,
-} from './TranslationKey';
+} from './Message';
 
 export interface UITranslationKeyStore {
   getBaseLanugage(): Language | undefined

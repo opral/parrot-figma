@@ -7,7 +7,7 @@ import '../../localization/i18n';
 import LanguageSetup from '../../compontents/languageSetup/LanguageSetup';
 
 import './Onboarding.css';
-import { Language } from '../../../lib/message/variants/Language';
+import { Language } from '../../../lib/message/variants/Locale';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import WindowManagerUi from '../../../lib/windowManager/WindowManagerUI';
 

@@ -1,6 +1,6 @@
-import { Language } from '../message/variants/Language';
+import { Language } from '../message/variants/Locale';
 import { Plural } from '../message/variants/Plural';
-import { Fillins, TranslationEntry } from '../message/TranslationKey';
+import { Fillins, TranslationEntry } from '../message/Message';
 import { DeltaOp } from './LocalizedLabelManager';
 
 export enum KeyState {

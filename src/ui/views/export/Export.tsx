@@ -8,11 +8,11 @@ import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
 import OutsideClickHandler from 'react-outside-click-handler';
 
-import MemoryTranslationKeyStore from '../../../lib/message/MemoryTranslationKeyStore';
+import MemoryTranslationKeyStore from '../../../lib/message/store/MessageStoreMemory';
 import Select, { SelectOption } from '../../compontents/select/select';
 import './Export.css';
 import TileSelect, { TileSelectOption } from '../../compontents/tileselect/tileselect';
-import { Language } from '../../../lib/message/variants/Language';
+import { Language } from '../../../lib/message/variants/Locale';
 import KeyExporter from '../../../lib/export/KeyExporter';
 import FEATURES_FLAGS from '../../featuretoggle';
 

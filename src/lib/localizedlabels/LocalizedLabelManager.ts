@@ -3,12 +3,12 @@
 import { t } from 'i18next';
 import { debug } from 'console';
 import { text } from 'stream/consumers';
-import { Language } from '../message/variants/Language';
+import { Language } from '../message/variants/Locale';
 import { KeyState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../message/variants/Plural';
 import ChangeEvent from './ChangeEvent';
-import { FigmaFileTranslationKeyStore } from '../message/FigmaFileTranslationKeyStore';
-import { Fillins, TranslationEntry } from '../message/TranslationKey';
+import { FigmaFileTranslationKeyStore } from '../message/store/MessageStoreFigmaRoot';
+import { Fillins, TranslationEntry } from '../message/Message';
 import VirtualTree, { VirtualTreeNode } from './VirtualTree';
 import LinksLoadedEvent from './LinksLoadedEvent';
 

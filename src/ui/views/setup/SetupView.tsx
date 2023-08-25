@@ -6,7 +6,7 @@ import { useState } from 'react';
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
-import { Language } from '../../../lib/message/variants/Language';
+import { Language } from '../../../lib/message/variants/Locale';
 import LanguageSetup from '../../compontents/languageSetup/LanguageSetup';
 
 type SetupViewProps = {

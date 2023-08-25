@@ -1,4 +1,4 @@
-import { Language } from './variants/Language';
+import { Language } from './variants/Locale';
 import { Plural } from './variants/Plural';
 import { Gender } from './variants/Gender';
 

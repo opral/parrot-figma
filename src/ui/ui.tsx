@@ -17,11 +17,11 @@ import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
 import './ui.css';
 import WindowManagerUi from '../lib/windowManager/WindowManagerUI';
 import { WindowMode } from '../lib/windowManager/WindowManagerSandbox';
-import { TranslationKeys } from '../lib/message/TranslationKey';
+import { TranslationKeys } from '../lib/message/Message';
 import TranslationKeyListView from './views/translationkeys/TranslationKeyListView';
 
-import MemoryTranslationKeyStore, { UITranslationKeys } from '../lib/message/MemoryTranslationKeyStore';
-import { FigmaFileTranslationKeyStore } from '../lib/message/FigmaFileTranslationKeyStore';
+import MemoryTranslationKeyStore, { UITranslationKeys } from '../lib/message/store/MessageStoreMemory';
+import { FigmaFileTranslationKeyStore } from '../lib/message/store/MessageStoreFigmaRoot';
 
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
 import LocalizedLabelManagerUI from '../lib/localizedlabels/LocalizedLabelManagerUI';
@@ -31,7 +31,7 @@ import './assets/icons.css';
 import SegmentedControl from './compontents/segmentedControl/SegmentedControl';
 import LanguageSetup from './compontents/languageSetup/LanguageSetup';
 import Onboarding from './views/onboarding/Onboarding';
-import { Language } from '../lib/message/variants/Language';
+import { Language } from '../lib/message/variants/Locale';
 import Tooltip from './compontents/tooltip/Tooltip';
 
 import Export from './views/export/Export';

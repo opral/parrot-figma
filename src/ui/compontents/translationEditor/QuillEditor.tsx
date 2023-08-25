@@ -16,7 +16,7 @@ import Quill, {
 } from 'quill';
 
 import Emitter from 'quill/core/emitter';
-import { Fillins, PlaceholderType } from '../../../lib/message/TranslationKey';
+import { Fillins, PlaceholderType } from '../../../lib/message/Message';
 import ParrotTheme from './quill/QuillTheme';
 import ParrotToolbar from './quill/Toolbar';
 import PlaceholderBlot from './blots/PlaceholderBlot';

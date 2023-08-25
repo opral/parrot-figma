@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { UITranslationKey } from '../../../lib/message/UITranslationKey';
+import { UITranslationKey } from '../../../lib/message/MessageUI';
 import { PlaceholderView } from './PlaceholderView';
 
 type TranslationViewProps = {

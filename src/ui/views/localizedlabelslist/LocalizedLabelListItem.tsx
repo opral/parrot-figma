@@ -8,15 +8,15 @@ import { KeyState, LocalizedLabel } from '../../../lib/localizedlabels/Localized
 import FigmaUtil from '../../../shared/FigmaUtil';
 import InputSelect, { InputSelectOption, InputSelectionOptionType } from '../../compontents/selectInput/inputselect';
 import Select, { SelectOption } from '../../compontents/select/select';
-import MemoryTranslationKeyStore from '../../../lib/message/MemoryTranslationKeyStore';
-import { Language } from '../../../lib/message/variants/Language';
+import MemoryTranslationKeyStore from '../../../lib/message/store/MessageStoreMemory';
+import { Language } from '../../../lib/message/variants/Locale';
 import TranslationEditor from '../../compontents/translationEditor/TranslationEditor';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import TextField from '../../compontents/textfield/TextField';
 import TranslationKeyListView from '../translationkeys/TranslationKeyListView';
 import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
 import PlaceholderEditorListItem from '../../compontents/placeholder/PlaceholderEditor';
-import { Fillins } from '../../../lib/message/TranslationKey';
+import { Fillins } from '../../../lib/message/Message';
 import FEATURES_FLAGS from '../../featuretoggle';
 import { track } from '../../utils/analytics';
 import Drawer from '../../compontents/drawer/Drawer';

@@ -1,5 +1,5 @@
 import { debug } from 'console';
-import { FigmaFileTranslationKeyStore } from '../message/FigmaFileTranslationKeyStore';
+import { FigmaFileTranslationKeyStore } from '../message/store/MessageStoreFigmaRoot';
 
 export enum WindowMode {
   IntroWindow = 'introWindow', // fixed/auto sized window

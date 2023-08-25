@@ -5,9 +5,9 @@ import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
-import { Language } from '../../../lib/message/variants/Language';
+import { Language } from '../../../lib/message/variants/Locale';
 
-import MemoryTranslationKeyStore, { SearchQuery } from '../../../lib/message/MemoryTranslationKeyStore';
+import MemoryTranslationKeyStore, { SearchQuery } from '../../../lib/message/store/MessageStoreMemory';
 import FigmaUtil from '../../../shared/FigmaUtil';
 import TranslationKeyListItem from './TranslationKeyListItem';
 import { Plural } from '../../../lib/message/variants/Plural';

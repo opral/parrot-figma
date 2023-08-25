@@ -49,7 +49,7 @@ export default function LocalizedLabelListItem({
   const [, setDummyState] = useState<any>();
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO remove when we implemented the design != keystore resolution
-  const translations = translatedKey?.translations[localizedLabel.language];
+  const translations = translatedKey?.variants[localizedLabel.language];
 
   const pluralsAvailable = [] as SelectOption[];
 

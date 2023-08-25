@@ -291,9 +291,9 @@ export default function TranslationKeyListItem({
       </div>
       {languages.map((language, i, allLanguages) => {
         let languageSkipped = false;
-        if (translationKey.translations[language as Locale] !== undefined) {
-          for (const plural of Object.keys(translationKey.translations[language as Locale]!)) {
-            if (translationKey.translations[language as Locale]![plural as Plural]!.skip !== true) {
+        if (translationKey.variants[language as Locale] !== undefined) {
+          for (const plural of Object.keys(translationKey.variants[language as Locale]!)) {
+            if (translationKey.variants[language as Locale]![plural as Plural]!.skip !== true) {
               languageSkipped = false;
               break;
             } else {
@@ -308,7 +308,7 @@ export default function TranslationKeyListItem({
             {getPluralFormsByLanguage(language).filter((plural) => translationKey.plural || plural === Plural.OTHER).map((plural, pluralsIndex, allPlurals) =>
               // eslint-disable-next-line consistent-return
               (
-                <div key={plural} className={`group plural-group ${pluralsIndex === (allPlurals.length - 1) ? 'lastPlural  grid-item-border grid-item-border-bottom' : ''} ${pluralsIndex === 0 ? 'firstPlural  grid-item-border grid-item-border-top' : ''} ${translationKey.plural ? 'onePlural' : ' multiplePlurals'}${translationKey.translations[language as Locale]?.[plural as Plural]?.skip === true ? ' skipped' : ''}`}>
+                <div key={plural} className={`group plural-group ${pluralsIndex === (allPlurals.length - 1) ? 'lastPlural  grid-item-border grid-item-border-bottom' : ''} ${pluralsIndex === 0 ? 'firstPlural  grid-item-border grid-item-border-top' : ''} ${translationKey.plural ? 'onePlural' : ' multiplePlurals'}${translationKey.variants[language as Locale]?.[plural as Plural]?.skip === true ? ' skipped' : ''}`}>
                   <div className="column column-plural grid-item-plural grid-item-border"><span className="rowText">{translationKey.plural ? plural : ''}</span></div>
                   <div className="column  column-translation grid-item-translation grid-item-border translation-container translation">
                     <TranslationEditor
@@ -316,7 +316,7 @@ export default function TranslationKeyListItem({
                       editable={select === undefined}
                       match={searchMatch?.textMatches[language]?.[plural as Plural]}
                       onSave={async (text: any, fillins: Fillins) => {
-                        let skip = translationKey.translations[language as Locale]?.[plural as Plural]?.skip ?? false;
+                        let skip = translationKey.variants[language as Locale]?.[plural as Plural]?.skip ?? false;
 
                         if (text !== undefined && text !== '') {
                           skip = false;
@@ -328,7 +328,7 @@ export default function TranslationKeyListItem({
                           fillins,
                         });
                       }}
-                      translationHTML={translationKey.translations[language as Locale]?.[plural as Plural]?.text}
+                      translationHTML={translationKey.variants[language as Locale]?.[plural as Plural]?.text}
                       translationKeyStore={translationKeyStore}
                     />
 
@@ -346,13 +346,13 @@ export default function TranslationKeyListItem({
                             translations: [{
                               language,
                               plural,
-                              text: translationKey.translations[language as Locale]?.[plural as Plural]?.text,
-                              skip: translationKey.translations[language as Locale]?.[plural as Plural]?.skip === undefined ? true : !translationKey.translations[language as Locale]![plural as Plural]!.skip,
+                              text: translationKey.variants[language as Locale]?.[plural as Plural]?.text,
+                              skip: translationKey.variants[language as Locale]?.[plural as Plural]?.skip === undefined ? true : !translationKey.variants[language as Locale]![plural as Plural]!.skip,
                             }],
                           });
                         }}
                       >
-                        <span className={'svg-container' + (translationKey.translations[language as Locale]?.[plural as Plural]?.skip === true ? ' eye-closed-svg' : ' eye-svg')} />
+                        <span className={'svg-container' + (translationKey.variants[language as Locale]?.[plural as Plural]?.skip === true ? ' eye-closed-svg' : ' eye-svg')} />
                       </span>
                       )}
                       { FEATURES_FLAGS.versioning && (

@@ -48,11 +48,11 @@ export default class KeyImporter {
       if (!currentKey) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         changedKeys.newKeys.push(keyToImport);
-      } else if (!currentKey.translations[language]) {
+      } else if (!currentKey.variants[language]) {
         changedKeys.newTranslations.push(keyToImport);
-      } else if (!currentKey.translations[language]![keyToImport.plural]) {
+      } else if (!currentKey.variants[language]![keyToImport.plural]) {
         changedKeys.newTranslations.push(keyToImport);
-      } else if (currentKey.translations[language]![keyToImport.plural]!.text !== keyToImport.text) {
+      } else if (currentKey.variants[language]![keyToImport.plural]!.text !== keyToImport.text) {
         changedKeys.updatedTranslations.push(keyToImport);
       }
     }

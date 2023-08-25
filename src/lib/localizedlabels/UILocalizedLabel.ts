@@ -404,11 +404,11 @@ export class UILocalizedLabel implements LocalizedLabel {
       const baseLanguage = this.manager.keyStore.getBaseLanugage()! as Locale;
       // TODO check if the target language is avaialable and up to date
       let translationUpToDate = false;
-      const baseLanguageHTML = this.language === baseLanguage ? this.translationHTML : this.unlinkedTranslations.translations?.[baseLanguage]?.[this.pluralId]?.text!;
+      const baseLanguageHTML = this.language === baseLanguage ? this.translationHTML : this.unlinkedTranslations.variants?.[baseLanguage]?.[this.pluralId]?.text!;
 
       if (this.unlinkedTranslations
-        && this.unlinkedTranslations.translations?.[targetLanguage]?.[this.pluralId]?.text) {
-        const currentTranslationBaseLangHash = this.unlinkedTranslations.translations?.[targetLanguage]?.[this.pluralId]?.baseLangHash;
+        && this.unlinkedTranslations.variants?.[targetLanguage]?.[this.pluralId]?.text) {
+        const currentTranslationBaseLangHash = this.unlinkedTranslations.variants?.[targetLanguage]?.[this.pluralId]?.baseLangHash;
         if (baseLanguageHTML && blake.blake2sHex(baseLanguageHTML) === currentTranslationBaseLangHash) {
           translationUpToDate = true;
         }

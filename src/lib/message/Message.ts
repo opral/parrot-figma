@@ -13,7 +13,8 @@ export type HistoryTag = {
 // TODO #10 rename to variant Entry
 export type TranslationEntry = {
   plural: boolean,
-  translations?: {
+  // TODO #10 take the renaming from translations -> variants in migrations into account
+  variants?: {
     [language in Locale]? : {
       // TODO #10 add gender
       [plural in Plural]? : {
@@ -108,7 +109,7 @@ export interface SerializableMessage {
   labels: string[],
   referencingTextNodes: string[],
   plural: boolean,
-  translations: Variants,
+  variants: Variants,
   quantity: { value: number } | { placeholder: string },
   placeholders: PlaceholdersByName,
   defaultFillins: Fillins

@@ -407,13 +407,13 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         language,
         keyVersion: translationKey.latestVersion,
         // showSampleValues: localizedLabel.rootFrameUseSampleValues,
-        translationHTML: translationKey.translations[language]?.[plural]?.text ?? 'no translation',
+        translationHTML: translationKey.variants[language]?.[plural]?.text ?? 'no translation',
       });
 
       // TODO check if design is sync with translation - if not offer update with prompt
     } else {
       if (localizedLabel.unlinkedTranslations) {
-        const translations = Object.entries(localizedLabel.unlinkedTranslations.translations!).flatMap(([languageFound, pluralsFound]) => Object.entries(pluralsFound).map(([pluralFound, { text }]) => {
+        const translations = Object.entries(localizedLabel.unlinkedTranslations.variants!).flatMap(([languageFound, pluralsFound]) => Object.entries(pluralsFound).map(([pluralFound, { text }]) => {
           if (languageFound === language && plural === pluralFound) {
             return ({ language: languageFound, plural: pluralFound, text: localizedLabel.translationHTML } as { language: Locale, plural: Plural, text: string, skip: false });
           }
@@ -548,21 +548,21 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         const version = changedProperties.keyVersion ?? localizedLabelCached.keyVersion;
 
         if (localizedLabelCached.keyType === KeyState.Linked) {
-          const translationHTML = translationKey?.getInVersion(version).translations[language]?.[plural]?.text ?? 'TODO Missinng Translation when setting Version';
-          const textAndOps = UILocalizedLabel.toTextAndOps(translationHTML, labelFillins);
+          const variantHTML = translationKey?.getInVersion(version).variants[language]?.[plural]?.text ?? 'TODO Missinng Translation when setting Version';
+          const textAndOps = UILocalizedLabel.toTextAndOps(variantHTML, labelFillins);
 
           // TODO handle placeholders
 
           changedPropertiesToForwared.ops = textAndOps.ops;
           changedPropertiesToForwared.characters = textAndOps.text;
-          changedPropertiesToForwared.filledTemplateHash = blake.blake2sHex(translationHTML);
+          changedPropertiesToForwared.filledTemplateHash = blake.blake2sHex(variantHTML);
         } else {
           // we expect to have an interims key already because otherwise we expect a new translationHTML from the provider or a fallback
           if (localizedLabelCached.unlinkedTranslations === undefined) {
             throw new Error('unlinked translation expected when no translation HTML is passed...');
           }
           // NOTE instead of missing translation we could mark the label and use the base language...
-          const translationHTML = localizedLabelCached.unlinkedTranslations!.translations![language]?.[plural]?.text ?? 'TODO Missinng Translation when setting Version';
+          const translationHTML = localizedLabelCached.unlinkedTranslations!.variants![language]?.[plural]?.text ?? 'TODO Missinng Translation when setting Version';
           const textAndOps = UILocalizedLabel.toTextAndOps(translationHTML, labelFillins);
 
           // TODO handle placeholders

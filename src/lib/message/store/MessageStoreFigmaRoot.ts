@@ -333,16 +333,16 @@ export class MessageStoreFigmaRoot {
     const dateOfChange = Date.now();
 
     // find differences
-    for (const language of Object.keys(translationKey.translations)) {
+    for (const language of Object.keys(translationKey.variants)) {
       const currentLanguage = language as Locale;
 
-      for (const plural of Object.keys(translationKey.translations[currentLanguage]!)) {
+      for (const plural of Object.keys(translationKey.variants[currentLanguage]!)) {
         const currentPlural = plural as Plural;
-        if (translationKey.translations[currentLanguage]![currentPlural]) {
-          translationKey.translations[currentLanguage]![currentPlural]!.text = translationKey.translations[currentLanguage]![currentPlural]?.text === '' ? undefined : translationKey.translations[currentLanguage]![currentPlural]?.text;
+        if (translationKey.variants[currentLanguage]![currentPlural]) {
+          translationKey.variants[currentLanguage]![currentPlural]!.text = translationKey.variants[currentLanguage]![currentPlural]?.text === '' ? undefined : translationKey.variants[currentLanguage]![currentPlural]?.text;
         }
-        if (keyCurrentVersion?.translations[currentLanguage]?.[currentPlural]?.text === translationKey.translations[currentLanguage]![currentPlural]?.text
-                    && keyCurrentVersion?.translations[currentLanguage]?.[currentPlural]?.skip === translationKey.translations[currentLanguage]![currentPlural]?.skip) {
+        if (keyCurrentVersion?.variants[currentLanguage]?.[currentPlural]?.text === translationKey.variants[currentLanguage]![currentPlural]?.text
+                    && keyCurrentVersion?.variants[currentLanguage]?.[currentPlural]?.skip === translationKey.variants[currentLanguage]![currentPlural]?.skip) {
           // console.log(`text equal! ${currentLanguage} ${currentPlural} ${keyCurrentVersion.translations[currentLanguage]?.[currentPlural]?.text}`);
           // eslint-disable-next-line no-continue
           continue;
@@ -355,18 +355,18 @@ export class MessageStoreFigmaRoot {
         if (historyEntry.translations![currentLanguage] === undefined) {
           historyEntry.translations![currentLanguage] = {
             [currentPlural]: {
-              text: translationKey.translations[currentLanguage]![currentPlural]!.text,
-              skip: translationKey.translations[currentLanguage]![currentPlural]!.skip,
+              text: translationKey.variants[currentLanguage]![currentPlural]!.text,
+              skip: translationKey.variants[currentLanguage]![currentPlural]!.skip,
             },
           };
         } else if (historyEntry.translations![currentLanguage]![currentPlural] === undefined) {
           historyEntry.translations![currentLanguage]![currentPlural] = {
-            text: translationKey.translations[currentLanguage]![currentPlural]!.text,
-            skip: translationKey.translations[currentLanguage]![currentPlural]!.skip,
+            text: translationKey.variants[currentLanguage]![currentPlural]!.text,
+            skip: translationKey.variants[currentLanguage]![currentPlural]!.skip,
           };
         }
 
-        translationKey.translations[currentLanguage]![currentPlural]!.version = translationKey.history.length;
+        translationKey.variants[currentLanguage]![currentPlural]!.version = translationKey.history.length;
       }
     }
 
@@ -494,7 +494,7 @@ export class MessageStoreFigmaRoot {
       keyName,
       labels: [],
       plural,
-      translations: translationsObj,
+      variants: translationsObj,
       referencingTextNodes: this.keyToLabels[keyName] ? [...this.keyToLabels[keyName]] : [],
       placeholders,
       quantity,
@@ -522,8 +522,8 @@ export class MessageStoreFigmaRoot {
 
     for (const translation of properties.translations) {
       // if no key for the given language exists - create an empty one for plural 'other' with version -1
-      if (!keyToUpdate.translations[translation.language]) {
-        keyToUpdate.translations[translation.language] = {
+      if (!keyToUpdate.variants[translation.language]) {
+        keyToUpdate.variants[translation.language] = {
           other: {
             version: -1,
             skip: false,
@@ -533,8 +533,8 @@ export class MessageStoreFigmaRoot {
       }
 
       // if the target plural does not extist yet create a dummy one - vlues get overriden in next step
-      if (!keyToUpdate.translations[translation.language]![translation.plural]) {
-        keyToUpdate.translations[translation.language]![translation.plural] = {
+      if (!keyToUpdate.variants[translation.language]![translation.plural]) {
+        keyToUpdate.variants[translation.language]![translation.plural] = {
           version: -1,
           skip: false,
           verified: false, // TODO #9 - check if false is correct
@@ -542,12 +542,12 @@ export class MessageStoreFigmaRoot {
       }
 
       // create a new translation entry with increased version
-      if (keyToUpdate.translations[translation.language]![translation.plural]!.text !== translation.text
-        || keyToUpdate.translations[translation.language]![translation.plural]!.skip !== translation.skip) {
+      if (keyToUpdate.variants[translation.language]![translation.plural]!.text !== translation.text
+        || keyToUpdate.variants[translation.language]![translation.plural]!.skip !== translation.skip) {
         changeFound = true;
-        keyToUpdate.translations[translation.language]![translation.plural]!.version = keyToUpdate.latestVersion + 1;
-        keyToUpdate.translations[translation.language]![translation.plural]!.text = translation.text;
-        keyToUpdate.translations[translation.language]![translation.plural]!.skip = translation.skip;
+        keyToUpdate.variants[translation.language]![translation.plural]!.version = keyToUpdate.latestVersion + 1;
+        keyToUpdate.variants[translation.language]![translation.plural]!.text = translation.text;
+        keyToUpdate.variants[translation.language]![translation.plural]!.skip = translation.skip;
       }
     }
 
@@ -556,7 +556,7 @@ export class MessageStoreFigmaRoot {
       keyToUpdate.plural = properties.plural;
     }
 
-    const placeholders = MessageUI.extractParameters(keyToUpdate.translations, this.getConfigSync().baseLanguage!, keyToUpdate.plural);
+    const placeholders = MessageUI.extractParameters(keyToUpdate.variants, this.getConfigSync().baseLanguage!, keyToUpdate.plural);
 
     if (JSON.stringify(keyToUpdate.placeholders) !== JSON.stringify(placeholders)) {
       changeFound = true;

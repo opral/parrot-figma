@@ -188,7 +188,7 @@ export default class MessageStoreMemory extends EventTarget {
           const keyInVersion = currentKey.getInVersion(keyVerson);
           translationKeys[keyInVersion.keyName] = keyInVersion;
         }
-      } else if (currentKey.translations[language]) {
+      } else if (currentKey.variants[language]) {
         translationKeys[currentKey.keyName] = currentKey;
       }
     }
@@ -402,7 +402,7 @@ export default class MessageStoreMemory extends EventTarget {
 
     for (const key of Object.values(this.translationKeys)) {
       for (const language of this.getLanugages()!) {
-        const plurals = key.translations[language];
+        const plurals = key.variants[language];
         for (const plural of getPluralFormsByLanguage(language as Locale)) {
           if (query.text === undefined || query.text === '') {
             results.matchingKeys.add(key.id);

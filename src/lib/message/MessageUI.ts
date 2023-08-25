@@ -25,7 +25,7 @@ export class MessageUI implements Message {
 
   labels: string[];
 
-  translations: {
+  variants: {
     [language in Locale]? : {
       // TODO #10 add gender
       [plural in Plural]? : {
@@ -58,7 +58,7 @@ export class MessageUI implements Message {
     this.plural = key.plural;
     this.labels = key.labels;
     this.referencingTextNodes = key.referencingTextNodes;
-    this.translations = key.translations;
+    this.variants = key.variants;
     this.history = key.history;
     this.quantity = key.quantity;
     this.placeholders = key.placeholders;
@@ -337,7 +337,7 @@ export class MessageUI implements Message {
       labels: [],
       plural: false,
       history: [],
-      translations: {},
+      variants: {},
       quantity: this.quantity,
       referencingTextNodes: this.referencingTextNodes,
       defaultFillins: this.defaultFillins,
@@ -357,20 +357,20 @@ export class MessageUI implements Message {
       }
 
       for (const [languageId, language] of Object.entries(currentVersion.translations)) {
-        if (!translationKeyInVersion.translations[languageId as Locale]) {
-          translationKeyInVersion.translations[languageId as Locale] = {};
+        if (!translationKeyInVersion.variants[languageId as Locale]) {
+          translationKeyInVersion.variants[languageId as Locale] = {};
         }
 
         for (const [pluralId, plural] of Object.entries(language)) {
-          if (!translationKeyInVersion.translations[languageId as Locale]![pluralId as Plural]) {
-            translationKeyInVersion.translations[languageId as Locale]![pluralId as Plural] = {
+          if (!translationKeyInVersion.variants[languageId as Locale]![pluralId as Plural]) {
+            translationKeyInVersion.variants[languageId as Locale]![pluralId as Plural] = {
               skip: plural.skip!,
               verified: plural.verified ?? false,
               text: plural.text,
               version: versionI,
             };
           } else {
-            const currentPlural = translationKeyInVersion.translations[languageId as Locale]![pluralId as Plural]!;
+            const currentPlural = translationKeyInVersion.variants[languageId as Locale]![pluralId as Plural]!;
             currentPlural.skip = plural.skip ?? currentPlural.skip;
             currentPlural.version = versionI;
             currentPlural.verified = plural.verified ?? currentPlural.verified;

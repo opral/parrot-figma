@@ -21,7 +21,7 @@ export default class AppleDictFileImporter {
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(stringsdictFileContent, 'text/xml');
 
-      const translationKeys: ImportTranslationKey[] = [];
+      const messages: ImportTranslationKey[] = [];
 
       // get all the dict elements in the document
       const dictElements = xmlDoc.getElementsByTagName('dict');
@@ -46,7 +46,7 @@ export default class AppleDictFileImporter {
             const plural = rule.tagName as Plural;
             const text = rule.textContent ?? undefined;
 
-            translationKeys.push({
+            messages.push({
               keyName,
               plural,
               text,
@@ -57,7 +57,7 @@ export default class AppleDictFileImporter {
           // add the key to the translation keys with the 'other' plural rule
           const valueElement = dictElement.querySelector('dict > string');
           const text = valueElement && valueElement.textContent ? valueElement.textContent : undefined;
-          translationKeys.push({
+          messages.push({
             keyName,
             plural: Plural.OTHER,
             text,
@@ -65,7 +65,7 @@ export default class AppleDictFileImporter {
         }
       }
 
-      return translationKeys;
+      return messages;
     } catch (error) {
       console.error('Failed to parse strings file content:', error);
       return undefined;

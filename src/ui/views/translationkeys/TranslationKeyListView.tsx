@@ -19,7 +19,7 @@ import { NodeSelection } from '../../../lib/localizedlabels/LocalizedLabelManage
 type TranslationKeyListViewProps = {
   initialSearchQuery: SearchQuery,
   showSearchBar: boolean,
-  translationKeyStore: MessageStoreMemory
+  messageStore: MessageStoreMemory
   localizedLabelManager: LocalizedLabelManagerUI
   figmaRemote: FigmaUtil
   select?: (key: string, language: Locale, plural: Plural) => void
@@ -30,7 +30,7 @@ type TranslationKeyListViewProps = {
 export default function TranslationKeyListView({
   initialSearchQuery,
   showSearchBar,
-  translationKeyStore,
+  messageStore,
   localizedLabelManager,
   figmaRemote,
   select,
@@ -48,7 +48,7 @@ export default function TranslationKeyListView({
   // const [keys, setKeys] = useState: UITranslationKeys,
   const [searchQuery, setSearchQuery] = useState<SearchQuery>(initialSearchQuery);
   debugger;
-  const filteredKeys = translationKeyStore.findKeys(searchQuery, selectedNodes);
+  const filteredKeys = messageStore.findKeys(searchQuery, selectedNodes);
   const tableRef = useRef<HTMLDivElement>(null);
 
   async function refreshSelection(triggerHighlight: boolean) {
@@ -79,12 +79,12 @@ export default function TranslationKeyListView({
     };
 
     localizedLabelManager.addEventListener('updated', onUpdated);
-    translationKeyStore.addEventListener('updated', onUpdated);
+    messageStore.addEventListener('updated', onUpdated);
     window.addEventListener('message', messageHandler);
 
     return () => {
       localizedLabelManager.removeEventListener('updated', onUpdated);
-      translationKeyStore.removeEventListener('updated', onUpdated);
+      messageStore.removeEventListener('updated', onUpdated);
       window.removeEventListener('message', messageHandler);
     };
   }, []);
@@ -116,7 +116,7 @@ export default function TranslationKeyListView({
     }
   }, [highlightSelection]);
   
-  const fileHasKeys = Object.keys(translationKeyStore.translationKeys).length > 0;
+  const fileHasKeys = Object.keys(messageStore.messages).length > 0;
   if (!fileHasKeys) {
     return (
       <div className="emptyState">
@@ -140,7 +140,7 @@ export default function TranslationKeyListView({
     setSearchQuery(MessageStoreMemory.toQueryObject(searchString));
   };
 
-  const longestKey = Object.keys(translationKeyStore.translationKeys).reduce((acc, key) => (key.length > acc.length ? key : acc), '');
+  const longestKey = Object.keys(messageStore.messages).reduce((acc, key) => (key.length > acc.length ? key : acc), '');
 
   let rendered = 0;
 
@@ -331,10 +331,10 @@ export default function TranslationKeyListView({
         <TranslationKeyListItem
           key="max-width-helper-row"
           rowClassNames="hidden-helper-row"
-          translationKeyStore={translationKeyStore}
+          messageStore={messageStore}
           localizedLabelManager={localizedLabelManager}
           searchMatch={undefined}
-          translationKey={translationKeyStore.translationKeys[longestKey]}
+          message={messageStore.messages[longestKey]}
           figmaRemote={figmaRemote}
           select={select}
           keySelected={false}
@@ -349,10 +349,10 @@ export default function TranslationKeyListView({
           return (
             <TranslationKeyListItem
               key={messageId}
-              translationKeyStore={translationKeyStore}
+              messageStore={messageStore}
               localizedLabelManager={localizedLabelManager}
               searchMatch={filteredKeys.matches[messageId]}
-              translationKey={translationKeyStore.translationKeys[messageId]}
+              message={messageStore.messages[messageId]}
               figmaRemote={figmaRemote}
               select={select}
               keySelected={Object.values(selectedNodes).map((selectedNode) => selectedNode.key).includes(messageId) || selectedKey === messageId}

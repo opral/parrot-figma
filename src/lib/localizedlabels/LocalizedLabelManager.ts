@@ -58,7 +58,7 @@ export interface DeltaOp {
 export const MARKER_CHARACTER = '​';
 // export const MARKER_CHARACTER = 'X​';
 export default class LocalizedLabelManager {
-  translationKeyStore?: MessageStoreFigmaRoot;
+  messageStore?: MessageStoreFigmaRoot;
 
   private containerSizeThreashold = 3000;
 
@@ -105,34 +105,34 @@ export default class LocalizedLabelManager {
     const currentKey = this.labelToKey[textNodeId];
     if (key === undefined || key === '') {
       if (currentKey) {
-        this.translationKeyStore!.keyToLabels[currentKey]!.delete(textNodeId);
+        this.messageStore!.keyToLabels[currentKey]!.delete(textNodeId);
         return currentKey;
       }
       return undefined;
     }
 
-    if (!this.translationKeyStore!.keyToLabels[key]) {
-      this.translationKeyStore!.keyToLabels[key] = new Set<string>();
+    if (!this.messageStore!.keyToLabels[key]) {
+      this.messageStore!.keyToLabels[key] = new Set<string>();
     }
-    if (this.translationKeyStore!.keyToLabels[key].has(textNodeId)) {
+    if (this.messageStore!.keyToLabels[key].has(textNodeId)) {
       return undefined;
     }
-    this.translationKeyStore!.keyToLabels[key].add(textNodeId);
+    this.messageStore!.keyToLabels[key].add(textNodeId);
     this.labelToKey[textNodeId] = key;
 
     if (currentKey) {
       if (currentKey !== key) {
-        this.translationKeyStore!.keyToLabels[currentKey]!.delete(textNodeId);
+        this.messageStore!.keyToLabels[currentKey]!.delete(textNodeId);
       }
       return currentKey;
     }
     return undefined;
   }
 
-  constructor(translationKeyStore: MessageStoreFigmaRoot | undefined) {
-    this.translationKeyStore = translationKeyStore;
+  constructor(messageStore: MessageStoreFigmaRoot | undefined) {
+    this.messageStore = messageStore;
 
-    if (translationKeyStore === undefined) {
+    if (messageStore === undefined) {
       return;
     }
 
@@ -542,8 +542,8 @@ export default class LocalizedLabelManager {
 
   async getWithKey(key: string) {
     const labels = [] as LocalizedLabel[];
-    if (this.translationKeyStore!.keyToLabels[key]) {
-      for (const textNodeId of this.translationKeyStore!.keyToLabels[key]) {
+    if (this.messageStore!.keyToLabels[key]) {
+      for (const textNodeId of this.messageStore!.keyToLabels[key]) {
         const textNode = figma.getNodeById(textNodeId) as TextNode;
         const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode);
         if (lokalizedLabel) {
@@ -693,7 +693,7 @@ export default class LocalizedLabelManager {
     }
 
     if (changedProperties.language !== undefined) {
-      if (changedProperties.language !== (await this.translationKeyStore!.getConfig()).baseLanguage) {
+      if (changedProperties.language !== (await this.messageStore!.getConfig()).baseLanguage) {
         if (textNode.autoRename) {
           textNode.setPluginData(this.autoRenameHashKey, textNode.characters);
           textNode.autoRename = false;
@@ -961,12 +961,12 @@ export default class LocalizedLabelManager {
 
     // if no plural id is specified than we fall back to "other" - the default plural
     const pluralId = node.getPluginData(this.keyPluralDataKey) === '' ? Plural.OTHER : node.getPluginData(this.keyPluralDataKey);
-    const language = node.getPluginData(this.languageDataKey) === '' ? this.translationKeyStore!.getConfigSync().baseLanguage! : node.getPluginData(this.languageDataKey) as Locale;
+    const language = node.getPluginData(this.languageDataKey) === '' ? this.messageStore!.getConfigSync().baseLanguage! : node.getPluginData(this.languageDataKey) as Locale;
     const keyVersion = node.getPluginData(this.keyVersionDataKey) === '' ? -1 : parseInt(node.getPluginData(this.keyVersionDataKey), 10);
 
     const keyType = node.getPluginData(this.keyTypeDataKey) === '' || node.getPluginData(this.keyTypeDataKey) === undefined ? KeyState.Unset : node.getPluginData(this.keyTypeDataKey) as KeyState;
     const key = node.getPluginData(this.keyDataKey) === '' ? undefined : node.getPluginData(this.keyDataKey);
-    const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === '' ? this.translationKeyStore!.getConfigSync().baseLanguage! : rootFrame.getPluginData(this.languageDataKey) as Locale;
+    const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === '' ? this.messageStore!.getConfigSync().baseLanguage! : rootFrame.getPluginData(this.languageDataKey) as Locale;
     const rootFrameUseSampleValues = rootFrame.getPluginData(this.sampleValuesDataKey) !== '';
     const useSampleValues = node.getPluginData(this.sampleValuesDataKey) !== '';
 

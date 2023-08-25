@@ -17,7 +17,7 @@ import KeyExporter from '../../../lib/export/KeyExporter';
 import FEATURES_FLAGS from '../../featuretoggle';
 
 type ExportProps = {
-  translationKeyStore: MessageStoreMemory
+  messageStore: MessageStoreMemory
 };
 /**
  * Select versionTag (allow to tag current Version)
@@ -25,7 +25,7 @@ type ExportProps = {
  * Select platform (ios/android) / export format
  */
 export default function Export({
-  translationKeyStore,
+  messageStore,
 }: ExportProps) {
   const { t } = useTranslation();
 
@@ -43,7 +43,7 @@ export default function Export({
     divider: true,
   }] as SelectOption[];
 
-  const initTagOptions = defaultOptions.concat(translationKeyStore.historyTags.slice().reverse().map((historyTag) => ({
+  const initTagOptions = defaultOptions.concat(messageStore.historyTags.slice().reverse().map((historyTag) => ({
     label: historyTag.title,
     value: historyTag.versionId!,
   } as SelectOption)));
@@ -68,7 +68,7 @@ export default function Export({
     forceSelected: false,
   }] as TileSelectOption<string>[];
 
-  for (const language of translationKeyStore.getLanugages()!) {
+  for (const language of messageStore.getLanugages()!) {
     // const untypedStrings = strings as any;
 
     const currentLanguageOption = {
@@ -99,11 +99,11 @@ export default function Export({
   const onVersionSelect = (version: string) => {
     setSelectedVersion(version);
   };
-  // const [baseLanguage, setBaseLanguages] = useState(translationKeyStore.getBaseLanugages());
+  // const [baseLanguage, setBaseLanguages] = useState(messageStore.getBaseLanugages());
 
   const onTagCurrentVersionClick = async () => {
-    const newTag = await translationKeyStore.createTag(title, description);
-    const options = defaultOptions.concat(translationKeyStore.historyTags.slice().reverse().map((historyTag) => ({
+    const newTag = await messageStore.createTag(title, description);
+    const options = defaultOptions.concat(messageStore.historyTags.slice().reverse().map((historyTag) => ({
       label: historyTag.title,
       value: historyTag.versionId!,
     } as SelectOption)));
@@ -163,7 +163,7 @@ export default function Export({
             className="button button--buttonSecondary"
             type="button"
             onClick={async () => {
-              const exportedFile = KeyExporter.export(translationKeyStore, exportLanguage!, 'apple-strings', selectedVersion);
+              const exportedFile = KeyExporter.export(messageStore, exportLanguage!, 'apple-strings', selectedVersion);
 
               if (exportedFile) {
                 downloadFile(exportedFile.fileName, exportedFile.fileType, exportedFile.content);
@@ -178,7 +178,7 @@ export default function Export({
             className="button button--buttonSecondary"
             type="button"
             onClick={async () => {
-              const exportedFile = KeyExporter.export(translationKeyStore, exportLanguage!, 'apple-dict', selectedVersion);
+              const exportedFile = KeyExporter.export(messageStore, exportLanguage!, 'apple-dict', selectedVersion);
 
               if (exportedFile) {
                 downloadFile(exportedFile.fileName, exportedFile.fileType, exportedFile.content);
@@ -197,7 +197,7 @@ export default function Export({
           className="button button--buttonSecondary"
           type="button"
           onClick={async () => {
-            const exportedFile = KeyExporter.export(translationKeyStore, exportLanguage!, 'android-xml', selectedVersion);
+            const exportedFile = KeyExporter.export(messageStore, exportLanguage!, 'android-xml', selectedVersion);
 
             if (exportedFile) {
               downloadFile(exportedFile.fileName, exportedFile.fileType, exportedFile.content);

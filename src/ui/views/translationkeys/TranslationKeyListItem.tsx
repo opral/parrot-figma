@@ -43,10 +43,10 @@ interface VersionEntry {
 
 type TranslationKeyListItemProps = {
   rowClassNames?: string | undefined,
-  translationKey: MessageUI,
+  message: MessageUI,
   figmaRemote: FigmaUtil,
   searchMatch: any,
-  translationKeyStore: MessageStoreMemory,
+  messageStore: MessageStoreMemory,
   localizedLabelManager: LocalizedLabelManagerUI,
   select?: Function,
   keySelected: boolean,
@@ -54,10 +54,10 @@ type TranslationKeyListItemProps = {
 
 export default function TranslationKeyListItem({
   rowClassNames,
-  translationKey,
+  message,
   figmaRemote,
   searchMatch,
-  translationKeyStore,
+  messageStore,
   localizedLabelManager,
   select,
   keySelected,
@@ -66,7 +66,7 @@ export default function TranslationKeyListItem({
   const [selected, setSelected] = useState(false);
   const [showUsage, setShowUsage] = useState(false);
   const [showPlaceholderEditor, setShowPlaceholderEditor] = useState(false);
-  const [defaultFillins, setDefaultFillins] = useState(translationKey.defaultFillins);
+  const [defaultFillins, setDefaultFillins] = useState(message.defaultFillins);
   const [history, setHistory] = useState<undefined | VersionEntry[]>(undefined);
   const [keyToDelete, setKeyToDelete] = useState<undefined | string>(undefined);
   const [keyToDeleteReferences, setKeyToDeleteReferences] = useState<undefined | number>(undefined);
@@ -75,7 +75,7 @@ export default function TranslationKeyListItem({
 
   const rowRef = React.useRef<HTMLDivElement>(null);
 
-  const referencingLabels = translationKey.referencingTextNodes;
+  const referencingLabels = message.referencingTextNodes;
 
   async function onNodeSelect(nodeId: string) {
     await figmaRemote.scrollIntoViewIfNeeded(nodeId, true);
@@ -133,10 +133,10 @@ export default function TranslationKeyListItem({
     await figmaRemote.scrollAndZoomNodesIntoView([referencingLabels[indexToSelect]]);
   }
 
-  const baseLang = translationKeyStore.getBaseLanugage();
+  const baseLang = messageStore.getBaseLanugage();
 
   // create an array of languages with baselanguage at position zero
-  const languages = [baseLang, ...translationKeyStore.getLanugages()!.filter((l) => l !== baseLang)] as Locale[];
+  const languages = [baseLang, ...messageStore.getLanugages()!.filter((l) => l !== baseLang)] as Locale[];
 
   const onShowHistoryClick = (language: Locale, plural: Plural) => {
     const specificHistory = [] as VersionEntry[];
@@ -147,8 +147,8 @@ export default function TranslationKeyListItem({
 
     const taggedVersions = [] as number[];
 
-    for (const tagIndex of Object.keys(translationKey.historyTags)) {
-      if (translationKey.historyTags[parseInt(tagIndex, 10)]) {
+    for (const tagIndex of Object.keys(message.historyTags)) {
+      if (message.historyTags[parseInt(tagIndex, 10)]) {
         taggedVersions.push(parseInt(tagIndex, 10));
       }
     }
@@ -157,22 +157,22 @@ export default function TranslationKeyListItem({
     // a key may no exist in every tag ->
     let currentTagIndex = 0;
     let currentVersionTagIndex = taggedVersions[currentTagIndex] as number | undefined;
-    let currentTaggedKeyVersion = currentVersionTagIndex && translationKey.historyTags[currentVersionTagIndex] ? translationKey.historyTags[currentVersionTagIndex] : -1;
-    let currentTag = currentVersionTagIndex ? translationKeyStore.historyTags[currentVersionTagIndex] : undefined;
+    let currentTaggedKeyVersion = currentVersionTagIndex && message.historyTags[currentVersionTagIndex] ? message.historyTags[currentVersionTagIndex] : -1;
+    let currentTag = currentVersionTagIndex ? messageStore.historyTags[currentVersionTagIndex] : undefined;
 
     console.log('taqgs');
-    console.log(translationKeyStore.historyTags);
+    console.log(messageStore.historyTags);
     console.log('key');
-    console.log(translationKey);
+    console.log(message);
 
     // filter relevant history changes for the given key
-    for (const keyHistoryEntry of translationKey.history) {
+    for (const keyHistoryEntry of message.history) {
       if (keyHistoryEntry.translations?.[language]?.[plural] !== undefined) {
         if (currentTaggedKeyVersion < currentVersion) {
           currentTagIndex += 1;
           currentVersionTagIndex = taggedVersions[currentTagIndex] as number | undefined;
-          currentTaggedKeyVersion = currentVersionTagIndex && translationKey.historyTags[currentVersionTagIndex] ? translationKey.historyTags[currentVersionTagIndex] : -1;
-          currentTag = currentVersionTagIndex ? translationKeyStore.historyTags[currentVersionTagIndex] : undefined;
+          currentTaggedKeyVersion = currentVersionTagIndex && message.historyTags[currentVersionTagIndex] ? message.historyTags[currentVersionTagIndex] : -1;
+          currentTag = currentVersionTagIndex ? messageStore.historyTags[currentVersionTagIndex] : undefined;
         }
 
         const currentRelevantVersion = {
@@ -210,7 +210,7 @@ export default function TranslationKeyListItem({
       className={`row row-key ${selected || keySelected ? 'selected' : ''} ${rowClassNames !== undefined ? rowClassNames : ''}`}
       onClick={() => {
         if (select) {
-          select(translationKey.id);
+          select(message.id);
         }
       }}
     >
@@ -222,12 +222,12 @@ export default function TranslationKeyListItem({
             <TextField
               singleClick={false}
               onSave={async (messageName: string) => {
-                localizedLabelManager.updateKey(translationKey.id, {
+                localizedLabelManager.updateKey(message.id, {
                   translations: [],
                   name: messageName,
                 });
               }}
-              text={translationKey.keyName}
+              text={message.keyName}
             />
           </span>
         </div>
@@ -238,7 +238,7 @@ export default function TranslationKeyListItem({
               className="layerIcon iconWrapper button"
               data-tooltip-content="Delete this translation key"
               onClick={() => {
-                setKeyToDelete(translationKey.id);
+                setKeyToDelete(message.id);
               }}
             >
               <span className="svg-container trash-svg" />
@@ -247,10 +247,10 @@ export default function TranslationKeyListItem({
             <span
               className="layerIcon iconWrapper button"
               onClick={() => {
-                localizedLabelManager.updateKey(translationKey.id, { translations: [], plural: !translationKey.plural });
+                localizedLabelManager.updateKey(message.id, { translations: [], plural: !message.plural });
               }}
             >
-              <span className={'svg-container ' + (translationKey.plural ? 'plural-svg' : 'no-plural-svg')} />
+              <span className={'svg-container ' + (message.plural ? 'plural-svg' : 'no-plural-svg')} />
             </span>
             )}
 
@@ -258,7 +258,7 @@ export default function TranslationKeyListItem({
           )}
         </div>
         <div>
-          { false && Object.values(translationKey.placeholders).map((placeholder: Placeholder) => (
+          { false && Object.values(message.placeholders).map((placeholder: Placeholder) => (
             <div>
               {placeholder.name + ' ' + (placeholder.derivedArgumentPosition) + ' ' + (placeholder.specifiedArgumentPosition ? placeholder.specifiedArgumentPosition : '-') + ' ' + placeholder.named }
             </div>
@@ -291,9 +291,9 @@ export default function TranslationKeyListItem({
       </div>
       {languages.map((language, i, allLanguages) => {
         let languageSkipped = false;
-        if (translationKey.variants[language as Locale] !== undefined) {
-          for (const plural of Object.keys(translationKey.variants[language as Locale]!)) {
-            if (translationKey.variants[language as Locale]![plural as Plural]!.skip !== true) {
+        if (message.variants[language as Locale] !== undefined) {
+          for (const plural of Object.keys(message.variants[language as Locale]!)) {
+            if (message.variants[language as Locale]![plural as Plural]!.skip !== true) {
               languageSkipped = false;
               break;
             } else {
@@ -305,31 +305,31 @@ export default function TranslationKeyListItem({
         return (
           <div className={`group language-group ${languageSkipped ? ' skipped ' : ''}${language === baseLang ? ' baselanguage grid-item-border grid-item-border-top' : ''}${i === (allLanguages.length - 1) ? ' grid-item-border grid-item-border-bottom ' : ''}`} key={language}>
             <div className="column column-language grid-item-language"><span className="rowText">{language}</span></div>
-            {getPluralFormsByLanguage(language).filter((plural) => translationKey.plural || plural === Plural.OTHER).map((plural, pluralsIndex, allPlurals) =>
+            {getPluralFormsByLanguage(language).filter((plural) => message.plural || plural === Plural.OTHER).map((plural, pluralsIndex, allPlurals) =>
               // eslint-disable-next-line consistent-return
               (
-                <div key={plural} className={`group plural-group ${pluralsIndex === (allPlurals.length - 1) ? 'lastPlural  grid-item-border grid-item-border-bottom' : ''} ${pluralsIndex === 0 ? 'firstPlural  grid-item-border grid-item-border-top' : ''} ${translationKey.plural ? 'onePlural' : ' multiplePlurals'}${translationKey.variants[language as Locale]?.[plural as Plural]?.skip === true ? ' skipped' : ''}`}>
-                  <div className="column column-plural grid-item-plural grid-item-border"><span className="rowText">{translationKey.plural ? plural : ''}</span></div>
+                <div key={plural} className={`group plural-group ${pluralsIndex === (allPlurals.length - 1) ? 'lastPlural  grid-item-border grid-item-border-bottom' : ''} ${pluralsIndex === 0 ? 'firstPlural  grid-item-border grid-item-border-top' : ''} ${message.plural ? 'onePlural' : ' multiplePlurals'}${message.variants[language as Locale]?.[plural as Plural]?.skip === true ? ' skipped' : ''}`}>
+                  <div className="column column-plural grid-item-plural grid-item-border"><span className="rowText">{message.plural ? plural : ''}</span></div>
                   <div className="column  column-translation grid-item-translation grid-item-border translation-container translation">
                     <TranslationEditor
-                      fillins={translationKey.defaultFillins}
+                      fillins={message.defaultFillins}
                       editable={select === undefined}
                       match={searchMatch?.textMatches[language]?.[plural as Plural]}
                       onSave={async (text: any, fillins: Fillins) => {
-                        let skip = translationKey.variants[language as Locale]?.[plural as Plural]?.skip ?? false;
+                        let skip = message.variants[language as Locale]?.[plural as Plural]?.skip ?? false;
 
                         if (text !== undefined && text !== '') {
                           skip = false;
                         }
-                        await localizedLabelManager.updateKey(translationKey.id!, {
+                        await localizedLabelManager.updateKey(message.id!, {
                           translations: [{
                             language, plural: plural as Plural, text, skip,
                           }],
                           fillins,
                         });
                       }}
-                      translationHTML={translationKey.variants[language as Locale]?.[plural as Plural]?.text}
-                      translationKeyStore={translationKeyStore}
+                      translationHTML={message.variants[language as Locale]?.[plural as Plural]?.text}
+                      messageStore={messageStore}
                     />
 
                   </div>
@@ -342,17 +342,17 @@ export default function TranslationKeyListItem({
                         className="layerIcon iconWrapper button"
                         onClick={async () => {
                           // disable a translation
-                          await localizedLabelManager.updateKey(translationKey.id!, {
+                          await localizedLabelManager.updateKey(message.id!, {
                             translations: [{
                               language,
                               plural,
-                              text: translationKey.variants[language as Locale]?.[plural as Plural]?.text,
-                              skip: translationKey.variants[language as Locale]?.[plural as Plural]?.skip === undefined ? true : !translationKey.variants[language as Locale]![plural as Plural]!.skip,
+                              text: message.variants[language as Locale]?.[plural as Plural]?.text,
+                              skip: message.variants[language as Locale]?.[plural as Plural]?.skip === undefined ? true : !message.variants[language as Locale]![plural as Plural]!.skip,
                             }],
                           });
                         }}
                       >
-                        <span className={'svg-container' + (translationKey.variants[language as Locale]?.[plural as Plural]?.skip === true ? ' eye-closed-svg' : ' eye-svg')} />
+                        <span className={'svg-container' + (message.variants[language as Locale]?.[plural as Plural]?.skip === true ? ' eye-closed-svg' : ' eye-svg')} />
                       </span>
                       )}
                       { FEATURES_FLAGS.versioning && (
@@ -419,7 +419,7 @@ export default function TranslationKeyListItem({
               onReuse={i === 0 ? undefined : async (text: string) => {
                 if (showHistory === undefined) return;
 
-                await localizedLabelManager.updateKey(translationKey.id!, {
+                await localizedLabelManager.updateKey(message.id!, {
                   translations: [{
                     language: showHistory.language, plural: showHistory.plural as Plural, text, skip: false,
                   }],
@@ -459,10 +459,10 @@ export default function TranslationKeyListItem({
             <div>Value</div>
             <div />
 
-            {translationKey.placeholders && Object.entries(translationKey.placeholders).map((entry, i, array) => (
+            {message.placeholders && Object.entries(message.placeholders).map((entry, i, array) => (
               <PlaceholderEditorListItem
                 placeholder={entry[1]}
-                fillin={translationKey.defaultFillins![entry[0]]?.value ?? ''}
+                fillin={message.defaultFillins![entry[0]]?.value ?? ''}
                 onValueChange={(placeholderName, fillinValue) => {
                   const newFillins = {
                     ...defaultFillins, // Copy the old fields
@@ -479,7 +479,7 @@ export default function TranslationKeyListItem({
             value="Save"
             disabled={false}
             onClick={() => {
-              localizedLabelManager.updateKey(translationKey.id, {
+              localizedLabelManager.updateKey(message.id, {
                 fillins: defaultFillins,
                 translations: [],
               });
@@ -513,7 +513,7 @@ export default function TranslationKeyListItem({
             key: 'enter',
             disabled: keyToDelete === undefined,
             callback: () => {
-              localizedLabelManager.deleteKey(translationKey.id);
+              localizedLabelManager.deleteKey(message.id);
               setKeyToDelete(undefined);
             },
           },

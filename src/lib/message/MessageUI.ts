@@ -329,7 +329,7 @@ export class MessageUI implements Message {
    * @returns
    */
   getInVersion(version: number) {
-    const translationKeyInVersion = {
+    const messageInVersion = {
       id: this.id,
       keyName: this.keyName,
       latestVersion: this.latestVersion,
@@ -347,9 +347,9 @@ export class MessageUI implements Message {
     for (let versionI = 0; versionI <= version; versionI++) {
       const currentVersion = this.history[versionI];
 
-      // translationKeyInVersion.history.push(currentVersion);
-      translationKeyInVersion.plural = currentVersion.plural ?? translationKeyInVersion.plural;
-      translationKeyInVersion.labels = currentVersion.labels ?? translationKeyInVersion.labels;
+      // messageInVersion.history.push(currentVersion);
+      messageInVersion.plural = currentVersion.plural ?? messageInVersion.plural;
+      messageInVersion.labels = currentVersion.labels ?? messageInVersion.labels;
 
       if (!currentVersion.translations) {
         // eslint-disable-next-line no-continue -- we want to skip the next processing in case this version doesn't change the translations
@@ -357,20 +357,20 @@ export class MessageUI implements Message {
       }
 
       for (const [languageId, language] of Object.entries(currentVersion.translations)) {
-        if (!translationKeyInVersion.variants[languageId as Locale]) {
-          translationKeyInVersion.variants[languageId as Locale] = {};
+        if (!messageInVersion.variants[languageId as Locale]) {
+          messageInVersion.variants[languageId as Locale] = {};
         }
 
         for (const [pluralId, plural] of Object.entries(language)) {
-          if (!translationKeyInVersion.variants[languageId as Locale]![pluralId as Plural]) {
-            translationKeyInVersion.variants[languageId as Locale]![pluralId as Plural] = {
+          if (!messageInVersion.variants[languageId as Locale]![pluralId as Plural]) {
+            messageInVersion.variants[languageId as Locale]![pluralId as Plural] = {
               skip: plural.skip!,
               verified: plural.verified ?? false,
               text: plural.text,
               version: versionI,
             };
           } else {
-            const currentPlural = translationKeyInVersion.variants[languageId as Locale]![pluralId as Plural]!;
+            const currentPlural = messageInVersion.variants[languageId as Locale]![pluralId as Plural]!;
             currentPlural.skip = plural.skip ?? currentPlural.skip;
             currentPlural.version = versionI;
             currentPlural.verified = plural.verified ?? currentPlural.verified;
@@ -380,7 +380,7 @@ export class MessageUI implements Message {
       }
     }
 
-    return translationKeyInVersion;
+    return messageInVersion;
   }
 
   /*

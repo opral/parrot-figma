@@ -14,7 +14,7 @@
 
     // const start = Date.now();
 
-    const translationKeys = [] as TranslationKey[];
+    const messages = [] as TranslationKey[];
 
     for (const key of lokaliseKeys.keys) {
       const keyName = key.key_name.other;
@@ -67,7 +67,7 @@
         translations[lokaliseLanguage] = plurals;
       }
 
-      translationKeys.push({
+      messages.push({
         keyName,
         latestVersion: 0,
         plural: keyPlurals.length > 1,
@@ -79,9 +79,9 @@
 
     // console.log(`Execution time: Response processing: ${Date.now() - start} ms`);
 
-    // console.log(`${translationKeys.length} keys found `);
+    // console.log(`${messages.length} keys found `);
 
-    for (const tanslationKey of translationKeys) {
+    for (const tanslationKey of messages) {
       this.persistKey(tanslationKey);
     }
 

@@ -15,11 +15,11 @@ export default class FigmaHelper {
 
   figma: PluginAPI | undefined;
 
-  translationKeyStore: MessageStoreFigmaRoot | undefined;
+  messageStore: MessageStoreFigmaRoot | undefined;
 
   constructor(figma?: PluginAPI, keyStore?: MessageStoreFigmaRoot) {
     this.figma = figma;
-    this.translationKeyStore = keyStore;
+    this.messageStore = keyStore;
   }
 
   async toggleKeyFrame(frameNodeId: string) {
@@ -209,7 +209,7 @@ export default class FigmaHelper {
                 break;
             }
 
-            this.translationKeyStore!.enrichLocalizationState(nodeWithKey, language as Language);
+            this.messageStore!.enrichLocalizationState(nodeWithKey, language as Language);
             let textNodeId = nodeWithKey.nodeId;
 
             if (language == 'keys') {

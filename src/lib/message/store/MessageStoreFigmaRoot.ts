@@ -194,12 +194,12 @@ export class MessageStoreFigmaRoot {
     return currentTags[tagId];
   }
 
-  async getHistory(translationKeyName: string) : Promise<HistoryEntry[]> {
-    return this.getHistorySync(translationKeyName).keyHistory;
+  async getHistory(messageName: string) : Promise<HistoryEntry[]> {
+    return this.getHistorySync(messageName).keyHistory;
   }
 
-  getHistorySync(translationKeyName: string) {
-    const keyHistoryRaw = figma.root.getPluginData(this.keyHistoryPrefix + translationKeyName);
+  getHistorySync(messageName: string) {
+    const keyHistoryRaw = figma.root.getPluginData(this.keyHistoryPrefix + messageName);
     let keyHistory = (keyHistoryRaw !== undefined && keyHistoryRaw !== '' ? JSON.parse(keyHistoryRaw) : []);
 
     if (keyHistory.length > 0 && keyHistory[0].translations === undefined) {
@@ -324,25 +324,25 @@ export class MessageStoreFigmaRoot {
     return this.getKey(id);
   }
 
-  private async persistKey(translationKeyPased: Message): Promise<Message> {
-    const translationKey = translationKeyPased;
-    const keyCurrentVersion = this.getKey(translationKey.id);
+  private async persistKey(messagePased: Message): Promise<Message> {
+    const message = messagePased;
+    const keyCurrentVersion = this.getKey(message.id);
 
     let historyEntry: HistoryEntry | undefined;
     const userId = figma.currentUser?.id ?? 'anonymous';
     const dateOfChange = Date.now();
 
     // find differences
-    for (const language of Object.keys(translationKey.variants)) {
+    for (const language of Object.keys(message.variants)) {
       const currentLanguage = language as Locale;
 
-      for (const plural of Object.keys(translationKey.variants[currentLanguage]!)) {
+      for (const plural of Object.keys(message.variants[currentLanguage]!)) {
         const currentPlural = plural as Plural;
-        if (translationKey.variants[currentLanguage]![currentPlural]) {
-          translationKey.variants[currentLanguage]![currentPlural]!.text = translationKey.variants[currentLanguage]![currentPlural]?.text === '' ? undefined : translationKey.variants[currentLanguage]![currentPlural]?.text;
+        if (message.variants[currentLanguage]![currentPlural]) {
+          message.variants[currentLanguage]![currentPlural]!.text = message.variants[currentLanguage]![currentPlural]?.text === '' ? undefined : message.variants[currentLanguage]![currentPlural]?.text;
         }
-        if (keyCurrentVersion?.variants[currentLanguage]?.[currentPlural]?.text === translationKey.variants[currentLanguage]![currentPlural]?.text
-                    && keyCurrentVersion?.variants[currentLanguage]?.[currentPlural]?.skip === translationKey.variants[currentLanguage]![currentPlural]?.skip) {
+        if (keyCurrentVersion?.variants[currentLanguage]?.[currentPlural]?.text === message.variants[currentLanguage]![currentPlural]?.text
+                    && keyCurrentVersion?.variants[currentLanguage]?.[currentPlural]?.skip === message.variants[currentLanguage]![currentPlural]?.skip) {
           // console.log(`text equal! ${currentLanguage} ${currentPlural} ${keyCurrentVersion.translations[currentLanguage]?.[currentPlural]?.text}`);
           // eslint-disable-next-line no-continue
           continue;
@@ -355,73 +355,73 @@ export class MessageStoreFigmaRoot {
         if (historyEntry.translations![currentLanguage] === undefined) {
           historyEntry.translations![currentLanguage] = {
             [currentPlural]: {
-              text: translationKey.variants[currentLanguage]![currentPlural]!.text,
-              skip: translationKey.variants[currentLanguage]![currentPlural]!.skip,
+              text: message.variants[currentLanguage]![currentPlural]!.text,
+              skip: message.variants[currentLanguage]![currentPlural]!.skip,
             },
           };
         } else if (historyEntry.translations![currentLanguage]![currentPlural] === undefined) {
           historyEntry.translations![currentLanguage]![currentPlural] = {
-            text: translationKey.variants[currentLanguage]![currentPlural]!.text,
-            skip: translationKey.variants[currentLanguage]![currentPlural]!.skip,
+            text: message.variants[currentLanguage]![currentPlural]!.text,
+            skip: message.variants[currentLanguage]![currentPlural]!.skip,
           };
         }
 
-        translationKey.variants[currentLanguage]![currentPlural]!.version = translationKey.history.length;
+        message.variants[currentLanguage]![currentPlural]!.version = message.history.length;
       }
     }
 
-    if (!keyCurrentVersion || translationKey.plural !== keyCurrentVersion?.plural) {
+    if (!keyCurrentVersion || message.plural !== keyCurrentVersion?.plural) {
       if (!historyEntry) {
         historyEntry = { user: userId, date: dateOfChange };
       }
 
-      historyEntry.plural = translationKey.plural;
+      historyEntry.plural = message.plural;
     }
 
-    if (!keyCurrentVersion || MessageStoreFigmaRoot.arraysAreEqual(translationKey.labels, keyCurrentVersion.labels)) {
+    if (!keyCurrentVersion || MessageStoreFigmaRoot.arraysAreEqual(message.labels, keyCurrentVersion.labels)) {
       if (!historyEntry) {
         historyEntry = { user: userId, date: dateOfChange };
       }
 
-      historyEntry.labels = translationKey.labels;
+      historyEntry.labels = message.labels;
     }
 
     let createMessageNameRef = undefined as string | undefined;
 
-    if (keyCurrentVersion && keyCurrentVersion.keyName !== translationKey.keyName) {
-      const existingKeyWithName = this.getKeyByName(translationKey.keyName);
-      if (existingKeyWithName && existingKeyWithName.id !== translationKey.id) {
-        throw new Error(`Key with name ${translationKey.keyName} exists already.`);
+    if (keyCurrentVersion && keyCurrentVersion.keyName !== message.keyName) {
+      const existingKeyWithName = this.getKeyByName(message.keyName);
+      if (existingKeyWithName && existingKeyWithName.id !== message.id) {
+        throw new Error(`Key with name ${message.keyName} exists already.`);
       }
 
       if (existingKeyWithName === undefined) {
-        createMessageNameRef = translationKey.keyName;
+        createMessageNameRef = message.keyName;
       }
 
       if (!historyEntry) {
         historyEntry = { user: userId, date: dateOfChange };
       }
 
-      historyEntry.name = translationKey.keyName;
+      historyEntry.name = message.keyName;
     }
 
     if (!historyEntry) {
       // no differences found!
-      return translationKey;
+      return message;
     }
 
-    translationKey.latestVersion = translationKey.history.length;
+    message.latestVersion = message.history.length;
 
-    translationKey.history.push(historyEntry);
+    message.history.push(historyEntry);
 
-    if (translationKey.keyName === undefined) {
+    if (message.keyName === undefined) {
       throw new Error('key name must be defined ');
     }
 
-    const serializableTranslationKey = translationKey as any;
+    const serializableTranslationKey = message as any;
     const { history } = serializableTranslationKey;
     delete serializableTranslationKey.history;
-    const messageId = translationKey.id;
+    const messageId = message.id;
     delete serializableTranslationKey.id;
 
     figma.root.setPluginData(this.keyPrefix + messageId, JSON.stringify(serializableTranslationKey));
@@ -430,7 +430,7 @@ export class MessageStoreFigmaRoot {
     if (createMessageNameRef !== undefined) {
       // we don't have a reference that acutally points to the name create a new one in the next free bucket.
       // NOTE: we can't reuse buckets that no longer point the the correct key since labels eventually still use the reference...
-      const unusedId = this.findUnusedId(translationKey.keyName);
+      const unusedId = this.findUnusedId(message.keyName);
       figma.root.setPluginData(this.keyPrefix + unusedId, JSON.stringify({ ref: messageId }));
     }
 
@@ -448,9 +448,9 @@ export class MessageStoreFigmaRoot {
     // TODO #8 handle history for placeholder, fillins and quantity!
     // TODO key history: pause event event handling using a flag;
 
-    translationKey.history = history;
-    translationKey.id = messageId;
-    return translationKey;
+    message.history = history;
+    message.id = messageId;
+    return message;
   }
 
   private static arraysAreEqual(arr1: string[], arr2: string[]) {
@@ -590,17 +590,17 @@ export class MessageStoreFigmaRoot {
   }
 
   async load(): Promise<Messages> {
-    const translationKeys = {} as Messages;
+    const messages = {} as Messages;
     for (const keyWithPrefix of figma.root.getPluginDataKeys()) {
       if (keyWithPrefix.startsWith(this.keyPrefix)) {
         const key = keyWithPrefix.substring(this.keyPrefix.length, keyWithPrefix.length);
         const message = this.getKey(key);
         if (message !== undefined) {
-          translationKeys[key] = message;
+          messages[key] = message;
         }
       }
     }
-    return translationKeys;
+    return messages;
   }
 
   async commitUndo() {

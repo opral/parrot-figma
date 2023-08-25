@@ -246,7 +246,7 @@ function App() {
         <TranslationKeyListView
           showSearchBar={false}
           initialSearchQuery={keyQuery}
-          translationKeyStore={memoryTranslationKeyStore}
+          messageStore={memoryTranslationKeyStore}
           localizedLabelManager={localizedLabelManager}
           figmaRemote={figmaRemote}
           highlightSelectedNodes
@@ -262,7 +262,7 @@ function App() {
     case 'export':
       view = (
         <Export
-          translationKeyStore={memoryTranslationKeyStore}
+          messageStore={memoryTranslationKeyStore}
         />
       );
       break;

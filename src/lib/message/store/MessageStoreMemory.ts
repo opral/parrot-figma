@@ -55,7 +55,7 @@ export default class MessageStoreMemory extends EventTarget {
 
   historyTags: HistoryTag[] = [];
 
-  translationKeys: MessagesUI = { };
+  messages: MessagesUI = { };
 
   constructor(parentKeyStore: MessageStoreFigmaRoot) {
     super();
@@ -132,14 +132,14 @@ export default class MessageStoreMemory extends EventTarget {
     this.dispatchEvent(event);
   }
 
-  private async upsertCache(translationKey: Message): Promise<MessageUI> {
+  private async upsertCache(message: Message): Promise<MessageUI> {
     debugger;
-    this.translationKeys[translationKey.id] = new MessageUI(this, translationKey);
-    return this.translationKeys[translationKey.id];
+    this.messages[message.id] = new MessageUI(this, message);
+    return this.messages[message.id];
   }
 
   private removeCache(id: string) {
-    delete this.translationKeys[id];
+    delete this.messages[id];
   }
 
   getLanugages(): Locale[] | undefined {
@@ -176,32 +176,32 @@ export default class MessageStoreMemory extends EventTarget {
   }
 
   getTranslationsByKeyName(language: Locale, versionId: string | undefined): { [keyName: string]: TranslationEntry } {
-    const translationKeys = {} as { [id: string]: Message };
+    const messages = {} as { [id: string]: Message };
 
     const tagIndex = versionId ? this.getTagIndexByVersionId(versionId) : -1;
 
-    for (const keyId of Object.keys(this.translationKeys)) {
-      const currentKey = this.translationKeys[keyId];
+    for (const keyId of Object.keys(this.messages)) {
+      const currentKey = this.messages[keyId];
       if (tagIndex >= 0) {
         const keyVerson = currentKey.getKeyVersionByTagIndex(tagIndex);
         if (keyVerson !== undefined) {
           const keyInVersion = currentKey.getInVersion(keyVerson);
-          translationKeys[keyInVersion.keyName] = keyInVersion;
+          messages[keyInVersion.keyName] = keyInVersion;
         }
       } else if (currentKey.variants[language]) {
-        translationKeys[currentKey.keyName] = currentKey;
+        messages[currentKey.keyName] = currentKey;
       }
     }
 
-    return translationKeys;
+    return messages;
   }
 
   getKey(id: string) : MessageUI | undefined {
-    return this.translationKeys[id];
+    return this.messages[id];
   }
 
   getKeyByName(messageName: string) : MessageUI | undefined {
-    for (const message of Object.values(this.translationKeys)) {
+    for (const message of Object.values(this.messages)) {
       if (message.keyName === messageName) {
         return message;
       }
@@ -400,7 +400,7 @@ export default class MessageStoreMemory extends EventTarget {
       });
     }
 
-    for (const key of Object.values(this.translationKeys)) {
+    for (const key of Object.values(this.messages)) {
       for (const language of this.getLanugages()!) {
         const plurals = key.variants[language];
         for (const plural of getPluralFormsByLanguage(language as Locale)) {
@@ -506,8 +506,8 @@ export default class MessageStoreMemory extends EventTarget {
   async createTag(title: string, description: string | undefined) {
     // TODO #11 we update the translation keys here - shouldn't we wait for the messaage bus instead?
     const tagId = this.historyTags.length;
-    for (const key of Object.keys(this.translationKeys)) {
-      this.translationKeys[key].historyTags[tagId] = this.translationKeys[key].latestVersion;
+    for (const key of Object.keys(this.messages)) {
+      this.messages[key].historyTags[tagId] = this.messages[key].latestVersion;
     }
 
     this.historyTags[tagId] = await this.parentKeyStore.createTag(tagId, title, description);
@@ -541,13 +541,13 @@ export default class MessageStoreMemory extends EventTarget {
   async load(): Promise<MessagesUI> {
     this.config = await this.parentKeyStore.getConfig();
     this.historyTags = await this.parentKeyStore.getHistoryTags();
-    this.translationKeys = {} as MessagesUI;
+    this.messages = {} as MessagesUI;
 
     const allTranslationKeys = await this.parentKeyStore.load();
     
     for (const key of Object.values(allTranslationKeys)) {
-      this.translationKeys[key.id] = new MessageUI(this, key);
+      this.messages[key.id] = new MessageUI(this, key);
     }
-    return this.translationKeys;
+    return this.messages;
   }
 }

@@ -36,8 +36,8 @@ export default function LocalizedLabelListItem({
   localizedLabelManager,
   selected,
 }: LocalizedLabelListItemProps) {
-  const translationKeyStore = localizedLabelManager.keyStore;
-  const translatedKey = localizedLabel.keyType !== KeyState.Unset ? translationKeyStore.getKey(localizedLabel.keyId!) : undefined;
+  const messageStore = localizedLabelManager.keyStore;
+  const translatedKey = localizedLabel.keyType !== KeyState.Unset ? messageStore.getKey(localizedLabel.keyId!) : undefined;
 
   const rowRef = React.useRef<HTMLDivElement>(null);
 
@@ -128,7 +128,7 @@ export default function LocalizedLabelListItem({
         { searchKey !== undefined && (
         <TranslationKeyListView
           showSearchBar
-          translationKeyStore={translationKeyStore}
+          messageStore={messageStore}
           localizedLabelManager={localizedLabelManager}
           figmaRemote={figmaRemote}
           selectedKey={drawerSelectedKey.current}
@@ -213,9 +213,9 @@ export default function LocalizedLabelListItem({
 
                     const keySearch = enteredValue === '' ? '*' : enteredValue;
                     const textMatchQuery = MessageStoreMemory.toQueryObject(`exact_text:true key:${keySearch} ${localizedLabel.characters}`);
-                    const { matchingKeys: suggestedKeys } = translationKeyStore.findKeys(textMatchQuery);
+                    const { matchingKeys: suggestedKeys } = messageStore.findKeys(textMatchQuery);
                     const keyMatchQuery = MessageStoreMemory.toQueryObject(`key:${keySearch}`);
-                    const { matchingKeys: matchingKeysByName } = translationKeyStore.findKeys(keyMatchQuery);
+                    const { matchingKeys: matchingKeysByName } = messageStore.findKeys(keyMatchQuery);
 
                     const isValidKey = enteredValue.length >= 0 && /^[a-zA-Z0-9]$/.test(enteredValue[enteredValue.length - 1]);
 
@@ -239,8 +239,8 @@ export default function LocalizedLabelListItem({
                       matchingKeysByName.delete(key);
                       return {
                         type: InputSelectionOptionType.SUGGESTION,
-                        value: translationKeyStore.getKey(key)!.keyName,
-                        label: translationKeyStore.getKey(key)!.keyName,
+                        value: messageStore.getKey(key)!.keyName,
+                        label: messageStore.getKey(key)!.keyName,
                       };
                     }));
 
@@ -253,8 +253,8 @@ export default function LocalizedLabelListItem({
 
                       options = options.concat([...matchingKeysByName].map((key) => ({
                         type: InputSelectionOptionType.SUGGESTION,
-                        value: translationKeyStore.getKey(key)!.keyName,
-                        label: translationKeyStore.getKey(key)!.keyName,
+                        value: messageStore.getKey(key)!.keyName,
+                        label: messageStore.getKey(key)!.keyName,
                       })));
                     }
 
@@ -328,7 +328,7 @@ export default function LocalizedLabelListItem({
                           }}
                           fillins={localizedLabel.getFillins()}
                           translationHTML={localizedLabel.translationHTML}
-                          translationKeyStore={translationKeyStore}
+                          messageStore={messageStore}
                         />
                         { selected !== 'unselected' && (
                           <div className="placeholder-view-grid" style={{ display: Object.keys(localizedLabel.getPlaceholders()).length > 0 ? undefined : 'none' }}>

@@ -15,14 +15,14 @@ for (const [key, translations] of Object.entries(input)) { // iterate over dicti
 
   let pluralTranslations = {};
 	let isPlural = false;
-	for (const [translationKey, translation] of Object.entries(translations)) {
-		let translationKeyParts = translationKey.split(':');
-		if (translationKeyParts.length != 2 || translationKeyParts[0] != language) {
+	for (const [message, translation] of Object.entries(translations)) {
+		let messageParts = message.split(':');
+		if (messageParts.length != 2 || messageParts[0] != language) {
 			continue;
 		}
 
 		isPlural = true;
-		pluralTranslations[translationKeyParts[1]] = translation;
+		pluralTranslations[messageParts[1]] = translation;
 
 	}
 

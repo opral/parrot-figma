@@ -274,9 +274,9 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   getFillins(keyToUse?: string, fillins?: Fillins) {
     const key = keyToUse ?? this.keyId;
-    const translationKey = key ? this.manager.keyStore.getKey(key) : undefined;
+    const message = key ? this.manager.keyStore.getKey(key) : undefined;
 
-    const defaultFillIns = translationKey ? { ...translationKey.defaultFillins } : {} as Fillins;
+    const defaultFillIns = message ? { ...message.defaultFillins } : {} as Fillins;
     const labelFillins = fillins ?? this.fillins;
 
     for (const parameterName of Object.keys(defaultFillIns)) {
@@ -375,16 +375,16 @@ export class UILocalizedLabel implements LocalizedLabel {
       return;
     }
 
-    const translationKey = this.manager.keyStore.getKey(this.keyId!);
+    const message = this.manager.keyStore.getKey(this.keyId!);
 
     if (this.keyType !== KeyState.Linked
       || this.state!.modified
-      || translationKey === undefined) {
+      || message === undefined) {
       // we don't change any property also not on the parent - no need to update the label at all
       return;
     }
 
-    const versionToApply = translationKey.getHistoryEntry(this.language, this.pluralId, this.keyVersion);
+    const versionToApply = message.getHistoryEntry(this.language, this.pluralId, this.keyVersion);
 
     const text = versionToApply?.translations?.[this.language]?.[this.pluralId]?.text;
     if (text) {
@@ -426,26 +426,26 @@ export class UILocalizedLabel implements LocalizedLabel {
       return;
     }
 
-    const translationKeyName = this.keyId ?? this.derivedKey;
+    const messageName = this.keyId ?? this.derivedKey;
     const labelState = this.state!;
     let labelVersion = this.keyVersion;
 
     if (this.keyType === KeyState.NoKey // we don't update unlinked labels
-      || translationKeyName === undefined // or labels where we cant derive or get the key
+      || messageName === undefined // or labels where we cant derive or get the key
       || labelState.modified) { // or that are modified
       // root language has changed - trigger cache update
       await this.manager.updateLabelProperties(this.nodeId, {});
       return;
     }
 
-    let translationKey = this.manager.keyStore.getKey(translationKeyName);
+    let message = this.manager.keyStore.getKey(messageName);
     // check if key exists
-    if (translationKey === undefined) {
+    if (message === undefined) {
       throw new Error('Key linked to label does not exist - not removed when key was deleted?');
       /* const translation = await missingTranslationProvider(this.translationHTML!, this.language, targetLanguage);
 
       // ok we have a fresh key to create - no translation to expect
-      translationKey = await this.manager.keyStore.createKey(translationKeyName, [{
+      message = await this.manager.keyStore.createKey(messageName, [{
         language: this.language,
         plural: this.pluralId,
         text: this.translationHTML,
@@ -456,12 +456,12 @@ export class UILocalizedLabel implements LocalizedLabel {
         text: translation,
         skip: false,
       }], this.pluralId !== Plural.OTHER);
-      labelVersion = translationKey.latestVersion; */
+      labelVersion = message.latestVersion; */
     } else {
       if (labelState.behind === 0) {
         // updating key
-        if (translationKey.translations[targetLanguage]?.[this.pluralId]?.text === undefined) {
-          if (translationKey.translations[targetLanguage]?.[this.pluralId]?.skip === true) {
+        if (message.translations[targetLanguage]?.[this.pluralId]?.text === undefined) {
+          if (message.translations[targetLanguage]?.[this.pluralId]?.skip === true) {
             // TODO #3 think about fall back mechanism:
             // in case the key for the given plural is skipped try to fall back to others
             // if this is skipped as well fall back to base language
@@ -472,28 +472,28 @@ export class UILocalizedLabel implements LocalizedLabel {
 
           // translation missing - generate it and update the translation key
           let originLanguage = this.manager.keyStore.getBaseLanugage();
-          let originText = translationKey.translations[this.manager.keyStore.getBaseLanugage()!]?.[this.pluralId]?.text;
+          let originText = message.translations[this.manager.keyStore.getBaseLanugage()!]?.[this.pluralId]?.text;
 
           if (originText === undefined) {
             originLanguage = this.language;
-            originText = translationKey.translations[this.language]![this.pluralId]?.text!;
+            originText = message.translations[this.language]![this.pluralId]?.text!;
           }
 
           const translation = await missingTranslationProvider(originText, originLanguage as string, targetLanguage);
-          translationKey = await this.manager.keyStore.updateKey(translationKeyName, [{
+          message = await this.manager.keyStore.updateKey(messageName, [{
             language: targetLanguage,
             plural: this.pluralId,
             text: translation,
             skip: false,
           }]);
         }
-        labelVersion = translationKey.latestVersion;
+        labelVersion = message.latestVersion;
       }
 
-      const versionToApply = translationKey.getHistoryEntry(targetLanguage, this.pluralId, labelVersion);
+      const versionToApply = message.getHistoryEntry(targetLanguage, this.pluralId, labelVersion);
 
       await this.manager.updateLabelProperties(this.nodeId, {
-        key: translationKeyName,
+        key: messageName,
         keyType: KeyState.Linked,
         language: targetLanguage,
         plural: this.pluralId,

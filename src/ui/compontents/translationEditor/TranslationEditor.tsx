@@ -34,7 +34,7 @@ type TranslationEditorProps = {
   onBlur?: Function,
   match: { start: number, length: number } | undefined
   editable: boolean,
-  translationKeyStore: MessageStoreMemory,
+  messageStore: MessageStoreMemory,
 };
 
 // We use this view in two ocations:
@@ -49,7 +49,7 @@ export default function TranslationEditor({
   onBlur,
   match,
   editable = true,
-  translationKeyStore,
+  messageStore,
   onChange,
 }: TranslationEditorProps) {
   const [textState, setTextState] = useState(translationHTML);

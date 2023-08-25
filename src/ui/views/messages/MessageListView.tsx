@@ -9,34 +9,34 @@ import { Locale } from '../../../lib/message/variants/Locale';
 
 import MessageStoreMemory, { SearchQuery } from '../../../lib/message/store/MessageStoreMemory';
 import FigmaUtil from '../../../shared/FigmaUtil';
-import TranslationKeyListItem from './TranslationKeyListItem';
+import TranslationKeyListItem from './MessageListItem';
 import { Plural } from '../../../lib/message/variants/Plural';
 
-import './TranslationKeyView.css';
+import './MessageView.css';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import { NodeSelection } from '../../../lib/localizedlabels/LocalizedLabelManager';
 
-type TranslationKeyListViewProps = {
+type MessageListViewProps = {
   initialSearchQuery: SearchQuery,
   showSearchBar: boolean,
   messageStore: MessageStoreMemory
   localizedLabelManager: LocalizedLabelManagerUI
   figmaRemote: FigmaUtil
   select?: (key: string, language: Locale, plural: Plural) => void
-  selectedKey?: string,
+  selectedMessageId?: string,
   highlightSelectedNodes: boolean
 };
 
-export default function TranslationKeyListView({
+export default function MessageListView({
   initialSearchQuery,
   showSearchBar,
   messageStore,
   localizedLabelManager,
   figmaRemote,
   select,
-  selectedKey,
+  selectedMessageId,
   highlightSelectedNodes,
-}: TranslationKeyListViewProps) {
+}: MessageListViewProps) {
   const { t } = useTranslation();
   const [, setTrigger] = useState(0);
   const [renderEntries, setRenderEntries] = useState(200);
@@ -47,14 +47,13 @@ export default function TranslationKeyListView({
 
   // const [keys, setKeys] = useState: UITranslationKeys,
   const [searchQuery, setSearchQuery] = useState<SearchQuery>(initialSearchQuery);
-  debugger;
   const filteredKeys = messageStore.findKeys(searchQuery, selectedNodes);
   const tableRef = useRef<HTMLDivElement>(null);
 
   async function refreshSelection(triggerHighlight: boolean) {
     if (highlightSelectedNodes) {
       const freshSelectedNodes = await localizedLabelManager.getSelection();
-  
+
       setSelectedNodes(freshSelectedNodes);
       setHighlightSelection(triggerHighlight);
     }
@@ -115,15 +114,15 @@ export default function TranslationKeyListView({
       }
     }
   }, [highlightSelection]);
-  
-  const fileHasKeys = Object.keys(messageStore.messages).length > 0;
-  if (!fileHasKeys) {
+
+  const fileHasMessages = Object.keys(messageStore.messages).length > 0;
+  if (!fileHasMessages) {
     return (
       <div className="emptyState">
-        <div className="emptyStateTitle">No Translation keys yet</div>
+        <div className="emptyStateTitle">No Messages yet</div>
         <div className="emptyStateSubtitle">
           <div>
-            Localized Keys
+            Messages
             <br />
             will show up here. - Create one by Linking a Translation Key on a Text in the Design Tab or Import your existing Keys in the Setup Tab.
           </div>
@@ -355,7 +354,7 @@ export default function TranslationKeyListView({
               message={messageStore.messages[messageId]}
               figmaRemote={figmaRemote}
               select={select}
-              keySelected={Object.values(selectedNodes).map((selectedNode) => selectedNode.key).includes(messageId) || selectedKey === messageId}
+              keySelected={Object.values(selectedNodes).map((selectedNode) => selectedNode.messageId).includes(messageId) || selectedMessageId === messageId}
             />
           );
         })}

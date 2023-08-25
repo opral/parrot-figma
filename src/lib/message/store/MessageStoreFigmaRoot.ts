@@ -38,20 +38,20 @@ export class MessageStoreFigmaRoot {
   /**
    * Prefix for keys - the head version of a key is stored withing a key of the root node of the document prefixed with the keyPrefix followed by the keyname
    */
-  keyPrefix = 'aar_k__';
+  messagePrefix = 'aar_k__';
 
   /**
    * Prefix for keys version history. Each change of a key is stored in the keys history array - found in keyHistoryPrefix followed by the keyname
    */
-  keyHistoryPrefix = 'aar_h__';
+  messageHistoryPrefix = 'aar_h__';
 
   // contains a map from key to state index from the last cache propagation
-  keyState = { } as {
-    [keyId: string]: number
+  messageState = { } as {
+    [messageId: string]: number
   };
 
-  public keyToLabels = {} as {
-    [keyName: string]: Set<string>
+  public messageIdToLabels = {} as {
+    [messageId: string]: Set<string>
   };
 
   constructor(asProxy: boolean) {
@@ -68,8 +68,8 @@ export class MessageStoreFigmaRoot {
         case 'PROPERTY_CHANGE': {
           if (change.node.parent === null // easy way to check if the node is the root node
           && change.properties.indexOf('pluginData') !== -1) {
-            const currentFileStorageKeys = figma.root.getPluginDataKeys().filter((value) => value.indexOf(this.keyHistoryPrefix) === 0);
-            let currentCachedKeys = Object.keys(this.keyState);
+            const currentFileStorageKeys = figma.root.getPluginDataKeys().filter((value) => value.indexOf(this.messageHistoryPrefix) === 0);
+            let currentCachedKeys = Object.keys(this.messageState);
 
             const changedKeys = {
               deleted: [] as string[],
@@ -78,14 +78,14 @@ export class MessageStoreFigmaRoot {
             };
 
             for (const currentFileStorageKey of currentFileStorageKeys) {
-              const id = currentFileStorageKey.slice(this.keyHistoryPrefix.length);
+              const id = currentFileStorageKey.slice(this.messageHistoryPrefix.length);
 
-              if (this.keyState[id] === undefined) {
+              if (this.messageState[id] === undefined) {
                 if (JSON.parse(figma.root.getPluginData(currentFileStorageKey)).ref === undefined) {
                   changedKeys.added.push(id);
                 }
               } else {
-                if (figma.root.getPluginData(currentFileStorageKey).length !== this.keyState[id]) {
+                if (figma.root.getPluginData(currentFileStorageKey).length !== this.messageState[id]) {
                   changedKeys.updated.push(id);
                 }
 
@@ -95,7 +95,7 @@ export class MessageStoreFigmaRoot {
             changedKeys.deleted = currentCachedKeys;
 
             for (const deletedKey of currentCachedKeys) {
-              delete this.keyState[deletedKey];
+              delete this.messageState[deletedKey];
             }
 
             if (changedKeys.deleted.length > 0
@@ -164,7 +164,7 @@ export class MessageStoreFigmaRoot {
 
     // add tag to all keys
     for (const keyWithPrefix of figma.root.getPluginDataKeys()) {
-      if (keyWithPrefix.startsWith(this.keyPrefix)) {
+      if (keyWithPrefix.startsWith(this.messagePrefix)) {
         const keyData = figma.root.getPluginData(keyWithPrefix);
         if (keyData && keyData !== '') {
           const keyAny = JSON.parse(keyData) as any;
@@ -199,14 +199,14 @@ export class MessageStoreFigmaRoot {
   }
 
   getHistorySync(messageName: string) {
-    const keyHistoryRaw = figma.root.getPluginData(this.keyHistoryPrefix + messageName);
+    const keyHistoryRaw = figma.root.getPluginData(this.messageHistoryPrefix + messageName);
     let keyHistory = (keyHistoryRaw !== undefined && keyHistoryRaw !== '' ? JSON.parse(keyHistoryRaw) : []);
 
-    if (keyHistory.length > 0 && keyHistory[0].translations === undefined) {
+    if (keyHistory.length > 0 && keyHistory[0].messages === undefined) {
       // eslint-disable-next-line @typescript-eslint/no-shadow
       keyHistory = keyHistory.map((keyHistory: any) => ({
         user: 123,
-        translations: keyHistory,
+        messages: keyHistory,
       }));
     }
 
@@ -216,8 +216,7 @@ export class MessageStoreFigmaRoot {
     };
   }
 
-  private createKeyId(keyName: string, bucket: number) {
-    
+  private createMessageId(keyName: string, bucket: number) {
     const messageNameHash = blake.blake2sHex(encoder.encode(keyName), undefined, 5);
     // debugging: const messageNameHash = keyName;
     return `${bucket}_${messageNameHash}`;
@@ -225,32 +224,32 @@ export class MessageStoreFigmaRoot {
 
   private findUnusedId(messageName: string) {
     let currentBuket = 0;
-    let idToTest = this.createKeyId(messageName, currentBuket);
-    while (figma.root.getPluginData(`${this.keyPrefix}${idToTest}`) !== '') {
+    let idToTest = this.createMessageId(messageName, currentBuket);
+    while (figma.root.getPluginData(`${this.messagePrefix}${idToTest}`) !== '') {
       currentBuket += 1;
-      idToTest = this.createKeyId(messageName, currentBuket);
+      idToTest = this.createMessageId(messageName, currentBuket);
     }
     return idToTest;
   }
 
-  getKeyByName(keyName: string) {
+  getMessageByName(keyName: string) {
     let currentBuket = 0;
-    let id = this.createKeyId(keyName, currentBuket);
+    let id = this.createMessageId(keyName, currentBuket);
     let message = undefined as Message | undefined;
 
-    while (figma.root.getPluginData(`${this.keyPrefix}${id}`) !== '') {
+    while (figma.root.getPluginData(`${this.messagePrefix}${id}`) !== '') {
       message = this.resolveMessageReference(id, keyName);
       if (message !== undefined) {
         return message;
       }
       currentBuket += 1;
-      id = this.createKeyId(keyName, currentBuket);
+      id = this.createMessageId(keyName, currentBuket);
     }
     return undefined;
   }
 
   resolveMessageReference(id: string, name: string): Message | undefined {
-    const referencedMessageRaw = figma.root.getPluginData(`${this.keyPrefix}${id}`);
+    const referencedMessageRaw = figma.root.getPluginData(`${this.messagePrefix}${id}`);
     if (referencedMessageRaw === '' || !referencedMessageRaw) {
       return undefined;
     }
@@ -259,13 +258,13 @@ export class MessageStoreFigmaRoot {
       return this.resolveMessageReference(referencedMessage.ref, name);
     }
     if (referencedMessage.keyName && referencedMessage.keyName === name) {
-      return this.getKey(id);
+      return this.getMessage(id);
     }
     return undefined;
   }
 
-  getKey(id: string): Message | undefined {
-    const keyRaw = figma.root.getPluginData(this.keyPrefix + id);
+  getMessage(id: string): Message | undefined {
+    const keyRaw = figma.root.getPluginData(this.messagePrefix + id);
 
     if (keyRaw === '' || !keyRaw) {
       return undefined;
@@ -278,7 +277,6 @@ export class MessageStoreFigmaRoot {
     }
 
     const key = keyAny as Message;
-
 
     // this is where we add the id from the bucket it was found in
     key.id = id;
@@ -314,19 +312,19 @@ export class MessageStoreFigmaRoot {
     const historyObj = this.getHistorySync(id);
     key.history = historyObj.keyHistory;
     key.latestVersion = key.history.length - 1;
-    key.referencingTextNodes = this.keyToLabels[key.id] ? [...this.keyToLabels[key.id]] : [];
-    this.keyState[id] = historyObj.state;
+    key.referencingTextNodes = this.messageIdToLabels[key.id] ? [...this.messageIdToLabels[key.id]] : [];
+    this.messageState[id] = historyObj.state;
 
     return key;
   }
 
   async getKeyAsync(id: string) {
-    return this.getKey(id);
+    return this.getMessage(id);
   }
 
   private async persistKey(messagePased: Message): Promise<Message> {
     const message = messagePased;
-    const keyCurrentVersion = this.getKey(message.id);
+    const keyCurrentVersion = this.getMessage(message.id);
 
     let historyEntry: HistoryEntry | undefined;
     const userId = figma.currentUser?.id ?? 'anonymous';
@@ -343,24 +341,24 @@ export class MessageStoreFigmaRoot {
         }
         if (keyCurrentVersion?.variants[currentLanguage]?.[currentPlural]?.text === message.variants[currentLanguage]![currentPlural]?.text
                     && keyCurrentVersion?.variants[currentLanguage]?.[currentPlural]?.skip === message.variants[currentLanguage]![currentPlural]?.skip) {
-          // console.log(`text equal! ${currentLanguage} ${currentPlural} ${keyCurrentVersion.translations[currentLanguage]?.[currentPlural]?.text}`);
+          // console.log(`text equal! ${currentLanguage} ${currentPlural} ${keyCurrentVersion.messages[currentLanguage]?.[currentPlural]?.text}`);
           // eslint-disable-next-line no-continue
           continue;
         }
 
         if (!historyEntry) {
-          historyEntry = { user: userId, date: dateOfChange, translations: {} };
+          historyEntry = { user: userId, date: dateOfChange, variants: {} };
         }
 
-        if (historyEntry.translations![currentLanguage] === undefined) {
-          historyEntry.translations![currentLanguage] = {
+        if (historyEntry.variants![currentLanguage] === undefined) {
+          historyEntry.variants![currentLanguage] = {
             [currentPlural]: {
               text: message.variants[currentLanguage]![currentPlural]!.text,
               skip: message.variants[currentLanguage]![currentPlural]!.skip,
             },
           };
-        } else if (historyEntry.translations![currentLanguage]![currentPlural] === undefined) {
-          historyEntry.translations![currentLanguage]![currentPlural] = {
+        } else if (historyEntry.variants![currentLanguage]![currentPlural] === undefined) {
+          historyEntry.variants![currentLanguage]![currentPlural] = {
             text: message.variants[currentLanguage]![currentPlural]!.text,
             skip: message.variants[currentLanguage]![currentPlural]!.skip,
           };
@@ -388,21 +386,21 @@ export class MessageStoreFigmaRoot {
 
     let createMessageNameRef = undefined as string | undefined;
 
-    if (keyCurrentVersion && keyCurrentVersion.keyName !== message.keyName) {
-      const existingKeyWithName = this.getKeyByName(message.keyName);
+    if (keyCurrentVersion && keyCurrentVersion.name !== message.name) {
+      const existingKeyWithName = this.getMessageByName(message.name);
       if (existingKeyWithName && existingKeyWithName.id !== message.id) {
-        throw new Error(`Key with name ${message.keyName} exists already.`);
+        throw new Error(`Key with name ${message.name} exists already.`);
       }
 
       if (existingKeyWithName === undefined) {
-        createMessageNameRef = message.keyName;
+        createMessageNameRef = message.name;
       }
 
       if (!historyEntry) {
         historyEntry = { user: userId, date: dateOfChange };
       }
 
-      historyEntry.name = message.keyName;
+      historyEntry.name = message.name;
     }
 
     if (!historyEntry) {
@@ -414,7 +412,7 @@ export class MessageStoreFigmaRoot {
 
     message.history.push(historyEntry);
 
-    if (message.keyName === undefined) {
+    if (message.name === undefined) {
       throw new Error('key name must be defined ');
     }
 
@@ -424,14 +422,14 @@ export class MessageStoreFigmaRoot {
     const messageId = message.id;
     delete serializableTranslationKey.id;
 
-    figma.root.setPluginData(this.keyPrefix + messageId, JSON.stringify(serializableTranslationKey));
-    figma.root.setPluginData(this.keyHistoryPrefix + messageId, JSON.stringify(history));
+    figma.root.setPluginData(this.messagePrefix + messageId, JSON.stringify(serializableTranslationKey));
+    figma.root.setPluginData(this.messageHistoryPrefix + messageId, JSON.stringify(history));
 
     if (createMessageNameRef !== undefined) {
       // we don't have a reference that acutally points to the name create a new one in the next free bucket.
       // NOTE: we can't reuse buckets that no longer point the the correct key since labels eventually still use the reference...
-      const unusedId = this.findUnusedId(message.keyName);
-      figma.root.setPluginData(this.keyPrefix + unusedId, JSON.stringify({ ref: messageId }));
+      const unusedId = this.findUnusedId(message.name);
+      figma.root.setPluginData(this.messagePrefix + unusedId, JSON.stringify({ ref: messageId }));
     }
 
     // storage idea:
@@ -466,36 +464,36 @@ export class MessageStoreFigmaRoot {
     return true;
   }
 
-  async createKey(keyName: string, translations: { language: Locale; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean, quantity?: { value: number } | { placeholder: string }, defaultFillins?: Fillins): Promise<Message> {
-    const existingKey = this.getKeyByName(keyName);
+  async createMessage(name: string, variants: { language: Locale; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean, quantity?: { value: number } | { placeholder: string }, defaultFillins?: Fillins): Promise<Message> {
+    const existingKey = this.getMessageByName(name);
     if (existingKey) {
       throw Error('tried to create a key that already existed');
     }
 
-    const translationsObj = {} as any;
-    for (const translation of translations) {
-      if (!translationsObj[translation.language]) {
-        translationsObj[translation.language] = {};
+    const messagesObj = {} as any;
+    for (const variant of variants) {
+      if (!messagesObj[variant.language]) {
+        messagesObj[variant.language] = {};
       }
 
-      if (!translationsObj[translation.language][translation.plural]) {
-        translationsObj[translation.language][translation.plural] = {};
+      if (!messagesObj[variant.language][variant.plural]) {
+        messagesObj[variant.language][variant.plural] = {};
       }
 
-      translationsObj[translation.language][translation.plural].text = translation.text;
+      messagesObj[variant.language][variant.plural].text = variant.text;
     }
 
-    const placeholders = MessageUI.extractParameters(translationsObj, this.getConfigSync().baseLanguage!, plural);
+    const placeholders = MessageUI.extractParameters(messagesObj, this.getConfigSync().baseLanguage!, plural);
 
-    const unusedId = this.findUnusedId(keyName);
+    const unusedId = this.findUnusedId(name);
     const createdKey = {
       id: unusedId,
       latestVersion: 0,
-      keyName,
+      name,
       labels: [],
       plural,
-      variants: translationsObj,
-      referencingTextNodes: this.keyToLabels[keyName] ? [...this.keyToLabels[keyName]] : [],
+      variants: messagesObj,
+      referencingTextNodes: this.messageIdToLabels[name] ? [...this.messageIdToLabels[name]] : [],
       placeholders,
       quantity,
       defaultFillins,
@@ -505,25 +503,25 @@ export class MessageStoreFigmaRoot {
     return this.persistKey(createdKey);
   }
 
-  async updateKey(keyId: string, properties: {
+  async updateMessage(id: string, properties: {
     name?: string,
-    translations: { language: Locale; plural: Plural; text: string | undefined; skip: boolean }[], 
-    plural?: boolean, 
-    quantity?: { value: number } | { placeholder: string }, 
+    variants: { language: Locale; plural: Plural; text: string | undefined; skip: boolean }[],
+    plural?: boolean,
+    quantity?: { value: number } | { placeholder: string },
     defaultFillins?: Fillins
   }): Promise<Message> {
     // this one gets a deep clone of the key
-    const keyToUpdate = this.getKey(keyId);
+    const messageToUpdate = this.getMessage(id);
     let changeFound = false;
 
-    if (keyToUpdate === undefined) {
-      throw new Error(`Key [${keyId}] not found!`);
+    if (messageToUpdate === undefined) {
+      throw new Error(`Key [${id}] not found!`);
     }
 
-    for (const translation of properties.translations) {
+    for (const variant of properties.variants) {
       // if no key for the given language exists - create an empty one for plural 'other' with version -1
-      if (!keyToUpdate.variants[translation.language]) {
-        keyToUpdate.variants[translation.language] = {
+      if (!messageToUpdate.variants[variant.language]) {
+        messageToUpdate.variants[variant.language] = {
           other: {
             version: -1,
             skip: false,
@@ -533,68 +531,68 @@ export class MessageStoreFigmaRoot {
       }
 
       // if the target plural does not extist yet create a dummy one - vlues get overriden in next step
-      if (!keyToUpdate.variants[translation.language]![translation.plural]) {
-        keyToUpdate.variants[translation.language]![translation.plural] = {
+      if (!messageToUpdate.variants[variant.language]![variant.plural]) {
+        messageToUpdate.variants[variant.language]![variant.plural] = {
           version: -1,
           skip: false,
           verified: false, // TODO #9 - check if false is correct
         };
       }
 
-      // create a new translation entry with increased version
-      if (keyToUpdate.variants[translation.language]![translation.plural]!.text !== translation.text
-        || keyToUpdate.variants[translation.language]![translation.plural]!.skip !== translation.skip) {
+      // create a new variant entry with increased version
+      if (messageToUpdate.variants[variant.language]![variant.plural]!.text !== variant.text
+        || messageToUpdate.variants[variant.language]![variant.plural]!.skip !== variant.skip) {
         changeFound = true;
-        keyToUpdate.variants[translation.language]![translation.plural]!.version = keyToUpdate.latestVersion + 1;
-        keyToUpdate.variants[translation.language]![translation.plural]!.text = translation.text;
-        keyToUpdate.variants[translation.language]![translation.plural]!.skip = translation.skip;
+        messageToUpdate.variants[variant.language]![variant.plural]!.version = messageToUpdate.latestVersion + 1;
+        messageToUpdate.variants[variant.language]![variant.plural]!.text = variant.text;
+        messageToUpdate.variants[variant.language]![variant.plural]!.skip = variant.skip;
       }
     }
 
-    if (properties.plural !== undefined && properties.plural !== null && keyToUpdate.plural !== properties.plural) {
+    if (properties.plural !== undefined && properties.plural !== null && messageToUpdate.plural !== properties.plural) {
       changeFound = true;
-      keyToUpdate.plural = properties.plural;
+      messageToUpdate.plural = properties.plural;
     }
 
-    const placeholders = MessageUI.extractParameters(keyToUpdate.variants, this.getConfigSync().baseLanguage!, keyToUpdate.plural);
+    const placeholders = MessageUI.extractParameters(messageToUpdate.variants, this.getConfigSync().baseLanguage!, messageToUpdate.plural);
 
-    if (JSON.stringify(keyToUpdate.placeholders) !== JSON.stringify(placeholders)) {
+    if (JSON.stringify(messageToUpdate.placeholders) !== JSON.stringify(placeholders)) {
       changeFound = true;
-      keyToUpdate.placeholders = placeholders;
+      messageToUpdate.placeholders = placeholders;
     }
 
-    if (properties.quantity !== undefined && properties.quantity !== null && JSON.stringify(keyToUpdate.quantity) !== JSON.stringify(properties.quantity)) {
+    if (properties.quantity !== undefined && properties.quantity !== null && JSON.stringify(messageToUpdate.quantity) !== JSON.stringify(properties.quantity)) {
       changeFound = true;
-      keyToUpdate.quantity = properties.quantity;
+      messageToUpdate.quantity = properties.quantity;
     }
 
-    if (properties.defaultFillins !== undefined && properties.defaultFillins !== null && JSON.stringify(keyToUpdate.defaultFillins) !== JSON.stringify(properties.defaultFillins)) {
+    if (properties.defaultFillins !== undefined && properties.defaultFillins !== null && JSON.stringify(messageToUpdate.defaultFillins) !== JSON.stringify(properties.defaultFillins)) {
       changeFound = true;
-      keyToUpdate.defaultFillins = properties.defaultFillins;
+      messageToUpdate.defaultFillins = properties.defaultFillins;
     }
 
-    if (properties.name !== undefined && keyToUpdate.keyName !== properties.name) {
+    if (properties.name !== undefined && messageToUpdate.name !== properties.name) {
       changeFound = true;
-      keyToUpdate.keyName = properties.name;
+      messageToUpdate.name = properties.name;
     }
 
     if (!changeFound) {
-      return keyToUpdate;
+      return messageToUpdate;
     }
-    return this.persistKey(keyToUpdate);
+    return this.persistKey(messageToUpdate);
   }
 
-  async deleteKey(keyId: string): Promise<void> {
-    figma.root.setPluginData(this.keyPrefix + keyId, '');
-    figma.root.setPluginData(this.keyHistoryPrefix + keyId, '');
+  async deleteMessage(keyId: string): Promise<void> {
+    figma.root.setPluginData(this.messagePrefix + keyId, '');
+    figma.root.setPluginData(this.messageHistoryPrefix + keyId, '');
   }
 
   async load(): Promise<Messages> {
     const messages = {} as Messages;
     for (const keyWithPrefix of figma.root.getPluginDataKeys()) {
-      if (keyWithPrefix.startsWith(this.keyPrefix)) {
-        const key = keyWithPrefix.substring(this.keyPrefix.length, keyWithPrefix.length);
-        const message = this.getKey(key);
+      if (keyWithPrefix.startsWith(this.messagePrefix)) {
+        const key = keyWithPrefix.substring(this.messagePrefix.length, keyWithPrefix.length);
+        const message = this.getMessage(key);
         if (message !== undefined) {
           messages[key] = message;
         }

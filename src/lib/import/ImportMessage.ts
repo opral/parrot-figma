@@ -1,7 +1,7 @@
 import { Plural } from '../message/variants/Plural';
 
-export type ImportTranslationKey = {
-  keyName: string,
+export type ImportMessage = {
+  name: string,
   plural: Plural;
   tags?: string[];
   text?: string;

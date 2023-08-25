@@ -20,8 +20,8 @@ export default function Onboarding({
   labelManager,
   onFinishSetup,
 }: OnboardingProps) {
-  const [selectedLanguages, setSelectedLanguages] = useState<Locale[]>(labelManager.keyStore.getLanugages() ?? []);
-  const [selectedBaseLanguage, setSelectedBaseLanguage] = useState<Locale | undefined>(labelManager.keyStore.getBaseLanugage());
+  const [selectedLanguages, setSelectedLanguages] = useState<Locale[]>(labelManager.messageStore.getLanugages() ?? []);
+  const [selectedBaseLanguage, setSelectedBaseLanguage] = useState<Locale | undefined>(labelManager.messageStore.getBaseLanugage());
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollHeightCheckInterval = useRef<any | undefined>(undefined);
 
@@ -66,8 +66,8 @@ export default function Onboarding({
             setSelectedBaseLanguage(baselanguage);
             setSelectedLanguages(activeLanguages);
             
-            await labelManager.keyStore.setBaseLanguage(baselanguage);
-            await labelManager.keyStore.setLanguages(activeLanguages);
+            await labelManager.messageStore.setBaseLanguage(baselanguage);
+            await labelManager.messageStore.setLanguages(activeLanguages);
           }}
         />
         <div className="onboarding-buttonbar">

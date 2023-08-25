@@ -1,6 +1,6 @@
 /* eslint-disable class-methods-use-this -- this class gets proxied using the async proxy - this doesn't work with static methods for now :-/ */
 
-import { KeyState, LocalizedLabel } from '../lib/localizedlabels/LocalizedLabel';
+import { MessageLinkState, LocalizedLabel } from '../lib/localizedlabels/LocalizedLabel';
 import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowManagerSandbox';
 
 /**
@@ -88,7 +88,7 @@ export default class FigmaUtil {
     let maxBottom = (frame as FrameNode).height;
     let i = 0;
     for (const nodeWithKey of sortedNodes) {
-      if (nodeWithKey.keyType !== KeyState.Linked) {
+      if (nodeWithKey.messageLinkState !== MessageLinkState.Linked) {
         // eslint-disable-next-line no-continue
         continue;
       }
@@ -109,7 +109,7 @@ export default class FigmaUtil {
       // Set bigger font size and red color
       textNode.fontSize = 18;
       textNode.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
-      textNode.characters = nodeWithKey.keyId!;
+      textNode.characters = nodeWithKey.messageId!;
 
       maxRight = Math.max(textNode.x + textNode.width, maxRight);
       maxBottom = Math.max(textNode.y + textNode.height, maxBottom);
@@ -141,7 +141,7 @@ export default class FigmaUtil {
       const line = figma.createLine();
       line.x = x1;
       line.y = y1;
-      line.name = nodeWithKey.keyId!;
+      line.name = nodeWithKey.messageId!;
 
       // Make line 200px long
       line.resize(length, 0);

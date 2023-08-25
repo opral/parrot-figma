@@ -4,11 +4,11 @@ import { t } from 'i18next';
 import { debug } from 'console';
 import { text } from 'stream/consumers';
 import { Locale } from '../message/variants/Locale';
-import { KeyState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
+import { MessageLinkState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../message/variants/Plural';
 import ChangeEvent from './ChangeEvent';
 import { MessageStoreFigmaRoot } from '../message/store/MessageStoreFigmaRoot';
-import { Fillins, TranslationEntry } from '../message/Message';
+import { Fillins, MessageEntry } from '../message/Message';
 import VirtualTree, { VirtualTreeNode } from './VirtualTree';
 import LinksLoadedEvent from './LinksLoadedEvent';
 
@@ -18,23 +18,23 @@ export interface NodeSelection {
     selectedNodeId: string;
     directSelection: boolean;
     isLabel: boolean;
-    key: string | undefined;
+    messageId: string | undefined;
   };
 }
 
 export interface SandboxUpdateLabelProperties {
   labelName?: string,
-  keyType?: KeyState,
-  keyId?: string,
+  messageLinkState?: MessageLinkState,
+  messageId?: string,
   language?: Locale,
   plural?: Plural,
-  keyVersion?: number,
+  messageVersion?: number,
   filledTemplateHash?: string,
   characters?: string,
   ops?: any
   fillins?: Fillins,
   showSampleValues?: boolean,
-  unlinkedTranslations?: TranslationEntry | null
+  unlinkedTranslations?: MessageEntry | null
 }
 
 export interface DeltaOp {
@@ -80,7 +80,7 @@ export default class LocalizedLabelManager {
 
   public languageDataKey = 'l';
 
-  public keyTypeDataKey = 'kt';
+  public messageLinkStateDataKey = 'kt';
 
   public keyVersionDataKey = 'kv';
 
@@ -95,34 +95,34 @@ export default class LocalizedLabelManager {
 
   private virtualTree = new VirtualTree();
 
-  private labelToKey = {} as {
+  private labelToMessage = {} as {
     [nodeId: string]: string
   };
 
   firstTextnodeInViewport: undefined | string;
 
-  private refreshLabelKeyLinkCache(textNodeId: string, key: string | undefined) {
-    const currentKey = this.labelToKey[textNodeId];
-    if (key === undefined || key === '') {
+  private refreshLabelMessaheLinkCache(textNodeId: string, messageId: string | undefined) {
+    const currentKey = this.labelToMessage[textNodeId];
+    if (messageId === undefined || messageId === '') {
       if (currentKey) {
-        this.messageStore!.keyToLabels[currentKey]!.delete(textNodeId);
+        this.messageStore!.messageIdToLabels[currentKey]!.delete(textNodeId);
         return currentKey;
       }
       return undefined;
     }
 
-    if (!this.messageStore!.keyToLabels[key]) {
-      this.messageStore!.keyToLabels[key] = new Set<string>();
+    if (!this.messageStore!.messageIdToLabels[messageId]) {
+      this.messageStore!.messageIdToLabels[messageId] = new Set<string>();
     }
-    if (this.messageStore!.keyToLabels[key].has(textNodeId)) {
+    if (this.messageStore!.messageIdToLabels[messageId].has(textNodeId)) {
       return undefined;
     }
-    this.messageStore!.keyToLabels[key].add(textNodeId);
-    this.labelToKey[textNodeId] = key;
+    this.messageStore!.messageIdToLabels[messageId].add(textNodeId);
+    this.labelToMessage[textNodeId] = messageId;
 
     if (currentKey) {
-      if (currentKey !== key) {
-        this.messageStore!.keyToLabels[currentKey]!.delete(textNodeId);
+      if (currentKey !== messageId) {
+        this.messageStore!.messageIdToLabels[currentKey]!.delete(textNodeId);
       }
       return currentKey;
     }
@@ -157,16 +157,16 @@ export default class LocalizedLabelManager {
             const localizedLabel = this.toLocalizedLabelOrUndefined(createdNode as TextNode);
             if (localizedLabel) {
               this.virtualTree.addNode(createdNode, createdNode.id);
-              if (localizedLabel.keyType === KeyState.Linked) {
-                const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, localizedLabel.keyId!);
-                if (previousKey !== localizedLabel.keyId!) {
+              if (localizedLabel.messageLinkState === MessageLinkState.Linked) {
+                const previousKey = this.refreshLabelMessaheLinkCache(localizedLabel.nodeId, localizedLabel.messageId!);
+                if (previousKey !== localizedLabel.messageId!) {
                   if (previousKey) {
                     keysChanged.add(previousKey);
                   }
-                  keysChanged.add(localizedLabel.keyId!);
+                  keysChanged.add(localizedLabel.messageId!);
                 }
               } else {
-                const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, undefined);
+                const previousKey = this.refreshLabelMessaheLinkCache(localizedLabel.nodeId, undefined);
                 if (previousKey) {
                   keysChanged.add(previousKey);
                 }
@@ -182,16 +182,16 @@ export default class LocalizedLabelManager {
               const localizedLabel = this.toLocalizedLabelOrUndefined(createdTextNode);
               if (localizedLabel) {
                 this.virtualTree.addNode(createdNode, createdNode.id);
-                if (localizedLabel.keyType === KeyState.Linked) {
-                  const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, localizedLabel.keyId!);
-                  if (previousKey !== localizedLabel.keyId!) {
+                if (localizedLabel.messageLinkState === MessageLinkState.Linked) {
+                  const previousKey = this.refreshLabelMessaheLinkCache(localizedLabel.nodeId, localizedLabel.messageId!);
+                  if (previousKey !== localizedLabel.messageId!) {
                     if (previousKey) {
                       keysChanged.add(previousKey);
                     }
-                    keysChanged.add(localizedLabel.keyId!);
+                    keysChanged.add(localizedLabel.messageId!);
                   }
                 } else {
-                  const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, undefined);
+                  const previousKey = this.refreshLabelMessaheLinkCache(localizedLabel.nodeId, undefined);
                   if (previousKey) {
                     keysChanged.add(previousKey);
                   }
@@ -209,7 +209,7 @@ export default class LocalizedLabelManager {
           // about this node from figma :-/ The ui layer will know what this change affects
           const deletedLeafs = this.virtualTree.removeBranch(change.id).filter((node) => node.cacheRelevant);
           deletedLeafs.forEach((node) => {
-            this.refreshLabelKeyLinkCache(node.id, undefined);
+            this.refreshLabelMessaheLinkCache(node.id, undefined);
             deletedIds.add(node.id);
           });
           // console.log(`Node deleted ${change.id} leafs: ${JSON.stringify(deletedIds)}`);
@@ -243,16 +243,16 @@ export default class LocalizedLabelManager {
 
             const localizedLabel = this.toLocalizedLabelOrUndefined(changedNode as TextNode);
             if (localizedLabel) {
-              if (localizedLabel.keyType === KeyState.Linked) {
-                const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, localizedLabel.keyId!);
-                if (previousKey !== localizedLabel.keyId!) {
+              if (localizedLabel.messageLinkState === MessageLinkState.Linked) {
+                const previousKey = this.refreshLabelMessaheLinkCache(localizedLabel.nodeId, localizedLabel.messageId!);
+                if (previousKey !== localizedLabel.messageId!) {
                   if (previousKey) {
                     keysChanged.add(previousKey);
                   }
-                  keysChanged.add(localizedLabel.keyId!);
+                  keysChanged.add(localizedLabel.messageId!);
                 }
               } else {
-                const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, undefined);
+                const previousKey = this.refreshLabelMessaheLinkCache(localizedLabel.nodeId, undefined);
                 if (previousKey) {
                   keysChanged.add(previousKey);
                 }
@@ -276,16 +276,16 @@ export default class LocalizedLabelManager {
                 if (movedFigmaNode && movedFigmaNode.type === 'TEXT') {
                   const localizedLabel = this.toLocalizedLabelOrUndefined(movedFigmaNode as TextNode);
                   if (localizedLabel) {
-                    if (localizedLabel.keyType === KeyState.Linked) {
-                      const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, localizedLabel.keyId!);
-                      if (previousKey !== localizedLabel.keyId!) {
+                    if (localizedLabel.messageLinkState === MessageLinkState.Linked) {
+                      const previousKey = this.refreshLabelMessaheLinkCache(localizedLabel.nodeId, localizedLabel.messageId!);
+                      if (previousKey !== localizedLabel.messageId!) {
                         if (previousKey) {
                           keysChanged.add(previousKey);
                         }
-                        keysChanged.add(localizedLabel.keyId!);
+                        keysChanged.add(localizedLabel.messageId!);
                       }
                     } else {
-                      const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, undefined);
+                      const previousKey = this.refreshLabelMessaheLinkCache(localizedLabel.nodeId, undefined);
                       if (previousKey) {
                         keysChanged.add(previousKey);
                       }
@@ -425,11 +425,11 @@ export default class LocalizedLabelManager {
       const textNodeId = textNode.id;
       this.virtualTree.addNode(textNode, textNodeId);
 
-      const keyType = textNode.getPluginData(this.keyTypeDataKey);
-      if (keyType !== '' && (keyType as KeyState) === KeyState.Linked) {
+      const messageLinkState = textNode.getPluginData(this.messageLinkStateDataKey);
+      if (messageLinkState !== '' && (messageLinkState as MessageLinkState) === MessageLinkState.Linked) {
         const key = textNode.getPluginData(this.keyDataKey);
         if (key !== '') {
-          const previousKey = this.refreshLabelKeyLinkCache(textNodeId, key);
+          const previousKey = this.refreshLabelMessaheLinkCache(textNodeId, key);
           if (previousKey) {
             keysLoaded.add(previousKey);
             this.virtualTree.addNode(textNode, textNodeId);
@@ -466,7 +466,7 @@ export default class LocalizedLabelManager {
           directSelection: true,
           isLabel: selectedNode.type === 'TEXT',
           selectedNodeId: selectedNode.id,
-          key: textNode?.keyType === KeyState.Linked ? textNode?.keyId : undefined,
+          messageId: textNode?.messageLinkState === MessageLinkState.Linked ? textNode?.messageId : undefined,
         };
       } else {
         selectionEnhanced[selectedNode.id] = {
@@ -474,7 +474,7 @@ export default class LocalizedLabelManager {
           isLabel: false,
           rootFrameId: rootFrame?.id,
           selectedNodeId: selectedNode.id,
-          key: undefined,
+          messageId: undefined,
         };
 
         const virtualSelectedNode = this.virtualTree.getVirtualNode(selectedNode.id);
@@ -488,7 +488,7 @@ export default class LocalizedLabelManager {
                 isLabel: true,
                 rootFrameId: rootFrame?.id,
                 selectedNodeId: virtualNode.id,
-                key: textNode?.keyType === KeyState.Linked ? textNode?.keyId : undefined,
+                messageId: textNode?.messageLinkState === MessageLinkState.Linked ? textNode?.messageId : undefined,
               };
             }
           });
@@ -540,10 +540,10 @@ export default class LocalizedLabelManager {
     return lokalizedLabel;
   }
 
-  async getWithKey(key: string) {
+  async getWithMessage(messageId: string) {
     const labels = [] as LocalizedLabel[];
-    if (this.messageStore!.keyToLabels[key]) {
-      for (const textNodeId of this.messageStore!.keyToLabels[key]) {
+    if (this.messageStore!.messageIdToLabels[messageId]) {
+      for (const textNodeId of this.messageStore!.messageIdToLabels[messageId]) {
         const textNode = figma.getNodeById(textNodeId) as TextNode;
         const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode);
         if (lokalizedLabel) {
@@ -659,16 +659,16 @@ export default class LocalizedLabelManager {
       textNode.setPluginData(this.autoRenameHashKey, '');
     }
 
-    if (changedProperties.keyId !== undefined) {
-      textNode.setPluginData(this.keyDataKey, changedProperties.keyId);
+    if (changedProperties.messageId !== undefined) {
+      textNode.setPluginData(this.keyDataKey, changedProperties.messageId);
     }
 
-    if (changedProperties.keyType !== undefined) {
-      textNode.setPluginData(this.keyTypeDataKey, changedProperties.keyType);
+    if (changedProperties.messageLinkState !== undefined) {
+      textNode.setPluginData(this.messageLinkStateDataKey, changedProperties.messageLinkState);
     }
 
-    if (changedProperties.keyVersion !== undefined) {
-      textNode.setPluginData(this.keyVersionDataKey, `${changedProperties.keyVersion}`);
+    if (changedProperties.messageVersion !== undefined) {
+      textNode.setPluginData(this.keyVersionDataKey, `${changedProperties.messageVersion}`);
     }
 
     if (changedProperties.showSampleValues !== undefined) {
@@ -964,7 +964,7 @@ export default class LocalizedLabelManager {
     const language = node.getPluginData(this.languageDataKey) === '' ? this.messageStore!.getConfigSync().baseLanguage! : node.getPluginData(this.languageDataKey) as Locale;
     const keyVersion = node.getPluginData(this.keyVersionDataKey) === '' ? -1 : parseInt(node.getPluginData(this.keyVersionDataKey), 10);
 
-    const keyType = node.getPluginData(this.keyTypeDataKey) === '' || node.getPluginData(this.keyTypeDataKey) === undefined ? KeyState.Unset : node.getPluginData(this.keyTypeDataKey) as KeyState;
+    const messageLinkState = node.getPluginData(this.messageLinkStateDataKey) === '' || node.getPluginData(this.messageLinkStateDataKey) === undefined ? MessageLinkState.Unset : node.getPluginData(this.messageLinkStateDataKey) as MessageLinkState;
     const key = node.getPluginData(this.keyDataKey) === '' ? undefined : node.getPluginData(this.keyDataKey);
     const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === '' ? this.messageStore!.getConfigSync().baseLanguage! : rootFrame.getPluginData(this.languageDataKey) as Locale;
     const rootFrameUseSampleValues = rootFrame.getPluginData(this.sampleValuesDataKey) !== '';
@@ -991,9 +991,9 @@ export default class LocalizedLabelManager {
       width: node.width,
       x,
       y,
-      keyType,
-      keyId: key,
-      keyVersion,
+      messageLinkState,
+      messageId: key,
+      messageVersion: keyVersion,
       fillins,
       derivedKey: derivable ? derivedName : undefined,
       pluralId: pluralId as Plural,
@@ -1001,7 +1001,7 @@ export default class LocalizedLabelManager {
       ops: tokenizedTextResult.deltaOps,
       warnings: tokenizedTextResult.warnings,
       labelStyle: tokenizedTextResult.labelStyle,
-      unlinkedTranslations,
+      unlinkedMessage: unlinkedTranslations,
     };
   }
 

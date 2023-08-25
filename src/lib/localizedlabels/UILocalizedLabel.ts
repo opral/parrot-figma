@@ -2,32 +2,31 @@ import Quill, { Delta as DeltaType, DeltaOperation } from 'quill';
 import blake from 'blakejs';
 import { Locale } from '../message/variants/Locale';
 import { Plural } from '../message/variants/Plural';
-import { KeyState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
-import { MessageUI } from '../message/MessageUI';
+import { MessageLinkState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
+
 import {
-  Fillins, Placeholder, PlaceholderType, PlaceholdersByName, TranslationEntry, Message,
+  Fillins, PlaceholdersByName, MessageEntry,
 } from '../message/Message';
 import LocalizedLabelManager, { DeltaOp, MARKER_CHARACTER } from './LocalizedLabelManager';
 
 const Delta = Quill.import('delta') as typeof DeltaType;
 
 export interface ILocalizedLabelManagerUI {
-  keyStore: any; // TODO make this UITranslationKeyStore and add all methods to the interface needed
+  messageStore: any; // TODO make this UITranslationKeyStore and add all methods to the interface needed
   updateLabelProperties(nodeId: string, changedProperties: {
     labelName?: string,
-    keyType?: KeyState,
-    key?: string,
-    keyVersion?: number,
+    messageLinkState?: MessageLinkState,
+    messageId?: string,
+    messageVersion?: number,
     language?: Locale,
     plural?: Plural,
-    translationHTML?: string,
+    variantHTML?: string,
     filledTemplateHash?: string,
     showSampleValues?: boolean,
   }): Promise<void>;
 }
 
 export class UILocalizedLabel implements LocalizedLabel {
-
   pageId: string;
 
   pageName: string;
@@ -56,11 +55,11 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   useSampleValues: boolean;
 
-  keyType: KeyState;
+  messageLinkState: MessageLinkState;
 
-  keyId?: string | undefined;
+  messageId?: string | undefined;
 
-  keyVersion: number;
+  messageVersion: number;
 
   pluralId: Plural;
 
@@ -83,7 +82,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   labelStyle: LabelStyle;
 
-  unlinkedTranslations: TranslationEntry; // | undefined;
+  unlinkedMessage: MessageEntry; // | undefined;
 
   // utils
   // to manage the label within the UI keep a reference of the Label manager
@@ -106,9 +105,9 @@ export class UILocalizedLabel implements LocalizedLabel {
     this.language = localizedLabel.language;
     this.rootFrameUseSampleValues = localizedLabel.rootFrameUseSampleValues;
     this.useSampleValues = localizedLabel.useSampleValues;
-    this.keyType = localizedLabel.keyType;
-    this.keyId = localizedLabel.keyId;
-    this.keyVersion = localizedLabel.keyVersion;
+    this.messageLinkState = localizedLabel.messageLinkState;
+    this.messageId = localizedLabel.messageId;
+    this.messageVersion = localizedLabel.messageVersion;
     this.pluralId = localizedLabel.pluralId;
     this.characters = localizedLabel.characters;
     this.textChangedAfterGeneration = localizedLabel.textChangedAfterGeneration;
@@ -117,20 +116,20 @@ export class UILocalizedLabel implements LocalizedLabel {
     this.ops = localizedLabel.ops;
     this.warnings = localizedLabel.warnings;
     this.labelStyle = localizedLabel.labelStyle;
-    this.translationHTML = UILocalizedLabel.toHtml(localizedLabel.characters, localizedLabel.ops, this.fillins, true);
-    this.unlinkedTranslations = localizedLabel.unlinkedTranslations;
+    this.variantHTML = UILocalizedLabel.toHtml(localizedLabel.characters, localizedLabel.ops, this.fillins, true);
+    this.unlinkedMessage = localizedLabel.unlinkedMessage;
     this.state = this.getState();
   }
 
-  translationHTML: string;
+  variantHTML: string;
 
   ops: DeltaOp[];
 
   filledTemplateHash?: string | undefined;
 
   getMessageName(): string | undefined {
-    if (this.keyId === undefined) return undefined;
-    const key = this.manager.keyStore.getKey(this.keyId);
+    if (this.messageId === undefined) return undefined;
+    const key = this.manager.messageStore.getKey(this.messageId);
     if (key) {
       return key.keyName;
     }
@@ -272,9 +271,9 @@ export class UILocalizedLabel implements LocalizedLabel {
     };
   }
 
-  getFillins(keyToUse?: string, fillins?: Fillins) {
-    const key = keyToUse ?? this.keyId;
-    const message = key ? this.manager.keyStore.getKey(key) : undefined;
+  getFillins(messageIdToUse?: string, fillins?: Fillins) {
+    const messageId = messageIdToUse ?? this.messageId;
+    const message = messageId ? this.manager.messageStore.getKey(messageId) : undefined;
 
     const defaultFillIns = message ? { ...message.defaultFillins } : {} as Fillins;
     const labelFillins = fillins ?? this.fillins;
@@ -294,7 +293,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     /*
     const labelTranslationPlaceholders = UITranslationKey.extractPlaceholdersInText(this.translation);
 
-    if (this.keyType === KeyState.Linked) {
+    if (this.messageLinkState === KeyState.Linked) {
       const key = this.manager.keyStore.getKey(this.key!)! as UITranslationKey;
       placeholders = { ...key.placeholders };
     }
@@ -341,28 +340,28 @@ export class UILocalizedLabel implements LocalizedLabel {
   getState(): { behind: number, orginalTranslationHTML?: string, modified: boolean } {
     const state = {
       modified: false,
-      translationDeleted: false,
+      variantDeleted: false,
       behind: 0,
-      orginalTranslationHTML: undefined as string | undefined,
+      orginalVariantHTML: undefined as string | undefined,
     };
 
     // debugger;
-    const translatedKey = this.keyType !== KeyState.Unset ? this.manager.keyStore.getKey(this.keyId!) : undefined;
+    const translatedKey = this.messageLinkState !== MessageLinkState.Unset ? this.manager.messageStore.getKey(this.messageId!) : undefined;
 
     if (translatedKey) {
-      const currentVersion = translatedKey.getHistoryEntry(this.language, this.pluralId, this.keyVersion);
+      const currentVersion = translatedKey.getHistoryEntry(this.language, this.pluralId, this.messageVersion);
 
       if (currentVersion === undefined) {
-        state.translationDeleted = true;
+        state.variantDeleted = true;
       } else {
-        state.behind = translatedKey.getChangesSince(this.language, this.pluralId, this.keyVersion);
+        state.behind = translatedKey.getChangesSince(this.language, this.pluralId, this.messageVersion);
 
-        const translationHtml = currentVersion.translations[this.language]?.[this.pluralId]?.text!;
+        const variantHtml = currentVersion.messages[this.language]?.[this.pluralId]?.text!;
 
         // eslint-disable-next-line no-param-reassign
-        if (translationHtml !== this.translationHTML) {
+        if (variantHtml !== this.variantHTML) {
           state.modified = true;
-          state.orginalTranslationHTML = translationHtml;
+          state.orginalVariantHTML = variantHtml;
         }
       }
     }
@@ -371,26 +370,26 @@ export class UILocalizedLabel implements LocalizedLabel {
   }
 
   async setUseSampleValues(showSampleValues: boolean) {
-    if (this.keyType !== KeyState.Linked) {
+    if (this.messageLinkState !== MessageLinkState.Linked) {
       return;
     }
 
-    const message = this.manager.keyStore.getKey(this.keyId!);
+    const message = this.manager.messageStore.getKey(this.messageId!);
 
-    if (this.keyType !== KeyState.Linked
+    if (this.messageLinkState !== MessageLinkState.Linked
       || this.state!.modified
       || message === undefined) {
       // we don't change any property also not on the parent - no need to update the label at all
       return;
     }
 
-    const versionToApply = message.getHistoryEntry(this.language, this.pluralId, this.keyVersion);
+    const versionToApply = message.getHistoryEntry(this.language, this.pluralId, this.messageVersion);
 
-    const text = versionToApply?.translations?.[this.language]?.[this.pluralId]?.text;
+    const text = versionToApply?.messages?.[this.language]?.[this.pluralId]?.text;
     if (text) {
       await this.manager.updateLabelProperties(this.nodeId, {
         showSampleValues,
-        translationHTML: text,
+        variantHTML: text,
       });
     }
   }
@@ -400,37 +399,37 @@ export class UILocalizedLabel implements LocalizedLabel {
     version: number | undefined,
     missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | undefined>,
   ) {
-    if (this.keyType === KeyState.Unset) {
-      const baseLanguage = this.manager.keyStore.getBaseLanugage()! as Locale;
+    if (this.messageLinkState === MessageLinkState.Unset) {
+      const baseLanguage = this.manager.messageStore.getBaseLanugage()! as Locale;
       // TODO check if the target language is avaialable and up to date
-      let translationUpToDate = false;
-      const baseLanguageHTML = this.language === baseLanguage ? this.translationHTML : this.unlinkedTranslations.variants?.[baseLanguage]?.[this.pluralId]?.text!;
+      let variantUpToDate = false;
+      const baseLanguageHTML = this.language === baseLanguage ? this.variantHTML : this.unlinkedMessage.variants?.[baseLanguage]?.[this.pluralId]?.text!;
 
-      if (this.unlinkedTranslations
-        && this.unlinkedTranslations.variants?.[targetLanguage]?.[this.pluralId]?.text) {
-        const currentTranslationBaseLangHash = this.unlinkedTranslations.variants?.[targetLanguage]?.[this.pluralId]?.baseLangHash;
+      if (this.unlinkedMessage
+        && this.unlinkedMessage.variants?.[targetLanguage]?.[this.pluralId]?.text) {
+        const currentTranslationBaseLangHash = this.unlinkedMessage.variants?.[targetLanguage]?.[this.pluralId]?.baseLangHash;
         if (baseLanguageHTML && blake.blake2sHex(baseLanguageHTML) === currentTranslationBaseLangHash) {
-          translationUpToDate = true;
+          variantUpToDate = true;
         }
       }
-      let translationHTML = undefined as string | undefined;
-      if (!translationUpToDate) {
-        translationHTML = await missingTranslationProvider(baseLanguageHTML, baseLanguage as string, targetLanguage);
+      let variantHTML = undefined as string | undefined;
+      if (!variantUpToDate) {
+        variantHTML = await missingTranslationProvider(baseLanguageHTML, baseLanguage as string, targetLanguage);
       }
 
       await this.manager.updateLabelProperties(this.nodeId, {
         language: targetLanguage,
         plural: this.pluralId,
-        translationHTML,
+        variantHTML,
       });
       return;
     }
 
-    const messageName = this.keyId ?? this.derivedKey;
+    const messageName = this.messageId ?? this.derivedKey;
     const labelState = this.state!;
-    let labelVersion = this.keyVersion;
+    let labelVersion = this.messageVersion;
 
-    if (this.keyType === KeyState.NoKey // we don't update unlinked labels
+    if (this.messageLinkState === MessageLinkState.NoKey // we don't update unlinked labels
       || messageName === undefined // or labels where we cant derive or get the key
       || labelState.modified) { // or that are modified
       // root language has changed - trigger cache update
@@ -438,7 +437,7 @@ export class UILocalizedLabel implements LocalizedLabel {
       return;
     }
 
-    let message = this.manager.keyStore.getKey(messageName);
+    let message = this.manager.messageStore.getKey(messageName);
     // check if key exists
     if (message === undefined) {
       throw new Error('Key linked to label does not exist - not removed when key was deleted?');
@@ -460,8 +459,8 @@ export class UILocalizedLabel implements LocalizedLabel {
     } else {
       if (labelState.behind === 0) {
         // updating key
-        if (message.translations[targetLanguage]?.[this.pluralId]?.text === undefined) {
-          if (message.translations[targetLanguage]?.[this.pluralId]?.skip === true) {
+        if (message.messages[targetLanguage]?.[this.pluralId]?.text === undefined) {
+          if (message.messages[targetLanguage]?.[this.pluralId]?.skip === true) {
             // TODO #3 think about fall back mechanism:
             // in case the key for the given plural is skipped try to fall back to others
             // if this is skipped as well fall back to base language
@@ -471,16 +470,16 @@ export class UILocalizedLabel implements LocalizedLabel {
           }
 
           // translation missing - generate it and update the translation key
-          let originLanguage = this.manager.keyStore.getBaseLanugage();
-          let originText = message.translations[this.manager.keyStore.getBaseLanugage()!]?.[this.pluralId]?.text;
+          let originLanguage = this.manager.messageStore.getBaseLanugage();
+          let originText = message.messages[this.manager.messageStore.getBaseLanugage()!]?.[this.pluralId]?.text;
 
           if (originText === undefined) {
             originLanguage = this.language;
-            originText = message.translations[this.language]![this.pluralId]?.text!;
+            originText = message.messages[this.language]![this.pluralId]?.text!;
           }
 
           const translation = await missingTranslationProvider(originText, originLanguage as string, targetLanguage);
-          message = await this.manager.keyStore.updateKey(messageName, [{
+          message = await this.manager.messageStore.updateKey(messageName, [{
             language: targetLanguage,
             plural: this.pluralId,
             text: translation,
@@ -493,12 +492,12 @@ export class UILocalizedLabel implements LocalizedLabel {
       const versionToApply = message.getHistoryEntry(targetLanguage, this.pluralId, labelVersion);
 
       await this.manager.updateLabelProperties(this.nodeId, {
-        key: messageName,
-        keyType: KeyState.Linked,
+        messageId: messageName,
+        messageLinkState: MessageLinkState.Linked,
         language: targetLanguage,
         plural: this.pluralId,
-        translationHTML: versionToApply?.translations?.[targetLanguage]?.[this.pluralId]?.text,
-        keyVersion: labelVersion,
+        variantHTML: versionToApply?.messages?.[targetLanguage]?.[this.pluralId]?.text,
+        messageVersion: labelVersion,
       });
     }
   }

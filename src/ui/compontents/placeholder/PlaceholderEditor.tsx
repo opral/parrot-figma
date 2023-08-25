@@ -3,7 +3,7 @@ import { Placeholder } from '../../../lib/message/Message';
 
 // placeholder editor should be able to:
 // - change the name of a placeholder
-//   - how do we propagate this to 1. the translations 2. the labels
+//   - how do we propagate this to 1. the messages 2. the labels
 // - change the decimal places for floating points
 //     - this would be a translation wide config? in theory mixed precision could be on purpose
 // - change the argument position for the placeholder

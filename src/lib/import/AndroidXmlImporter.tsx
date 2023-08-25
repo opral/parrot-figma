@@ -4,7 +4,7 @@
 
 import { Locale } from '../message/variants/Locale';
 import { Plural } from '../message/variants/Plural';
-import { ImportTranslationKey } from './ImportTranslationKey';
+import { ImportMessage } from './ImportMessage';
 
 export default class AndroidXmlImporter {
   static reformatPlaceholders(text: string) {
@@ -96,7 +96,7 @@ export default class AndroidXmlImporter {
     return replacedString;
   }
 
-  static toImportObject(filename: string, stringsFileContent: string): ImportTranslationKey[] | undefined {
+  static toImportObject(filename: string, stringsFileContent: string): ImportMessage[] | undefined {
     const fileNameParts = filename.split('.');
     const fileExtension = fileNameParts[fileNameParts.length - 1];
     if (fileExtension !== 'xml') {
@@ -120,7 +120,7 @@ export default class AndroidXmlImporter {
     }
 
     // create an empty object to hold our key-value pairs
-    const importedKeys = [] as ImportTranslationKey[];
+    const importedKeys = [] as ImportMessage[];
 
     for (const childNode of resources.childNodes) {
       if (childNode.nodeType !== Node.ELEMENT_NODE) {
@@ -139,7 +139,7 @@ export default class AndroidXmlImporter {
         }
 
         importedKeys.push({
-          keyName: stringNode.getAttribute('name') as string,
+          name: stringNode.getAttribute('name') as string,
           plural: Plural.OTHER,
           text: this.toParrotPlaceholders(this.unMask(childNode.textContent)),
         });
@@ -152,7 +152,7 @@ export default class AndroidXmlImporter {
         const plurals = AndroidXmlImporter.getPluralItems(pluralNode);
         for (const pluralType of (Object.keys(plurals) as Plural[])) {
           importedKeys.push({
-            keyName: pluralNode.getAttribute('name') as string,
+            name: pluralNode.getAttribute('name') as string,
             plural: pluralType,
             text: this.toParrotPlaceholders(this.unMask(plurals[pluralType]!.text!)),
           });

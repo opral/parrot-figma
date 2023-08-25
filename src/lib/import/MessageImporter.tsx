@@ -8,11 +8,11 @@ import MessageStoreMemory from '../message/store/MessageStoreMemory';
 import AppleStringsFileImporter from './AppleStringsFileImporter';
 import AndroidXMLImporter from './AndroidXmlImporter';
 
-import { ImportTranslationKey } from './ImportTranslationKey';
+import { ImportMessage } from './ImportMessage';
 import LocalizedLabelManagerUI from '../localizedlabels/LocalizedLabelManagerUI';
 import I18NextKeyValueImporter from './I18Next';
 
-function toChangeArray(importKey: ImportTranslationKey, language: Locale) {
+function toChangeArray(importKey: ImportMessage, language: Locale) {
   return [{
     language,
     plural: importKey.plural,
@@ -31,29 +31,29 @@ export enum ImportType {
 export type ImportResult = {
   fileName: string,
   type: ImportType,
-  keys: ImportTranslationKey[] | undefined,
+  messages: ImportMessage[] | undefined,
 };
 
-export default class KeyImporter {
-  static getImportStatistics(keyStore: MessageStoreMemory, importKeys: ImportTranslationKey[], language: Locale) {
+export default class MessageImporter {
+  static getImportStatistics(messageStore: MessageStoreMemory, importMessages: ImportMessage[], language: Locale) {
     const changedKeys = {
       language,
-      newKeys: [] as ImportTranslationKey[],
-      newTranslations: [] as ImportTranslationKey[],
-      updatedTranslations: [] as ImportTranslationKey[],
+      newKeys: [] as ImportMessage[],
+      newTranslations: [] as ImportMessage[],
+      updatedTranslations: [] as ImportMessage[],
     };
 
-    for (const keyToImport of importKeys) {
-      const currentKey = keyStore.getKeyByName(keyToImport.keyName);
+    for (const messageToImport of importMessages) {
+      const currentKey = messageStore.getMessageByName(messageToImport.name);
       if (!currentKey) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        changedKeys.newKeys.push(keyToImport);
+        changedKeys.newKeys.push(messageToImport);
       } else if (!currentKey.variants[language]) {
-        changedKeys.newTranslations.push(keyToImport);
-      } else if (!currentKey.variants[language]![keyToImport.plural]) {
-        changedKeys.newTranslations.push(keyToImport);
-      } else if (currentKey.variants[language]![keyToImport.plural]!.text !== keyToImport.text) {
-        changedKeys.updatedTranslations.push(keyToImport);
+        changedKeys.newTranslations.push(messageToImport);
+      } else if (!currentKey.variants[language]![messageToImport.plural]) {
+        changedKeys.newTranslations.push(messageToImport);
+      } else if (currentKey.variants[language]![messageToImport.plural]!.text !== messageToImport.text) {
+        changedKeys.updatedTranslations.push(messageToImport);
       }
     }
 
@@ -66,45 +66,45 @@ export default class KeyImporter {
     const results = {
       fileName,
       type: ImportType.UNSUPPORTED,
-      keys: undefined as ImportTranslationKey[] | undefined,
+      messages: undefined as ImportMessage[] | undefined,
     };
 
     let importObject = AppleStringsFileImporter.toImportObject(fileName, content);
     if (importObject) {
       results.type = ImportType.IOS_STRINGS;
-      results.keys = importObject;
+      results.messages = importObject;
       return results;
     }
 
     importObject = AndroidXMLImporter.toImportObject(fileName, content);
     if (importObject) {
       results.type = ImportType.ANDROID_XML;
-      results.keys = importObject;
+      results.messages = importObject;
       return results;
     }
 
     importObject = I18NextKeyValueImporter.toImportObject(fileName, content);
     if (importObject) {
       results.type = ImportType.L18N_JSON;
-      results.keys = importObject;
+      results.messages = importObject;
       return results;
     }
 
     return results;
   }
 
-  static async import(labelManager: LocalizedLabelManagerUI, keysToImport: ImportTranslationKey[], language: Locale) {
-    for (const keyToImport of keysToImport) {
-      const currentKey = labelManager.keyStore.getKeyByName(keyToImport.keyName);
+  static async import(labelManager: LocalizedLabelManagerUI, messagesToImport: ImportMessage[], language: Locale) {
+    for (const messageToImport of messagesToImport) {
+      const currentKey = labelManager.messageStore.getMessageByName(messageToImport.name);
       if (!currentKey) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        console.log(`creating key${keyToImport.keyName}`);
+        console.log(`creating key${messageToImport.name}`);
         // TODO #8 implement import logic for placeholders and quantities
-        const createdKey = await labelManager.keyStore.createKey(keyToImport.keyName, toChangeArray(keyToImport, language), false);
+        const createdMessage = await labelManager.messageStore.createMessage(messageToImport.name, toChangeArray(messageToImport, language), false);
       } else {
-        console.log(`updateing key${keyToImport.keyName}`);
+        console.log(`updateing key${messageToImport.name}`);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const updatedKey = await labelManager.updateKey(currentKey.id, { translations: toChangeArray(keyToImport, language) });
+        const updatedMessage = await labelManager.updateKey(currentKey.id, { variants: toChangeArray(messageToImport, language) });
       }
     }
     // TODO keyStore.commit();
@@ -125,8 +125,8 @@ export default class KeyImporter {
           language: lang, plural: Plural.OTHER, text: result[key], skip: false,
         }], false);
         changedKeys.added.push(createdKey);
-      } else if (currentKey!.translations[lang]?.other?.text !== result[key]) {
-        const skip = currentKey!.translations[lang]?.other?.skip ?? false;
+      } else if (currentKey!.messages[lang]?.other?.text !== result[key]) {
+        const skip = currentKey!.messages[lang]?.other?.skip ?? false;
         const updatedKey = await this.updateKey(key, [{
           language: lang, plural: Plural.OTHER, text: result[key], skip,
         }]);

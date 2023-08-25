@@ -18,7 +18,7 @@ import './ui.css';
 import WindowManagerUi from '../lib/windowManager/WindowManagerUI';
 import { WindowMode } from '../lib/windowManager/WindowManagerSandbox';
 import { Messages } from '../lib/message/Message';
-import TranslationKeyListView from './views/translationkeys/TranslationKeyListView';
+import MessageListView from './views/messages/MessageListView';
 
 import MessageStoreMemory, { MessagesUI } from '../lib/message/store/MessageStoreMemory';
 import { MessageStoreFigmaRoot } from '../lib/message/store/MessageStoreFigmaRoot';
@@ -243,7 +243,7 @@ function App() {
       );
     case 'keys':
       view = (
-        <TranslationKeyListView
+        <MessageListView
           showSearchBar={false}
           initialSearchQuery={keyQuery}
           messageStore={memoryTranslationKeyStore}

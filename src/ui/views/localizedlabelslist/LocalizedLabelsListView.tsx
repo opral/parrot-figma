@@ -133,13 +133,13 @@ export default function LocalizedLabelsListView({
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
     localizedLabelManager.addEventListener('updated', refreshSelection);
-    localizedLabelManager.keyStore.addEventListener('updated', refreshSelection);
+    localizedLabelManager.messageStore.addEventListener('updated', refreshSelection);
     window.addEventListener('message', messageHandler);
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
     return () => {
       localizedLabelManager.removeEventListener('updated', refreshSelection);
-      localizedLabelManager.keyStore.removeEventListener('updated', refreshSelection);
+      localizedLabelManager.messageStore.removeEventListener('updated', refreshSelection);
       window.removeEventListener('message', messageHandler);
     };
   }, []);

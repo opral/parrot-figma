@@ -8,7 +8,6 @@ import { useEffect, useState } from 'react';
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
 import OutsideClickHandler from 'react-outside-click-handler';
-import { fileLoader } from 'ejs';
 import { Locale } from '../../../lib/message/variants/Locale';
 import { Plural, getPluralFormsByLanguage } from '../../../lib/message/variants/Plural';
 import { Fillins, HistoryTag, Placeholder } from '../../../lib/message/Message';
@@ -18,13 +17,12 @@ import FigmaUtil from '../../../shared/FigmaUtil';
 
 import TranslationEditor from '../../compontents/translationEditor/TranslationEditor';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
-import MatchView from '../../compontents/matchview/MatchView';
+
 import HistoryEntryView from '../../compontents/history/HistoryEntryView';
 import { MessageUI } from '../../../lib/message/MessageUI';
 import PlaceholderEditorListItem from '../../compontents/placeholder/PlaceholderEditor';
 import AsyncImage from './AsyncImage';
 import FEATURES_FLAGS from '../../featuretoggle';
-import { ImportType } from '../../../lib/import/KeyImporter';
 import Drawer from '../../compontents/drawer/Drawer';
 import TextField from '../../compontents/textfield/TextField';
 // import ReactQuill from 'react-quill';
@@ -68,7 +66,7 @@ export default function TranslationKeyListItem({
   const [showPlaceholderEditor, setShowPlaceholderEditor] = useState(false);
   const [defaultFillins, setDefaultFillins] = useState(message.defaultFillins);
   const [history, setHistory] = useState<undefined | VersionEntry[]>(undefined);
-  const [keyToDelete, setKeyToDelete] = useState<undefined | string>(undefined);
+  const [messageIdToDelete, setMessageIdToDelete] = useState<undefined | string>(undefined);
   const [keyToDeleteReferences, setKeyToDeleteReferences] = useState<undefined | number>(undefined);
 
   const [showHistory, setShowHistory] = useState<undefined | { language: Locale, plural: Plural }>(undefined);
@@ -83,14 +81,14 @@ export default function TranslationKeyListItem({
 
   useEffect(() => {
     const updateReferenceCount = async () => {
-      const referenceCount = (await localizedLabelManager.getWithKey(keyToDelete!)).length;
+      const referenceCount = (await localizedLabelManager.getWithMessage(messageIdToDelete!)).length;
       setKeyToDeleteReferences(referenceCount);
     };
 
-    if (keyToDelete) {
+    if (messageIdToDelete) {
       updateReferenceCount();
     }
-  }, [keyToDelete]);
+  }, [messageIdToDelete]);
 
   async function showAll() {
     // TODO check in which page the label is in
@@ -166,8 +164,8 @@ export default function TranslationKeyListItem({
     console.log(message);
 
     // filter relevant history changes for the given key
-    for (const keyHistoryEntry of message.history) {
-      if (keyHistoryEntry.translations?.[language]?.[plural] !== undefined) {
+    for (const messageHistoryEntry of message.history) {
+      if (messageHistoryEntry.variants?.[language]?.[plural] !== undefined) {
         if (currentTaggedKeyVersion < currentVersion) {
           currentTagIndex += 1;
           currentVersionTagIndex = taggedVersions[currentTagIndex] as number | undefined;
@@ -177,14 +175,14 @@ export default function TranslationKeyListItem({
 
         const currentRelevantVersion = {
           versionTag: currentTag,
-          text: keyHistoryEntry.translations?.[language]?.[plural]?.text ?? lastRelevantVersion?.text,
+          text: messageHistoryEntry.variants?.[language]?.[plural]?.text ?? lastRelevantVersion?.text,
           previousText: lastRelevantVersion?.text,
-          userName: keyHistoryEntry.user,
+          userName: messageHistoryEntry.user,
           version: currentVersion,
-          date: keyHistoryEntry.date,
-          userIconUrl: keyHistoryEntry.user,
-          skip: keyHistoryEntry.translations?.[language]?.[plural]?.skip ?? false,
-          verified: keyHistoryEntry.translations?.[language]?.[plural]?.verified ?? false, // TODO #9 check correct state for history view
+          date: messageHistoryEntry.date,
+          userIconUrl: messageHistoryEntry.user,
+          skip: messageHistoryEntry.variants?.[language]?.[plural]?.skip ?? false,
+          verified: messageHistoryEntry.variants?.[language]?.[plural]?.verified ?? false, // TODO #9 check correct state for history view
         };
 
         // relevant historyEntry
@@ -223,11 +221,11 @@ export default function TranslationKeyListItem({
               singleClick={false}
               onSave={async (messageName: string) => {
                 localizedLabelManager.updateKey(message.id, {
-                  translations: [],
+                  variants: [],
                   name: messageName,
                 });
               }}
-              text={message.keyName}
+              text={message.name}
             />
           </span>
         </div>
@@ -238,7 +236,7 @@ export default function TranslationKeyListItem({
               className="layerIcon iconWrapper button"
               data-tooltip-content="Delete this translation key"
               onClick={() => {
-                setKeyToDelete(message.id);
+                setMessageIdToDelete(message.id);
               }}
             >
               <span className="svg-container trash-svg" />
@@ -247,7 +245,7 @@ export default function TranslationKeyListItem({
             <span
               className="layerIcon iconWrapper button"
               onClick={() => {
-                localizedLabelManager.updateKey(message.id, { translations: [], plural: !message.plural });
+                localizedLabelManager.updateKey(message.id, { variants: [], plural: !message.plural });
               }}
             >
               <span className={'svg-container ' + (message.plural ? 'plural-svg' : 'no-plural-svg')} />
@@ -322,13 +320,13 @@ export default function TranslationKeyListItem({
                           skip = false;
                         }
                         await localizedLabelManager.updateKey(message.id!, {
-                          translations: [{
+                          variants: [{
                             language, plural: plural as Plural, text, skip,
                           }],
                           fillins,
                         });
                       }}
-                      translationHTML={message.variants[language as Locale]?.[plural as Plural]?.text}
+                      variantHTML={message.variants[language as Locale]?.[plural as Plural]?.text}
                       messageStore={messageStore}
                     />
 
@@ -343,7 +341,7 @@ export default function TranslationKeyListItem({
                         onClick={async () => {
                           // disable a translation
                           await localizedLabelManager.updateKey(message.id!, {
-                            translations: [{
+                            variants: [{
                               language,
                               plural,
                               text: message.variants[language as Locale]?.[plural as Plural]?.text,
@@ -420,7 +418,7 @@ export default function TranslationKeyListItem({
                 if (showHistory === undefined) return;
 
                 await localizedLabelManager.updateKey(message.id!, {
-                  translations: [{
+                  variants: [{
                     language: showHistory.language, plural: showHistory.plural as Plural, text, skip: false,
                   }],
                 });
@@ -481,7 +479,7 @@ export default function TranslationKeyListItem({
             onClick={() => {
               localizedLabelManager.updateKey(message.id, {
                 fillins: defaultFillins,
-                translations: [],
+                variants: [],
               });
             }}
           />
@@ -504,33 +502,33 @@ export default function TranslationKeyListItem({
             key: 'escape',
             callback: () => {
               // set back to head
-              setKeyToDelete(undefined);
+              setMessageIdToDelete(undefined);
             },
           },
           {
             type: 'primary-destructive',
             text: 'Delete Key',
             key: 'enter',
-            disabled: keyToDelete === undefined,
+            disabled: messageIdToDelete === undefined,
             callback: () => {
               localizedLabelManager.deleteKey(message.id);
-              setKeyToDelete(undefined);
+              setMessageIdToDelete(undefined);
             },
           },
 
         ]}
-        shown={keyToDelete !== undefined}
+        shown={messageIdToDelete !== undefined}
       >
         <div className="history_view--topHeader">
           Delete
           {' '}
-          {keyToDelete}
+          {messageIdToDelete}
         </div>
         <div>
           {keyToDeleteReferences !== undefined && keyToDeleteReferences > 0 && (
             <>
               Deletion of the key
-              {keyToDelete}
+              {messageIdToDelete}
               {' '}
               will unlink
               {' '}
@@ -544,7 +542,7 @@ export default function TranslationKeyListItem({
           <>
             Key
             {' '}
-            {keyToDelete}
+            {messageIdToDelete}
             {' '}
             is not refrenced by a label
           </>

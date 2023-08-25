@@ -17,7 +17,7 @@ import QuillEditor from './QuillEditor';
 import { Fillins } from '../../../lib/message/Message';
 
 type TranslationEditorProps = {
-  translationHTML?: string,
+  variantHTML?: string,
   fillins: Fillins,
   /**
    * Triggered when a save is requested - like enter press or click out of the controll
@@ -42,7 +42,7 @@ type TranslationEditorProps = {
 //  - label editor - text should contain the placeholders but the editor needs to know the fillins?
 
 export default function TranslationEditor({
-  translationHTML,
+  variantHTML: variantHTML,
   fillins,
   onSave,
   onCancel,
@@ -52,12 +52,12 @@ export default function TranslationEditor({
   messageStore,
   onChange,
 }: TranslationEditorProps) {
-  const [textState, setTextState] = useState(translationHTML);
+  const [textState, setTextState] = useState(variantHTML);
   const [fillinsState, setFillinsState] = useState(fillins);
 
   //console.log('#23 QuillEditor() \n [' + translationHTML + ']');
 
-  const textRef = useRef(translationHTML);
+  const textRef = useRef(variantHTML);
   const fillinsRef = useRef(fillins);
 
   const [editingState, setEditingState] = useState(false);
@@ -91,14 +91,14 @@ export default function TranslationEditor({
   const handleCancel = () => {
     //console.log('#23 QuillEditor.handleCancel');
 
-    setTextState(translationHTML);
+    setTextState(variantHTML);
     setFillinsState(fillins);
 
-    textRef.current = translationHTML;
+    textRef.current = variantHTML;
     fillinsRef.current = fillins;
 
     if (onChange !== undefined) {
-      onChange(translationHTML, fillins);
+      onChange(variantHTML, fillins);
     }
 
     setEditingState(false);
@@ -107,9 +107,9 @@ export default function TranslationEditor({
 
   useEffect(() => {
     //console.log('#23 QuillEditor.useEffect(translationHTML)  [' + translationHTML + ']');
-    setTextState(translationHTML);
-    textRef.current = translationHTML;
-  }, [translationHTML]);
+    setTextState(variantHTML);
+    textRef.current = variantHTML;
+  }, [variantHTML]);
 
   useEffect(() => {
     setFillinsState(fillins);

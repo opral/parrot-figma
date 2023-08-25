@@ -20,7 +20,7 @@
       const keyName = key.key_name.other;
       const keyPlurals = [Plural.OTHER];
 
-      const translations = {} as {
+      const messages = {} as {
         [language in Language]? : {
           [plural in Plural]? : {
             version: number,
@@ -29,7 +29,7 @@
           }
         }
       };
-      for (const transalation of key.translations) {
+      for (const transalation of key.messages) {
         const lokaliseLanguage = transalation.language_iso as Language;
 
         const plurals = {} as {
@@ -64,14 +64,14 @@
           };
         }
 
-        translations[lokaliseLanguage] = plurals;
+        messages[lokaliseLanguage] = plurals;
       }
 
       messages.push({
         keyName,
         latestVersion: 0,
         plural: keyPlurals.length > 1,
-        translations,
+        messages,
         history: [],
         tags: [], // TODO add tags
       });

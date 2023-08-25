@@ -12,9 +12,9 @@ import ReactSelect, { MultiValueRemoveProps, components } from 'react-select';
 import OutsideClickHandler from 'react-outside-click-handler';
 import FileDropZone from '../dropzone/Dropzone';
 import FileSelect from '../fileselect/FileSelect';
-import KeyImporter, { ImportResult, ImportType } from '../../../lib/import/KeyImporter';
+import MessageImporter, { ImportResult, ImportType } from '../../../lib/import/MessageImporter';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
-import { ImportTranslationKey } from '../../../lib/import/ImportTranslationKey';
+import { ImportMessage } from '../../../lib/import/ImportMessage';
 import Drawer from '../drawer/Drawer';
 
 function Option(props: any) {
@@ -92,21 +92,21 @@ export default function LanguageSetup({
 
   const [importKeysByState, setimportKeysByState] = useState<{
     language: Locale,
-    newKeys: ImportTranslationKey[],
-    newTranslations: ImportTranslationKey[],
-    updatedTranslations: ImportTranslationKey[],
+    newKeys: ImportMessage[],
+    newTranslations: ImportMessage[],
+    updatedTranslations: ImportMessage[],
   } | undefined>(undefined);
 
-  const [keySummary, setKeySummary] = useState(labelManager.keyStore.findKeys({}, undefined));
+  const [keySummary, setKeySummary] = useState(labelManager.messageStore.findKeys({}, undefined));
 
   useEffect(() => {
-    const updateSummary = () => { setKeySummary(labelManager.keyStore.findKeys({}, undefined)); };
+    const updateSummary = () => { setKeySummary(labelManager.messageStore.findKeys({}, undefined)); };
 
-    labelManager.keyStore.addEventListener('updated', updateSummary);
+    labelManager.messageStore.addEventListener('updated', updateSummary);
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
     return () => {
-      labelManager.keyStore.removeEventListener('updated', updateSummary);
+      labelManager.messageStore.removeEventListener('updated', updateSummary);
     };
   }, []);
 
@@ -162,7 +162,7 @@ export default function LanguageSetup({
             key: 'enter',
             disabled: importResult && importResult!.type === ImportType.UNSUPPORTED,
             callback: () => {
-              labelManager.import(importResult!.keys!, importKeysByState!.language);
+              labelManager.import(importResult!.messages!, importKeysByState!.language);
               setImportResult(undefined);
               setimportKeysByState(undefined);
             },
@@ -215,11 +215,11 @@ export default function LanguageSetup({
               {' '}
             {importKeysByState.newKeys.length}
             <br />
-            New translations:
+            New messages:
               {' '}
             {importKeysByState.newTranslations.length}
             <br />
-            Updated translations:
+            Updated messages:
               {' '}
             {importKeysByState.updatedTranslations.length}
             <br />
@@ -286,9 +286,9 @@ export default function LanguageSetup({
                   text="Import"
                   onFilesReceived={(files: any) => {
                     for (const filename of Object.keys(files)) {
-                      const importResultFromSelectedFile = KeyImporter.processFile(filename, files[filename]);
+                      const importResultFromSelectedFile = MessageImporter.processFile(filename, files[filename]);
                       setImportResult(importResultFromSelectedFile);
-                      const importStats = KeyImporter.getImportStatistics(labelManager.keyStore, importResultFromSelectedFile.keys!, selectedBaseLanguage!.value as Locale);
+                      const importStats = MessageImporter.getImportStatistics(labelManager.messageStore, importResultFromSelectedFile.messages!, selectedBaseLanguage!.value as Locale);
                       setimportKeysByState(importStats);
                     }
                   }}
@@ -363,9 +363,9 @@ export default function LanguageSetup({
                       text="Import"
                       onFilesReceived={(files: any) => {
                         for (const filename of Object.keys(files)) {
-                          const importResultFromSelectedFile = KeyImporter.processFile(filename, files[filename]);
+                          const importResultFromSelectedFile = MessageImporter.processFile(filename, files[filename]);
                           setImportResult(importResultFromSelectedFile);
-                          const importStats = KeyImporter.getImportStatistics(labelManager.keyStore, importResultFromSelectedFile.keys!, languageOption.value as Locale);
+                          const importStats = MessageImporter.getImportStatistics(labelManager.messageStore, importResultFromSelectedFile.messages!, languageOption.value as Locale);
                           setimportKeysByState(importStats);
                         }
                       }}

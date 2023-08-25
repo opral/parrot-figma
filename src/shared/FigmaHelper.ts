@@ -1,12 +1,12 @@
 /* eslint-disable -- TODO remove this when most of the class is used again */
-import { MessageStore } from '../lib/message/store/MessageStoreBase';
+
 
 import FigmaUtil from './FigmaUtil';
 import { Locale } from '../lib/message/variants/Locale';
 import { Plural } from '../lib/message/variants/Plural';
 import { MessageStoreFigmaRoot } from '../lib/message/store/MessageStoreFigmaRoot';
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
-import { KeyState } from '../lib/localizedlabels/LocalizedLabel';
+import { MessageLinkState } from '../lib/localizedlabels/LocalizedLabel';
 
 const defaultLinkStyleKey = 'defaultLinkStyle';
 
@@ -82,7 +82,7 @@ export default class FigmaHelper {
         
         for (let nodeWithKey of translatedFrame.localizedLabelsInFrame) {
 
-            if (nodeWithKey.keyType !== KeyState.Linked) {
+            if (nodeWithKey.messageLinkState !== MessageLinkState.Linked) {
               continue;
             }
 
@@ -101,7 +101,7 @@ export default class FigmaHelper {
             // Set bigger font size and red color
             textNode.fontSize = 18
             textNode.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }]
-            textNode.characters = nodeWithKey.keyId!;
+            textNode.characters = nodeWithKey.messageId!;
 
             maxRight = Math.max(textNode.x + textNode.width, maxRight);
             maxBottom = Math.max(textNode.y + textNode.height, maxBottom);
@@ -133,7 +133,7 @@ export default class FigmaHelper {
             let line = figma.createLine();
             line.x = x1;
             line.y = y1;
-            line.name = nodeWithKey.keyId!
+            line.name = nodeWithKey.messageId!
 
             // Make line 200px long
             line.resize(length, 0);

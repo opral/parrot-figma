@@ -1,9 +1,9 @@
 import { Locale } from '../message/variants/Locale';
 import { Plural } from '../message/variants/Plural';
-import { Fillins, TranslationEntry } from '../message/Message';
+import { Fillins, MessageEntry } from '../message/Message';
 import { DeltaOp } from './LocalizedLabelManager';
 
-export enum KeyState {
+export enum MessageLinkState {
   Unset = 'unset', // label has not yet modified by the plugin
   NoKey = 'nokey', // state when the label has not been translated by the plugin yet
   Linked = 'linked', // key was set to a fixed key
@@ -37,9 +37,9 @@ export interface LocalizedLabel {
   rootFrameUseSampleValues: boolean;
 
   useSampleValues: boolean;
-  keyType: KeyState
-  keyId?: string;
-  keyVersion: number,
+  messageLinkState: MessageLinkState
+  messageId?: string;
+  messageVersion: number,
   pluralId: Plural;
   characters: string;
   ops: DeltaOp[];
@@ -92,5 +92,5 @@ export interface LocalizedLabel {
 
   derivedKey?: string;
 
-  unlinkedTranslations: TranslationEntry;
+  unlinkedMessage: MessageEntry;
 }

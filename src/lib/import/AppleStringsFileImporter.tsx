@@ -3,7 +3,7 @@
 /* eslint-disable no-plusplus */
 
 import { Plural } from '../message/variants/Plural';
-import { ImportTranslationKey } from './ImportTranslationKey';
+import { ImportMessage } from './ImportMessage';
 
 export default class AppleStringsFileImporter {
   static reformatPlaceholders(text: string) {
@@ -33,7 +33,7 @@ export default class AppleStringsFileImporter {
     return replacedString;
   }
 
-  static toImportObject(filename: string, stringsFileContent: string): ImportTranslationKey[] | undefined {
+  static toImportObject(filename: string, stringsFileContent: string): ImportMessage[] | undefined {
     const fileNameParts = filename.split('.');
     const fileExtension = fileNameParts[fileNameParts.length - 1];
     if (fileExtension !== 'strings') {
@@ -44,7 +44,7 @@ export default class AppleStringsFileImporter {
     const lines = stringsFileContent.split('\n');
 
     // create an empty object to hold our key-value pairs
-    const importedKeys = [] as ImportTranslationKey[];
+    const importedKeys = [] as ImportMessage[];
 
     // iterate over each line of the file
     // eslint-disable-next-line no-plusplus
@@ -75,13 +75,13 @@ export default class AppleStringsFileImporter {
 
       // split the line into a key and value pair
       const parts = line.split('=');
-      let key = parts[0].trim();
+      let messageName = parts[0].trim();
       let value = parts[1].trim();
       let quoteWrapped = false;
 
       // remove any surrounding quotes from the key and value
-      if (key.startsWith('"') && key.endsWith('"')) {
-        key = key.slice(1, -1);
+      if (messageName.startsWith('"') && messageName.endsWith('"')) {
+        messageName = messageName.slice(1, -1);
       }
       if (value.startsWith('"') && value.endsWith('"')) {
         value = value.slice(1, -1);
@@ -102,7 +102,7 @@ export default class AppleStringsFileImporter {
 
       // add the key-value pair to our result object
       importedKeys.push({
-        keyName: key,
+        name: messageName,
         plural: Plural.OTHER,
         text: value,
       });

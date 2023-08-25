@@ -3,7 +3,7 @@
 /* eslint-disable no-plusplus */
 
 import { Plural } from '../message/variants/Plural';
-import { ImportTranslationKey } from './ImportTranslationKey';
+import { ImportMessage } from './ImportMessage';
 
 const separator = '__';
 
@@ -63,7 +63,7 @@ export default class I18NextKeyValueImporter {
     return value;
   }
 
-  static toImportObject(filename: string, stringsFileContent: string): ImportTranslationKey[] | undefined {
+  static toImportObject(filename: string, stringsFileContent: string): ImportMessage[] | undefined {
     const fileNameParts = filename.split('.');
     const fileExtension = fileNameParts[fileNameParts.length - 1];
     if (fileExtension !== 'json') {
@@ -84,20 +84,20 @@ export default class I18NextKeyValueImporter {
     }
 
     // create an empty object to hold our key-value pairs
-    const importedKeys = [] as ImportTranslationKey[];
+    const importedKeys = [] as ImportMessage[];
 
     this.nodeToImpotObjects('', json, importedKeys);
 
     return importedKeys;
   }
 
-  static nodeToImpotObjects(keyName: string, node: any, keys: ImportTranslationKey[]) {
+  static nodeToImpotObjects(keyName: string, node: any, keys: ImportMessage[]) {
     for (const [key, subNode] of Object.entries(node)) {
       const currentKeyName = `${keyName}${key}`;
       if (typeof subNode === 'string') {
         const keyAndPlrual = I18NextKeyValueImporter.extractPlural(currentKeyName);
         keys.push({
-          keyName: keyAndPlrual.key,
+          name: keyAndPlrual.key,
           plural: keyAndPlrual.plural,
           text: this.toParrotPlaceholders(subNode as string),
         });

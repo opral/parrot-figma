@@ -78,6 +78,6 @@ export default class GoogleTranslator {
           });
           const translationResults = await result.json();
 
-          return translationResults.translations[0].text; */
+          return translationResults.messages[0].text; */
   }
 }

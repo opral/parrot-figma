@@ -14,13 +14,13 @@ export default class Mirgations {
     {
       version: '0.9.55',
       migrate: (version: string) => {
-        // go through all keys - add the keyname
+        // go through all messages - add the message name
 
-        // add key name to first history entry
+        // add message name to first history entry
 
-        // replace keys with new id
+        // replace messages with new id
 
-        // go through all textnodes with references to keys and update to slot 0
+        // go through all textnodes with references to messages and update to slot 0
 
         // TODO #10 implement migration
 

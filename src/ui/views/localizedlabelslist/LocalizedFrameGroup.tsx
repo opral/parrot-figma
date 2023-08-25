@@ -58,16 +58,16 @@ export default function LocalizedFrameGroup({
   let rootFrameLanguage: SelectOption | undefined;
   const languageOptiones = [] as SelectOption[];
 
-  const languages = localizedLabelManager.keyStore.getLanugages()!.sort();
+  const languages = localizedLabelManager.messageStore.getLanugages()!.sort();
 
-  languageOptiones.push(toLanguageOption(localizedLabelManager.keyStore.getBaseLanugage()!));
+  languageOptiones.push(toLanguageOption(localizedLabelManager.messageStore.getBaseLanugage()!));
 
   for (const language of languages) {
     const currentLanguageOption = toLanguageOption(language);
     if (language === firstTranslationState.rootFrameLanguage) {
       rootFrameLanguage = currentLanguageOption;
     }
-    if (localizedLabelManager.keyStore.getBaseLanugage()! !== language) {
+    if (localizedLabelManager.messageStore.getBaseLanugage()! !== language) {
       languageOptiones.push(currentLanguageOption);
     }
   }
@@ -122,7 +122,7 @@ export default function LocalizedFrameGroup({
 
         return (
           <LocalizedLabelListItem
-            showKey={showKey}
+            showMessage={showKey}
             key={translationState.nodeId}
             figmaRemote={figmaRemote}
             localizedLabelManager={localizedLabelManager}

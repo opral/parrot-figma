@@ -4,7 +4,7 @@ import { Locale } from '../variants/Locale';
 import { Plural, getPluralFormsByLanguage } from '../variants/Plural';
 import {
   Fillins,
-  HistoryEntry, HistoryTag, PlaceholdersByName, TranslationEntry, Message, Messages,
+  HistoryEntry, HistoryTag, PlaceholdersByName, MessageEntry, Message, Messages,
 } from '../Message';
 import { Config, MessageStoreFigmaRoot } from './MessageStoreFigmaRoot';
 import { MessageUI } from '../MessageUI';
@@ -45,7 +45,7 @@ export type SearchResult = {
 };
 
 export interface MessagesUI {
-  [keyName: string]: MessageUI
+  [messageName: string]: MessageUI
 }
 
 export default class MessageStoreMemory extends EventTarget {
@@ -175,7 +175,7 @@ export default class MessageStoreMemory extends EventTarget {
     return tagIndex;
   }
 
-  getTranslationsByKeyName(language: Locale, versionId: string | undefined): { [keyName: string]: TranslationEntry } {
+  getTranslationsByKeyName(language: Locale, versionId: string | undefined): { [keyName: string]: MessageEntry } {
     const messages = {} as { [id: string]: Message };
 
     const tagIndex = versionId ? this.getTagIndexByVersionId(versionId) : -1;
@@ -186,23 +186,23 @@ export default class MessageStoreMemory extends EventTarget {
         const keyVerson = currentKey.getKeyVersionByTagIndex(tagIndex);
         if (keyVerson !== undefined) {
           const keyInVersion = currentKey.getInVersion(keyVerson);
-          messages[keyInVersion.keyName] = keyInVersion;
+          messages[keyInVersion.name] = keyInVersion;
         }
       } else if (currentKey.variants[language]) {
-        messages[currentKey.keyName] = currentKey;
+        messages[currentKey.name] = currentKey;
       }
     }
 
     return messages;
   }
 
-  getKey(id: string) : MessageUI | undefined {
+  getMessage(id: string) : MessageUI | undefined {
     return this.messages[id];
   }
 
-  getKeyByName(messageName: string) : MessageUI | undefined {
+  getMessageByName(messageName: string) : MessageUI | undefined {
     for (const message of Object.values(this.messages)) {
-      if (message.keyName === messageName) {
+      if (message.name === messageName) {
         return message;
       }
     }
@@ -391,49 +391,49 @@ export default class MessageStoreMemory extends EventTarget {
 
     if (selection) {
       Object.values(selection).forEach((selectedNode) => {
-        if (selectedNode.key !== undefined) {
+        if (selectedNode.messageId !== undefined) {
           if (!selectedNode.directSelection) {
-            results.referencedInLabels.add(selectedNode.key);
+            results.referencedInLabels.add(selectedNode.messageId);
           }
-          results.referencedInFrame.add(selectedNode.key);
+          results.referencedInFrame.add(selectedNode.messageId);
         }
       });
     }
 
-    for (const key of Object.values(this.messages)) {
+    for (const message of Object.values(this.messages)) {
       for (const language of this.getLanugages()!) {
-        const plurals = key.variants[language];
+        const plurals = message.variants[language];
         for (const plural of getPluralFormsByLanguage(language as Locale)) {
           if (query.text === undefined || query.text === '') {
-            results.matchingKeys.add(key.id);
+            results.matchingKeys.add(message.id);
           } else if (plurals?.[plural]?.text !== undefined) {
             const matchStartText = plurals[plural]!.text!.toLowerCase().indexOf(query.text.toLowerCase());
             if ((query.exactText && matchStartText === 0 && plurals[plural]!.text!.length === query.text.length)
               || (!query.exactText && matchStartText !== -1)) {
-              if (!results.matches[key.id]) {
-                results.matches[key.id] = { textMatches: {}, keyMatch: undefined };
+              if (!results.matches[message.id]) {
+                results.matches[message.id] = { textMatches: {}, keyMatch: undefined };
               }
 
-              if (!results.matches[key.id].textMatches![language as Locale]) {
-                results.matches[key.id].textMatches![language as Locale]! = {};
+              if (!results.matches[message.id].textMatches![language as Locale]) {
+                results.matches[message.id].textMatches![language as Locale]! = {};
               }
-              results.matches[key.id].textMatches![language as Locale]![plural as Plural] = { start: matchStartText, length: query.text.length };
-              results.matchingKeys.add(key.id);
-              results.inText.add(key.id);
+              results.matches[message.id].textMatches![language as Locale]![plural as Plural] = { start: matchStartText, length: query.text.length };
+              results.matchingKeys.add(message.id);
+              results.inText.add(message.id);
             }
           }
 
           if (plurals?.[plural]?.text === undefined) {
             if (plurals?.[plural]?.skip !== true) {
-              if (key.plural || plural === Plural.OTHER) {
+              if (message.plural || plural === Plural.OTHER) {
                 if ((!plurals?.[plural]?.text || plurals?.[plural]?.text === '')) {
-                  if (key.plural || plural === Plural.OTHER) {
-                    results.withMissingTranslations.add(key.id);
+                  if (message.plural || plural === Plural.OTHER) {
+                    results.withMissingTranslations.add(message.id);
 
                     if (results.withMissingTranslationsPerLanguage[language] === undefined) {
                       results.withMissingTranslationsPerLanguage[language] = new Set<string>();
                     }
-                    results.withMissingTranslationsPerLanguage[language]!.add(key.id);
+                    results.withMissingTranslationsPerLanguage[language]!.add(message.id);
                   }
                 }
               }
@@ -441,35 +441,35 @@ export default class MessageStoreMemory extends EventTarget {
           }
 
           if (plurals?.[plural] && !plurals[plural]!.verified) {
-            results.withMissingReview.add(key.id);
+            results.withMissingReview.add(message.id);
           }
         }
       }
 
       if (query.key) {
         if (query.key !== '*') {
-          const keyMatchStart = key.keyName.toLowerCase().indexOf(query.key.toLowerCase());
+          const keyMatchStart = message.name.toLowerCase().indexOf(query.key.toLowerCase());
 
           if (keyMatchStart === 0) {
-            if (!results.matches[key.id]) {
-              results.matches[key.id] = { textMatches: {}, keyMatch: undefined };
+            if (!results.matches[message.id]) {
+              results.matches[message.id] = { textMatches: {}, keyMatch: undefined };
             }
-            results.matches[key.id].keyMatch = { start: keyMatchStart, length: query.key.length };
-            results.inKeys.add(key.id);
+            results.matches[message.id].keyMatch = { start: keyMatchStart, length: query.key.length };
+            results.inKeys.add(message.id);
           } else {
             // eslint-disable-next-line no-continue
-            results.matchingKeys.delete(key.id);
+            results.matchingKeys.delete(message.id);
           }
         }
       } else if (query.text !== undefined && query.text !== '') {
-        const keyMatchStart = key.keyName.toLowerCase().indexOf(query.text.toLowerCase());
+        const keyMatchStart = message.name.toLowerCase().indexOf(query.text.toLowerCase());
         if (keyMatchStart !== -1) {
-          if (!results.matches[key.id]) {
-            results.matches[key.id] = { textMatches: {}, keyMatch: undefined };
+          if (!results.matches[message.id]) {
+            results.matches[message.id] = { textMatches: {}, keyMatch: undefined };
           }
-          results.matches[key.id].keyMatch = { start: keyMatchStart, length: query.text.length };
-          results.inKeys.add(key.id);
-          results.matchingKeys.add(key.id);
+          results.matches[message.id].keyMatch = { start: keyMatchStart, length: query.text.length };
+          results.inKeys.add(message.id);
+          results.matchingKeys.add(message.id);
         }
       }
     }
@@ -498,7 +498,7 @@ export default class MessageStoreMemory extends EventTarget {
     // in case we have no specific we want to suggest specific like
     // - matches in keys (n)
     // - matches in text (n)
-    // - with missing translations (n)
+    // - with missing messages (n)
     // - with missing review (n)
     return results;
   }
@@ -514,27 +514,27 @@ export default class MessageStoreMemory extends EventTarget {
     return this.historyTags[tagId];
   }
 
-  async createKey(messageName: string, translations: { language: Locale; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean, fillins?: Fillins, quantity?: { value: number } | { placeholder: string }): Promise<MessageUI> {
-    if (messageName === '') {
+  async createMessage(name: string, messages: { language: Locale; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean, fillins?: Fillins, quantity?: { value: number } | { placeholder: string }): Promise<MessageUI> {
+    if (name === '') {
       throw new Error('keys mus have at least one character');
     }
-    const createdKey = await this.parentKeyStore.createKey(messageName, translations, plural, quantity, fillins);
-    return this.upsertCache(createdKey);
+    const createdMessage = await this.parentKeyStore.createMessage(name, messages, plural, quantity, fillins);
+    return this.upsertCache(createdMessage);
   }
 
-  async updateKey(id: string, properties: {
+  async updateMessage(id: string, properties: {
     name?: string,
-    translations: { language: Locale, plural: Plural, text: string | undefined, skip: boolean }[],
+    variants: { language: Locale, plural: Plural, text: string | undefined, skip: boolean }[],
     plural?: boolean,
     fillins?: Fillins,
     quantity?: { value: number } | { placeholder: string }
   }) {
-    const updatedKey = await this.parentKeyStore.updateKey(id, properties);
-    return this.upsertCache(updatedKey);
+    const updatedMessage = await this.parentKeyStore.updateMessage(id, properties);
+    return this.upsertCache(updatedMessage);
   }
 
-  async deleteKey(id: string) {
-    await this.parentKeyStore.deleteKey(id);
+  async deleteMessage(id: string) {
+    await this.parentKeyStore.deleteMessage(id);
     this.removeCache(id);
   }
 
@@ -543,10 +543,9 @@ export default class MessageStoreMemory extends EventTarget {
     this.historyTags = await this.parentKeyStore.getHistoryTags();
     this.messages = {} as MessagesUI;
 
-    const allTranslationKeys = await this.parentKeyStore.load();
-    
-    for (const key of Object.values(allTranslationKeys)) {
-      this.messages[key.id] = new MessageUI(this, key);
+    const allMessages = await this.parentKeyStore.load();
+    for (const message of Object.values(allMessages)) {
+      this.messages[message.id] = new MessageUI(this, message);
     }
     return this.messages;
   }

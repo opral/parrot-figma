@@ -12,12 +12,12 @@ export interface MessageStoreUI {
 export class MessageUI implements Message {
   id: string;
 
-  keyName: string;
+  name: string;
 
   latestVersion: number;
 
   historyTags: {
-    // map a tag identifier (we use a number for size reasons) to a version index of a key
+    // map a tag identifier (we use a number for size reasons) to a version index of a message
     [tagIndex: number]: number;
   };
 
@@ -45,31 +45,31 @@ export class MessageUI implements Message {
 
   history: HistoryEntry[];
 
-  keyStore: MessageStoreUI;
+  messageStore: MessageStoreUI;
 
   referencingTextNodes: string[];
 
-  constructor(keyStore: MessageStoreUI, key: Message) {
-    this.keyStore = keyStore;
-    this.id = key.id;
-    this.keyName = key.keyName;
-    this.latestVersion = key.latestVersion;
-    this.historyTags = key.historyTags;
-    this.plural = key.plural;
-    this.labels = key.labels;
-    this.referencingTextNodes = key.referencingTextNodes;
-    this.variants = key.variants;
-    this.history = key.history;
-    this.quantity = key.quantity;
-    this.placeholders = key.placeholders;
-    this.defaultFillins = key.defaultFillins ? key.defaultFillins : {};
+  constructor(messageStore: MessageStoreUI, message: Message) {
+    this.messageStore = messageStore;
+    this.id = message.id;
+    this.name = message.name;
+    this.latestVersion = message.latestVersion;
+    this.historyTags = message.historyTags;
+    this.plural = message.plural;
+    this.labels = message.labels;
+    this.referencingTextNodes = message.referencingTextNodes;
+    this.variants = message.variants;
+    this.history = message.history;
+    this.quantity = message.quantity;
+    this.placeholders = message.placeholders;
+    this.defaultFillins = message.defaultFillins ? message.defaultFillins : {};
   }
 
   getHistoryEntry(language: Locale, plural: Plural, version: number) : HistoryEntry | undefined {
     // iterate backward until we have a match
     let currentVersion = version;
     while (currentVersion >= 0) {
-      if (this.history[currentVersion]?.translations?.[language]?.[plural]) {
+      if (this.history[currentVersion]?.variants?.[language]?.[plural]) {
         return this.history[currentVersion];
       }
       currentVersion -= 1;
@@ -82,7 +82,7 @@ export class MessageUI implements Message {
 
     let currentVersion = this.latestVersion;
     while (currentVersion >= 0 && currentVersion > version) {
-      if (this.history[currentVersion]?.translations?.[language]?.[plural]) {
+      if (this.history[currentVersion]?.variants?.[language]?.[plural]) {
         changeCounter += 1;
       }
       currentVersion -= 1;
@@ -212,7 +212,7 @@ export class MessageUI implements Message {
    * - how shall we flag false positives - parameters that are not needed in a specific language?
    *
    */
-  static extractParameters(translations: Variants, baseLanguage: Locale, includePluralForms: boolean) : PlaceholdersByName {
+  static extractParameters(messages: Variants, baseLanguage: Locale, includePluralForms: boolean) : PlaceholdersByName {
     // a placeholder can be processed in two ways:
     // 1. with a argument postion [[1:...]]
     // - the first placeholder with a specific argument postion wins
@@ -232,15 +232,15 @@ export class MessageUI implements Message {
     };
 
     // base lang has priority
-    if (translations[baseLanguage]) {
+    if (messages[baseLanguage]) {
       // console.log('extracting baselanguage');
-      MessageUI.extractPlaceholdersInLanguage(translations, baseLanguage, includePluralForms, processedPlaceholders, placeholdersWithArgumentPosition, placeholdersWithoutArgumentPosition);
+      MessageUI.extractPlaceholdersInLanguage(messages, baseLanguage, includePluralForms, processedPlaceholders, placeholdersWithArgumentPosition, placeholdersWithoutArgumentPosition);
     }
 
-    for (const [language] of Object.entries(translations)) {
+    for (const [language] of Object.entries(messages)) {
       if (language !== baseLanguage) {
         // console.log(`extracting language${baseLang}`);
-        MessageUI.extractPlaceholdersInLanguage(translations, language as Locale, includePluralForms, processedPlaceholders, placeholdersWithArgumentPosition, placeholdersWithoutArgumentPosition);
+        MessageUI.extractPlaceholdersInLanguage(messages, language as Locale, includePluralForms, processedPlaceholders, placeholdersWithArgumentPosition, placeholdersWithoutArgumentPosition);
       }
     }
 
@@ -277,15 +277,15 @@ export class MessageUI implements Message {
     return placeholders;
   }
 
-  private static extractPlaceholdersInLanguage(translations: Variants, language: Locale, plurals: boolean, processedPlaceholders: { [placeholderName: string]: boolean; }, placeholdersWithArgumentPosition: Placeholder[], placeholdersWithoutArgumentPosition: Placeholder[]) {
+  private static extractPlaceholdersInLanguage(messages: Variants, language: Locale, plurals: boolean, processedPlaceholders: { [placeholderName: string]: boolean; }, placeholdersWithArgumentPosition: Placeholder[], placeholdersWithoutArgumentPosition: Placeholder[]) {
     // plural priority is defined by the PluralFormsByLanguage map
     for (const plural of getPluralFormsByLanguage(language)) {
       if (!plurals && plural !== Plural.OTHER) {
         // eslint-disable-next-line no-continue
         continue;
       }
-      if (translations[language]![plural]?.text) {
-        const placeHoldersInText = MessageUI.extractPlaceholdersInText(translations[language]![plural]!.text!);
+      if (messages[language]![plural]?.text) {
+        const placeHoldersInText = MessageUI.extractPlaceholdersInText(messages[language]![plural]!.text!);
         for (const placeHolderInText of placeHoldersInText) {
           if (processedPlaceholders[placeHolderInText.name] === true) {
             // NOTHING TO DO - placeholder got a fixed position already;
@@ -323,7 +323,7 @@ export class MessageUI implements Message {
   }
 
   /**
-   * Allows to get this key in a specific version. All properties and translations/plurals will be returned in the
+   * Allows to get this key in a specific version. All properties and messages/plurals will be returned in the
    * version passed as version parameter
    * @param version the version to return the key in
    * @returns
@@ -331,7 +331,7 @@ export class MessageUI implements Message {
   getInVersion(version: number) {
     const messageInVersion = {
       id: this.id,
-      keyName: this.keyName,
+      name: this.name,
       latestVersion: this.latestVersion,
       historyTags: this.historyTags,
       labels: [],
@@ -351,12 +351,12 @@ export class MessageUI implements Message {
       messageInVersion.plural = currentVersion.plural ?? messageInVersion.plural;
       messageInVersion.labels = currentVersion.labels ?? messageInVersion.labels;
 
-      if (!currentVersion.translations) {
-        // eslint-disable-next-line no-continue -- we want to skip the next processing in case this version doesn't change the translations
+      if (!currentVersion.variants) {
+        // eslint-disable-next-line no-continue -- we want to skip the next processing in case this version doesn't change the messages
         continue;
       }
 
-      for (const [languageId, language] of Object.entries(currentVersion.translations)) {
+      for (const [languageId, language] of Object.entries(currentVersion.variants)) {
         if (!messageInVersion.variants[languageId as Locale]) {
           messageInVersion.variants[languageId as Locale] = {};
         }
@@ -385,7 +385,7 @@ export class MessageUI implements Message {
 
   /*
   fuzzyMatch(text: string) {
-    for (const [language, languages] of Object.entries(this.translations)) {
+    for (const [language, languages] of Object.entries(this.messages)) {
       for (const plural of getPluralFormsByLanguage(language as Language)) {
         if (languages[plural]?.text !== undefined) {
           if (Math.abs(languages[plural]!.text!.length - text.length) > 30) { // TODO take parameters into account to define accepted difference in length

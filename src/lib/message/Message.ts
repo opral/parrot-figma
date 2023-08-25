@@ -11,9 +11,9 @@ export type HistoryTag = {
 };
 
 // TODO #10 rename to variant Entry
-export type TranslationEntry = {
+export type MessageEntry = {
   plural: boolean,
-  // TODO #10 take the renaming from translations -> variants in migrations into account
+  // TODO #10 take the renaming from messages -> variants in migrations into account
   variants?: {
     [language in Locale]? : {
       // TODO #10 add gender
@@ -33,7 +33,7 @@ export type HistoryEntry = {
   name?: string,
   plural?: boolean,
   labels?: string[],
-  translations?: {
+  variants?: {
     [language in Locale]? : {
       // TODO #10 add gender
       [plural in Plural]? : {
@@ -57,7 +57,7 @@ export interface Placeholder {
   type: PlaceholderType, // s: string | f: float | d: decimal
   decimalPlaces: undefined | number, // in case of type float this gives the number of decimal places after the .
   specifiedArgumentPosition: undefined | number, // if defined the position to provide the argument at when using printf for example
-  derivedArgumentPosition: undefined | number, // the argument position derived by analyzing all translations
+  derivedArgumentPosition: undefined | number, // the argument position derived by analyzing all messages
   parameterNumber: number // the 0-based position the parameter apeared. in a string like "Hello [[first_name]] [[last_name]]" first_name would get 0, last_name would get 1.
 
   // the argumentPosition is fixed by the first apearance - this can lead to conflicts like same parameter has different arumentPostions set or multiple placeholders block the same position
@@ -100,7 +100,7 @@ export type Variants = {
 
 export interface SerializableMessage {
   id: string,
-  keyName: string,
+  name: string,
   latestVersion: number,
   historyTags: {
     // map a tag identifier (we use a number for size reasons) to a version index of a key

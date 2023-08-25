@@ -5,9 +5,9 @@ import { LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
 import LocalizedLabelListItem from './LocalizedLabelListItem';
 import Select, { SelectOption } from '../../compontents/select/select';
 import FigmaUtil from '../../../shared/FigmaUtil';
-import MemoryTranslationKeyStore from '../../../lib/message/store/MessageStoreMemory';
+import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
-import { Language } from '../../../lib/message/variants/Locale';
+import { Locale } from '../../../lib/message/variants/Locale';
 import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
 import { NodeSelection } from '../../../lib/localizedlabels/LocalizedLabelManager';
 import GoogleTranslator from '../../../lib/translationprovider/google';
@@ -72,7 +72,7 @@ export default function LocalizedFrameGroup({
     }
   }
 
-  async function onLanguageSelectionClick(firstLocalizedLabelInFrame: LocalizedLabel, language: Language) {
+  async function onLanguageSelectionClick(firstLocalizedLabelInFrame: LocalizedLabel, language: Locale) {
     const translationProvider = GoogleTranslator.translate;
 
     localizedLabelManager.setFrameLanguage(firstLocalizedLabelInFrame.rootFrameId, language, translationProvider);
@@ -101,7 +101,7 @@ export default function LocalizedFrameGroup({
             <Select
               tooltip="Container Frame Langueage"
               placeholder="Select item"
-              onChange={(value) => { onLanguageSelectionClick(firstTranslationState, value.value as Language); }}
+              onChange={(value) => { onLanguageSelectionClick(firstTranslationState, value.value as Locale); }}
               defaultValue={languageOptiones.find((opt) => opt.value === rootFrameLanguage?.value)}
               getOptions={() => languageOptiones}
             />

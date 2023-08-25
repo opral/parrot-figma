@@ -1,10 +1,10 @@
 /* eslint-disable -- TODO remove this when most of the class is used again */
-import { TranslationKeyStore } from '../lib/message/store/MessageStoreBase';
+import { MessageStore } from '../lib/message/store/MessageStoreBase';
 
 import FigmaUtil from './FigmaUtil';
-import { Language } from '../lib/message/variants/Locale';
+import { Locale } from '../lib/message/variants/Locale';
 import { Plural } from '../lib/message/variants/Plural';
-import { FigmaFileTranslationKeyStore } from '../lib/message/store/MessageStoreFigmaRoot';
+import { MessageStoreFigmaRoot } from '../lib/message/store/MessageStoreFigmaRoot';
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
 import { KeyState } from '../lib/localizedlabels/LocalizedLabel';
 
@@ -15,9 +15,9 @@ export default class FigmaHelper {
 
   figma: PluginAPI | undefined;
 
-  translationKeyStore: FigmaFileTranslationKeyStore | undefined;
+  translationKeyStore: MessageStoreFigmaRoot | undefined;
 
-  constructor(figma?: PluginAPI, keyStore?: FigmaFileTranslationKeyStore) {
+  constructor(figma?: PluginAPI, keyStore?: MessageStoreFigmaRoot) {
     this.figma = figma;
     this.translationKeyStore = keyStore;
   }

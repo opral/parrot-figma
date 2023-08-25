@@ -17,11 +17,11 @@ import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
 import './ui.css';
 import WindowManagerUi from '../lib/windowManager/WindowManagerUI';
 import { WindowMode } from '../lib/windowManager/WindowManagerSandbox';
-import { TranslationKeys } from '../lib/message/Message';
+import { Messages } from '../lib/message/Message';
 import TranslationKeyListView from './views/translationkeys/TranslationKeyListView';
 
-import MemoryTranslationKeyStore, { UITranslationKeys } from '../lib/message/store/MessageStoreMemory';
-import { FigmaFileTranslationKeyStore } from '../lib/message/store/MessageStoreFigmaRoot';
+import MessageStoreMemory, { MessagesUI } from '../lib/message/store/MessageStoreMemory';
+import { MessageStoreFigmaRoot } from '../lib/message/store/MessageStoreFigmaRoot';
 
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
 import LocalizedLabelManagerUI from '../lib/localizedlabels/LocalizedLabelManagerUI';
@@ -31,7 +31,7 @@ import './assets/icons.css';
 import SegmentedControl from './compontents/segmentedControl/SegmentedControl';
 import LanguageSetup from './compontents/languageSetup/LanguageSetup';
 import Onboarding from './views/onboarding/Onboarding';
-import { Language } from '../lib/message/variants/Locale';
+import { Locale } from '../lib/message/variants/Locale';
 import Tooltip from './compontents/tooltip/Tooltip';
 
 import Export from './views/export/Export';
@@ -112,9 +112,9 @@ figmaRemote.getUserId().then((userId) => {
   identify(userId!);
 });
 
-const figmaFileTranslationKeyStore = new FigmaFileTranslationKeyStore(true);
+const figmaFileTranslationKeyStore = new MessageStoreFigmaRoot(true);
 asyncFunctionProxy.proxyAsyncMethods(figmaFileTranslationKeyStore);
-const memoryTranslationKeyStore = new MemoryTranslationKeyStore(figmaFileTranslationKeyStore);
+const memoryTranslationKeyStore = new MessageStoreMemory(figmaFileTranslationKeyStore);
 
 const remoteLocalizedLabelManager = new LocalizedLabelManager(undefined);
 asyncFunctionProxy.proxyAsyncMethods(remoteLocalizedLabelManager);
@@ -125,7 +125,7 @@ function App() {
   const [appScreen, setAppScreen] = useState(undefined as String | undefined);
 
   const [windowMode, setWindowMode] = useState(WindowManagerUi.instance!.windowMode);
-  const [keyQuery, setKeyQuery] = useState(MemoryTranslationKeyStore.toQueryObject(''));
+  const [keyQuery, setKeyQuery] = useState(MessageStoreMemory.toQueryObject(''));
 
   useEffect(() => {
     // asynchronous fetch the state from figma helper
@@ -270,7 +270,7 @@ function App() {
       view = (
         <LocalizedLabelsListView
           showKey={(key: string) => {
-            setKeyQuery(MemoryTranslationKeyStore.toQueryObject(`key:${key}`));
+            setKeyQuery(MessageStoreMemory.toQueryObject(`key:${key}`));
             setAppScreen('keys');
           }}
           localizedLabelManager={localizedLabelManager}
@@ -292,7 +292,7 @@ function App() {
           <div
             className={`tab ${appScreen === 'keys' ? 'active' : ''}`}
             onClick={() => {
-              setKeyQuery(MemoryTranslationKeyStore.toQueryObject(''));
+              setKeyQuery(MessageStoreMemory.toQueryObject(''));
               setAppScreen('keys');
             }}
           >

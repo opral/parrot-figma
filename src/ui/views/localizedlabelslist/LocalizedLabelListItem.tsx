@@ -8,8 +8,8 @@ import { KeyState, LocalizedLabel } from '../../../lib/localizedlabels/Localized
 import FigmaUtil from '../../../shared/FigmaUtil';
 import InputSelect, { InputSelectOption, InputSelectionOptionType } from '../../compontents/selectInput/inputselect';
 import Select, { SelectOption } from '../../compontents/select/select';
-import MemoryTranslationKeyStore from '../../../lib/message/store/MessageStoreMemory';
-import { Language } from '../../../lib/message/variants/Locale';
+import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
+import { Locale } from '../../../lib/message/variants/Locale';
 import TranslationEditor from '../../compontents/translationEditor/TranslationEditor';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import TextField from '../../compontents/textfield/TextField';
@@ -132,8 +132,8 @@ export default function LocalizedLabelListItem({
           localizedLabelManager={localizedLabelManager}
           figmaRemote={figmaRemote}
           selectedKey={drawerSelectedKey.current}
-          initialSearchQuery={MemoryTranslationKeyStore.toQueryObject(`key:* ${searchKey.search}`)}
-          select={(key: string, language: Language, plural: Plural) => {
+          initialSearchQuery={MessageStoreMemory.toQueryObject(`key:* ${searchKey.search}`)}
+          select={(key: string, language: Locale, plural: Plural) => {
             drawerSelectedKey.current = key;
             setDummyState({});
           }}
@@ -212,9 +212,9 @@ export default function LocalizedLabelListItem({
                     let options = [] as InputSelectOption[];
 
                     const keySearch = enteredValue === '' ? '*' : enteredValue;
-                    const textMatchQuery = MemoryTranslationKeyStore.toQueryObject(`exact_text:true key:${keySearch} ${localizedLabel.characters}`);
+                    const textMatchQuery = MessageStoreMemory.toQueryObject(`exact_text:true key:${keySearch} ${localizedLabel.characters}`);
                     const { matchingKeys: suggestedKeys } = translationKeyStore.findKeys(textMatchQuery);
-                    const keyMatchQuery = MemoryTranslationKeyStore.toQueryObject(`key:${keySearch}`);
+                    const keyMatchQuery = MessageStoreMemory.toQueryObject(`key:${keySearch}`);
                     const { matchingKeys: matchingKeysByName } = translationKeyStore.findKeys(keyMatchQuery);
 
                     const isValidKey = enteredValue.length >= 0 && /^[a-zA-Z0-9]$/.test(enteredValue[enteredValue.length - 1]);

@@ -1,4 +1,4 @@
-import { Language } from '../message/variants/Locale';
+import { Locale } from '../message/variants/Locale';
 import { Plural } from '../message/variants/Plural';
 import { Fillins, TranslationEntry } from '../message/Message';
 import { DeltaOp } from './LocalizedLabelManager';
@@ -31,9 +31,9 @@ export interface LocalizedLabel {
   width: number;
   height: number;
 
-  rootFrameLanguage: Language;
+  rootFrameLanguage: Locale;
 
-  language: Language;
+  language: Locale;
   rootFrameUseSampleValues: boolean;
 
   useSampleValues: boolean;

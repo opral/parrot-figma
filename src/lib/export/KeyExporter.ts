@@ -1,13 +1,13 @@
 import ejs from 'ejs';
-import { Language } from '../message/variants/Locale';
-import MemoryTranslationKeyStore from '../message/store/MessageStoreMemory';
+import { Locale } from '../message/variants/Locale';
+import MessageStoreMemory from '../message/store/MessageStoreMemory';
 
 const androidXmlExporterTmpl = ejs.compile(require('./templates/AndroidXmlExporter.ejs').default); // include the EJS template as a string
 const appleStringsFileExporterTmpl = ejs.compile(require('./templates/AppleStringsFileExporter.ejs').default);
 const appleDictFileExporterTmpl = ejs.compile(require('./templates/AppleDictFileExporter.ejs').default);
 
 export default class KeyExporter {
-  static export(translationKeyStore: MemoryTranslationKeyStore, language: Language, format: string, versionId: string | undefined) {
+  static export(translationKeyStore: MessageStoreMemory, language: Locale, format: string, versionId: string | undefined) {
     // prepare the data needed by the templates
     const data = { input: translationKeyStore.getTranslationsByKeyName(language, versionId), language };
 

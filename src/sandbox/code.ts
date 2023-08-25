@@ -10,7 +10,7 @@
 
 
 import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
-import { FigmaFileTranslationKeyStore } from '../lib/message/store/MessageStoreFigmaRoot';
+import { MessageStoreFigmaRoot } from '../lib/message/store/MessageStoreFigmaRoot';
 import FigmaUtil from '../shared/FigmaUtil';
 import FigmaHelper from '../shared/FigmaHelper';
 import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowManagerSandbox';
@@ -45,7 +45,7 @@ const asyncFunctionProxy = new AsyncFunctionProxy('SandboxAsyncFunctionProxy', (
 
 asyncFunctionProxy.registerInstance(figmaRemote);
 
-const localizationState = new FigmaFileTranslationKeyStore(false);
+const localizationState = new MessageStoreFigmaRoot(false);
 asyncFunctionProxy.registerInstance(localizationState);
 
 const remoteLocalizedLabelManager = new LocalizedLabelManager(localizationState);

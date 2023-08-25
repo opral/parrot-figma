@@ -1,11 +1,11 @@
 /* eslint-disable consistent-return */
-import { Language } from '../variants/Locale';
+import { Locale } from '../variants/Locale';
 import { Plural } from '../variants/Plural';
-import { HistoryEntry, TranslationKey, TranslationKeys } from '../Message';
+import { Message } from '../Message';
 
-export interface TranslationKeyStore {
-  createKey(keyName: string, translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[], plural: boolean) : Promise<TranslationKey>
-  getKey(keyName: string) : TranslationKey | undefined
-  updateKey(keyName: string, translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[], plural?: boolean) : Promise<TranslationKey>
+export interface MessageStore {
+  createKey(keyName: string, translations: { language: Locale, plural: Plural, text: string | undefined, skip: boolean }[], plural: boolean) : Promise<Message>
+  getKey(keyName: string) : Message | undefined
+  updateKey(keyName: string, translations: { language: Locale, plural: Plural, text: string | undefined, skip: boolean }[], plural?: boolean) : Promise<Message>
   deleteKey(keyName: string) : Promise<void>
 }

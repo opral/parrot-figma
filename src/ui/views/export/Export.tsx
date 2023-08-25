@@ -8,16 +8,16 @@ import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
 import OutsideClickHandler from 'react-outside-click-handler';
 
-import MemoryTranslationKeyStore from '../../../lib/message/store/MessageStoreMemory';
+import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
 import Select, { SelectOption } from '../../compontents/select/select';
 import './Export.css';
 import TileSelect, { TileSelectOption } from '../../compontents/tileselect/tileselect';
-import { Language } from '../../../lib/message/variants/Locale';
+import { Locale } from '../../../lib/message/variants/Locale';
 import KeyExporter from '../../../lib/export/KeyExporter';
 import FEATURES_FLAGS from '../../featuretoggle';
 
 type ExportProps = {
-  translationKeyStore: MemoryTranslationKeyStore
+  translationKeyStore: MessageStoreMemory
 };
 /**
  * Select versionTag (allow to tag current Version)
@@ -52,10 +52,10 @@ export default function Export({
   const [title, setTitle] = useState('test');
   const [description, setDescription] = useState('');
   const [tagOptions, setTagOptions] = useState(initTagOptions);
-  const [exportLanguage, setExportLanguage] = useState<Language | undefined>(undefined);
+  const [exportLanguage, setExportLanguage] = useState<Locale | undefined>(undefined);
   const [exportPlatform, setExportPlatform] = useState<string | undefined>(undefined);
 
-  const exportLanguageOptions = [] as TileSelectOption<Language>[];
+  const exportLanguageOptions = [] as TileSelectOption<Locale>[];
   const exportPlatformOptions = [{
     label: 'Android',
     value: 'android',
@@ -78,7 +78,7 @@ export default function Export({
       // icon: `flag-${language}`,
       forceSelected: language === exportLanguage,
       subLabel: language === exportLanguage ? '(base language)' : undefined,
-    } as TileSelectOption<Language>;
+    } as TileSelectOption<Locale>;
 
     exportLanguageOptions.push(currentLanguageOption);
   }
@@ -126,8 +126,8 @@ export default function Export({
       )}
       <div>
         Select Language
-        <TileSelect<Language>
-          onChange={(selectedLang: Language[]) => {
+        <TileSelect<Locale>
+          onChange={(selectedLang: Locale[]) => {
             if (selectedLang.length === 1) {
               setExportLanguage(selectedLang[0]);
             } else {

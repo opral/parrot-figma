@@ -5,9 +5,9 @@ import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
-import { Language } from '../../../lib/message/variants/Locale';
+import { Locale } from '../../../lib/message/variants/Locale';
 
-import MemoryTranslationKeyStore, { SearchQuery } from '../../../lib/message/store/MessageStoreMemory';
+import MessageStoreMemory, { SearchQuery } from '../../../lib/message/store/MessageStoreMemory';
 import FigmaUtil from '../../../shared/FigmaUtil';
 import TranslationKeyListItem from './TranslationKeyListItem';
 import { Plural } from '../../../lib/message/variants/Plural';
@@ -19,10 +19,10 @@ import { NodeSelection } from '../../../lib/localizedlabels/LocalizedLabelManage
 type TranslationKeyListViewProps = {
   initialSearchQuery: SearchQuery,
   showSearchBar: boolean,
-  translationKeyStore: MemoryTranslationKeyStore
+  translationKeyStore: MessageStoreMemory
   localizedLabelManager: LocalizedLabelManagerUI
   figmaRemote: FigmaUtil
-  select?: (key: string, language: Language, plural: Plural) => void
+  select?: (key: string, language: Locale, plural: Plural) => void
   selectedKey?: string,
   highlightSelectedNodes: boolean
 };
@@ -137,7 +137,7 @@ export default function TranslationKeyListView({
   };
 
   const onSearchChange = (searchString: string) => {
-    setSearchQuery(MemoryTranslationKeyStore.toQueryObject(searchString));
+    setSearchQuery(MessageStoreMemory.toQueryObject(searchString));
   };
 
   const longestKey = Object.keys(translationKeyStore.translationKeys).reduce((acc, key) => (key.length > acc.length ? key : acc), '');
@@ -155,7 +155,7 @@ export default function TranslationKeyListView({
           className="search--searchInput"
           spellCheck="false"
           dir="auto"
-          value={MemoryTranslationKeyStore.toSearchString(searchQuery)}
+          value={MessageStoreMemory.toSearchString(searchQuery)}
           onChange={(e) => {
             onSearchChange(e.target.value);
             setRenderEntries(100);

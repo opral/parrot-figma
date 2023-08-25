@@ -11,7 +11,7 @@ import OutsideClickHandler from 'react-outside-click-handler';
 import './TranslationEditor.css';
 
 import Quill from 'quill';
-import MemoryTranslationKeyStore from '../../../lib/message/store/MessageStoreMemory';
+import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
 import TranslationView from './TranslationView';
 import QuillEditor from './QuillEditor';
 import { Fillins } from '../../../lib/message/Message';
@@ -34,7 +34,7 @@ type TranslationEditorProps = {
   onBlur?: Function,
   match: { start: number, length: number } | undefined
   editable: boolean,
-  translationKeyStore: MemoryTranslationKeyStore,
+  translationKeyStore: MessageStoreMemory,
 };
 
 // We use this view in two ocations:

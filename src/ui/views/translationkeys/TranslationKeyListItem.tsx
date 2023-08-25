@@ -9,10 +9,10 @@ import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
 import OutsideClickHandler from 'react-outside-click-handler';
 import { fileLoader } from 'ejs';
-import { Language } from '../../../lib/message/variants/Locale';
+import { Locale } from '../../../lib/message/variants/Locale';
 import { Plural, getPluralFormsByLanguage } from '../../../lib/message/variants/Plural';
 import { Fillins, HistoryTag, Placeholder } from '../../../lib/message/Message';
-import MemoryTranslationKeyStore from '../../../lib/message/store/MessageStoreMemory';
+import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
 
 import FigmaUtil from '../../../shared/FigmaUtil';
 
@@ -20,7 +20,7 @@ import TranslationEditor from '../../compontents/translationEditor/TranslationEd
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import MatchView from '../../compontents/matchview/MatchView';
 import HistoryEntryView from '../../compontents/history/HistoryEntryView';
-import { UITranslationKey } from '../../../lib/message/MessageUI';
+import { MessageUI } from '../../../lib/message/MessageUI';
 import PlaceholderEditorListItem from '../../compontents/placeholder/PlaceholderEditor';
 import AsyncImage from './AsyncImage';
 import FEATURES_FLAGS from '../../featuretoggle';
@@ -43,10 +43,10 @@ interface VersionEntry {
 
 type TranslationKeyListItemProps = {
   rowClassNames?: string | undefined,
-  translationKey: UITranslationKey,
+  translationKey: MessageUI,
   figmaRemote: FigmaUtil,
   searchMatch: any,
-  translationKeyStore: MemoryTranslationKeyStore,
+  translationKeyStore: MessageStoreMemory,
   localizedLabelManager: LocalizedLabelManagerUI,
   select?: Function,
   keySelected: boolean,
@@ -71,7 +71,7 @@ export default function TranslationKeyListItem({
   const [keyToDelete, setKeyToDelete] = useState<undefined | string>(undefined);
   const [keyToDeleteReferences, setKeyToDeleteReferences] = useState<undefined | number>(undefined);
 
-  const [showHistory, setShowHistory] = useState<undefined | { language: Language, plural: Plural }>(undefined);
+  const [showHistory, setShowHistory] = useState<undefined | { language: Locale, plural: Plural }>(undefined);
 
   const rowRef = React.useRef<HTMLDivElement>(null);
 
@@ -136,9 +136,9 @@ export default function TranslationKeyListItem({
   const baseLang = translationKeyStore.getBaseLanugage();
 
   // create an array of languages with baselanguage at position zero
-  const languages = [baseLang, ...translationKeyStore.getLanugages()!.filter((l) => l !== baseLang)] as Language[];
+  const languages = [baseLang, ...translationKeyStore.getLanugages()!.filter((l) => l !== baseLang)] as Locale[];
 
-  const onShowHistoryClick = (language: Language, plural: Plural) => {
+  const onShowHistoryClick = (language: Locale, plural: Plural) => {
     const specificHistory = [] as VersionEntry[];
 
     let lastRelevantVersion = undefined as VersionEntry | undefined;
@@ -291,9 +291,9 @@ export default function TranslationKeyListItem({
       </div>
       {languages.map((language, i, allLanguages) => {
         let languageSkipped = false;
-        if (translationKey.translations[language as Language] !== undefined) {
-          for (const plural of Object.keys(translationKey.translations[language as Language]!)) {
-            if (translationKey.translations[language as Language]![plural as Plural]!.skip !== true) {
+        if (translationKey.translations[language as Locale] !== undefined) {
+          for (const plural of Object.keys(translationKey.translations[language as Locale]!)) {
+            if (translationKey.translations[language as Locale]![plural as Plural]!.skip !== true) {
               languageSkipped = false;
               break;
             } else {
@@ -308,7 +308,7 @@ export default function TranslationKeyListItem({
             {getPluralFormsByLanguage(language).filter((plural) => translationKey.plural || plural === Plural.OTHER).map((plural, pluralsIndex, allPlurals) =>
               // eslint-disable-next-line consistent-return
               (
-                <div key={plural} className={`group plural-group ${pluralsIndex === (allPlurals.length - 1) ? 'lastPlural  grid-item-border grid-item-border-bottom' : ''} ${pluralsIndex === 0 ? 'firstPlural  grid-item-border grid-item-border-top' : ''} ${translationKey.plural ? 'onePlural' : ' multiplePlurals'}${translationKey.translations[language as Language]?.[plural as Plural]?.skip === true ? ' skipped' : ''}`}>
+                <div key={plural} className={`group plural-group ${pluralsIndex === (allPlurals.length - 1) ? 'lastPlural  grid-item-border grid-item-border-bottom' : ''} ${pluralsIndex === 0 ? 'firstPlural  grid-item-border grid-item-border-top' : ''} ${translationKey.plural ? 'onePlural' : ' multiplePlurals'}${translationKey.translations[language as Locale]?.[plural as Plural]?.skip === true ? ' skipped' : ''}`}>
                   <div className="column column-plural grid-item-plural grid-item-border"><span className="rowText">{translationKey.plural ? plural : ''}</span></div>
                   <div className="column  column-translation grid-item-translation grid-item-border translation-container translation">
                     <TranslationEditor
@@ -316,7 +316,7 @@ export default function TranslationKeyListItem({
                       editable={select === undefined}
                       match={searchMatch?.textMatches[language]?.[plural as Plural]}
                       onSave={async (text: any, fillins: Fillins) => {
-                        let skip = translationKey.translations[language as Language]?.[plural as Plural]?.skip ?? false;
+                        let skip = translationKey.translations[language as Locale]?.[plural as Plural]?.skip ?? false;
 
                         if (text !== undefined && text !== '') {
                           skip = false;
@@ -328,7 +328,7 @@ export default function TranslationKeyListItem({
                           fillins,
                         });
                       }}
-                      translationHTML={translationKey.translations[language as Language]?.[plural as Plural]?.text}
+                      translationHTML={translationKey.translations[language as Locale]?.[plural as Plural]?.text}
                       translationKeyStore={translationKeyStore}
                     />
 
@@ -346,13 +346,13 @@ export default function TranslationKeyListItem({
                             translations: [{
                               language,
                               plural,
-                              text: translationKey.translations[language as Language]?.[plural as Plural]?.text,
-                              skip: translationKey.translations[language as Language]?.[plural as Plural]?.skip === undefined ? true : !translationKey.translations[language as Language]![plural as Plural]!.skip,
+                              text: translationKey.translations[language as Locale]?.[plural as Plural]?.text,
+                              skip: translationKey.translations[language as Locale]?.[plural as Plural]?.skip === undefined ? true : !translationKey.translations[language as Locale]![plural as Plural]!.skip,
                             }],
                           });
                         }}
                       >
-                        <span className={'svg-container' + (translationKey.translations[language as Language]?.[plural as Plural]?.skip === true ? ' eye-closed-svg' : ' eye-svg')} />
+                        <span className={'svg-container' + (translationKey.translations[language as Locale]?.[plural as Plural]?.skip === true ? ' eye-closed-svg' : ' eye-svg')} />
                       </span>
                       )}
                       { FEATURES_FLAGS.versioning && (

@@ -8,7 +8,7 @@ import OutsideClickHandler from 'react-outside-click-handler';
 import './inputselect.css';
 import { debug } from 'console';
 import { Plural } from '../../../lib/message/variants/Plural';
-import { Language } from '../../../lib/message/variants/Locale';
+import { Locale } from '../../../lib/message/variants/Locale';
 
 export enum InputSelectionOptionType {
   SUGGESTION,
@@ -21,7 +21,7 @@ export interface InputSelectOption {
   divider?: string | boolean;
   value: string;
   plural?: Plural,
-  language?: Language,
+  language?: Locale,
   type: InputSelectionOptionType;
   label: string;
   icon?: string;

@@ -5,8 +5,8 @@ import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { use } from 'i18next';
 import Select, { SelectOption } from '../select/select';
-import { SearchQuery, UITranslationKeys } from '../../../lib/message/store/MessageStoreMemory';
-import { Language } from '../../../lib/message/variants/Locale';
+import { SearchQuery, MessagesUI } from '../../../lib/message/store/MessageStoreMemory';
+import { Locale } from '../../../lib/message/variants/Locale';
 import './LanguageSetup.css';
 import ReactSelect, { MultiValueRemoveProps, components } from 'react-select';
 import OutsideClickHandler from 'react-outside-click-handler';
@@ -70,9 +70,9 @@ function toLanguageOptions(languages: string[], baseLanguage?: string) {
 
 type LanguageSetupProps = {
   labelManager: LocalizedLabelManagerUI,
-  activeLanguages: Language[]
-  baseLanguage: Language | undefined
-  onChange: (baseLanguage: Language, activeLanguages: Language[]) => void
+  activeLanguages: Locale[]
+  baseLanguage: Locale | undefined
+  onChange: (baseLanguage: Locale, activeLanguages: Locale[]) => void
 };
 export default function LanguageSetup({
   labelManager,
@@ -86,12 +86,12 @@ export default function LanguageSetup({
   const [changeBaseLanguage, setChangeBaseLanguage] = useState(baseLanguage === undefined);
   const [changeLanguages, setChangeLanguages] = useState(activeLanguages.length === 0);
 
-  const availableLanguages = toLanguageOptions(Object.values(Language), selectedBaseLanguage !== undefined ? selectedBaseLanguage.value : undefined);
+  const availableLanguages = toLanguageOptions(Object.values(Locale), selectedBaseLanguage !== undefined ? selectedBaseLanguage.value : undefined);
 
   const [importResult, setImportResult] = useState(undefined as ImportResult | undefined);
 
   const [importKeysByState, setimportKeysByState] = useState<{
-    language: Language,
+    language: Locale,
     newKeys: ImportTranslationKey[],
     newTranslations: ImportTranslationKey[],
     updatedTranslations: ImportTranslationKey[],
@@ -126,7 +126,7 @@ export default function LanguageSetup({
       setSelectedLanguages(updatedLanguages.filter((languageOption) => languageOption.value !== value.value));
 
       setSelectedBaseLanguage(value);
-      onChange(value.value as Language, updatedLanguages.map((languageOption: any) => languageOption.value as Language));
+      onChange(value.value as Locale, updatedLanguages.map((languageOption: any) => languageOption.value as Locale));
     }
   };
 
@@ -139,7 +139,7 @@ export default function LanguageSetup({
     }
 
     setSelectedLanguages(values);
-    onChange(selectedBaseLanguage!.value as Language, languagesWithBaseLanguage.map((languageOption: any) => languageOption.value as Language));
+    onChange(selectedBaseLanguage!.value as Locale, languagesWithBaseLanguage.map((languageOption: any) => languageOption.value as Locale));
   };
 
   return (
@@ -271,11 +271,11 @@ export default function LanguageSetup({
                 {keySummary.matchingKeys.size}
                 {' '}
                 Translation Keys
-                {keySummary.withMissingTranslationsPerLanguage[selectedBaseLanguage!.value as Language]
-                 && keySummary.withMissingTranslationsPerLanguage[selectedBaseLanguage!.value as Language]!.size > 0 && (
+                {keySummary.withMissingTranslationsPerLanguage[selectedBaseLanguage!.value as Locale]
+                 && keySummary.withMissingTranslationsPerLanguage[selectedBaseLanguage!.value as Locale]!.size > 0 && (
                  <div>
                    (
-                   {keySummary.withMissingTranslationsPerLanguage[selectedBaseLanguage!.value as Language]!.size}
+                   {keySummary.withMissingTranslationsPerLanguage[selectedBaseLanguage!.value as Locale]!.size}
                    {' '}
                    Missing Translations)
                  </div>
@@ -288,7 +288,7 @@ export default function LanguageSetup({
                     for (const filename of Object.keys(files)) {
                       const importResultFromSelectedFile = KeyImporter.processFile(filename, files[filename]);
                       setImportResult(importResultFromSelectedFile);
-                      const importStats = KeyImporter.getImportStatistics(labelManager.keyStore, importResultFromSelectedFile.keys!, selectedBaseLanguage!.value as Language);
+                      const importStats = KeyImporter.getImportStatistics(labelManager.keyStore, importResultFromSelectedFile.keys!, selectedBaseLanguage!.value as Locale);
                       setimportKeysByState(importStats);
                     }
                   }}
@@ -352,7 +352,7 @@ export default function LanguageSetup({
 
                     <div>
 
-                      {keySummary.withMissingTranslationsPerLanguage[languageOption.value as Language]?.size ?? 0}
+                      {keySummary.withMissingTranslationsPerLanguage[languageOption.value as Locale]?.size ?? 0}
                       {' '}
                       Missing Translations
                     </div>
@@ -365,7 +365,7 @@ export default function LanguageSetup({
                         for (const filename of Object.keys(files)) {
                           const importResultFromSelectedFile = KeyImporter.processFile(filename, files[filename]);
                           setImportResult(importResultFromSelectedFile);
-                          const importStats = KeyImporter.getImportStatistics(labelManager.keyStore, importResultFromSelectedFile.keys!, languageOption.value as Language);
+                          const importStats = KeyImporter.getImportStatistics(labelManager.keyStore, importResultFromSelectedFile.keys!, languageOption.value as Locale);
                           setimportKeysByState(importStats);
                         }
                       }}

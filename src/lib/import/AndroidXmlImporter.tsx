@@ -2,7 +2,7 @@
 /* eslint-disable no-continue */
 /* eslint-disable no-plusplus */
 
-import { Language } from '../message/variants/Locale';
+import { Locale } from '../message/variants/Locale';
 import { Plural } from '../message/variants/Plural';
 import { ImportTranslationKey } from './ImportTranslationKey';
 

@@ -1,11 +1,11 @@
 import Quill, { Delta as DeltaType, DeltaOperation } from 'quill';
 import blake from 'blakejs';
-import { Language } from '../message/variants/Locale';
+import { Locale } from '../message/variants/Locale';
 import { Plural } from '../message/variants/Plural';
 import { KeyState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
-import { UITranslationKey } from '../message/MessageUI';
+import { MessageUI } from '../message/MessageUI';
 import {
-  Fillins, Placeholder, PlaceholderType, PlaceholdersByName, TranslationEntry, TranslationKey,
+  Fillins, Placeholder, PlaceholderType, PlaceholdersByName, TranslationEntry, Message,
 } from '../message/Message';
 import LocalizedLabelManager, { DeltaOp, MARKER_CHARACTER } from './LocalizedLabelManager';
 
@@ -18,7 +18,7 @@ export interface ILocalizedLabelManagerUI {
     keyType?: KeyState,
     key?: string,
     keyVersion?: number,
-    language?: Language,
+    language?: Locale,
     plural?: Plural,
     translationHTML?: string,
     filledTemplateHash?: string,
@@ -48,9 +48,9 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   height: number;
 
-  rootFrameLanguage: Language;
+  rootFrameLanguage: Locale;
 
-  language: Language;
+  language: Locale;
 
   rootFrameUseSampleValues: boolean;
 
@@ -396,12 +396,12 @@ export class UILocalizedLabel implements LocalizedLabel {
   }
 
   async setLanguage(
-    targetLanguage: Language,
+    targetLanguage: Locale,
     version: number | undefined,
     missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | undefined>,
   ) {
     if (this.keyType === KeyState.Unset) {
-      const baseLanguage = this.manager.keyStore.getBaseLanugage()! as Language;
+      const baseLanguage = this.manager.keyStore.getBaseLanugage()! as Locale;
       // TODO check if the target language is avaialable and up to date
       let translationUpToDate = false;
       const baseLanguageHTML = this.language === baseLanguage ? this.translationHTML : this.unlinkedTranslations.translations?.[baseLanguage]?.[this.pluralId]?.text!;

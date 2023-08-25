@@ -2,8 +2,8 @@ import blake from 'blakejs';
 import { KeyState, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../message/variants/Plural';
 import LocalizedLabelManager, { SandboxUpdateLabelProperties } from './LocalizedLabelManager';
-import { Language } from '../message/variants/Locale';
-import MemoryTranslationKeyStore from '../message/store/MessageStoreMemory';
+import { Locale } from '../message/variants/Locale';
+import MessageStoreMemory from '../message/store/MessageStoreMemory';
 import ChangeEvent from './ChangeEvent';
 
 import { ILocalizedLabelManagerUI, UILocalizedLabel } from './UILocalizedLabel';
@@ -136,9 +136,9 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
   private localizedLabelMangerSandbox: LocalizedLabelManager;
 
-  keyStore: MemoryTranslationKeyStore;
+  keyStore: MessageStoreMemory;
 
-  constructor(localizedLabelMangerSandbox: LocalizedLabelManager, keyStore: MemoryTranslationKeyStore) {
+  constructor(localizedLabelMangerSandbox: LocalizedLabelManager, keyStore: MessageStoreMemory) {
     super();
     this.localizedLabelMangerSandbox = localizedLabelMangerSandbox;
     this.keyStore = keyStore;
@@ -275,7 +275,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     return [...this.cachedFrames[frameId].localizedLabelIds].map((labelId) => this.cachedLocalisedLabels[labelId]!);
   }
 
-  async setFrameLanguage(frameId: string, targetLanguage: Language, missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | undefined>) {
+  async setFrameLanguage(frameId: string, targetLanguage: Locale, missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | undefined>) {
     const version = undefined as undefined | number; // todo fill with fixed version of the frame if set
 
     await this.localizedLabelMangerSandbox.updateFrameProperties(frameId, {
@@ -295,7 +295,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     keyId: string,
     properties: {
       name?: string,
-      translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[],
+      translations: { language: Locale, plural: Plural, text: string | undefined, skip: boolean }[],
       plural?: boolean,
       fillins?: Fillins,
       quantity?: { value: number } | { placeholder: string },
@@ -314,7 +314,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
   async setLabelLanguage(
     cachedLabel: LocalizedLabel,
-    targetLanguage: Language,
+    targetLanguage: Locale,
     version: number | undefined,
     missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | undefined>,
   ) {
@@ -324,7 +324,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   async createNewVersionFromLabelState(localizedLabel: UILocalizedLabel) {
     const localizedKey = await this.keyStore.updateKey(localizedLabel.keyId!, {
       translations: [{
-        language: localizedLabel.language as Language, plural: localizedLabel.pluralId as Plural, text: localizedLabel.translationHTML, skip: false,
+        language: localizedLabel.language as Locale, plural: localizedLabel.pluralId as Plural, text: localizedLabel.translationHTML, skip: false,
       }],
       fillins: localizedLabel.fillins,
     });
@@ -396,7 +396,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     }
   }
 
-  async linkKey(localizedLabel: UILocalizedLabel, keyNameToLinkTo: string, language: Language, plural: Plural) {
+  async linkKey(localizedLabel: UILocalizedLabel, keyNameToLinkTo: string, language: Locale, plural: Plural) {
     let translationKey = this.keyStore.getKeyByName(keyNameToLinkTo);
 
     if (translationKey !== undefined) {
@@ -415,9 +415,9 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
       if (localizedLabel.unlinkedTranslations) {
         const translations = Object.entries(localizedLabel.unlinkedTranslations.translations!).flatMap(([languageFound, pluralsFound]) => Object.entries(pluralsFound).map(([pluralFound, { text }]) => {
           if (languageFound === language && plural === pluralFound) {
-            return ({ language: languageFound, plural: pluralFound, text: localizedLabel.translationHTML } as { language: Language, plural: Plural, text: string, skip: false });
+            return ({ language: languageFound, plural: pluralFound, text: localizedLabel.translationHTML } as { language: Locale, plural: Plural, text: string, skip: false });
           }
-          return ({ language: languageFound, plural: pluralFound, text } as { language: Language, plural: Plural, text: string, skip: false });
+          return ({ language: languageFound, plural: pluralFound, text } as { language: Locale, plural: Plural, text: string, skip: false });
         }));
         translationKey = await this.keyStore.createKey(keyNameToLinkTo, translations, localizedLabel.unlinkedTranslations.plural, localizedLabel.fillins);
       } else {
@@ -509,7 +509,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     keyType?: KeyState,
     keyId?: string,
     keyVersion?: number,
-    language?: Language,
+    language?: Locale,
     plural?: Plural,
     translationHTML?: string,
     fillins?: Fillins,
@@ -639,14 +639,14 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     return selection;
   }
 
-  async import(keysToImport: ImportTranslationKey[], language: Language) {
-    function toChangeArray(importKey: ImportTranslationKey, languageToUse: Language) {
+  async import(keysToImport: ImportTranslationKey[], language: Locale) {
+    function toChangeArray(importKey: ImportTranslationKey, languageToUse: Locale) {
       return [{
         language: languageToUse,
         plural: importKey.plural,
         text: importKey.text,
         skip: false,
-      }] as { language: Language; plural: Plural; text: string | undefined; skip: boolean }[];
+      }] as { language: Locale; plural: Plural; text: string | undefined; skip: boolean }[];
     }
 
     for (const keyToImport of keysToImport) {

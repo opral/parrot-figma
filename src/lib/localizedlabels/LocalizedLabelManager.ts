@@ -3,11 +3,11 @@
 import { t } from 'i18next';
 import { debug } from 'console';
 import { text } from 'stream/consumers';
-import { Language } from '../message/variants/Locale';
+import { Locale } from '../message/variants/Locale';
 import { KeyState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../message/variants/Plural';
 import ChangeEvent from './ChangeEvent';
-import { FigmaFileTranslationKeyStore } from '../message/store/MessageStoreFigmaRoot';
+import { MessageStoreFigmaRoot } from '../message/store/MessageStoreFigmaRoot';
 import { Fillins, TranslationEntry } from '../message/Message';
 import VirtualTree, { VirtualTreeNode } from './VirtualTree';
 import LinksLoadedEvent from './LinksLoadedEvent';
@@ -26,7 +26,7 @@ export interface SandboxUpdateLabelProperties {
   labelName?: string,
   keyType?: KeyState,
   keyId?: string,
-  language?: Language,
+  language?: Locale,
   plural?: Plural,
   keyVersion?: number,
   filledTemplateHash?: string,
@@ -58,7 +58,7 @@ export interface DeltaOp {
 export const MARKER_CHARACTER = '​';
 // export const MARKER_CHARACTER = 'X​';
 export default class LocalizedLabelManager {
-  translationKeyStore?: FigmaFileTranslationKeyStore;
+  translationKeyStore?: MessageStoreFigmaRoot;
 
   private containerSizeThreashold = 3000;
 
@@ -129,7 +129,7 @@ export default class LocalizedLabelManager {
     return undefined;
   }
 
-  constructor(translationKeyStore: FigmaFileTranslationKeyStore | undefined) {
+  constructor(translationKeyStore: MessageStoreFigmaRoot | undefined) {
     this.translationKeyStore = translationKeyStore;
 
     if (translationKeyStore === undefined) {
@@ -612,7 +612,7 @@ export default class LocalizedLabelManager {
     }
   }
 
-  async updateFrameProperties(frameNodeId: string, properties: { language?: Language, sampleValues?: boolean }) {
+  async updateFrameProperties(frameNodeId: string, properties: { language?: Locale, sampleValues?: boolean }) {
     const frame = figma.getNodeById(frameNodeId) as FrameNode;
     if (!frame) {
       return;
@@ -961,12 +961,12 @@ export default class LocalizedLabelManager {
 
     // if no plural id is specified than we fall back to "other" - the default plural
     const pluralId = node.getPluginData(this.keyPluralDataKey) === '' ? Plural.OTHER : node.getPluginData(this.keyPluralDataKey);
-    const language = node.getPluginData(this.languageDataKey) === '' ? this.translationKeyStore!.getConfigSync().baseLanguage! : node.getPluginData(this.languageDataKey) as Language;
+    const language = node.getPluginData(this.languageDataKey) === '' ? this.translationKeyStore!.getConfigSync().baseLanguage! : node.getPluginData(this.languageDataKey) as Locale;
     const keyVersion = node.getPluginData(this.keyVersionDataKey) === '' ? -1 : parseInt(node.getPluginData(this.keyVersionDataKey), 10);
 
     const keyType = node.getPluginData(this.keyTypeDataKey) === '' || node.getPluginData(this.keyTypeDataKey) === undefined ? KeyState.Unset : node.getPluginData(this.keyTypeDataKey) as KeyState;
     const key = node.getPluginData(this.keyDataKey) === '' ? undefined : node.getPluginData(this.keyDataKey);
-    const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === '' ? this.translationKeyStore!.getConfigSync().baseLanguage! : rootFrame.getPluginData(this.languageDataKey) as Language;
+    const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === '' ? this.translationKeyStore!.getConfigSync().baseLanguage! : rootFrame.getPluginData(this.languageDataKey) as Locale;
     const rootFrameUseSampleValues = rootFrame.getPluginData(this.sampleValuesDataKey) !== '';
     const useSampleValues = node.getPluginData(this.sampleValuesDataKey) !== '';
 

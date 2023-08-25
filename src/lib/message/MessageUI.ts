@@ -1,15 +1,15 @@
 /* eslint-disable no-plusplus */
-import { Language } from './variants/Locale';
+import { Locale } from './variants/Locale';
 import { Plural, getPluralFormsByLanguage } from './variants/Plural';
 import {
-  Fillins, HistoryEntry, Placeholder, PlaceholderType, PlaceholdersByName, TranslationKey, Translations,
+  Fillins, HistoryEntry, Placeholder, PlaceholderType, PlaceholdersByName, Message, Variants,
 } from './Message';
 
-export interface UITranslationKeyStore {
-  getBaseLanugage(): Language | undefined
+export interface MessageStoreUI {
+  getBaseLanugage(): Locale | undefined
 }
 
-export class UITranslationKey implements TranslationKey {
+export class MessageUI implements Message {
   id: string;
 
   keyName: string;
@@ -26,7 +26,8 @@ export class UITranslationKey implements TranslationKey {
   labels: string[];
 
   translations: {
-    [language in Language]? : {
+    [language in Locale]? : {
+      // TODO #10 add gender
       [plural in Plural]? : {
         version: number,
         text?: string,
@@ -44,11 +45,11 @@ export class UITranslationKey implements TranslationKey {
 
   history: HistoryEntry[];
 
-  keyStore: UITranslationKeyStore;
+  keyStore: MessageStoreUI;
 
   referencingTextNodes: string[];
 
-  constructor(keyStore: UITranslationKeyStore, key: TranslationKey) {
+  constructor(keyStore: MessageStoreUI, key: Message) {
     this.keyStore = keyStore;
     this.id = key.id;
     this.keyName = key.keyName;
@@ -64,7 +65,7 @@ export class UITranslationKey implements TranslationKey {
     this.defaultFillins = key.defaultFillins ? key.defaultFillins : {};
   }
 
-  getHistoryEntry(language: Language, plural: Plural, version: number) : HistoryEntry | undefined {
+  getHistoryEntry(language: Locale, plural: Plural, version: number) : HistoryEntry | undefined {
     // iterate backward until we have a match
     let currentVersion = version;
     while (currentVersion >= 0) {
@@ -76,7 +77,7 @@ export class UITranslationKey implements TranslationKey {
     return undefined;
   }
 
-  getChangesSince(language: Language, plural: Plural, version: number) {
+  getChangesSince(language: Locale, plural: Plural, version: number) {
     let changeCounter = 0;
 
     let currentVersion = this.latestVersion;
@@ -211,7 +212,7 @@ export class UITranslationKey implements TranslationKey {
    * - how shall we flag false positives - parameters that are not needed in a specific language?
    *
    */
-  static extractParameters(translations: Translations, baseLanguage: Language, includePluralForms: boolean) : PlaceholdersByName {
+  static extractParameters(translations: Variants, baseLanguage: Locale, includePluralForms: boolean) : PlaceholdersByName {
     // a placeholder can be processed in two ways:
     // 1. with a argument postion [[1:...]]
     // - the first placeholder with a specific argument postion wins
@@ -233,13 +234,13 @@ export class UITranslationKey implements TranslationKey {
     // base lang has priority
     if (translations[baseLanguage]) {
       // console.log('extracting baselanguage');
-      UITranslationKey.extractPlaceholdersInLanguage(translations, baseLanguage, includePluralForms, processedPlaceholders, placeholdersWithArgumentPosition, placeholdersWithoutArgumentPosition);
+      MessageUI.extractPlaceholdersInLanguage(translations, baseLanguage, includePluralForms, processedPlaceholders, placeholdersWithArgumentPosition, placeholdersWithoutArgumentPosition);
     }
 
     for (const [language] of Object.entries(translations)) {
       if (language !== baseLanguage) {
         // console.log(`extracting language${baseLang}`);
-        UITranslationKey.extractPlaceholdersInLanguage(translations, language as Language, includePluralForms, processedPlaceholders, placeholdersWithArgumentPosition, placeholdersWithoutArgumentPosition);
+        MessageUI.extractPlaceholdersInLanguage(translations, language as Locale, includePluralForms, processedPlaceholders, placeholdersWithArgumentPosition, placeholdersWithoutArgumentPosition);
       }
     }
 
@@ -276,7 +277,7 @@ export class UITranslationKey implements TranslationKey {
     return placeholders;
   }
 
-  private static extractPlaceholdersInLanguage(translations: Translations, language: Language, plurals: boolean, processedPlaceholders: { [placeholderName: string]: boolean; }, placeholdersWithArgumentPosition: Placeholder[], placeholdersWithoutArgumentPosition: Placeholder[]) {
+  private static extractPlaceholdersInLanguage(translations: Variants, language: Locale, plurals: boolean, processedPlaceholders: { [placeholderName: string]: boolean; }, placeholdersWithArgumentPosition: Placeholder[], placeholdersWithoutArgumentPosition: Placeholder[]) {
     // plural priority is defined by the PluralFormsByLanguage map
     for (const plural of getPluralFormsByLanguage(language)) {
       if (!plurals && plural !== Plural.OTHER) {
@@ -284,7 +285,7 @@ export class UITranslationKey implements TranslationKey {
         continue;
       }
       if (translations[language]![plural]?.text) {
-        const placeHoldersInText = UITranslationKey.extractPlaceholdersInText(translations[language]![plural]!.text!);
+        const placeHoldersInText = MessageUI.extractPlaceholdersInText(translations[language]![plural]!.text!);
         for (const placeHolderInText of placeHoldersInText) {
           if (processedPlaceholders[placeHolderInText.name] === true) {
             // NOTHING TO DO - placeholder got a fixed position already;
@@ -341,7 +342,7 @@ export class UITranslationKey implements TranslationKey {
       referencingTextNodes: this.referencingTextNodes,
       defaultFillins: this.defaultFillins,
       placeholders: this.placeholders,
-    } as TranslationKey;
+    } as Message;
 
     for (let versionI = 0; versionI <= version; versionI++) {
       const currentVersion = this.history[versionI];
@@ -356,20 +357,20 @@ export class UITranslationKey implements TranslationKey {
       }
 
       for (const [languageId, language] of Object.entries(currentVersion.translations)) {
-        if (!translationKeyInVersion.translations[languageId as Language]) {
-          translationKeyInVersion.translations[languageId as Language] = {};
+        if (!translationKeyInVersion.translations[languageId as Locale]) {
+          translationKeyInVersion.translations[languageId as Locale] = {};
         }
 
         for (const [pluralId, plural] of Object.entries(language)) {
-          if (!translationKeyInVersion.translations[languageId as Language]![pluralId as Plural]) {
-            translationKeyInVersion.translations[languageId as Language]![pluralId as Plural] = {
+          if (!translationKeyInVersion.translations[languageId as Locale]![pluralId as Plural]) {
+            translationKeyInVersion.translations[languageId as Locale]![pluralId as Plural] = {
               skip: plural.skip!,
               verified: plural.verified ?? false,
               text: plural.text,
               version: versionI,
             };
           } else {
-            const currentPlural = translationKeyInVersion.translations[languageId as Language]![pluralId as Plural]!;
+            const currentPlural = translationKeyInVersion.translations[languageId as Locale]![pluralId as Plural]!;
             currentPlural.skip = plural.skip ?? currentPlural.skip;
             currentPlural.version = versionI;
             currentPlural.verified = plural.verified ?? currentPlural.verified;

@@ -7,7 +7,7 @@ import '../../localization/i18n';
 import LanguageSetup from '../../compontents/languageSetup/LanguageSetup';
 
 import './Onboarding.css';
-import { Language } from '../../../lib/message/variants/Locale';
+import { Locale } from '../../../lib/message/variants/Locale';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import WindowManagerUi from '../../../lib/windowManager/WindowManagerUI';
 
@@ -20,8 +20,8 @@ export default function Onboarding({
   labelManager,
   onFinishSetup,
 }: OnboardingProps) {
-  const [selectedLanguages, setSelectedLanguages] = useState<Language[]>(labelManager.keyStore.getLanugages() ?? []);
-  const [selectedBaseLanguage, setSelectedBaseLanguage] = useState<Language | undefined>(labelManager.keyStore.getBaseLanugage());
+  const [selectedLanguages, setSelectedLanguages] = useState<Locale[]>(labelManager.keyStore.getLanugages() ?? []);
+  const [selectedBaseLanguage, setSelectedBaseLanguage] = useState<Locale | undefined>(labelManager.keyStore.getBaseLanugage());
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollHeightCheckInterval = useRef<any | undefined>(undefined);
 
@@ -62,7 +62,7 @@ export default function Onboarding({
           labelManager={labelManager}
           baseLanguage={selectedBaseLanguage}
           activeLanguages={selectedLanguages}
-          onChange={async (baselanguage: Language, activeLanguages: Language[]) => {
+          onChange={async (baselanguage: Locale, activeLanguages: Locale[]) => {
             setSelectedBaseLanguage(baselanguage);
             setSelectedLanguages(activeLanguages);
             

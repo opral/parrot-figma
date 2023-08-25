@@ -1,13 +1,13 @@
 /* eslint-disable no-plusplus */
 /* eslint-disable no-await-in-loop */
-import { Language } from '../variants/Locale';
+import { Locale } from '../variants/Locale';
 import { Plural, getPluralFormsByLanguage } from '../variants/Plural';
 import {
   Fillins,
-  HistoryEntry, HistoryTag, PlaceholdersByName, TranslationEntry, TranslationKey, TranslationKeys,
+  HistoryEntry, HistoryTag, PlaceholdersByName, TranslationEntry, Message, Messages,
 } from '../Message';
-import { Config, FigmaFileTranslationKeyStore } from './MessageStoreFigmaRoot';
-import { UITranslationKey } from '../MessageUI';
+import { Config, MessageStoreFigmaRoot } from './MessageStoreFigmaRoot';
+import { MessageUI } from '../MessageUI';
 import { NodeSelection } from '../../localizedlabels/LocalizedLabelManager';
 
 export type SearchQuery = {
@@ -29,7 +29,7 @@ export type SearchResult = {
   inText: Set<string>,
   withMissingTranslations: Set<string>,
   withMissingTranslationsPerLanguage: {
-    [language in Language]? : Set<string>
+    [language in Locale]? : Set<string>
   },
   withMissingReview: Set<string>,
   matchingKeys: Set<string>,
@@ -38,26 +38,26 @@ export type SearchResult = {
   matches: { [key: string] : {
     keyMatch: { start: number, length: number } | undefined,
     textMatches: {
-      [language in Language]?: { [plural in Plural]?: { start: number, length: number } }
+      [language in Locale]?: { [plural in Plural]?: { start: number, length: number } }
     }
   } },
 
 };
 
-export interface UITranslationKeys {
-  [keyName: string]: UITranslationKey
+export interface MessagesUI {
+  [keyName: string]: MessageUI
 }
 
-export default class MemoryTranslationKeyStore extends EventTarget {
-  parentKeyStore: FigmaFileTranslationKeyStore;
+export default class MessageStoreMemory extends EventTarget {
+  parentKeyStore: MessageStoreFigmaRoot;
 
   config: Config | undefined;
 
   historyTags: HistoryTag[] = [];
 
-  translationKeys: UITranslationKeys = { };
+  translationKeys: MessagesUI = { };
 
-  constructor(parentKeyStore: FigmaFileTranslationKeyStore) {
+  constructor(parentKeyStore: MessageStoreFigmaRoot) {
     super();
     this.parentKeyStore = parentKeyStore;
 
@@ -132,9 +132,9 @@ export default class MemoryTranslationKeyStore extends EventTarget {
     this.dispatchEvent(event);
   }
 
-  private async upsertCache(translationKey: TranslationKey): Promise<UITranslationKey> {
+  private async upsertCache(translationKey: Message): Promise<MessageUI> {
     debugger;
-    this.translationKeys[translationKey.id] = new UITranslationKey(this, translationKey);
+    this.translationKeys[translationKey.id] = new MessageUI(this, translationKey);
     return this.translationKeys[translationKey.id];
   }
 
@@ -142,11 +142,11 @@ export default class MemoryTranslationKeyStore extends EventTarget {
     delete this.translationKeys[id];
   }
 
-  getLanugages(): Language[] | undefined {
+  getLanugages(): Locale[] | undefined {
     return this.config!.enabledLanguages;
   }
 
-  async setLanguages(languages: Language[]) {
+  async setLanguages(languages: Locale[]) {
     this.config!.enabledLanguages = languages;
     const parentConfig = await this.parentKeyStore.getConfig();
 
@@ -154,11 +154,11 @@ export default class MemoryTranslationKeyStore extends EventTarget {
     await this.parentKeyStore.setConfig(parentConfig);
   }
 
-  getBaseLanugage(): Language | undefined {
+  getBaseLanugage(): Locale | undefined {
     return this.config!.baseLanguage;
   }
 
-  async setBaseLanguage(language: Language) {
+  async setBaseLanguage(language: Locale) {
     this.config!.baseLanguage = language;
     const parentConfig = await this.parentKeyStore.getConfig();
     parentConfig.baseLanguage = language;
@@ -175,8 +175,8 @@ export default class MemoryTranslationKeyStore extends EventTarget {
     return tagIndex;
   }
 
-  getTranslationsByKeyName(language: Language, versionId: string | undefined): { [keyName: string]: TranslationEntry } {
-    const translationKeys = {} as { [id: string]: TranslationKey };
+  getTranslationsByKeyName(language: Locale, versionId: string | undefined): { [keyName: string]: TranslationEntry } {
+    const translationKeys = {} as { [id: string]: Message };
 
     const tagIndex = versionId ? this.getTagIndexByVersionId(versionId) : -1;
 
@@ -196,11 +196,11 @@ export default class MemoryTranslationKeyStore extends EventTarget {
     return translationKeys;
   }
 
-  getKey(id: string) : UITranslationKey | undefined {
+  getKey(id: string) : MessageUI | undefined {
     return this.translationKeys[id];
   }
 
-  getKeyByName(messageName: string) : UITranslationKey | undefined {
+  getKeyByName(messageName: string) : MessageUI | undefined {
     for (const message of Object.values(this.translationKeys)) {
       if (message.keyName === messageName) {
         return message;
@@ -375,7 +375,7 @@ export default class MemoryTranslationKeyStore extends EventTarget {
       inText: new Set<string>(),
       withMissingTranslations: new Set<string>(),
       withMissingTranslationsPerLanguage: { } as {
-        [language in Language]? : Set<string>
+        [language in Locale]? : Set<string>
       },
       withMissingReview: new Set<string>(),
       matchingKeys: new Set<string>(),
@@ -384,7 +384,7 @@ export default class MemoryTranslationKeyStore extends EventTarget {
       matches: {} as { [key:string] : {
         keyMatch: { start: number, length: number } | undefined,
         textMatches: {
-          [language in Language]?: { [plural in Plural]?: { start: number, length: number } }
+          [language in Locale]?: { [plural in Plural]?: { start: number, length: number } }
         }
       } },
     };
@@ -403,7 +403,7 @@ export default class MemoryTranslationKeyStore extends EventTarget {
     for (const key of Object.values(this.translationKeys)) {
       for (const language of this.getLanugages()!) {
         const plurals = key.translations[language];
-        for (const plural of getPluralFormsByLanguage(language as Language)) {
+        for (const plural of getPluralFormsByLanguage(language as Locale)) {
           if (query.text === undefined || query.text === '') {
             results.matchingKeys.add(key.id);
           } else if (plurals?.[plural]?.text !== undefined) {
@@ -414,10 +414,10 @@ export default class MemoryTranslationKeyStore extends EventTarget {
                 results.matches[key.id] = { textMatches: {}, keyMatch: undefined };
               }
 
-              if (!results.matches[key.id].textMatches![language as Language]) {
-                results.matches[key.id].textMatches![language as Language]! = {};
+              if (!results.matches[key.id].textMatches![language as Locale]) {
+                results.matches[key.id].textMatches![language as Locale]! = {};
               }
-              results.matches[key.id].textMatches![language as Language]![plural as Plural] = { start: matchStartText, length: query.text.length };
+              results.matches[key.id].textMatches![language as Locale]![plural as Plural] = { start: matchStartText, length: query.text.length };
               results.matchingKeys.add(key.id);
               results.inText.add(key.id);
             }
@@ -514,7 +514,7 @@ export default class MemoryTranslationKeyStore extends EventTarget {
     return this.historyTags[tagId];
   }
 
-  async createKey(messageName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean, fillins?: Fillins, quantity?: { value: number } | { placeholder: string }): Promise<UITranslationKey> {
+  async createKey(messageName: string, translations: { language: Locale; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean, fillins?: Fillins, quantity?: { value: number } | { placeholder: string }): Promise<MessageUI> {
     if (messageName === '') {
       throw new Error('keys mus have at least one character');
     }
@@ -524,7 +524,7 @@ export default class MemoryTranslationKeyStore extends EventTarget {
 
   async updateKey(id: string, properties: {
     name?: string,
-    translations: { language: Language, plural: Plural, text: string | undefined, skip: boolean }[],
+    translations: { language: Locale, plural: Plural, text: string | undefined, skip: boolean }[],
     plural?: boolean,
     fillins?: Fillins,
     quantity?: { value: number } | { placeholder: string }
@@ -538,15 +538,15 @@ export default class MemoryTranslationKeyStore extends EventTarget {
     this.removeCache(id);
   }
 
-  async load(): Promise<UITranslationKeys> {
+  async load(): Promise<MessagesUI> {
     this.config = await this.parentKeyStore.getConfig();
     this.historyTags = await this.parentKeyStore.getHistoryTags();
-    this.translationKeys = {} as UITranslationKeys;
+    this.translationKeys = {} as MessagesUI;
 
     const allTranslationKeys = await this.parentKeyStore.load();
     
     for (const key of Object.values(allTranslationKeys)) {
-      this.translationKeys[key.id] = new UITranslationKey(this, key);
+      this.translationKeys[key.id] = new MessageUI(this, key);
     }
     return this.translationKeys;
   }

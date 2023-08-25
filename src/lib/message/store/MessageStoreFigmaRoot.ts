@@ -4,26 +4,26 @@
 import TextEncoding from 'text-encoding';
 
 import blake from 'blakejs';
-import { Language } from '../variants/Locale';
+import { Locale } from '../variants/Locale';
 import { Plural } from '../variants/Plural';
 import {
-  HistoryTag, HistoryEntry, TranslationKey, TranslationKeys, PlaceholdersByName, Fillins, PlaceholderType,
+  HistoryTag, HistoryEntry, Message, Messages, PlaceholdersByName, Fillins, PlaceholderType,
 } from '../Message';
-import { UITranslationKey } from '../MessageUI';
+import { MessageUI } from '../MessageUI';
 
 const encoder = new TextEncoding.TextEncoder();
 
 export interface Config {
-  baseLanguage?: Language,
-  enabledLanguages?: Language[]
+  baseLanguage?: Locale,
+  enabledLanguages?: Locale[]
 }
 
 const defaultStringFillinValue = 'Loren Impsum';
 const defaultDecimalFillinValue = 7;
 const defaultFloatFillinValue = Math.PI;
 
-export class FigmaFileTranslationKeyStore {
-  public proxyClassName = 'FigmaFileTranslationKeyStore';
+export class MessageStoreFigmaRoot {
+  public proxyClassName = 'MessageStoreFigmaRoot';
 
   public static configDataKey = 'aar_c';
 
@@ -115,7 +115,7 @@ export class FigmaFileTranslationKeyStore {
   }
 
   getConfigSync() {
-    const keyRaw = figma.root.getPluginData(FigmaFileTranslationKeyStore.configDataKey);
+    const keyRaw = figma.root.getPluginData(MessageStoreFigmaRoot.configDataKey);
 
     if (keyRaw === '' || !keyRaw) {
       return {
@@ -132,11 +132,11 @@ export class FigmaFileTranslationKeyStore {
   }
 
   async setConfig(languageConfig: Config) {
-    figma.root.setPluginData(FigmaFileTranslationKeyStore.configDataKey, JSON.stringify(languageConfig));
+    figma.root.setPluginData(MessageStoreFigmaRoot.configDataKey, JSON.stringify(languageConfig));
   }
 
   getHistoryTagsSync() {
-    const tagsRaw = figma.root.getPluginData(FigmaFileTranslationKeyStore.tagsDataKey);
+    const tagsRaw = figma.root.getPluginData(MessageStoreFigmaRoot.tagsDataKey);
     let currentTags = [] as HistoryTag[];
     if (tagsRaw !== '') {
       currentTags = JSON.parse(tagsRaw) as HistoryTag[];
@@ -160,7 +160,7 @@ export class FigmaFileTranslationKeyStore {
       title,
       description,
     };
-    figma.root.setPluginData(FigmaFileTranslationKeyStore.tagsDataKey, JSON.stringify(currentTags));
+    figma.root.setPluginData(MessageStoreFigmaRoot.tagsDataKey, JSON.stringify(currentTags));
 
     // add tag to all keys
     for (const keyWithPrefix of figma.root.getPluginDataKeys()) {
@@ -173,7 +173,7 @@ export class FigmaFileTranslationKeyStore {
             continue;
           }
 
-          const key = keyAny as TranslationKey;
+          const key = keyAny as Message;
           if (!key.historyTags) {
             key.historyTags = [];
           }
@@ -189,7 +189,7 @@ export class FigmaFileTranslationKeyStore {
     // add version entry in figma file
     const versionHistoryEntry = await figma.saveVersionHistoryAsync(title, description);
     currentTags[tagId].versionId = versionHistoryEntry.id;
-    figma.root.setPluginData(FigmaFileTranslationKeyStore.tagsDataKey, JSON.stringify(currentTags));
+    figma.root.setPluginData(MessageStoreFigmaRoot.tagsDataKey, JSON.stringify(currentTags));
 
     return currentTags[tagId];
   }
@@ -236,7 +236,7 @@ export class FigmaFileTranslationKeyStore {
   getKeyByName(keyName: string) {
     let currentBuket = 0;
     let id = this.createKeyId(keyName, currentBuket);
-    let message = undefined as TranslationKey | undefined;
+    let message = undefined as Message | undefined;
 
     while (figma.root.getPluginData(`${this.keyPrefix}${id}`) !== '') {
       message = this.resolveMessageReference(id, keyName);
@@ -249,7 +249,7 @@ export class FigmaFileTranslationKeyStore {
     return undefined;
   }
 
-  resolveMessageReference(id: string, name: string): TranslationKey | undefined {
+  resolveMessageReference(id: string, name: string): Message | undefined {
     const referencedMessageRaw = figma.root.getPluginData(`${this.keyPrefix}${id}`);
     if (referencedMessageRaw === '' || !referencedMessageRaw) {
       return undefined;
@@ -264,7 +264,7 @@ export class FigmaFileTranslationKeyStore {
     return undefined;
   }
 
-  getKey(id: string): TranslationKey | undefined {
+  getKey(id: string): Message | undefined {
     const keyRaw = figma.root.getPluginData(this.keyPrefix + id);
 
     if (keyRaw === '' || !keyRaw) {
@@ -277,7 +277,7 @@ export class FigmaFileTranslationKeyStore {
       return undefined;
     }
 
-    const key = keyAny as TranslationKey;
+    const key = keyAny as Message;
 
 
     // this is where we add the id from the bucket it was found in
@@ -324,7 +324,7 @@ export class FigmaFileTranslationKeyStore {
     return this.getKey(id);
   }
 
-  private async persistKey(translationKeyPased: TranslationKey): Promise<TranslationKey> {
+  private async persistKey(translationKeyPased: Message): Promise<Message> {
     const translationKey = translationKeyPased;
     const keyCurrentVersion = this.getKey(translationKey.id);
 
@@ -334,7 +334,7 @@ export class FigmaFileTranslationKeyStore {
 
     // find differences
     for (const language of Object.keys(translationKey.translations)) {
-      const currentLanguage = language as Language;
+      const currentLanguage = language as Locale;
 
       for (const plural of Object.keys(translationKey.translations[currentLanguage]!)) {
         const currentPlural = plural as Plural;
@@ -378,7 +378,7 @@ export class FigmaFileTranslationKeyStore {
       historyEntry.plural = translationKey.plural;
     }
 
-    if (!keyCurrentVersion || FigmaFileTranslationKeyStore.arraysAreEqual(translationKey.labels, keyCurrentVersion.labels)) {
+    if (!keyCurrentVersion || MessageStoreFigmaRoot.arraysAreEqual(translationKey.labels, keyCurrentVersion.labels)) {
       if (!historyEntry) {
         historyEntry = { user: userId, date: dateOfChange };
       }
@@ -466,7 +466,7 @@ export class FigmaFileTranslationKeyStore {
     return true;
   }
 
-  async createKey(keyName: string, translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean, quantity?: { value: number } | { placeholder: string }, defaultFillins?: Fillins): Promise<TranslationKey> {
+  async createKey(keyName: string, translations: { language: Locale; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean, quantity?: { value: number } | { placeholder: string }, defaultFillins?: Fillins): Promise<Message> {
     const existingKey = this.getKeyByName(keyName);
     if (existingKey) {
       throw Error('tried to create a key that already existed');
@@ -485,7 +485,7 @@ export class FigmaFileTranslationKeyStore {
       translationsObj[translation.language][translation.plural].text = translation.text;
     }
 
-    const placeholders = UITranslationKey.extractParameters(translationsObj, this.getConfigSync().baseLanguage!, plural);
+    const placeholders = MessageUI.extractParameters(translationsObj, this.getConfigSync().baseLanguage!, plural);
 
     const unusedId = this.findUnusedId(keyName);
     const createdKey = {
@@ -501,17 +501,17 @@ export class FigmaFileTranslationKeyStore {
       defaultFillins,
       history: [], // first history entry will be added in persistKey method...
       historyTags: [],
-    } as TranslationKey;
+    } as Message;
     return this.persistKey(createdKey);
   }
 
   async updateKey(keyId: string, properties: {
     name?: string,
-    translations: { language: Language; plural: Plural; text: string | undefined; skip: boolean }[], 
+    translations: { language: Locale; plural: Plural; text: string | undefined; skip: boolean }[], 
     plural?: boolean, 
     quantity?: { value: number } | { placeholder: string }, 
     defaultFillins?: Fillins
-  }): Promise<TranslationKey> {
+  }): Promise<Message> {
     // this one gets a deep clone of the key
     const keyToUpdate = this.getKey(keyId);
     let changeFound = false;
@@ -556,7 +556,7 @@ export class FigmaFileTranslationKeyStore {
       keyToUpdate.plural = properties.plural;
     }
 
-    const placeholders = UITranslationKey.extractParameters(keyToUpdate.translations, this.getConfigSync().baseLanguage!, keyToUpdate.plural);
+    const placeholders = MessageUI.extractParameters(keyToUpdate.translations, this.getConfigSync().baseLanguage!, keyToUpdate.plural);
 
     if (JSON.stringify(keyToUpdate.placeholders) !== JSON.stringify(placeholders)) {
       changeFound = true;
@@ -589,8 +589,8 @@ export class FigmaFileTranslationKeyStore {
     figma.root.setPluginData(this.keyHistoryPrefix + keyId, '');
   }
 
-  async load(): Promise<TranslationKeys> {
-    const translationKeys = {} as TranslationKeys;
+  async load(): Promise<Messages> {
+    const translationKeys = {} as Messages;
     for (const keyWithPrefix of figma.root.getPluginDataKeys()) {
       if (keyWithPrefix.startsWith(this.keyPrefix)) {
         const key = keyWithPrefix.substring(this.keyPrefix.length, keyWithPrefix.length);

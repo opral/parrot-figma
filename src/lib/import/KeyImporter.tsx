@@ -1,9 +1,9 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-continue */
 /* eslint-disable no-plusplus */
-import { Language } from '../message/variants/Locale';
+import { Locale } from '../message/variants/Locale';
 import { Plural } from '../message/variants/Plural';
-import MemoryTranslationKeyStore from '../message/store/MessageStoreMemory';
+import MessageStoreMemory from '../message/store/MessageStoreMemory';
 
 import AppleStringsFileImporter from './AppleStringsFileImporter';
 import AndroidXMLImporter from './AndroidXmlImporter';
@@ -12,13 +12,13 @@ import { ImportTranslationKey } from './ImportTranslationKey';
 import LocalizedLabelManagerUI from '../localizedlabels/LocalizedLabelManagerUI';
 import I18NextKeyValueImporter from './I18Next';
 
-function toChangeArray(importKey: ImportTranslationKey, language: Language) {
+function toChangeArray(importKey: ImportTranslationKey, language: Locale) {
   return [{
     language,
     plural: importKey.plural,
     text: importKey.text,
     skip: false,
-  }] as { language: Language; plural: Plural; text: string | undefined; skip: boolean }[];
+  }] as { language: Locale; plural: Plural; text: string | undefined; skip: boolean }[];
 }
 
 export enum ImportType {
@@ -35,7 +35,7 @@ export type ImportResult = {
 };
 
 export default class KeyImporter {
-  static getImportStatistics(keyStore: MemoryTranslationKeyStore, importKeys: ImportTranslationKey[], language: Language) {
+  static getImportStatistics(keyStore: MessageStoreMemory, importKeys: ImportTranslationKey[], language: Locale) {
     const changedKeys = {
       language,
       newKeys: [] as ImportTranslationKey[],
@@ -93,7 +93,7 @@ export default class KeyImporter {
     return results;
   }
 
-  static async import(labelManager: LocalizedLabelManagerUI, keysToImport: ImportTranslationKey[], language: Language) {
+  static async import(labelManager: LocalizedLabelManagerUI, keysToImport: ImportTranslationKey[], language: Locale) {
     for (const keyToImport of keysToImport) {
       const currentKey = labelManager.keyStore.getKeyByName(keyToImport.keyName);
       if (!currentKey) {

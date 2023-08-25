@@ -1,4 +1,4 @@
-import { Language } from './variants/Locale';
+import { Locale } from './variants/Locale';
 import { Plural } from './variants/Plural';
 import { Gender } from './variants/Gender';
 
@@ -10,10 +10,12 @@ export type HistoryTag = {
   versionId?: string,
 };
 
+// TODO #10 rename to variant Entry
 export type TranslationEntry = {
   plural: boolean,
   translations?: {
-    [language in Language]? : {
+    [language in Locale]? : {
+      // TODO #10 add gender
       [plural in Plural]? : {
         text?: string,
         baseLangHash?: string,
@@ -31,7 +33,8 @@ export type HistoryEntry = {
   plural?: boolean,
   labels?: string[],
   translations?: {
-    [language in Language]? : {
+    [language in Locale]? : {
+      // TODO #10 add gender
       [plural in Plural]? : {
         text?: string,
         verified?: boolean,
@@ -58,7 +61,7 @@ export interface Placeholder {
 
   // the argumentPosition is fixed by the first apearance - this can lead to conflicts like same parameter has different arumentPostions set or multiple placeholders block the same position
   // in such cases it will be ignored
-  positionSpecifiedByLanguage?: Language,
+  positionSpecifiedByLanguage?: Locale,
   positionSpecifiedInPlural?: Plural,
 
   positionInString: number,
@@ -73,8 +76,10 @@ export interface Fillins {
   [placeholderName: string]: { value: string | number, default?: boolean }
 }
 
-export type Translations = {
-  [language in Language]? : {
+// TODO #10 rename to variants
+export type Variants = {
+  [language in Locale]? : {
+    // TODO #10 [gender in Gender]? : {
     [plural in Plural]? : {
       version: number,
       text?: string,
@@ -92,7 +97,7 @@ export type Translations = {
 // additional like qa done, tags should be stored separately?
 //
 
-export interface SerializableTranslationKey {
+export interface SerializableMessage {
   id: string,
   keyName: string,
   latestVersion: number,
@@ -103,16 +108,16 @@ export interface SerializableTranslationKey {
   labels: string[],
   referencingTextNodes: string[],
   plural: boolean,
-  translations: Translations,
+  translations: Variants,
   quantity: { value: number } | { placeholder: string },
   placeholders: PlaceholdersByName,
   defaultFillins: Fillins
 }
 
-export interface TranslationKey extends SerializableTranslationKey {
+export interface Message extends SerializableMessage {
   history: HistoryEntry[]
 }
 
-export interface TranslationKeys {
-  [keyName: string]: TranslationKey
+export interface Messages {
+  [keyName: string]: Message
 }

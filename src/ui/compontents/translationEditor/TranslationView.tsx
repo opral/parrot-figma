@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { UITranslationKey } from '../../../lib/message/MessageUI';
+import { MessageUI } from '../../../lib/message/MessageUI';
 import { PlaceholderView } from './PlaceholderView';
 
 type TranslationViewProps = {
@@ -12,7 +12,7 @@ export default function TranslationView({
   text,
 }: TranslationViewProps) {
   const result = [];
-  const placeholders = UITranslationKey.extractPlaceholdersInText(text);
+  const placeholders = MessageUI.extractPlaceholdersInText(text);
   const fixedPosition = 3; // TODO #8 source this from the keys parameters instead
   let lastEnd = 0;
   let placeHolderIndex = 0;

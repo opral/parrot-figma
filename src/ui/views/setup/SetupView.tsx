@@ -6,7 +6,7 @@ import { useState } from 'react';
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
-import { Language } from '../../../lib/message/variants/Locale';
+import { Locale } from '../../../lib/message/variants/Locale';
 import LanguageSetup from '../../compontents/languageSetup/LanguageSetup';
 
 type SetupViewProps = {
@@ -21,7 +21,7 @@ export default function SetupView({
       labelManager={labelManager}
       baseLanguage={labelManager.keyStore.getBaseLanugage()}
       activeLanguages={labelManager.keyStore.getLanugages()!}
-      onChange={async (baselanguage: Language, activeLanguages: Language[]) => {
+      onChange={async (baselanguage: Locale, activeLanguages: Locale[]) => {
         
         await labelManager.keyStore.setBaseLanguage(baselanguage);
         await labelManager.keyStore.setLanguages(activeLanguages);

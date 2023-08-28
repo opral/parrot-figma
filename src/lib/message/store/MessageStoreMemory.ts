@@ -4,11 +4,12 @@ import { Locale } from '../variants/Locale';
 import { Plural, getPluralFormsByLanguage } from '../variants/Plural';
 import {
   Fillins,
-  HistoryEntry, HistoryTag, PlaceholdersByName, MessageEntry, Message, Messages,
+  HistoryTag, MessageEntry, Message,
 } from '../Message';
 import { Config, MessageStoreFigmaRoot } from './MessageStoreFigmaRoot';
 import { MessageUI } from '../MessageUI';
 import { NodeSelection } from '../../localizedlabels/LocalizedLabelManager';
+import { Gender, genderList } from '../variants/Gender';
 
 export type SearchQuery = {
   selected?: 'FRAME' | 'LABEL' | undefined,
@@ -16,8 +17,8 @@ export type SearchQuery = {
   oneLabelOf?: string[] | undefined,
   unverified?: boolean | undefined,
   missingTranslation?: boolean | undefined,
-  key?: string | undefined, // suggestion n with key
-  keyAtEnd?: boolean | undefined,
+  name?: string | undefined,
+  nameAtEnd?: boolean | undefined,
   text?: string | undefined,
   exactText?: boolean | undefined,
   searchString?: string | undefined,
@@ -25,20 +26,20 @@ export type SearchQuery = {
 
 export type SearchResult = {
 
-  inKeys: Set<string>,
+  inNames: Set<string>,
   inText: Set<string>,
-  withMissingTranslations: Set<string>,
-  withMissingTranslationsPerLanguage: {
+  withMissingVariants: Set<string>,
+  withMissingVariantsPerLanguage: {
     [language in Locale]? : Set<string>
   },
   withMissingReview: Set<string>,
-  matchingKeys: Set<string>,
+  matchingNames: Set<string>,
   referencedInFrame: Set<string>,
   referencedInLabels: Set<string>,
-  matches: { [key: string] : {
-    keyMatch: { start: number, length: number } | undefined,
+  matches: { [messageId: string] : {
+    messageNameMatch: { start: number, length: number } | undefined,
     textMatches: {
-      [language in Locale]?: { [plural in Plural]?: { start: number, length: number } }
+      [language in Locale]?: { [gender in Gender]?: { [plural in Plural]?: { start: number, length: number } } }
     }
   } },
 
@@ -70,16 +71,16 @@ export default class MessageStoreMemory extends EventTarget {
     });
   }
 
-  public async updateKeyLinks(keys: string[]) {
+  public async updateMessageLinks(messageIds: string[]) {
     const changes = {
       updated: [] as string[],
-      changedKeys: keys,
+      changedKeys: messageIds,
     };
 
-    for (const updatedKeyLink of keys) {
-      const key = await this.parentKeyStore.getKeyAsync(updatedKeyLink);
-      if (key) {
-        this.upsertCache(key);
+    for (const updatedKeyLink of messageIds) {
+      const message = await this.parentKeyStore.getMessageAsync(updatedKeyLink);
+      if (message) {
+        this.upsertCache(message);
       }
     }
 
@@ -87,7 +88,7 @@ export default class MessageStoreMemory extends EventTarget {
     this.dispatchEvent(event);
   }
 
-  private async processCacheUpdate(changedKeys: { deleted: string[], added: string[], updated: string[] }, updatedHistoryTags: HistoryTag[] | undefined) {
+  private async processCacheUpdate(changedMessages: { deleted: string[], added: string[], updated: string[] }, updatedHistoryTags: HistoryTag[] | undefined) {
     const changes = {
       deleted: [] as string[],
       updated: [] as string[],
@@ -100,27 +101,27 @@ export default class MessageStoreMemory extends EventTarget {
       this.historyTags = updatedHistoryTags;
     }
 
-    for (const deltedKey of changedKeys.deleted) {
+    for (const deltedKey of changedMessages.deleted) {
       this.removeCache(deltedKey);
       changes.deleted.push(deltedKey);
       changes.changedKeys.push(deltedKey);
     }
 
-    for (const updatedKey of changedKeys.updated) {
-      const freshKey = await this.parentKeyStore.getKeyAsync(updatedKey);
+    for (const updatedMessage of changedMessages.updated) {
+      const freshKey = await this.parentKeyStore.getMessageAsync(updatedMessage);
       if (!freshKey) {
-        throw new Error(`fresh key does not exist... [${updatedKey}]`);
+        throw new Error(`fresh message does not exist... [${updatedMessage}]`);
       }
 
       this.upsertCache(freshKey);
-      changes.updated.push(updatedKey);
-      changes.changedKeys.push(updatedKey);
+      changes.updated.push(updatedMessage);
+      changes.changedKeys.push(updatedMessage);
     }
 
-    for (const addedKey of changedKeys.added) {
-      const freshKey = await this.parentKeyStore.getKeyAsync(addedKey);
+    for (const addedKey of changedMessages.added) {
+      const freshKey = await this.parentKeyStore.getMessageAsync(addedKey);
       if (!freshKey) {
-        throw new Error(`fresh key does not exist... [${addedKey}]`);
+        throw new Error(`fresh message does not exist... [${addedKey}]`);
       }
 
       this.upsertCache(freshKey);
@@ -133,7 +134,6 @@ export default class MessageStoreMemory extends EventTarget {
   }
 
   private async upsertCache(message: Message): Promise<MessageUI> {
-    debugger;
     this.messages[message.id] = new MessageUI(this, message);
     return this.messages[message.id];
   }
@@ -175,21 +175,21 @@ export default class MessageStoreMemory extends EventTarget {
     return tagIndex;
   }
 
-  getTranslationsByKeyName(language: Locale, versionId: string | undefined): { [keyName: string]: MessageEntry } {
+  getMessagesByMessageName(language: Locale, versionId: string | undefined): { [messageName: string]: MessageEntry } {
     const messages = {} as { [id: string]: Message };
 
     const tagIndex = versionId ? this.getTagIndexByVersionId(versionId) : -1;
 
-    for (const keyId of Object.keys(this.messages)) {
-      const currentKey = this.messages[keyId];
+    for (const messageId of Object.keys(this.messages)) {
+      const currentMessage = this.messages[messageId];
       if (tagIndex >= 0) {
-        const keyVerson = currentKey.getKeyVersionByTagIndex(tagIndex);
-        if (keyVerson !== undefined) {
-          const keyInVersion = currentKey.getInVersion(keyVerson);
-          messages[keyInVersion.name] = keyInVersion;
+        const messageVersion = currentMessage.getMessageVersionByTagIndex(tagIndex);
+        if (messageVersion !== undefined) {
+          const messageInVersion = currentMessage.getInVersion(messageVersion);
+          messages[messageInVersion.name] = messageInVersion;
         }
-      } else if (currentKey.variants[language]) {
-        messages[currentKey.name] = currentKey;
+      } else if (currentMessage.variants[language]) {
+        messages[currentMessage.name] = currentMessage;
       }
     }
 
@@ -239,9 +239,9 @@ export default class MessageStoreMemory extends EventTarget {
       searchString += 'exact_text:true ';
     }
 
-    if (searchQuery.key !== undefined) {
-      searchString += `key:${searchQuery.key}`;
-      if (!searchQuery.keyAtEnd) {
+    if (searchQuery.name !== undefined) {
+      searchString += `name:${searchQuery.name}`;
+      if (!searchQuery.nameAtEnd) {
         searchString += ' ';
       }
     }
@@ -257,8 +257,8 @@ export default class MessageStoreMemory extends EventTarget {
       hasLabel: [],
       oneLabelOf: [],
       verified: undefined,
-      key: undefined, // suggestion n with key
-      keyAtEnd: false,
+      name: undefined,
+      nameAtEnd: false,
       text: '',
       exactText: false,
       searchString,
@@ -301,9 +301,9 @@ export default class MessageStoreMemory extends EventTarget {
           searchQueryObj.unverified = filterParts[1] === 'true';
         } else if (filterParts[0] === 'exact_text' && filterParts.length > 1) {
           searchQueryObj.exactText = filterParts[1] === 'true';
-        } else if (filterParts[0] === 'key' && filterParts.length > 1) {
+        } else if (filterParts[0] === 'name' && filterParts.length > 1) {
           // eslint-disable-next-line prefer-destructuring
-          searchQueryObj.key = filterParts[1];
+          searchQueryObj.name = filterParts[1];
         } else {
           // eslint-disable-next-line no-continue
           continue;
@@ -314,17 +314,17 @@ export default class MessageStoreMemory extends EventTarget {
       }
     }
 
-    if (!searchQueryObj.key) {
-      // the regex expects a leading space - if we haven't found the key filter yet - try to find it at
+    if (!searchQueryObj.name) {
+      // the regex expects a leading space - if we haven't found the name filter yet - try to find it at
       // the very end
 
-      const keyAtTheEnd = /key:([\w,*:]+)$/g;
-      const matches = processedInputString.match(keyAtTheEnd);
+      const nameAtTheEnd = /name:([\w,*:]+)$/g;
+      const matches = processedInputString.match(nameAtTheEnd);
       if (matches) {
         // eslint-disable-next-line prefer-destructuring
-        searchQueryObj.key = matches[0].split(':')[1];
+        searchQueryObj.name = matches[0].split(':')[1];
         processedInputString = processedInputString.split(matches[0]).join('');
-        searchQueryObj.keyAtEnd = true;
+        searchQueryObj.nameAtEnd = true;
       }
     }
 
@@ -339,18 +339,18 @@ export default class MessageStoreMemory extends EventTarget {
   /**
    * what do we want to search
    * "emission"
-   *  - all keys with "emission" in their name
+   *  - all messageNames with "emission" in their name
    * or
-   *  - all keys with "emission" in their text
+   *  - all messageNames with "emission" in their text
    * or
-   *  - all keys with a tag called "emmission"
+   *  - all messageNames with a tag called "emmission"
    *
-   * key:emision
-   *  - all keys with emmision in their name
+   * name:emision
+   *  - all messageNames with emmision in their name
    *    - asterix not adding a lot of value
    *
    * text:"emision"
-   *  - all keys with emmision in thair text
+   *  - all messageNames with emmision in thair text
    *
    * "translation:missing:de"
    * "translation:complete"
@@ -363,7 +363,7 @@ export default class MessageStoreMemory extends EventTarget {
    *
    * " verified:true "
    *
-   * key:asdasd_asdasd_asd
+   * messageNames:asdasd_asdasd_asd
    *
    * all filter but text have no space, and a leading no space name spearated by colon
    *
@@ -371,20 +371,20 @@ export default class MessageStoreMemory extends EventTarget {
    */
   findKeys(query: SearchQuery, selection?: NodeSelection): SearchResult {
     const results = {
-      inKeys: new Set<string>(),
+      inNames: new Set<string>(),
       inText: new Set<string>(),
-      withMissingTranslations: new Set<string>(),
-      withMissingTranslationsPerLanguage: { } as {
+      withMissingVariants: new Set<string>(),
+      withMissingVariantsPerLanguage: { } as {
         [language in Locale]? : Set<string>
       },
       withMissingReview: new Set<string>(),
-      matchingKeys: new Set<string>(),
+      matchingNames: new Set<string>(),
       referencedInFrame: new Set<string>(),
       referencedInLabels: new Set<string>(),
-      matches: {} as { [key:string] : {
-        keyMatch: { start: number, length: number } | undefined,
+      matches: {} as { [name:string] : {
+        messageNameMatch: { start: number, length: number } | undefined,
         textMatches: {
-          [language in Locale]?: { [plural in Plural]?: { start: number, length: number } }
+          [language in Locale]?: { [gender in Gender]?: { [plural in Plural]?: { start: number, length: number } } }
         }
       } },
     };
@@ -401,102 +401,109 @@ export default class MessageStoreMemory extends EventTarget {
     }
 
     for (const message of Object.values(this.messages)) {
-      for (const language of this.getLanugages()!) {
-        const plurals = message.variants[language];
-        for (const plural of getPluralFormsByLanguage(language as Locale)) {
-          if (query.text === undefined || query.text === '') {
-            results.matchingKeys.add(message.id);
-          } else if (plurals?.[plural]?.text !== undefined) {
-            const matchStartText = plurals[plural]!.text!.toLowerCase().indexOf(query.text.toLowerCase());
-            if ((query.exactText && matchStartText === 0 && plurals[plural]!.text!.length === query.text.length)
-              || (!query.exactText && matchStartText !== -1)) {
-              if (!results.matches[message.id]) {
-                results.matches[message.id] = { textMatches: {}, keyMatch: undefined };
-              }
+      for (const locale of this.getLanugages()!) {
+        for (const gender of genderList) {
+          for (const plural of getPluralFormsByLanguage(locale as Locale)) {
+            const variant = message.variants[locale]?.[gender]?.[plural];
+            if (query.text === undefined || query.text === '') {
+              results.matchingNames.add(message.id);
+            } else if (variant?.text !== undefined) {
+              const matchStartText = variant!.text!.toLowerCase().indexOf(query.text.toLowerCase());
+              if ((query.exactText && matchStartText === 0 && variant!.text!.length === query.text.length)
+                || (!query.exactText && matchStartText !== -1)) {
+                if (!results.matches[message.id]) {
+                  results.matches[message.id] = { textMatches: {}, messageNameMatch: undefined };
+                }
 
-              if (!results.matches[message.id].textMatches![language as Locale]) {
-                results.matches[message.id].textMatches![language as Locale]! = {};
+                if (!results.matches[message.id].textMatches![locale as Locale]) {
+                  results.matches[message.id].textMatches![locale as Locale]! = {};
+                }
+
+                if (!results.matches[message.id].textMatches![locale as Locale]![gender as Gender]) {
+                  results.matches[message.id].textMatches![locale as Locale]![gender as Gender] = {};
+                }
+
+                results.matches[message.id].textMatches![locale as Locale]![gender as Gender]![plural as Plural] = { start: matchStartText, length: query.text.length };
+                results.matchingNames.add(message.id);
+                results.inText.add(message.id);
               }
-              results.matches[message.id].textMatches![language as Locale]![plural as Plural] = { start: matchStartText, length: query.text.length };
-              results.matchingKeys.add(message.id);
-              results.inText.add(message.id);
             }
-          }
 
-          if (plurals?.[plural]?.text === undefined) {
-            if (plurals?.[plural]?.skip !== true) {
-              if (message.plural || plural === Plural.OTHER) {
-                if ((!plurals?.[plural]?.text || plurals?.[plural]?.text === '')) {
-                  if (message.plural || plural === Plural.OTHER) {
-                    results.withMissingTranslations.add(message.id);
+            if (variant?.text === undefined) {
+              if (variant?.skip !== true) {
+                if (message.plural || plural === Plural.OTHER) {
+                  if ((!variant?.text || variant?.text === '')) {
+                    if (message.plural || plural === Plural.OTHER) {
+                      results.withMissingVariants.add(message.id);
 
-                    if (results.withMissingTranslationsPerLanguage[language] === undefined) {
-                      results.withMissingTranslationsPerLanguage[language] = new Set<string>();
+                      if (results.withMissingVariantsPerLanguage[locale] === undefined) {
+                        results.withMissingVariantsPerLanguage[locale] = new Set<string>();
+                      }
+                      results.withMissingVariantsPerLanguage[locale]!.add(message.id);
                     }
-                    results.withMissingTranslationsPerLanguage[language]!.add(message.id);
                   }
                 }
               }
             }
-          }
 
-          if (plurals?.[plural] && !plurals[plural]!.verified) {
-            results.withMissingReview.add(message.id);
+            if (variant && !variant!.verified) {
+              results.withMissingReview.add(message.id);
+            }
           }
         }
       }
 
-      if (query.key) {
-        if (query.key !== '*') {
-          const keyMatchStart = message.name.toLowerCase().indexOf(query.key.toLowerCase());
+      if (query.name) {
+        if (query.name !== '*') {
+          const mameMatchStart = message.name.toLowerCase().indexOf(query.name.toLowerCase());
 
-          if (keyMatchStart === 0) {
+          if (mameMatchStart === 0) {
             if (!results.matches[message.id]) {
-              results.matches[message.id] = { textMatches: {}, keyMatch: undefined };
+              results.matches[message.id] = { textMatches: {}, messageNameMatch: undefined };
             }
-            results.matches[message.id].keyMatch = { start: keyMatchStart, length: query.key.length };
-            results.inKeys.add(message.id);
+            results.matches[message.id].messageNameMatch = { start: mameMatchStart, length: query.name.length };
+            results.inNames.add(message.id);
           } else {
             // eslint-disable-next-line no-continue
-            results.matchingKeys.delete(message.id);
+            results.matchingNames.delete(message.id);
           }
         }
       } else if (query.text !== undefined && query.text !== '') {
-        const keyMatchStart = message.name.toLowerCase().indexOf(query.text.toLowerCase());
-        if (keyMatchStart !== -1) {
+        const nameMatchStart = message.name.toLowerCase().indexOf(query.text.toLowerCase());
+        if (nameMatchStart !== -1) {
           if (!results.matches[message.id]) {
-            results.matches[message.id] = { textMatches: {}, keyMatch: undefined };
+            results.matches[message.id] = { textMatches: {}, messageNameMatch: undefined };
           }
-          results.matches[message.id].keyMatch = { start: keyMatchStart, length: query.text.length };
-          results.inKeys.add(message.id);
-          results.matchingKeys.add(message.id);
+          results.matches[message.id].messageNameMatch = { start: nameMatchStart, length: query.text.length };
+          results.inNames.add(message.id);
+          results.matchingNames.add(message.id);
         }
       }
     }
 
-    results.withMissingReview = new Set([...results.withMissingReview].filter((x) => results.matchingKeys.has(x)));
-    results.withMissingTranslations = new Set([...results.withMissingTranslations].filter((x) => results.matchingKeys.has(x)));
+    results.withMissingReview = new Set([...results.withMissingReview].filter((x) => results.matchingNames.has(x)));
+    results.withMissingVariants = new Set([...results.withMissingVariants].filter((x) => results.matchingNames.has(x)));
 
     if (query.missingTranslation === true) {
-      results.matchingKeys = new Set([...results.matchingKeys].filter((x) => results.withMissingTranslations.has(x)));
+      results.matchingNames = new Set([...results.matchingNames].filter((x) => results.withMissingVariants.has(x)));
     } else if (query.missingTranslation === false) {
-      results.matchingKeys = new Set([...results.matchingKeys].filter((x) => !results.withMissingTranslations.has(x)));
+      results.matchingNames = new Set([...results.matchingNames].filter((x) => !results.withMissingVariants.has(x)));
     }
 
     if (query.unverified === true) {
-      results.matchingKeys = new Set([...results.matchingKeys].filter((x) => results.withMissingReview.has(x)));
+      results.matchingNames = new Set([...results.matchingNames].filter((x) => results.withMissingReview.has(x)));
     } else if (query.unverified === false) {
-      results.matchingKeys = new Set([...results.matchingKeys].filter((x) => !results.withMissingReview.has(x)));
+      results.matchingNames = new Set([...results.matchingNames].filter((x) => !results.withMissingReview.has(x)));
     }
 
     if (query.selected === 'FRAME') {
-      results.matchingKeys = new Set([...results.matchingKeys].filter((x) => results.referencedInFrame.has(x)));
+      results.matchingNames = new Set([...results.matchingNames].filter((x) => results.referencedInFrame.has(x)));
     } else if (query.selected === 'LABEL') {
-      results.matchingKeys = new Set([...results.matchingKeys].filter((x) => results.referencedInLabels.has(x)));
+      results.matchingNames = new Set([...results.matchingNames].filter((x) => results.referencedInLabels.has(x)));
     }
 
     // in case we have no specific we want to suggest specific like
-    // - matches in keys (n)
+    // - matches in messageNames (n)
     // - matches in text (n)
     // - with missing messages (n)
     // - with missing review (n)
@@ -504,27 +511,28 @@ export default class MessageStoreMemory extends EventTarget {
   }
 
   async createTag(title: string, description: string | undefined) {
-    // TODO #11 we update the translation keys here - shouldn't we wait for the messaage bus instead?
+    // TODO #11 we update the messages here - shouldn't we wait for the messaage bus instead?
     const tagId = this.historyTags.length;
-    for (const key of Object.keys(this.messages)) {
-      this.messages[key].historyTags[tagId] = this.messages[key].latestVersion;
+    for (const messageId of Object.keys(this.messages)) {
+      this.messages[messageId].historyTags[tagId] = this.messages[messageId].latestVersion;
     }
 
     this.historyTags[tagId] = await this.parentKeyStore.createTag(tagId, title, description);
     return this.historyTags[tagId];
   }
 
-  async createMessage(name: string, messages: { language: Locale; plural: Plural; text: string | undefined; skip: boolean }[], plural: boolean, fillins?: Fillins, quantity?: { value: number } | { placeholder: string }): Promise<MessageUI> {
+  async createMessage(name: string, messages: { locale: Locale; gender: Gender, plural: Plural; text: string | undefined; skip: boolean }[], gender: boolean, plural: boolean, fillins?: Fillins, quantity?: { value: number } | { placeholder: string }): Promise<MessageUI> {
     if (name === '') {
-      throw new Error('keys mus have at least one character');
+      throw new Error('message name must have at least one character');
     }
-    const createdMessage = await this.parentKeyStore.createMessage(name, messages, plural, quantity, fillins);
+    const createdMessage = await this.parentKeyStore.createMessage(name, messages, gender, plural, quantity, fillins);
     return this.upsertCache(createdMessage);
   }
 
   async updateMessage(id: string, properties: {
     name?: string,
-    variants: { language: Locale, plural: Plural, text: string | undefined, skip: boolean }[],
+    variants: { locale: Locale, gender: Gender, plural: Plural, text: string | undefined, skip: boolean }[],
+    gender?: boolean,
     plural?: boolean,
     fillins?: Fillins,
     quantity?: { value: number } | { placeholder: string }

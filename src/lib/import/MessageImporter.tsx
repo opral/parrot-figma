@@ -11,14 +11,16 @@ import AndroidXMLImporter from './AndroidXmlImporter';
 import { ImportMessage } from './ImportMessage';
 import LocalizedLabelManagerUI from '../localizedlabels/LocalizedLabelManagerUI';
 import I18NextKeyValueImporter from './I18Next';
+import { Gender } from '../message/variants/Gender';
 
-function toChangeArray(importKey: ImportMessage, language: Locale) {
+function toChangeArray(importKey: ImportMessage, locale: Locale) {
   return [{
-    language,
+    locale,
+    gender: importKey.gender,
     plural: importKey.plural,
     text: importKey.text,
     skip: false,
-  }] as { language: Locale; plural: Plural; text: string | undefined; skip: boolean }[];
+  }] as { locale: Locale; gender: Gender; plural: Plural; text: string | undefined; skip: boolean }[];
 }
 
 export enum ImportType {
@@ -36,28 +38,30 @@ export type ImportResult = {
 
 export default class MessageImporter {
   static getImportStatistics(messageStore: MessageStoreMemory, importMessages: ImportMessage[], language: Locale) {
-    const changedKeys = {
+    const changedMessages = {
       language,
-      newKeys: [] as ImportMessage[],
-      newTranslations: [] as ImportMessage[],
-      updatedTranslations: [] as ImportMessage[],
+      newMessages: [] as ImportMessage[],
+      newVariants: [] as ImportMessage[],
+      updatedVariants: [] as ImportMessage[],
     };
 
     for (const messageToImport of importMessages) {
-      const currentKey = messageStore.getMessageByName(messageToImport.name);
-      if (!currentKey) {
+      const currentMessage = messageStore.getMessageByName(messageToImport.name);
+      if (!currentMessage) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        changedKeys.newKeys.push(messageToImport);
-      } else if (!currentKey.variants[language]) {
-        changedKeys.newTranslations.push(messageToImport);
-      } else if (!currentKey.variants[language]![messageToImport.plural]) {
-        changedKeys.newTranslations.push(messageToImport);
-      } else if (currentKey.variants[language]![messageToImport.plural]!.text !== messageToImport.text) {
-        changedKeys.updatedTranslations.push(messageToImport);
+        changedMessages.newMessages.push(messageToImport);
+      } else if (!currentMessage.variants[language]) {
+        changedMessages.newVariants.push(messageToImport);
+      } else if (!currentMessage.variants[language]![messageToImport.gender]) {
+        changedMessages.newVariants.push(messageToImport);
+      } else if (!currentMessage.variants[language]![messageToImport.gender]![messageToImport.plural]) {
+        changedMessages.newVariants.push(messageToImport);
+      } else if (currentMessage.variants[language]![messageToImport.gender]![messageToImport.plural]!.text !== messageToImport.text) {
+        changedMessages.updatedVariants.push(messageToImport);
       }
     }
 
-    return changedKeys;
+    return changedMessages;
   }
 
   static processFile(fileName: string, content: string): ImportResult {
@@ -100,11 +104,11 @@ export default class MessageImporter {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         console.log(`creating key${messageToImport.name}`);
         // TODO #8 implement import logic for placeholders and quantities
-        const createdMessage = await labelManager.messageStore.createMessage(messageToImport.name, toChangeArray(messageToImport, language), false);
+        const createdMessage = await labelManager.messageStore.createMessage(messageToImport.name, toChangeArray(messageToImport, language), false, false);
       } else {
         console.log(`updateing key${messageToImport.name}`);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const updatedMessage = await labelManager.updateKey(currentKey.id, { variants: toChangeArray(messageToImport, language) });
+        const updatedMessage = await labelManager.updateMessage(currentKey.id, { variants: toChangeArray(messageToImport, language) });
       }
     }
     // TODO keyStore.commit();

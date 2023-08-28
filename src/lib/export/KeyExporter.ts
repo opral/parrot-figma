@@ -9,7 +9,7 @@ const appleDictFileExporterTmpl = ejs.compile(require('./templates/AppleDictFile
 export default class KeyExporter {
   static export(messageStore: MessageStoreMemory, language: Locale, format: string, versionId: string | undefined) {
     // prepare the data needed by the templates
-    const data = { input: messageStore.getTranslationsByKeyName(language, versionId), language };
+    const data = { input: messageStore.getMessagesByMessageName(language, versionId), language };
 
     if (format === 'apple-strings') {
       return {

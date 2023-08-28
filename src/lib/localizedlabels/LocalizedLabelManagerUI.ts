@@ -10,6 +10,7 @@ import { ILocalizedLabelManagerUI, UILocalizedLabel } from './UILocalizedLabel';
 import { Fillins, MessageEntry } from '../message/Message';
 import LinksLoadedEvent from './LinksLoadedEvent';
 import { ImportMessage } from '../import/ImportMessage';
+import { Gender } from '../message/variants/Gender';
 
 export default class LocalizedLabelManagerUI extends EventTarget implements ILocalizedLabelManagerUI {
   // mapping from nodeId to localizied label instance
@@ -90,6 +91,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
           && cachedLabel.nodeId === label.nodeId
           && cachedLabel.pageId === label.pageId
           && cachedLabel.pageName === label.pageName
+          && cachedLabel.genderId === label.genderId
           && cachedLabel.pluralId === label.pluralId
           && cachedLabel.rootFrameId === label.rootFrameId
           && cachedLabel.rootFrameLanguage === label.rootFrameLanguage
@@ -162,7 +164,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   }
 
   onKeyLabelLinksLoaded(event: LinksLoadedEvent) {
-    this.messageStore.updateKeyLinks(event.keys);
+    this.messageStore.updateMessageLinks(event.keys);
   }
 
   framesIdToLoad = [] as string[];
@@ -291,11 +293,12 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     // await this.localizedLabelMangerSandbox.updateFrameById(frameId);
   }
 
-  async updateKey(
+  async updateMessage(
     keyId: string,
     properties: {
       name?: string,
-      variants: { language: Locale, plural: Plural, text: string | undefined, skip: boolean }[],
+      variants: { locale: Locale, gender: Gender, plural: Plural, text: string | undefined, skip: boolean }[],
+      gender?: boolean,
       plural?: boolean,
       fillins?: Fillins,
       quantity?: { value: number } | { placeholder: string },
@@ -324,7 +327,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   async createNewVersionFromLabelState(localizedLabel: UILocalizedLabel) {
     const localizedKey = await this.messageStore.updateMessage(localizedLabel.messageId!, {
       variants: [{
-        language: localizedLabel.language as Locale, plural: localizedLabel.pluralId as Plural, text: localizedLabel.variantHTML, skip: false,
+        locale: localizedLabel.language as Locale, gender: localizedLabel.genderId, plural: localizedLabel.pluralId as Plural, text: localizedLabel.variantHTML, skip: false,
       }],
       fillins: localizedLabel.fillins,
     });
@@ -342,7 +345,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     const updatePromises = [];
     for (const localizedLabel of localizedLabels) {
       const message = this.messageStore.getMessage(localizedLabel.messageId!)!;
-      const historyEntryForVersion = message.getHistoryEntry(localizedLabel.rootFrameLanguage, localizedLabel.pluralId, message.latestVersion);
+      const historyEntryForVersion = message.getHistoryEntry(localizedLabel.rootFrameLanguage, localizedLabel.genderId, localizedLabel.pluralId, message.latestVersion);
 
       const fillins = { ...localizedLabel.fillins };
       for (const placeholderName of Object.keys(message.defaultFillins)) {
@@ -359,8 +362,9 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
       // eslint-disable-next-line no-await-in-loop
       updatePromises.push(this.updateLabelProperties(localizedLabel.nodeId, {
         keyVersion: message.latestVersion,
-        variantHTML: historyEntryForVersion!.variants?.[localizedLabel.rootFrameLanguage]?.[localizedLabel.pluralId]?.text,
+        variantHTML: historyEntryForVersion!.variants?.[localizedLabel.rootFrameLanguage]?.[localizedLabel.genderId]?.[localizedLabel.pluralId]?.text,
         language: localizedLabel.rootFrameLanguage,
+        gender: localizedLabel.genderId,
         plural: localizedLabel.pluralId,
         fillins,
       }));
@@ -396,43 +400,65 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     }
   }
 
-  async linkKey(localizedLabel: UILocalizedLabel, keyNameToLinkTo: string, language: Locale, plural: Plural) {
+  async linkKey(localizedLabel: UILocalizedLabel, keyNameToLinkTo: string, locale: Locale, gender: Gender, plural: Plural) {
     let message = this.messageStore.getMessageByName(keyNameToLinkTo);
 
     if (message !== undefined) {
+      // message does exist - we only have to link it
       await this.updateLabelProperties(localizedLabel.nodeId, {
-        keyId: message.id,
+        messageId: message.id,
         messageLinkState: MessageLinkState.Linked,
+        gender,
         plural,
-        language,
+        language: locale,
         keyVersion: message.latestVersion,
         // showSampleValues: localizedLabel.rootFrameUseSampleValues,
-        variantHTML: message.variants[language]?.[plural]?.text ?? 'no translation',
+        variantHTML: message.variants[locale]?.[gender]?.[plural]?.text ?? 'no translation',
       });
 
       // TODO check if design is sync with translation - if not offer update with prompt
     } else {
       if (localizedLabel.unlinkedMessage) {
-        const variants = Object.entries(localizedLabel.unlinkedMessage.variants!).flatMap(([languageFound, pluralsFound]) => Object.entries(pluralsFound).map(([pluralFound, { text }]) => {
-          if (languageFound === language && plural === pluralFound) {
-            return ({ language: languageFound, plural: pluralFound, text: localizedLabel.variantHTML } as { language: Locale, plural: Plural, text: string, skip: false });
+        // const variants = Object.entries(localizedLabel.unlinkedMessage.variants!).flatMap(([languageFound, pluralsFound]) => Object.entries(pluralsFound).map(([pluralFound, { text }]) => {
+
+        const variants = [] as { locale: Locale; gender: Gender, plural: Plural; text: string | undefined; skip: boolean }[];
+        for (const [localeFound, genders] of Object.entries(localizedLabel.unlinkedMessage.variants!)) {
+          for (const [genderFound, plurals] of Object.entries(genders)) {
+            for (const [pluralFound, variant] of Object.entries(plurals)) {
+              if (localeFound === locale && plural === pluralFound) {
+                variants.push({
+                  locale: localeFound,
+                  gender: genderFound,
+                  plural: pluralFound,
+                  text: localizedLabel.variantHTML,
+                } as { locale: Locale, gender: Gender, plural: Plural, text: string, skip: false });
+              } else {
+                variants.push({
+                  locale: localeFound,
+                  gender: genderFound,
+                  plural: pluralFound,
+                  text: variant.text,
+                } as { locale: Locale, gender: Gender, plural: Plural, text: string, skip: false });
+              }
+            }
           }
-          return ({ language: languageFound, plural: pluralFound, text } as { language: Locale, plural: Plural, text: string, skip: false });
-        }));
-        message = await this.messageStore.createMessage(keyNameToLinkTo, variants, localizedLabel.unlinkedMessage.plural, localizedLabel.fillins);
+        }
+        message = await this.messageStore.createMessage(keyNameToLinkTo, variants, localizedLabel.unlinkedMessage.gender, localizedLabel.unlinkedMessage.plural, localizedLabel.fillins);
       } else {
         message = await this.messageStore.createMessage(keyNameToLinkTo, [{
-          language,
+          locale,
+          gender,
           plural,
           text: localizedLabel.variantHTML,
           skip: false,
-        }], plural !== Plural.OTHER, localizedLabel.fillins);
+        }], gender !== Gender.NEUTRAL, plural !== Plural.OTHER, localizedLabel.fillins);
       }
       await this.updateLabelProperties(localizedLabel.nodeId, {
-        keyId: message.id,
+        messageId: message.id,
         messageLinkState: MessageLinkState.Linked,
         keyVersion: message.latestVersion, // its save to use latest version here since we created a whole new key here.
-        language,
+        language: locale,
+        gender,
         plural,
         // showSampleValues: localizedLabel.rootFrameUseSampleValues,
         variantHTML: localizedLabel.variantHTML,
@@ -464,7 +490,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
   async updateLabelTranslation(localizedLabel: LocalizedLabel, variantHTML: string) {
     this.updateLabelProperties(localizedLabel.nodeId, {
-      variantHTML: variantHTML,
+      variantHTML,
     });
 
     await this.localizedLabelMangerSandbox.commitUndo();
@@ -507,9 +533,10 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   async updateLabelProperties(nodeId: string, changedProperties: {
     labelName?: string,
     messageLinkState?: MessageLinkState,
-    keyId?: string,
+    messageId?: string,
     keyVersion?: number,
     language?: Locale,
+    gender?: Gender,
     plural?: Plural,
     variantHTML?: string,
     fillins?: Fillins,
@@ -519,8 +546,8 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     const localizedLabelCached = this.cachedLocalisedLabels[nodeId]!;
     const labelFillins = changedProperties.fillins ?? localizedLabelCached.fillins;
 
-    const keyId = changedProperties.keyId ?? localizedLabelCached.messageId;
-    const message = keyId ? this.messageStore.getMessage(keyId) : undefined;
+    const messageId = changedProperties.messageId ?? localizedLabelCached.messageId;
+    const message = messageId ? this.messageStore.getMessage(messageId) : undefined;
 
     if (message?.defaultFillins) {
       for (const [placeholderName, fillin] of Object.entries(message.defaultFillins)) {
@@ -532,23 +559,25 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
     const changedPropertiesToForwared = changedProperties as SandboxUpdateLabelProperties;
 
-    changedPropertiesToForwared.fillins = localizedLabelCached.getFillins(changedProperties.keyId, labelFillins);
+    changedPropertiesToForwared.fillins = localizedLabelCached.getFillins(changedProperties.messageId, labelFillins);
 
     if (localizedLabelCached.messageLinkState === MessageLinkState.Linked) {
-      changedPropertiesToForwared.unlinkedTranslations = null;
+      changedPropertiesToForwared.unlinkedMessage = null;
     }
 
     if (!changedProperties.variantHTML) {
       if (changedProperties.language !== undefined
+        || changedProperties.gender !== undefined
         || changedProperties.plural !== undefined
         || changedProperties.keyVersion !== undefined) {
         // only language, plural have changed eventually
         const language = changedProperties.language ?? localizedLabelCached.language;
         const plural = changedProperties.plural ?? localizedLabelCached.pluralId;
+        const gender = changedProperties.gender ?? localizedLabelCached.genderId;
         const version = changedProperties.keyVersion ?? localizedLabelCached.messageVersion;
 
         if (localizedLabelCached.messageLinkState === MessageLinkState.Linked) {
-          const variantHTML = message?.getInVersion(version).variants[language]?.[plural]?.text ?? 'TODO Missinng Translation when setting Version';
+          const variantHTML = message?.getInVersion(version).variants[language]?.[gender]?.[plural]?.text ?? 'TODO Missinng Translation when setting Version';
           const textAndOps = UILocalizedLabel.toTextAndOps(variantHTML, labelFillins);
 
           // TODO handle placeholders
@@ -562,7 +591,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
             throw new Error('unlinked message expected when no message HTML is passed...');
           }
           // NOTE instead of missing translation we could mark the label and use the base language...
-          const variantHTML = localizedLabelCached.unlinkedMessage!.variants![language]?.[plural]?.text ?? 'TODO Missinng Translation when setting Version';
+          const variantHTML = localizedLabelCached.unlinkedMessage!.variants![language]?.[gender]?.[plural]?.text ?? 'TODO Missinng Translation when setting Version';
           const textAndOps = UILocalizedLabel.toTextAndOps(variantHTML, labelFillins);
 
           // TODO handle placeholders
@@ -582,48 +611,56 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
       changedPropertiesToForwared.filledTemplateHash = blake.blake2sHex(`${textAndOps.text}||||${JSON.stringify(textAndOps.ops)}`);
 
       if (localizedLabelCached.messageLinkState !== MessageLinkState.Linked) {
-        // key is not linked yet - store translation in labels unlinkedTranslations until its linked to one
+        // key is not linked yet - store translation in labels unlinkedMessage until its linked to one
         const baseLanguage = this.messageStore.getBaseLanugage()!;
+        const currentGender = (localizedLabelCached.genderId ?? Gender.NEUTRAL);
         const currentPlural = (localizedLabelCached.pluralId ?? Plural.OTHER);
-        let { unlinkedTranslations } = localizedLabelCached as any;
-        if (unlinkedTranslations === undefined || unlinkedTranslations.variants === undefined) {
+        let { unlinkedMessage } = localizedLabelCached as any;
+        if (unlinkedMessage === undefined || unlinkedMessage.variants === undefined) {
           // create interims message variants in label using its current state for the baselang - we always start with the base lang so this is posible :)
-          unlinkedTranslations = {
+          unlinkedMessage = {
             variants: {} as any,
+            gender: false,
             plural: false,
           } as any;
-          unlinkedTranslations.variants[baseLanguage] = {};
-          unlinkedTranslations.variants[baseLanguage][currentPlural] = {
+          unlinkedMessage.variants[baseLanguage] = {};
+          unlinkedMessage.variants[baseLanguage][currentGender] = {};
+          unlinkedMessage.variants[baseLanguage][currentGender][currentPlural] = {
             text: localizedLabelCached.variantHTML,
           };
         }
 
-        let baseLanguageHTML = unlinkedTranslations.variants[baseLanguage][currentPlural].text;
+        let baseLanguageHTML = unlinkedMessage.variants[baseLanguage][currentGender][currentPlural].text;
 
         if (localizedLabelCached.language === baseLanguage) {
           baseLanguageHTML = localizedLabelCached.variantHTML;
-          unlinkedTranslations.variants[baseLanguage][currentPlural] = {
+          unlinkedMessage.variants[baseLanguage][currentGender][currentPlural] = {
             text: baseLanguageHTML,
           };
         }
         // TODO #23 Interims key update/create an entry in the interims translation for the language/plural passed - store base language hash to know if base language changed
 
         const targetLanguage = changedProperties.language ?? localizedLabelCached.language;
+        const tergetGender = changedProperties.gender ?? currentGender;
         const targetPlural = changedProperties.plural ?? currentPlural;
-        if (!unlinkedTranslations.variants[targetLanguage]) {
-          unlinkedTranslations.variants[targetLanguage] = {};
+        if (!unlinkedMessage.variants[targetLanguage]) {
+          unlinkedMessage.variants[targetLanguage] = {};
         }
 
-        if (!unlinkedTranslations.variants[targetLanguage][targetPlural]) {
-          unlinkedTranslations.variants[targetLanguage][targetPlural] = {};
+        if (!unlinkedMessage.variants[targetLanguage][tergetGender]) {
+          unlinkedMessage.variants[targetLanguage][tergetGender] = {};
         }
 
-        unlinkedTranslations.variants[targetLanguage][targetPlural].text = changedProperties.variantHTML;
+        if (!unlinkedMessage.variants[targetLanguage][tergetGender][targetPlural]) {
+          unlinkedMessage.variants[targetLanguage][tergetGender][targetPlural] = {};
+        }
+
+        unlinkedMessage.variants[targetLanguage][tergetGender][targetPlural].text = changedProperties.variantHTML;
         if (targetLanguage !== baseLanguage) {
-          unlinkedTranslations.variants[targetLanguage][targetPlural].baseLangHash = blake.blake2sHex(baseLanguageHTML);
+          unlinkedMessage.variants[targetLanguage][tergetGender][targetPlural].baseLangHash = blake.blake2sHex(baseLanguageHTML);
         }
 
-        changedPropertiesToForwared.unlinkedTranslations = unlinkedTranslations;
+        changedPropertiesToForwared.unlinkedMessage = unlinkedMessage;
       }
     }
 
@@ -639,14 +676,15 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     return selection;
   }
 
-  async import(keysToImport: ImportMessage[], language: Locale) {
+  async import(keysToImport: ImportMessage[], locale: Locale) {
     function toChangeArray(importKey: ImportMessage, languageToUse: Locale) {
       return [{
-        language: languageToUse,
+        locale: languageToUse,
+        gender: importKey.gender,
         plural: importKey.plural,
         text: importKey.text,
         skip: false,
-      }] as { language: Locale; plural: Plural; text: string | undefined; skip: boolean }[];
+      }] as { locale: Locale; gender: Gender, plural: Plural; text: string | undefined; skip: boolean }[];
     }
 
     for (const keyToImport of keysToImport) {
@@ -656,11 +694,11 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         console.log(`creating key${keyToImport.name}`);
         // TODO #8 implement import logic for placeholders and quantities
         // eslint-disable-next-line no-await-in-loop
-        await this.messageStore.createMessage(keyToImport.name, toChangeArray(keyToImport, language), false);
+        await this.messageStore.createMessage(keyToImport.name, toChangeArray(keyToImport, locale), false, false);
       } else {
         console.log(`updateing key${keyToImport.name}`);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-await-in-loop
-        await this.updateKey(currentKey.id, { variants: toChangeArray(keyToImport, language) });
+        await this.updateMessage(currentKey.id, { variants: toChangeArray(keyToImport, locale) });
       }
     }
   }

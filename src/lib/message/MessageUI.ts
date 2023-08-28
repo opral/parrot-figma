@@ -4,6 +4,7 @@ import { Plural, getPluralFormsByLanguage } from './variants/Plural';
 import {
   Fillins, HistoryEntry, Placeholder, PlaceholderType, PlaceholdersByName, Message, Variants,
 } from './Message';
+import { Gender, genderList } from './variants/Gender';
 
 export interface MessageStoreUI {
   getBaseLanugage(): Locale | undefined
@@ -21,18 +22,21 @@ export class MessageUI implements Message {
     [tagIndex: number]: number;
   };
 
+  gender: boolean;
+
   plural: boolean;
 
   labels: string[];
 
   variants: {
     [language in Locale]? : {
-      // TODO #10 add gender
-      [plural in Plural]? : {
-        version: number,
-        text?: string,
-        verified: boolean,
-        skip: boolean
+      [gender in Gender]? : {
+        [plural in Plural]? : {
+          version: number,
+          text?: string,
+          verified: boolean,
+          skip: boolean
+        }
       }
     }
   };
@@ -55,6 +59,7 @@ export class MessageUI implements Message {
     this.name = message.name;
     this.latestVersion = message.latestVersion;
     this.historyTags = message.historyTags;
+    this.gender = message.gender;
     this.plural = message.plural;
     this.labels = message.labels;
     this.referencingTextNodes = message.referencingTextNodes;
@@ -65,11 +70,11 @@ export class MessageUI implements Message {
     this.defaultFillins = message.defaultFillins ? message.defaultFillins : {};
   }
 
-  getHistoryEntry(language: Locale, plural: Plural, version: number) : HistoryEntry | undefined {
+  getHistoryEntry(language: Locale, gender: Gender, plural: Plural, version: number) : HistoryEntry | undefined {
     // iterate backward until we have a match
     let currentVersion = version;
     while (currentVersion >= 0) {
-      if (this.history[currentVersion]?.variants?.[language]?.[plural]) {
+      if (this.history[currentVersion]?.variants?.[language]?.[gender]?.[plural]) {
         return this.history[currentVersion];
       }
       currentVersion -= 1;
@@ -77,12 +82,12 @@ export class MessageUI implements Message {
     return undefined;
   }
 
-  getChangesSince(language: Locale, plural: Plural, version: number) {
+  getChangesSince(language: Locale, gender: Gender, plural: Plural, version: number) {
     let changeCounter = 0;
 
     let currentVersion = this.latestVersion;
     while (currentVersion >= 0 && currentVersion > version) {
-      if (this.history[currentVersion]?.variants?.[language]?.[plural]) {
+      if (this.history[currentVersion]?.variants?.[language]?.[gender]?.[plural]) {
         changeCounter += 1;
       }
       currentVersion -= 1;
@@ -212,7 +217,7 @@ export class MessageUI implements Message {
    * - how shall we flag false positives - parameters that are not needed in a specific language?
    *
    */
-  static extractParameters(messages: Variants, baseLanguage: Locale, includePluralForms: boolean) : PlaceholdersByName {
+  static extractParameters(messages: Variants, baseLanguage: Locale, includeGenderForms: boolean, includePluralForms: boolean) : PlaceholdersByName {
     // a placeholder can be processed in two ways:
     // 1. with a argument postion [[1:...]]
     // - the first placeholder with a specific argument postion wins
@@ -234,13 +239,13 @@ export class MessageUI implements Message {
     // base lang has priority
     if (messages[baseLanguage]) {
       // console.log('extracting baselanguage');
-      MessageUI.extractPlaceholdersInLanguage(messages, baseLanguage, includePluralForms, processedPlaceholders, placeholdersWithArgumentPosition, placeholdersWithoutArgumentPosition);
+      MessageUI.extractPlaceholdersInLanguage(messages, baseLanguage, includeGenderForms, includePluralForms, processedPlaceholders, placeholdersWithArgumentPosition, placeholdersWithoutArgumentPosition);
     }
 
     for (const [language] of Object.entries(messages)) {
       if (language !== baseLanguage) {
         // console.log(`extracting language${baseLang}`);
-        MessageUI.extractPlaceholdersInLanguage(messages, language as Locale, includePluralForms, processedPlaceholders, placeholdersWithArgumentPosition, placeholdersWithoutArgumentPosition);
+        MessageUI.extractPlaceholdersInLanguage(messages, language as Locale, includeGenderForms, includePluralForms, processedPlaceholders, placeholdersWithArgumentPosition, placeholdersWithoutArgumentPosition);
       }
     }
 
@@ -277,48 +282,54 @@ export class MessageUI implements Message {
     return placeholders;
   }
 
-  private static extractPlaceholdersInLanguage(messages: Variants, language: Locale, plurals: boolean, processedPlaceholders: { [placeholderName: string]: boolean; }, placeholdersWithArgumentPosition: Placeholder[], placeholdersWithoutArgumentPosition: Placeholder[]) {
-    // plural priority is defined by the PluralFormsByLanguage map
-    for (const plural of getPluralFormsByLanguage(language)) {
-      if (!plurals && plural !== Plural.OTHER) {
+  private static extractPlaceholdersInLanguage(variants: Variants, locale: Locale, genderForms: boolean, plurals: boolean, processedPlaceholders: { [placeholderName: string]: boolean; }, placeholdersWithArgumentPosition: Placeholder[], placeholdersWithoutArgumentPosition: Placeholder[]) {
+    for (const gender of genderList) {
+      if (!genderForms && gender !== Gender.NEUTRAL) {
         // eslint-disable-next-line no-continue
         continue;
       }
-      if (messages[language]![plural]?.text) {
-        const placeHoldersInText = MessageUI.extractPlaceholdersInText(messages[language]![plural]!.text!);
-        for (const placeHolderInText of placeHoldersInText) {
-          if (processedPlaceholders[placeHolderInText.name] === true) {
-            // NOTHING TO DO - placeholder got a fixed position already;
-          } else if (processedPlaceholders[placeHolderInText.name] === false) {
-            if (placeHolderInText.specifiedArgumentPosition !== undefined && !placeholdersWithArgumentPosition[placeHolderInText.specifiedArgumentPosition]) {
-              // placeholder has a fixed argument position and the slot is available
-              const previosIndex = placeholdersWithoutArgumentPosition.findIndex((placeholder) => placeholder.name === placeHolderInText.name);
-              placeholdersWithoutArgumentPosition.splice(previosIndex, 1);
+      // plural priority is defined by the PluralFormsByLanguage map
+      for (const plural of getPluralFormsByLanguage(locale)) {
+        if (!plurals && plural !== Plural.OTHER) {
+          // eslint-disable-next-line no-continue
+          continue;
+        }
+        if (variants[locale]![gender]?.[plural]?.text) {
+          const placeHoldersInText = MessageUI.extractPlaceholdersInText(variants[locale]![gender]?.[plural]?.text!);
+          for (const placeHolderInText of placeHoldersInText) {
+            if (processedPlaceholders[placeHolderInText.name] === true) {
+              // NOTHING TO DO - placeholder got a fixed position already;
+            } else if (processedPlaceholders[placeHolderInText.name] === false) {
+              if (placeHolderInText.specifiedArgumentPosition !== undefined && !placeholdersWithArgumentPosition[placeHolderInText.specifiedArgumentPosition]) {
+                // placeholder has a fixed argument position and the slot is available
+                const previosIndex = placeholdersWithoutArgumentPosition.findIndex((placeholder) => placeholder.name === placeHolderInText.name);
+                placeholdersWithoutArgumentPosition.splice(previosIndex, 1);
+                // eslint-disable-next-line no-param-reassign -- we explicetly call by reference here
+                placeholdersWithArgumentPosition[placeHolderInText.specifiedArgumentPosition] = placeHolderInText;
+                // eslint-disable-next-line no-param-reassign
+                processedPlaceholders[placeHolderInText.name] = true;
+              } else {
+                // NOTHING TO DO - was already processed and the additional information - argument position doesn't change anything since the slot is not free anymore
+              }
+            } else if (placeHolderInText.specifiedArgumentPosition !== undefined && !placeholdersWithArgumentPosition[placeHolderInText.specifiedArgumentPosition]) {
+              // the placeholder has not yet proccessed, it has a fixed argument position that is still available
               // eslint-disable-next-line no-param-reassign -- we explicetly call by reference here
               placeholdersWithArgumentPosition[placeHolderInText.specifiedArgumentPosition] = placeHolderInText;
-              // eslint-disable-next-line no-param-reassign
+              // eslint-disable-next-line no-param-reassign -- we explicetly call by reference here
               processedPlaceholders[placeHolderInText.name] = true;
             } else {
-              // NOTHING TO DO - was already processed and the additional information - argument position doesn't change anything since the slot is not free anymore
+              // the placeholder has not yet been processed and it has no argument position or the provided ones slot is not free - add to fill in placeholders for now
+              placeholdersWithoutArgumentPosition.push(placeHolderInText);
+              // eslint-disable-next-line no-param-reassign -- we explicetly call by reference here
+              processedPlaceholders[placeHolderInText.name] = false;
             }
-          } else if (placeHolderInText.specifiedArgumentPosition !== undefined && !placeholdersWithArgumentPosition[placeHolderInText.specifiedArgumentPosition]) {
-            // the placeholder has not yet proccessed, it has a fixed argument position that is still available
-            // eslint-disable-next-line no-param-reassign -- we explicetly call by reference here
-            placeholdersWithArgumentPosition[placeHolderInText.specifiedArgumentPosition] = placeHolderInText;
-            // eslint-disable-next-line no-param-reassign -- we explicetly call by reference here
-            processedPlaceholders[placeHolderInText.name] = true;
-          } else {
-            // the placeholder has not yet been processed and it has no argument position or the provided ones slot is not free - add to fill in placeholders for now
-            placeholdersWithoutArgumentPosition.push(placeHolderInText);
-            // eslint-disable-next-line no-param-reassign -- we explicetly call by reference here
-            processedPlaceholders[placeHolderInText.name] = false;
           }
         }
       }
     }
   }
 
-  getKeyVersionByTagIndex(tagIndex: number) {
+  getMessageVersionByTagIndex(tagIndex: number) {
     return this.historyTags[tagIndex];
   }
 
@@ -336,6 +347,7 @@ export class MessageUI implements Message {
       historyTags: this.historyTags,
       labels: [],
       plural: false,
+      gender: false,
       history: [],
       variants: {},
       quantity: this.quantity,
@@ -349,6 +361,7 @@ export class MessageUI implements Message {
 
       // messageInVersion.history.push(currentVersion);
       messageInVersion.plural = currentVersion.plural ?? messageInVersion.plural;
+      messageInVersion.gender = currentVersion.gender ?? messageInVersion.gender;
       messageInVersion.labels = currentVersion.labels ?? messageInVersion.labels;
 
       if (!currentVersion.variants) {
@@ -356,25 +369,31 @@ export class MessageUI implements Message {
         continue;
       }
 
-      for (const [languageId, language] of Object.entries(currentVersion.variants)) {
-        if (!messageInVersion.variants[languageId as Locale]) {
-          messageInVersion.variants[languageId as Locale] = {};
+      for (const [localeId, locale] of Object.entries(currentVersion.variants)) {
+        if (!messageInVersion.variants[localeId as Locale]) {
+          messageInVersion.variants[localeId as Locale] = {};
         }
 
-        for (const [pluralId, plural] of Object.entries(language)) {
-          if (!messageInVersion.variants[languageId as Locale]![pluralId as Plural]) {
-            messageInVersion.variants[languageId as Locale]![pluralId as Plural] = {
-              skip: plural.skip!,
-              verified: plural.verified ?? false,
-              text: plural.text,
-              version: versionI,
-            };
-          } else {
-            const currentPlural = messageInVersion.variants[languageId as Locale]![pluralId as Plural]!;
-            currentPlural.skip = plural.skip ?? currentPlural.skip;
-            currentPlural.version = versionI;
-            currentPlural.verified = plural.verified ?? currentPlural.verified;
-            currentPlural.text = plural.text ?? currentPlural.text;
+        for (const [genderId, gender] of Object.entries(locale)) {
+          if (!messageInVersion.variants[localeId as Locale]![genderId as Gender]) {
+            messageInVersion.variants[localeId as Locale]![genderId as Gender] = {};
+          }
+
+          for (const [pluralId, plural] of Object.entries(gender)) {
+            if (!messageInVersion.variants[localeId as Locale]![genderId as Gender]![pluralId as Plural]) {
+              messageInVersion.variants[localeId as Locale]![genderId as Gender]![pluralId as Plural] = {
+                skip: plural.skip!,
+                verified: plural.verified ?? false,
+                text: plural.text,
+                version: versionI,
+              };
+            } else {
+              const currentPlural = messageInVersion.variants[localeId as Locale]![genderId as Gender]![pluralId as Plural]!;
+              currentPlural.skip = plural.skip ?? currentPlural.skip;
+              currentPlural.version = versionI;
+              currentPlural.verified = plural.verified ?? currentPlural.verified;
+              currentPlural.text = plural.text ?? currentPlural.text;
+            }
           }
         }
       }

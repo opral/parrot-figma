@@ -2,6 +2,7 @@ import { Locale } from '../message/variants/Locale';
 import { Plural } from '../message/variants/Plural';
 import { Fillins, MessageEntry } from '../message/Message';
 import { DeltaOp } from './LocalizedLabelManager';
+import { Gender } from '../message/variants/Gender';
 
 export enum MessageLinkState {
   Unset = 'unset', // label has not yet modified by the plugin
@@ -40,6 +41,7 @@ export interface LocalizedLabel {
   messageLinkState: MessageLinkState
   messageId?: string;
   messageVersion: number,
+  genderId: Gender,
   pluralId: Plural;
   characters: string;
   ops: DeltaOp[];

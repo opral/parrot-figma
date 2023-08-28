@@ -10,6 +10,7 @@
 
 
 import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
+import MigrationManager from '../lib/migrations/MigrationManager'
 import { MessageStoreFigmaRoot } from '../lib/message/store/MessageStoreFigmaRoot';
 import FigmaUtil from '../shared/FigmaUtil';
 import FigmaHelper from '../shared/FigmaHelper';
@@ -22,6 +23,9 @@ const fileConfigured = figmaRemote.getRootPluginDataSync('fileSetupCompleted') !
 const introShownToUser = true;
 
 figma.root.setRelaunchData({ open: 'Let Your Design Speak all Languages' });
+
+const migrationManager = new MigrationManager();
+migrationManager.migrate();
 
 WindowManagerSandbox.init({
   bottomSheet: {

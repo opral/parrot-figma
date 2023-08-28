@@ -92,9 +92,9 @@ export default function LanguageSetup({
 
   const [importKeysByState, setimportKeysByState] = useState<{
     language: Locale,
-    newKeys: ImportMessage[],
-    newTranslations: ImportMessage[],
-    updatedTranslations: ImportMessage[],
+    newMessages: ImportMessage[],
+    newVariants: ImportMessage[],
+    updatedVariants: ImportMessage[],
   } | undefined>(undefined);
 
   const [keySummary, setKeySummary] = useState(labelManager.messageStore.findKeys({}, undefined));
@@ -213,15 +213,15 @@ export default function LanguageSetup({
             <br />
             New Keys:
               {' '}
-            {importKeysByState.newKeys.length}
+            {importKeysByState.newMessages.length}
             <br />
             New messages:
               {' '}
-            {importKeysByState.newTranslations.length}
+            {importKeysByState.newVariants.length}
             <br />
             Updated messages:
               {' '}
-            {importKeysByState.updatedTranslations.length}
+            {importKeysByState.updatedVariants.length}
             <br />
 
           </div>
@@ -268,16 +268,16 @@ export default function LanguageSetup({
             <div className="choosen-languages">
               <div className="language-name"><div>{selectedBaseLanguage?.label}</div></div>
               <div className="language-summary">
-                {keySummary.matchingKeys.size}
+                {keySummary.matchingNames.size}
                 {' '}
-                Translation Keys
-                {keySummary.withMissingTranslationsPerLanguage[selectedBaseLanguage!.value as Locale]
-                 && keySummary.withMissingTranslationsPerLanguage[selectedBaseLanguage!.value as Locale]!.size > 0 && (
+                Messages
+                {keySummary.withMissingVariantsPerLanguage[selectedBaseLanguage!.value as Locale]
+                 && keySummary.withMissingVariantsPerLanguage[selectedBaseLanguage!.value as Locale]!.size > 0 && (
                  <div>
                    (
-                   {keySummary.withMissingTranslationsPerLanguage[selectedBaseLanguage!.value as Locale]!.size}
+                   {keySummary.withMissingVariantsPerLanguage[selectedBaseLanguage!.value as Locale]!.size}
                    {' '}
-                   Missing Translations)
+                   Missing Variants)
                  </div>
                 )}
               </div>
@@ -352,7 +352,7 @@ export default function LanguageSetup({
 
                     <div>
 
-                      {keySummary.withMissingTranslationsPerLanguage[languageOption.value as Locale]?.size ?? 0}
+                      {keySummary.withMissingVariantsPerLanguage[languageOption.value as Locale]?.size ?? 0}
                       {' '}
                       Missing Translations
                     </div>

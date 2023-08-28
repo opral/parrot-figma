@@ -11,6 +11,7 @@ import { MessageStoreFigmaRoot } from '../message/store/MessageStoreFigmaRoot';
 import { Fillins, MessageEntry } from '../message/Message';
 import VirtualTree, { VirtualTreeNode } from './VirtualTree';
 import LinksLoadedEvent from './LinksLoadedEvent';
+import { Gender } from '../message/variants/Gender';
 
 export interface NodeSelection {
   [nodeId: string]: {
@@ -27,6 +28,7 @@ export interface SandboxUpdateLabelProperties {
   messageLinkState?: MessageLinkState,
   messageId?: string,
   language?: Locale,
+  gender?: Gender,
   plural?: Plural,
   messageVersion?: number,
   filledTemplateHash?: string,
@@ -34,7 +36,7 @@ export interface SandboxUpdateLabelProperties {
   ops?: any
   fillins?: Fillins,
   showSampleValues?: boolean,
-  unlinkedTranslations?: MessageEntry | null
+  unlinkedMessage?: MessageEntry | null
 }
 
 export interface DeltaOp {
@@ -74,22 +76,24 @@ export default class LocalizedLabelManager {
 
   public sampleValuesDataKey = 'sv';
 
-  public unlinkedTranslationsDataKey = 'ut';
+  public anonymMessageDataKey = 'am';
 
   public fillinsKey = 'fi';
 
   public languageDataKey = 'l';
 
-  public messageLinkStateDataKey = 'kt';
+  public messageLinkStateDataKey = 'mt';
 
-  public keyVersionDataKey = 'kv';
+  public messageVersionDataKey = 'mv';
 
-  public keyPluralDataKey = 'kp';
+  public messagePluralDataKey = 'mp';
+
+  public messageGenderDataKey = 'mg';
+
+  public messageIdDataKey = 'mi';
 
   // hash that allows detection of autorename
   public autoRenameHashKey = 'arh';
-
-  public keyDataKey = 'key';
 
   public labelIdDataKey = 'olid'; // we store the orginal label id (the id of the node when the plugin changed properties the first time) to detect a copy
 
@@ -427,14 +431,14 @@ export default class LocalizedLabelManager {
 
       const messageLinkState = textNode.getPluginData(this.messageLinkStateDataKey);
       if (messageLinkState !== '' && (messageLinkState as MessageLinkState) === MessageLinkState.Linked) {
-        const key = textNode.getPluginData(this.keyDataKey);
-        if (key !== '') {
-          const previousKey = this.refreshLabelMessaheLinkCache(textNodeId, key);
+        const messageId = textNode.getPluginData(this.messageIdDataKey);
+        if (messageId !== '') {
+          const previousKey = this.refreshLabelMessaheLinkCache(textNodeId, messageId);
           if (previousKey) {
             keysLoaded.add(previousKey);
             this.virtualTree.addNode(textNode, textNodeId);
           }
-          keysLoaded.add(key);
+          keysLoaded.add(messageId);
         }
       }
     }
@@ -660,7 +664,7 @@ export default class LocalizedLabelManager {
     }
 
     if (changedProperties.messageId !== undefined) {
-      textNode.setPluginData(this.keyDataKey, changedProperties.messageId);
+      textNode.setPluginData(this.messageIdDataKey, changedProperties.messageId);
     }
 
     if (changedProperties.messageLinkState !== undefined) {
@@ -668,7 +672,7 @@ export default class LocalizedLabelManager {
     }
 
     if (changedProperties.messageVersion !== undefined) {
-      textNode.setPluginData(this.keyVersionDataKey, `${changedProperties.messageVersion}`);
+      textNode.setPluginData(this.messageVersionDataKey, `${changedProperties.messageVersion}`);
     }
 
     if (changedProperties.showSampleValues !== undefined) {
@@ -679,17 +683,21 @@ export default class LocalizedLabelManager {
       textNode.setPluginData(this.fillinsKey, JSON.stringify(changedProperties.fillins));
     }
 
-    if (changedProperties.unlinkedTranslations !== undefined) {
-      if (changedProperties.unlinkedTranslations === null) {
+    if (changedProperties.unlinkedMessage !== undefined) {
+      if (changedProperties.unlinkedMessage === null) {
         // clean up the unlinked translation
-        textNode.setPluginData(this.unlinkedTranslationsDataKey, '');
+        textNode.setPluginData(this.anonymMessageDataKey, '');
       } else {
-        textNode.setPluginData(this.unlinkedTranslationsDataKey, JSON.stringify(changedProperties.unlinkedTranslations));
+        textNode.setPluginData(this.anonymMessageDataKey, JSON.stringify(changedProperties.unlinkedMessage));
       }
     }
 
+    if (changedProperties.gender !== undefined) {
+      textNode.setPluginData(this.messageGenderDataKey, changedProperties.gender ? changedProperties.gender : '');
+    }
+
     if (changedProperties.plural !== undefined) {
-      textNode.setPluginData(this.keyPluralDataKey, changedProperties.plural ? changedProperties.plural : '');
+      textNode.setPluginData(this.messagePluralDataKey, changedProperties.plural ? changedProperties.plural : '');
     }
 
     if (changedProperties.language !== undefined) {
@@ -960,18 +968,19 @@ export default class LocalizedLabelManager {
     // get plugin 1192ms -> 938ms
 
     // if no plural id is specified than we fall back to "other" - the default plural
-    const pluralId = node.getPluginData(this.keyPluralDataKey) === '' ? Plural.OTHER : node.getPluginData(this.keyPluralDataKey);
+    const pluralId = node.getPluginData(this.messagePluralDataKey) === '' ? Plural.OTHER : node.getPluginData(this.messagePluralDataKey);
+    const genderId = node.getPluginData(this.messageGenderDataKey) === '' ? Gender.NEUTRAL : node.getPluginData(this.messageGenderDataKey);
     const language = node.getPluginData(this.languageDataKey) === '' ? this.messageStore!.getConfigSync().baseLanguage! : node.getPluginData(this.languageDataKey) as Locale;
-    const keyVersion = node.getPluginData(this.keyVersionDataKey) === '' ? -1 : parseInt(node.getPluginData(this.keyVersionDataKey), 10);
+    const keyVersion = node.getPluginData(this.messageVersionDataKey) === '' ? -1 : parseInt(node.getPluginData(this.messageVersionDataKey), 10);
 
     const messageLinkState = node.getPluginData(this.messageLinkStateDataKey) === '' || node.getPluginData(this.messageLinkStateDataKey) === undefined ? MessageLinkState.Unset : node.getPluginData(this.messageLinkStateDataKey) as MessageLinkState;
-    const key = node.getPluginData(this.keyDataKey) === '' ? undefined : node.getPluginData(this.keyDataKey);
+    const messageId = node.getPluginData(this.messageIdDataKey) === '' ? undefined : node.getPluginData(this.messageIdDataKey);
     const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === '' ? this.messageStore!.getConfigSync().baseLanguage! : rootFrame.getPluginData(this.languageDataKey) as Locale;
     const rootFrameUseSampleValues = rootFrame.getPluginData(this.sampleValuesDataKey) !== '';
     const useSampleValues = node.getPluginData(this.sampleValuesDataKey) !== '';
 
     const filledTemplateHash = node.getPluginData(this.filledTemplateHashDataKey) !== '' ? node.getPluginData(this.filledTemplateHashDataKey) : undefined;
-    const unlinkedTranslations = node.getPluginData(this.unlinkedTranslationsDataKey) !== '' ? JSON.parse(node.getPluginData(this.unlinkedTranslationsDataKey)) : undefined;
+    const unlinkedMessage = node.getPluginData(this.anonymMessageDataKey) !== '' ? JSON.parse(node.getPluginData(this.anonymMessageDataKey)) : undefined;
 
     // eslint-disable-next-line consistent-return
     return {
@@ -992,16 +1001,17 @@ export default class LocalizedLabelManager {
       x,
       y,
       messageLinkState,
-      messageId: key,
+      messageId,
       messageVersion: keyVersion,
       fillins,
       derivedKey: derivable ? derivedName : undefined,
+      genderId: genderId as Gender,
       pluralId: pluralId as Plural,
       characters: text,
       ops: tokenizedTextResult.deltaOps,
       warnings: tokenizedTextResult.warnings,
       labelStyle: tokenizedTextResult.labelStyle,
-      unlinkedMessage: unlinkedTranslations,
+      unlinkedMessage: unlinkedMessage,
     };
   }
 

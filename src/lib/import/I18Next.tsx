@@ -2,6 +2,7 @@
 /* eslint-disable no-continue */
 /* eslint-disable no-plusplus */
 
+import { Gender } from '../message/variants/Gender';
 import { Plural } from '../message/variants/Plural';
 import { ImportMessage } from './ImportMessage';
 
@@ -98,6 +99,7 @@ export default class I18NextKeyValueImporter {
         const keyAndPlrual = I18NextKeyValueImporter.extractPlural(currentKeyName);
         keys.push({
           name: keyAndPlrual.key,
+          gender: Gender.NEUTRAL, // TODO #10 also add gender
           plural: keyAndPlrual.plural,
           text: this.toParrotPlaceholders(subNode as string),
         });

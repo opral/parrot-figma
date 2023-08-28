@@ -25,6 +25,7 @@ import AsyncImage from './AsyncImage';
 import FEATURES_FLAGS from '../../featuretoggle';
 import Drawer from '../../compontents/drawer/Drawer';
 import TextField from '../../compontents/textfield/TextField';
+import { Gender, genderList } from '../../../lib/message/variants/Gender';
 // import ReactQuill from 'react-quill';
 
 interface VersionEntry {
@@ -69,7 +70,7 @@ export default function TranslationKeyListItem({
   const [messageIdToDelete, setMessageIdToDelete] = useState<undefined | string>(undefined);
   const [keyToDeleteReferences, setKeyToDeleteReferences] = useState<undefined | number>(undefined);
 
-  const [showHistory, setShowHistory] = useState<undefined | { language: Locale, plural: Plural }>(undefined);
+  const [showHistory, setShowHistory] = useState<undefined | { language: Locale, gender: Gender, plural: Plural }>(undefined);
 
   const rowRef = React.useRef<HTMLDivElement>(null);
 
@@ -136,7 +137,7 @@ export default function TranslationKeyListItem({
   // create an array of languages with baselanguage at position zero
   const languages = [baseLang, ...messageStore.getLanugages()!.filter((l) => l !== baseLang)] as Locale[];
 
-  const onShowHistoryClick = (language: Locale, plural: Plural) => {
+  const onShowHistoryClick = (language: Locale, gender: Gender, plural: Plural) => {
     const specificHistory = [] as VersionEntry[];
 
     let lastRelevantVersion = undefined as VersionEntry | undefined;
@@ -165,7 +166,7 @@ export default function TranslationKeyListItem({
 
     // filter relevant history changes for the given key
     for (const messageHistoryEntry of message.history) {
-      if (messageHistoryEntry.variants?.[language]?.[plural] !== undefined) {
+      if (messageHistoryEntry.variants?.[language]?.[gender]?.[plural] !== undefined) {
         if (currentTaggedKeyVersion < currentVersion) {
           currentTagIndex += 1;
           currentVersionTagIndex = taggedVersions[currentTagIndex] as number | undefined;
@@ -175,14 +176,14 @@ export default function TranslationKeyListItem({
 
         const currentRelevantVersion = {
           versionTag: currentTag,
-          text: messageHistoryEntry.variants?.[language]?.[plural]?.text ?? lastRelevantVersion?.text,
+          text: messageHistoryEntry.variants?.[language]?.[gender]?.[plural]?.text ?? lastRelevantVersion?.text,
           previousText: lastRelevantVersion?.text,
           userName: messageHistoryEntry.user,
           version: currentVersion,
           date: messageHistoryEntry.date,
           userIconUrl: messageHistoryEntry.user,
-          skip: messageHistoryEntry.variants?.[language]?.[plural]?.skip ?? false,
-          verified: messageHistoryEntry.variants?.[language]?.[plural]?.verified ?? false, // TODO #9 check correct state for history view
+          skip: messageHistoryEntry.variants?.[language]?.[gender]?.[plural]?.skip ?? false,
+          verified: messageHistoryEntry.variants?.[language]?.[gender]?.[plural]?.verified ?? false, // TODO #9 check correct state for history view
         };
 
         // relevant historyEntry
@@ -199,7 +200,7 @@ export default function TranslationKeyListItem({
     }
 
     setHistory(specificHistory.reverse());
-    setShowHistory({ language, plural });
+    setShowHistory({ language, gender, plural });
   };
 
   return (
@@ -220,7 +221,7 @@ export default function TranslationKeyListItem({
             <TextField
               singleClick={false}
               onSave={async (messageName: string) => {
-                localizedLabelManager.updateKey(message.id, {
+                localizedLabelManager.updateMessage(message.id, {
                   variants: [],
                   name: messageName,
                 });
@@ -245,7 +246,7 @@ export default function TranslationKeyListItem({
             <span
               className="layerIcon iconWrapper button"
               onClick={() => {
-                localizedLabelManager.updateKey(message.id, { variants: [], plural: !message.plural });
+                localizedLabelManager.updateMessage(message.id, { variants: [], plural: !message.plural });
               }}
             >
               <span className={'svg-container ' + (message.plural ? 'plural-svg' : 'no-plural-svg')} />
@@ -290,12 +291,14 @@ export default function TranslationKeyListItem({
       {languages.map((language, i, allLanguages) => {
         let languageSkipped = false;
         if (message.variants[language as Locale] !== undefined) {
-          for (const plural of Object.keys(message.variants[language as Locale]!)) {
-            if (message.variants[language as Locale]![plural as Plural]!.skip !== true) {
-              languageSkipped = false;
-              break;
-            } else {
-              languageSkipped = true;
+          for (const gender of Object.keys(message.variants[language as Locale]!)) {
+            for (const plural of Object.keys(message.variants[language as Locale]![gender as Gender]!)) {
+              if (message.variants[language as Locale]![gender as Gender]![plural as Plural]!.skip !== true) {
+                languageSkipped = false;
+                break;
+              } else {
+                languageSkipped = true;
+              }
             }
           }
         }
@@ -303,79 +306,86 @@ export default function TranslationKeyListItem({
         return (
           <div className={`group language-group ${languageSkipped ? ' skipped ' : ''}${language === baseLang ? ' baselanguage grid-item-border grid-item-border-top' : ''}${i === (allLanguages.length - 1) ? ' grid-item-border grid-item-border-bottom ' : ''}`} key={language}>
             <div className="column column-language grid-item-language"><span className="rowText">{language}</span></div>
-            {getPluralFormsByLanguage(language).filter((plural) => message.plural || plural === Plural.OTHER).map((plural, pluralsIndex, allPlurals) =>
-              // eslint-disable-next-line consistent-return
-              (
-                <div key={plural} className={`group plural-group ${pluralsIndex === (allPlurals.length - 1) ? 'lastPlural  grid-item-border grid-item-border-bottom' : ''} ${pluralsIndex === 0 ? 'firstPlural  grid-item-border grid-item-border-top' : ''} ${message.plural ? 'onePlural' : ' multiplePlurals'}${message.variants[language as Locale]?.[plural as Plural]?.skip === true ? ' skipped' : ''}`}>
-                  <div className="column column-plural grid-item-plural grid-item-border"><span className="rowText">{message.plural ? plural : ''}</span></div>
-                  <div className="column  column-translation grid-item-translation grid-item-border translation-container translation">
-                    <TranslationEditor
-                      fillins={message.defaultFillins}
-                      editable={select === undefined}
-                      match={searchMatch?.textMatches[language]?.[plural as Plural]}
-                      onSave={async (text: any, fillins: Fillins) => {
-                        let skip = message.variants[language as Locale]?.[plural as Plural]?.skip ?? false;
+            {genderList.filter(((gender) => message.gender || gender === Gender.NEUTRAL)).map((gender, genderIndex, allGenders) => (
+              <div key={gender} className={`group gender-group ${genderIndex === (allGenders.length - 1) ? 'lastGender  grid-item-border grid-item-border-bottom' : ''} ${genderIndex === 0 ? 'firstGender  grid-item-border grid-item-border-top' : ''} ${message.gender ? 'oneGender' : ' multipleGenders'}`}>
+                <div className="column column-gender grid-item-gender grid-item-border"><span className="rowText">{message.gender ? gender : ''}</span></div>
+                {getPluralFormsByLanguage(language).filter((plural) => message.plural || plural === Plural.OTHER).map((plural, pluralsIndex, allPlurals) =>
+                // eslint-disable-next-line consistent-return
+                  (
+                    <div key={plural} className={`group plural-group ${pluralsIndex === (allPlurals.length - 1) ? 'lastPlural  grid-item-border grid-item-border-bottom' : ''} ${pluralsIndex === 0 ? 'firstPlural  grid-item-border grid-item-border-top' : ''} ${message.plural ? 'onePlural' : ' multiplePlurals'}${message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.skip === true ? ' skipped' : ''}`}>
+                      <div className="column column-plural grid-item-plural grid-item-border"><span className="rowText">{message.plural ? plural : ''}</span></div>
+                      <div className="column  column-translation grid-item-translation grid-item-border translation-container translation">
+                        <TranslationEditor
+                          fillins={message.defaultFillins}
+                          editable={select === undefined}
+                          match={searchMatch?.textMatches[language]?.[gender as Gender]?.[plural as Plural]}
+                          onSave={async (text: any, fillins: Fillins) => {
+                            let skip = message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.skip ?? false;
 
-                        if (text !== undefined && text !== '') {
-                          skip = false;
-                        }
-                        await localizedLabelManager.updateKey(message.id!, {
-                          variants: [{
-                            language, plural: plural as Plural, text, skip,
-                          }],
-                          fillins,
-                        });
-                      }}
-                      variantHTML={message.variants[language as Locale]?.[plural as Plural]?.text}
-                      messageStore={messageStore}
-                    />
+                            if (text !== undefined && text !== '') {
+                              skip = false;
+                            }
+                            await localizedLabelManager.updateMessage(message.id!, {
+                              variants: [{
+                                locale: language, plural: plural as Plural, gender: gender as Gender, text, skip,
+                              }],
+                              fillins,
+                            });
+                          }}
+                          variantHTML={message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.text}
+                          messageStore={messageStore}
+                        />
 
-                  </div>
-                  <div className="column column-actions grid-item-actions grid-item-border grid-item-border-right">
-                    { select === undefined && (
-                    <>
-                      { FEATURES_FLAGS.disableKeyLanguage
+                      </div>
+                      <div className="column column-actions grid-item-actions grid-item-border grid-item-border-right">
+                        { select === undefined && (
+                        <>
+                          { FEATURES_FLAGS.disableKeyLanguage
                       && (
                       <span
                         className="layerIcon iconWrapper button"
                         onClick={async () => {
                           // disable a translation
-                          await localizedLabelManager.updateKey(message.id!, {
+                          await localizedLabelManager.updateMessage(message.id!, {
                             variants: [{
-                              language,
+                              locale: language,
+                              gender,
                               plural,
-                              text: message.variants[language as Locale]?.[plural as Plural]?.text,
-                              skip: message.variants[language as Locale]?.[plural as Plural]?.skip === undefined ? true : !message.variants[language as Locale]![plural as Plural]!.skip,
+                              text: message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.text,
+                              skip: message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.skip === undefined ? true : !message.variants[language as Locale]![gender as Gender]![plural as Plural]!.skip,
                             }],
                           });
                         }}
                       >
-                        <span className={'svg-container' + (message.variants[language as Locale]?.[plural as Plural]?.skip === true ? ' eye-closed-svg' : ' eye-svg')} />
+                        <span className={'svg-container' + (message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.skip === true ? ' eye-closed-svg' : ' eye-svg')} />
                       </span>
                       )}
-                      { FEATURES_FLAGS.versioning && (
-                      <span
-                        className="layerIcon iconWrapper button"
-                        onClick={async () => {
-                          onShowHistoryClick(language, plural);
-                        }}
-                      >
-                        <span className="svg-container history-svg" />
-                      </span>
-                      )}
-                      <span
-                        className="layerIcon iconWrapper button"
-                        onClick={async () => {
-                          setShowPlaceholderEditor(true);
-                        }}
-                      >
-                        <span className="svg-container placeholder-svg" />
-                      </span>
-                    </>
-                    )}
-                  </div>
-                </div>
-              ))}
+                          { FEATURES_FLAGS.versioning && (
+                          <span
+                            className="layerIcon iconWrapper button"
+                            onClick={async () => {
+                              onShowHistoryClick(language, gender, plural);
+                            }}
+                          >
+                            <span className="svg-container history-svg" />
+                          </span>
+                          )}
+                          <span
+                            className="layerIcon iconWrapper button"
+                            onClick={async () => {
+                              setShowPlaceholderEditor(true);
+                            }}
+                          >
+                            <span className="svg-container placeholder-svg" />
+                          </span>
+                        </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            ))}
+
           </div>
         );
       })}
@@ -417,9 +427,9 @@ export default function TranslationKeyListItem({
               onReuse={i === 0 ? undefined : async (text: string) => {
                 if (showHistory === undefined) return;
 
-                await localizedLabelManager.updateKey(message.id!, {
+                await localizedLabelManager.updateMessage(message.id!, {
                   variants: [{
-                    language: showHistory.language, plural: showHistory.plural as Plural, text, skip: false,
+                    locale: showHistory.language, gender: showHistory.gender, plural: showHistory.plural as Plural, text, skip: false,
                   }],
                 });
                 setShowHistory(undefined);
@@ -477,7 +487,7 @@ export default function TranslationKeyListItem({
             value="Save"
             disabled={false}
             onClick={() => {
-              localizedLabelManager.updateKey(message.id, {
+              localizedLabelManager.updateMessage(message.id, {
                 fillins: defaultFillins,
                 variants: [],
               });

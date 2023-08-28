@@ -2,6 +2,7 @@
 /* eslint-disable no-continue */
 /* eslint-disable no-plusplus */
 
+import { Gender } from '../message/variants/Gender';
 import { Plural } from '../message/variants/Plural';
 import { ImportMessage } from './ImportMessage';
 
@@ -49,6 +50,7 @@ export default class AppleDictFileImporter {
             messages.push({
               name: messageName,
               plural,
+              gender: Gender.NEUTRAL,
               text,
             });
           }
@@ -60,6 +62,7 @@ export default class AppleDictFileImporter {
           messages.push({
             name: messageName,
             plural: Plural.OTHER,
+            gender: Gender.NEUTRAL,
             text,
           });
         }

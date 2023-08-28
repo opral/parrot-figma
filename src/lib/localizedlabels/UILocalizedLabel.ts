@@ -8,6 +8,7 @@ import {
   Fillins, PlaceholdersByName, MessageEntry,
 } from '../message/Message';
 import LocalizedLabelManager, { DeltaOp, MARKER_CHARACTER } from './LocalizedLabelManager';
+import { Gender } from '../message/variants/Gender';
 
 const Delta = Quill.import('delta') as typeof DeltaType;
 
@@ -19,6 +20,7 @@ export interface ILocalizedLabelManagerUI {
     messageId?: string,
     messageVersion?: number,
     language?: Locale,
+    gender?: Gender,
     plural?: Plural,
     variantHTML?: string,
     filledTemplateHash?: string,
@@ -60,6 +62,8 @@ export class UILocalizedLabel implements LocalizedLabel {
   messageId?: string | undefined;
 
   messageVersion: number;
+
+  genderId: Gender;
 
   pluralId: Plural;
 
@@ -108,6 +112,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     this.messageLinkState = localizedLabel.messageLinkState;
     this.messageId = localizedLabel.messageId;
     this.messageVersion = localizedLabel.messageVersion;
+    this.genderId = localizedLabel.genderId;
     this.pluralId = localizedLabel.pluralId;
     this.characters = localizedLabel.characters;
     this.textChangedAfterGeneration = localizedLabel.textChangedAfterGeneration;
@@ -129,15 +134,19 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   getMessageName(): string | undefined {
     if (this.messageId === undefined) return undefined;
-    const key = this.manager.messageStore.getKey(this.messageId);
-    if (key) {
-      return key.keyName;
+    const message = this.manager.messageStore.getMessage(this.messageId);
+    if (message) {
+      return message.name;
     }
 
     return undefined;
   }
 
   static toHtml(text: string, ops: DeltaOp[], fillins: Fillins, trimLabelStyles: boolean) {
+    if (text === '') {
+      return '';
+    }
+
     const deltaOps = [] as DeltaOperation[];
     const lastTwoCharsBreaks = text.length > 1 && text[text.length - 1] === '\n' && text[text.length - 2] === '\n';
 
@@ -273,7 +282,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   getFillins(messageIdToUse?: string, fillins?: Fillins) {
     const messageId = messageIdToUse ?? this.messageId;
-    const message = messageId ? this.manager.messageStore.getKey(messageId) : undefined;
+    const message = messageId ? this.manager.messageStore.getMessage(messageId) : undefined;
 
     const defaultFillIns = message ? { ...message.defaultFillins } : {} as Fillins;
     const labelFillins = fillins ?? this.fillins;
@@ -332,7 +341,7 @@ export class UILocalizedLabel implements LocalizedLabel {
    *
    * Label state changes if:
    *  * the labels text changes and its text is different from the original text
-   *  * the keys language/plural the label references changed
+   *  * the message variant language/gender/plural the label references changed
    *  *
    * @param localizedLabel the label to provide the state for
    * @returns
@@ -346,17 +355,17 @@ export class UILocalizedLabel implements LocalizedLabel {
     };
 
     // debugger;
-    const translatedKey = this.messageLinkState !== MessageLinkState.Unset ? this.manager.messageStore.getKey(this.messageId!) : undefined;
+    const translatedKey = this.messageLinkState !== MessageLinkState.Unset ? this.manager.messageStore.getMessage(this.messageId!) : undefined;
 
     if (translatedKey) {
-      const currentVersion = translatedKey.getHistoryEntry(this.language, this.pluralId, this.messageVersion);
+      const currentVersion = translatedKey.getHistoryEntry(this.language, this.genderId, this.pluralId, this.messageVersion);
 
       if (currentVersion === undefined) {
         state.variantDeleted = true;
       } else {
-        state.behind = translatedKey.getChangesSince(this.language, this.pluralId, this.messageVersion);
+        state.behind = translatedKey.getChangesSince(this.language, this.genderId, this.pluralId, this.messageVersion);
 
-        const variantHtml = currentVersion.messages[this.language]?.[this.pluralId]?.text!;
+        const variantHtml = currentVersion.variants[this.language]?.[this.genderId]?.[this.pluralId]?.text!;
 
         // eslint-disable-next-line no-param-reassign
         if (variantHtml !== this.variantHTML) {
@@ -374,7 +383,7 @@ export class UILocalizedLabel implements LocalizedLabel {
       return;
     }
 
-    const message = this.manager.messageStore.getKey(this.messageId!);
+    const message = this.manager.messageStore.getMessage(this.messageId!);
 
     if (this.messageLinkState !== MessageLinkState.Linked
       || this.state!.modified
@@ -383,9 +392,9 @@ export class UILocalizedLabel implements LocalizedLabel {
       return;
     }
 
-    const versionToApply = message.getHistoryEntry(this.language, this.pluralId, this.messageVersion);
+    const versionToApply = message.getHistoryEntry(this.language, this.genderId, this.pluralId, this.messageVersion);
 
-    const text = versionToApply?.messages?.[this.language]?.[this.pluralId]?.text;
+    const text = versionToApply?.messages?.[this.language]?.[this.genderId]?.[this.pluralId]?.text;
     if (text) {
       await this.manager.updateLabelProperties(this.nodeId, {
         showSampleValues,
@@ -403,11 +412,11 @@ export class UILocalizedLabel implements LocalizedLabel {
       const baseLanguage = this.manager.messageStore.getBaseLanugage()! as Locale;
       // TODO check if the target language is avaialable and up to date
       let variantUpToDate = false;
-      const baseLanguageHTML = this.language === baseLanguage ? this.variantHTML : this.unlinkedMessage.variants?.[baseLanguage]?.[this.pluralId]?.text!;
+      const baseLanguageHTML = this.language === baseLanguage ? this.variantHTML : this.unlinkedMessage.variants?.[baseLanguage]?.[this.genderId]?.[this.pluralId]?.text!;
 
       if (this.unlinkedMessage
-        && this.unlinkedMessage.variants?.[targetLanguage]?.[this.pluralId]?.text) {
-        const currentTranslationBaseLangHash = this.unlinkedMessage.variants?.[targetLanguage]?.[this.pluralId]?.baseLangHash;
+        && this.unlinkedMessage.variants?.[targetLanguage]?.[this.genderId]?.[this.pluralId]?.text) {
+        const currentTranslationBaseLangHash = this.unlinkedMessage.variants?.[targetLanguage]?.[this.genderId]?.[this.pluralId]?.baseLangHash;
         if (baseLanguageHTML && blake.blake2sHex(baseLanguageHTML) === currentTranslationBaseLangHash) {
           variantUpToDate = true;
         }
@@ -419,31 +428,32 @@ export class UILocalizedLabel implements LocalizedLabel {
 
       await this.manager.updateLabelProperties(this.nodeId, {
         language: targetLanguage,
+        gender: this.genderId,
         plural: this.pluralId,
         variantHTML,
       });
       return;
     }
 
-    const messageName = this.messageId ?? this.derivedKey;
+    const messageId = this.messageId ?? this.derivedKey;
     const labelState = this.state!;
     let labelVersion = this.messageVersion;
 
     if (this.messageLinkState === MessageLinkState.NoKey // we don't update unlinked labels
-      || messageName === undefined // or labels where we cant derive or get the key
+      || messageId === undefined // or labels where we cant derive or get the message
       || labelState.modified) { // or that are modified
       // root language has changed - trigger cache update
       await this.manager.updateLabelProperties(this.nodeId, {});
       return;
     }
 
-    let message = this.manager.messageStore.getKey(messageName);
-    // check if key exists
+    let message = this.manager.messageStore.getMessage(messageId);
+    // check if message exists
     if (message === undefined) {
-      throw new Error('Key linked to label does not exist - not removed when key was deleted?');
+      throw new Error('Message linked to label does not exist - not removed when Message was deleted?');
       /* const translation = await missingTranslationProvider(this.translationHTML!, this.language, targetLanguage);
 
-      // ok we have a fresh key to create - no translation to expect
+      // ok we have a fresh message to create - no translation to expect
       message = await this.manager.keyStore.createKey(messageName, [{
         language: this.language,
         plural: this.pluralId,
@@ -458,29 +468,30 @@ export class UILocalizedLabel implements LocalizedLabel {
       labelVersion = message.latestVersion; */
     } else {
       if (labelState.behind === 0) {
-        // updating key
-        if (message.messages[targetLanguage]?.[this.pluralId]?.text === undefined) {
-          if (message.messages[targetLanguage]?.[this.pluralId]?.skip === true) {
+        // updating message
+        if (message.variants[targetLanguage]?.[this.genderId]?.[this.pluralId]?.text === undefined) {
+          if (message.variants[targetLanguage]?.[this.genderId]?.[this.pluralId]?.skip === true) {
             // TODO #3 think about fall back mechanism:
-            // in case the key for the given plural is skipped try to fall back to others
+            // in case the variant for the given plural is skipped try to fall back to others
             // if this is skipped as well fall back to base language
             //  - for now we just don't change the label
             await this.manager.updateLabelProperties(this.nodeId, {});
             return;
           }
 
-          // translation missing - generate it and update the translation key
+          // translation missing - generate it and update the message
           let originLanguage = this.manager.messageStore.getBaseLanugage();
-          let originText = message.messages[this.manager.messageStore.getBaseLanugage()!]?.[this.pluralId]?.text;
+          let originText = message.variants[this.manager.messageStore.getBaseLanugage()!]?.[this.genderId]?.[this.pluralId]?.text;
 
           if (originText === undefined) {
             originLanguage = this.language;
-            originText = message.messages[this.language]![this.pluralId]?.text!;
+            originText = message.variants[this.language]![this.genderId]?.[this.pluralId]?.text!;
           }
 
           const translation = await missingTranslationProvider(originText, originLanguage as string, targetLanguage);
-          message = await this.manager.messageStore.updateKey(messageName, [{
+          message = await this.manager.messageStore.updateMessage(messageId, [{
             language: targetLanguage,
+            gender: this.genderId,
             plural: this.pluralId,
             text: translation,
             skip: false,
@@ -489,11 +500,12 @@ export class UILocalizedLabel implements LocalizedLabel {
         labelVersion = message.latestVersion;
       }
 
-      const versionToApply = message.getHistoryEntry(targetLanguage, this.pluralId, labelVersion);
+      const versionToApply = message.getHistoryEntry(targetLanguage, this.genderId, this.pluralId, labelVersion);
 
       await this.manager.updateLabelProperties(this.nodeId, {
-        messageId: messageName,
+        messageId,
         messageLinkState: MessageLinkState.Linked,
+        gender: this.genderId,
         language: targetLanguage,
         plural: this.pluralId,
         variantHTML: versionToApply?.messages?.[targetLanguage]?.[this.pluralId]?.text,

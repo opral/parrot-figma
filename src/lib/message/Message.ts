@@ -12,16 +12,17 @@ export type HistoryTag = {
 
 // TODO #10 rename to variant Entry
 export type MessageEntry = {
+  gender: boolean,
   plural: boolean,
-  // TODO #10 take the renaming from messages -> variants in migrations into account
   variants?: {
     [language in Locale]? : {
-      // TODO #10 add gender
-      [plural in Plural]? : {
-        text?: string,
-        baseLangHash?: string,
-        verified: boolean,
-        skip?: boolean
+      [gender in Gender]? : {
+        [plural in Plural]? : {
+          text?: string,
+          baseLangHash?: string,
+          verified: boolean,
+          skip?: boolean
+        }
       }
     }
   }
@@ -31,15 +32,17 @@ export type HistoryEntry = {
   user: string,
   date: number,
   name?: string,
+  gender?: boolean,
   plural?: boolean,
   labels?: string[],
   variants?: {
     [language in Locale]? : {
-      // TODO #10 add gender
-      [plural in Plural]? : {
-        text?: string,
-        verified?: boolean,
-        skip?: boolean
+      [gender in Gender]? : {
+        [plural in Plural]? : {
+          text?: string,
+          verified?: boolean,
+          skip?: boolean
+        }
       }
     }
   }
@@ -77,23 +80,23 @@ export interface Fillins {
   [placeholderName: string]: { value: string | number, default?: boolean }
 }
 
-// TODO #10 rename to variants
 export type Variants = {
   [language in Locale]? : {
-    // TODO #10 [gender in Gender]? : {
-    [plural in Plural]? : {
-      version: number,
-      text?: string,
-      verified: boolean,
-      skip: boolean
+    [gender in Gender]? : {
+      [plural in Plural]? : {
+        version: number,
+        text?: string,
+        verified: boolean,
+        skip: boolean
+      }
     }
   }
 };
 
 // base language changed: baseVersionID > translation id
-// Each label stores the key + version of the translation > we need to know the latest version of each translation
+// Each label stores the message + version of the translation > we need to know the latest version of each translation
 
-// we need to know the latest version of the base transalation to know if a key needs to be checked
+// we need to know the latest version of the base transalation to know if a message needs to be checked
 // a version needs an author (editor) and a method (manual/deepl/google translate)
 // additional like qa done, tags should be stored separately?
 //
@@ -103,11 +106,12 @@ export interface SerializableMessage {
   name: string,
   latestVersion: number,
   historyTags: {
-    // map a tag identifier (we use a number for size reasons) to a version index of a key
+    // map a tag identifier (we use a number for size reasons) to a version index of a message
     [tagIndex: number]: number,
   },
   labels: string[],
   referencingTextNodes: string[],
+  gender: boolean,
   plural: boolean,
   variants: Variants,
   quantity: { value: number } | { placeholder: string },
@@ -120,5 +124,5 @@ export interface Message extends SerializableMessage {
 }
 
 export interface Messages {
-  [keyName: string]: Message
+  [messageId: string]: Message
 }

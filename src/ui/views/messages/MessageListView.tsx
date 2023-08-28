@@ -164,26 +164,26 @@ export default function MessageListView({
       )}
 
       <div className="searchResults">
-        { searchQuery.key !== undefined && (
+        { searchQuery.name !== undefined && (
           <div className="searchResults-suggestion">
-            <div className="text">{`Key: ${searchQuery.key}`}</div>
+            <div className="text">{`Key: ${searchQuery.name}`}</div>
             <div
               className="close svg-container cross-svg"
               onClick={() => {
                 const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-                newQuery.key = undefined;
+                newQuery.name = undefined;
                 updateQuery(newQuery);
               }}
             />
           </div>
         )}
 
-        { searchQuery.key === undefined && (
+        { searchQuery.name === undefined && (
           <div style={{ paddingRight: '5px' }}>
             <span>
-              {filteredKeys.matchingKeys.size}
+              {filteredKeys.matchingNames.size}
               {' '}
-              Translation Keys
+              Messages
               {' '}
             </span>
             {searchQuery.missingTranslation === undefined && (
@@ -193,9 +193,9 @@ export default function MessageListView({
                 {' '}
                 -
                 {' '}
-                {filteredKeys.withMissingTranslations.size}
+                {filteredKeys.withMissingVariants.size}
                 {' '}
-                Missing Translations
+                Missing Variants
               </span>
               <span
                 style={{ color: '#1DA1F2', cursor: 'pointer' }}
@@ -214,7 +214,7 @@ export default function MessageListView({
 
           </div>
         )}
-        { searchQuery.key === undefined && searchQuery.missingTranslation !== undefined && (
+        { searchQuery.name === undefined && searchQuery.missingTranslation !== undefined && (
           <div className="searchResults-suggestion">
             <div className="text">Missing Translation</div>
             <div
@@ -239,7 +239,7 @@ export default function MessageListView({
               updateQuery(newQuery);
             }}
           >
-            {`Full Translation (${filteredKeys.withMissingTranslations.size})`}
+            {`Full Translation (${filteredKeys.withMissingVariants.size})`}
           </div>
           <div
             className={`searchResults-suggestion ${searchQuery.selected === 'FRAME' ? ' active' : ''}`}
@@ -266,32 +266,32 @@ export default function MessageListView({
           <div className="searchResults-suggestion">
             results:
             {' '}
-            {filteredKeys.matchingKeys.size}
+            {filteredKeys.matchingNames.size}
             {' '}
           </div>
         </>
         )}
-        {false && !searchQuery.key && filteredKeys.inKeys.size > 0 && (
+        {false && !searchQuery.name && filteredKeys.inNames.size > 0 && (
         <div
           className="searchResults-suggestion"
           onClick={() => {
             const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-            newQuery.key = searchQuery.text;
-            newQuery.keyAtEnd = false;
+            newQuery.name = searchQuery.text;
+            newQuery.nameAtEnd = false;
             newQuery.text = '';
 
             updateQuery(newQuery);
           }}
         >
-          {`key:${searchQuery.text} ${filteredKeys.inKeys.size}`}
+          {`key:${searchQuery.text} ${filteredKeys.inNames.size}`}
         </div>
         )}
-        {false && !searchQuery.key && filteredKeys.inText.size > 0 && (
+        {false && !searchQuery.name && filteredKeys.inText.size > 0 && (
         <div
           className="searchResults-suggestion"
           onClick={() => {
             const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-            newQuery.key = '*';
+            newQuery.name = '*';
             updateQuery(newQuery);
           }}
         >
@@ -319,7 +319,7 @@ export default function MessageListView({
             updateQuery(newQuery);
           }}
         >
-          {`missing_translation:true ${filteredKeys.withMissingTranslations.size}`}
+          {`missing_translation:true ${filteredKeys.withMissingVariants.size}`}
         </div>
         )}
       </div>
@@ -338,7 +338,7 @@ export default function MessageListView({
           select={select}
           keySelected={false}
         />
-        {[...filteredKeys.matchingKeys].map((messageId) => {
+        {[...filteredKeys.matchingNames].map((messageId) => {
           if (rendered > renderEntries) {
             return;
           }

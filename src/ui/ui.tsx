@@ -130,7 +130,7 @@ function App() {
   useEffect(() => {
     // asynchronous fetch the state from figma helper
     (async () => {
-      // console.log('load - keys');
+      // console.log('load - messages');
       await memoryTranslationKeyStore.load();
       localizedLabelManager.startFillupCache();
       const fileSetupCompleted = await figmaRemote.getRootPluginData('fileSetupCompleted');
@@ -241,7 +241,7 @@ function App() {
           />
         </>
       );
-    case 'keys':
+    case 'messages':
       view = (
         <MessageListView
           showSearchBar={false}
@@ -271,7 +271,7 @@ function App() {
         <LocalizedLabelsListView
           showKey={(key: string) => {
             setKeyQuery(MessageStoreMemory.toQueryObject(`key:${key}`));
-            setAppScreen('keys');
+            setAppScreen('messages');
           }}
           localizedLabelManager={localizedLabelManager}
           figmaRemote={figmaRemote}
@@ -290,14 +290,13 @@ function App() {
         <div className="tabHeader">
           <div className={`tab ${appScreen === 'design' ? 'active' : ''}`} onClick={() => setAppScreen('design')}>Design</div>
           <div
-            className={`tab ${appScreen === 'keys' ? 'active' : ''}`}
+            className={`tab ${appScreen === 'messages' ? 'active' : ''}`}
             onClick={() => {
               setKeyQuery(MessageStoreMemory.toQueryObject(''));
-              setAppScreen('keys');
+              setAppScreen('messages');
             }}
           >
-            Keys
-
+            Messages
           </div>
           { FEATURES_FLAGS.export && (<div className={`tab ${appScreen === 'export' ? 'active' : ''}`} onClick={() => setAppScreen('export')}>{ FEATURES_FLAGS.versioning ? 'Versions & Export' : 'Export'}</div>)}
           <div className={`tab ${appScreen === 'settings' ? 'active' : ''}`} onClick={() => setAppScreen('settings')}>Setup</div>

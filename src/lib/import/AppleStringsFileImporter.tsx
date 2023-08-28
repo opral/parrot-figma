@@ -2,6 +2,7 @@
 /* eslint-disable no-continue */
 /* eslint-disable no-plusplus */
 
+import { Gender } from '../message/variants/Gender';
 import { Plural } from '../message/variants/Plural';
 import { ImportMessage } from './ImportMessage';
 
@@ -104,6 +105,7 @@ export default class AppleStringsFileImporter {
       importedKeys.push({
         name: messageName,
         plural: Plural.OTHER,
+        gender: Gender.NEUTRAL,
         text: value,
       });
     }

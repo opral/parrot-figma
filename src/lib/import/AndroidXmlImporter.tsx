@@ -2,6 +2,7 @@
 /* eslint-disable no-continue */
 /* eslint-disable no-plusplus */
 
+import { Gender } from '../message/variants/Gender';
 import { Locale } from '../message/variants/Locale';
 import { Plural } from '../message/variants/Plural';
 import { ImportMessage } from './ImportMessage';
@@ -140,6 +141,7 @@ export default class AndroidXmlImporter {
 
         importedKeys.push({
           name: stringNode.getAttribute('name') as string,
+          gender: Gender.NEUTRAL,
           plural: Plural.OTHER,
           text: this.toParrotPlaceholders(this.unMask(childNode.textContent)),
         });
@@ -153,6 +155,7 @@ export default class AndroidXmlImporter {
         for (const pluralType of (Object.keys(plurals) as Plural[])) {
           importedKeys.push({
             name: pluralNode.getAttribute('name') as string,
+            gender: Gender.NEUTRAL,
             plural: pluralType,
             text: this.toParrotPlaceholders(this.unMask(plurals[pluralType]!.text!)),
           });

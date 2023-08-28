@@ -20,6 +20,7 @@ import { Fillins } from '../../../lib/message/Message';
 import FEATURES_FLAGS from '../../featuretoggle';
 import { track } from '../../utils/analytics';
 import Drawer from '../../compontents/drawer/Drawer';
+import { Gender } from '../../../lib/message/variants/Gender';
 
 type LocalizedLabelListItemProps = {
   showMessage: Function,
@@ -83,10 +84,10 @@ export default function LocalizedLabelListItem({
     });
   }
 
-  let keyValue = '';
+  let messageName = '';
 
   if (localizedLabel.messageLinkState === MessageLinkState.Linked && localizedLabel.messageId) {
-    keyValue = localizedLabel.getMessageName()!;
+    messageName = localizedLabel.getMessageName()!;
   }
 
   useEffect(() => {
@@ -111,7 +112,7 @@ export default function LocalizedLabelListItem({
             text: 'Use Key',
             key: 'enter',
             callback: () => {
-              localizedLabelManager.linkKey(localizedLabel, drawerSelectedKey.current!, localizedLabel.rootFrameLanguage!, Plural.OTHER);
+              localizedLabelManager.linkKey(localizedLabel, drawerSelectedKey.current!, localizedLabel.rootFrameLanguage!, Gender.NEUTRAL, Plural.OTHER);
               setSearchKey(undefined);
             },
             disabled: drawerSelectedKey.current === undefined,
@@ -166,38 +167,38 @@ export default function LocalizedLabelListItem({
               <div className="key-panel">
                 <InputSelect
                   className="key-select"
-                  placeholder="Link Translation Key"
+                  placeholder="Link Message..."
                   inputPlaceholder="e.g. home__tagline"
-                  tooltip="Link a Translation Key to this Text to reuse messages and straight forwaredd Developer handover."
+                  tooltip="Link a Message to this Text to reuse messages and for a straight forwaredd Developer handover."
                   onCancel={() => {
                     setDummyState({});
                   }}
                   onChange={async (selectedOption) => {
                     if (selectedOption.type === InputSelectionOptionType.ACTION) {
-                      if (selectedOption.value === 'select-key') {
+                      if (selectedOption.value === 'select-message') {
                         setSearchKey({
                           search: localizedLabel.characters,
                         });
-                      } else if (selectedOption.value === 'show-key') {
-                        showMessage(localizedLabel.messageId!);
+                      } else if (selectedOption.value === 'show-message') {
+                        showMessage(localizedLabel.getMessageName());
                       } else if (selectedOption.value === 'reset') {
                         await localizedLabelManager.unsetLabel(localizedLabel);
                       }
                     } else if (selectedOption.type === InputSelectionOptionType.ADD) {
-                      await localizedLabelManager.linkKey(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!, Plural.OTHER);
+                      await localizedLabelManager.linkKey(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!, Gender.NEUTRAL, Plural.OTHER);
                     } else if (selectedOption.type === InputSelectionOptionType.SUGGESTION) {
-                      await localizedLabelManager.linkKey(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!, Plural.OTHER);
+                      await localizedLabelManager.linkKey(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!, Gender.NEUTRAL, Plural.OTHER);
                     }
                     /* if (selectedOption.type === 'action') {
                       if (selectedOption.value === 'no-translation') {
                         localizedLabelManager.setNoKey(localizedLabel);
-                      } else if (selectedOption.value === 'select-key') {
+                      } else if (selectedOption.value === 'select-message') {
                         setSearchKey({
                           search: localizedLabel.characters,
                         });
                       } else if (selectedOption.value === 'create-key') {
                         setNewKey(localizedLabel.derivedKey ?? '');
-                      } else if (selectedOption.value === 'show-key') {
+                      } else if (selectedOption.value === 'show-message') {
                         showKey(localizedLabel.key!);
                       }
                     } else if (selectedOption.type === 'key') {
@@ -205,15 +206,15 @@ export default function LocalizedLabelListItem({
                     } */
                   }}
                   valueReplaceFn={(value) => value.replace(/[ .]/g, (match) => (match === '.' ? '__' : '_'))}
-                  defaultValue={keyValue}
+                  defaultValue={messageName}
                   getOptions={(enteredValue: string) => {
                     let options = [] as InputSelectOption[];
 
                     const keySearch = enteredValue === '' ? '*' : enteredValue;
                     const textMatchQuery = MessageStoreMemory.toQueryObject(`exact_text:true key:${keySearch} ${localizedLabel.characters}`);
-                    const { matchingKeys: suggestedKeys } = messageStore.findKeys(textMatchQuery);
+                    const { matchingNames: suggestedKeys } = messageStore.findKeys(textMatchQuery);
                     const keyMatchQuery = MessageStoreMemory.toQueryObject(`key:${keySearch}`);
-                    const { matchingKeys: matchingKeysByName } = messageStore.findKeys(keyMatchQuery);
+                    const { matchingNames: matchingKeysByName } = messageStore.findKeys(keyMatchQuery);
 
                     const isValidKey = enteredValue.length >= 0 && /^[a-zA-Z0-9]$/.test(enteredValue[enteredValue.length - 1]);
 
@@ -246,7 +247,7 @@ export default function LocalizedLabelListItem({
                       options.push({
                         type: InputSelectionOptionType.DIVIDER,
                         value: '',
-                        label: 'Keys',
+                        label: 'Messages',
                       });
 
                       options = options.concat([...matchingKeysByName].map((key) => ({
@@ -266,14 +267,14 @@ export default function LocalizedLabelListItem({
 
                     options.push({
                       label: 'Full Search...',
-                      value: 'select-key',
+                      value: 'select-message',
                       type: InputSelectionOptionType.ACTION,
                     });
 
-                    if (keyValue && keyValue !== '') {
+                    if (messageName && messageName !== '') {
                       options.push({
-                        label: 'Go to Translation key...',
-                        value: 'show-key',
+                        label: 'Show linked Message...',
+                        value: 'show-message',
                         type: InputSelectionOptionType.ACTION,
                       });
                     }

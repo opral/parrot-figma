@@ -29,7 +29,6 @@ import LocalizedLabelManagerUI from '../lib/localizedlabels/LocalizedLabelManage
 import './tabbar.css';
 import './assets/icons.css';
 import SegmentedControl from './compontents/segmentedControl/SegmentedControl';
-import LanguageSetup from './compontents/languageSetup/LanguageSetup';
 import Onboarding from './views/onboarding/Onboarding';
 import { Locale } from '../lib/message/variants/Locale';
 import Tooltip from './compontents/tooltip/Tooltip';
@@ -37,6 +36,9 @@ import Tooltip from './compontents/tooltip/Tooltip';
 import Export from './views/export/Export';
 import FEATURES_FLAGS from './featuretoggle';
 import SetupView from './views/setup/SetupView';
+import * as pjs from '../../package.json';
+
+console.log(`Starting Figma UI - Version ${pjs.version}`);
 
 TimeAgo.addDefaultLocale(en);
 
@@ -112,7 +114,31 @@ figmaRemote.getUserId().then((userId) => {
   identify(userId!);
 });
 
+
+const checkVersion = async () => {
+  const minVersionRequest = await fetch('https://parrot-global.github.io/parrot/min-version.json<', {
+    cache: 'no-cache',
+  });
+  const { minVersion } = await minVersionRequest.json();
+  const figVersion = Number.parseInt(pjs.version.split('.')[2], 10);
+  console.log(`Current Version: ${figVersion} Minimum version ${minVersion}`);
+  if (minVersion > figVersion) {
+    if (document.getElementById('version-outdated')) {
+      document.getElementById('version-outdated')!.classList.remove('gone');
+      document.getElementById('version-outdated')!.classList.add('visible');
+    }
+  }
+};
+
+const versionCheckInterval = 1000 * 40;
+// we use any here since NodeJS.Timout - the suggested type by the ide is not correct
+checkVersion().catch(console.log);
+setInterval(() => {
+  checkVersion().catch(console.log);
+}, versionCheckInterval);
+
 const figmaFileTranslationKeyStore = new MessageStoreFigmaRoot(true);
+
 asyncFunctionProxy.proxyAsyncMethods(figmaFileTranslationKeyStore);
 const memoryTranslationKeyStore = new MessageStoreMemory(figmaFileTranslationKeyStore);
 
@@ -262,7 +288,7 @@ function App() {
     case 'export':
       view = (
         <Export
-          messageStore={memoryTranslationKeyStore}
+          labelManager={localizedLabelManager}
         />
       );
       break;

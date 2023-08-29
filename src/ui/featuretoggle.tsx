@@ -2,7 +2,7 @@ const FEATURES_FLAGS = {
   plurals: false,
   versioning: false,
   disableKeyLanguage: false,
-  export: false,
+  export: true,
   import: true,
 };
 

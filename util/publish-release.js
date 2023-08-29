@@ -17,7 +17,7 @@ async function runCLI() {
 
     console.log('Got api Token')
 
-    console.log('Fetching Design file for Plugin Store text...');
+    console.log('Fetching Design file ('+figmaFile+') for Plugin Store text...');
     const figmaDocument = (await getFigmaFile(apiToken, figmaFile)).document;
     
     const tags = [];

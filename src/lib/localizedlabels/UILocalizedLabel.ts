@@ -151,7 +151,9 @@ export class UILocalizedLabel implements LocalizedLabel {
     const lastTwoCharsBreaks = text.length > 1 && text[text.length - 1] === '\n' && text[text.length - 2] === '\n';
 
     // allways add an additional line break at the end
-    ops[ops.length - 1].end += 1;
+    if (ops.length > 0) {
+      ops[ops.length - 1].end += 1;
+    }
     const rawtext = `${text}\n`;
 
     // s
@@ -406,7 +408,7 @@ export class UILocalizedLabel implements LocalizedLabel {
   async setLanguage(
     targetLanguage: Locale,
     version: number | undefined,
-    missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | undefined>,
+    missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | null>,
   ) {
     if (this.messageLinkState === MessageLinkState.Unset) {
       const baseLanguage = this.manager.messageStore.getBaseLanugage()! as Locale;
@@ -423,7 +425,7 @@ export class UILocalizedLabel implements LocalizedLabel {
       }
       let variantHTML = undefined as string | undefined;
       if (!variantUpToDate) {
-        variantHTML = await missingTranslationProvider(baseLanguageHTML, baseLanguage as string, targetLanguage);
+        variantHTML = await missingTranslationProvider(baseLanguageHTML, baseLanguage as string, targetLanguage) ?? 'no translation';
       }
 
       await this.manager.updateLabelProperties(this.nodeId, {
@@ -488,7 +490,7 @@ export class UILocalizedLabel implements LocalizedLabel {
             originText = message.variants[this.language]![this.genderId]?.[this.pluralId]?.text!;
           }
 
-          const translation = await missingTranslationProvider(originText, originLanguage as string, targetLanguage);
+          const translation = await missingTranslationProvider(originText, originLanguage as string, targetLanguage) ?? 'no translation';
           message = await this.manager.messageStore.updateMessage(messageId, [{
             language: targetLanguage,
             gender: this.genderId,

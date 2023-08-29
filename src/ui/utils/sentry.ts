@@ -2,8 +2,6 @@
 import * as Sentry from '@sentry/react';
 import * as pjs from '../../../package.json';
 
-const DSN = process.env.SENTRY_DSN;
-
 // Bitwise operators are used to force conversion of  the string to a number
 const SAMPLING = ~~(process.env.SENTRY_SAMPLING!) || 0.1;
 const PROFILE_RATE = ~~(process.env.SENTRY_PROFILE_SAMPLING!) || 0.1;
@@ -33,7 +31,7 @@ export const initializeSentry = () => {
     case 'production':
       Sentry.addTracingExtensions();
       Sentry.init({
-        dsn: DSN,
+        dsn: process.env.SENTRY_DSN,
         release: `parrot@${pjs.version}`,
         environment: process.env.ENVIRONMENT,
         tracesSampleRate: SAMPLING,

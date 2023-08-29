@@ -25,10 +25,10 @@ import ItalicBlot from './blots/ItalicBlot';
 import LinkBlot from './blots/LinkBlot';
 import TextDecorationBlot from './blots/TextDecorationBlot';
 
-Quill.register(LinkBlot);
-Quill.register(ItalicBlot);
-Quill.register(BoldBlot);
-Quill.register(PlaceholderBlot);
+Quill.register(LinkBlot, true);
+Quill.register(ItalicBlot, true);
+Quill.register(BoldBlot, true);
+Quill.register(PlaceholderBlot, true);
 
 Quill.register(TextDecorationBlot);
 const icons = Quill.import('ui/icons');

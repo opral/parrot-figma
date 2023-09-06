@@ -5,6 +5,7 @@ import MessageStoreMemory from '../message/store/MessageStoreMemory';
 const androidXmlExporterTmpl = ejs.compile(require('./templates/AndroidXmlExporter.ejs').default); // include the EJS template as a string
 const appleStringsFileExporterTmpl = ejs.compile(require('./templates/AppleStringsFileExporter.ejs').default);
 const appleDictFileExporterTmpl = ejs.compile(require('./templates/AppleDictFileExporter.ejs').default);
+const i18nextJsonExporter = ejs.compile(require('./templates/i18nextJsonExporter.ejs').default);
 
 export default class KeyExporter {
   static export(messageStore: MessageStoreMemory, language: Locale, format: string, versionId: string | undefined) {
@@ -28,6 +29,12 @@ export default class KeyExporter {
         fileName: 'strings.xml',
         fileType: 'application/xml',
         content: androidXmlExporterTmpl(data),
+      };
+    } if (format === 'i18next') {
+      return {
+        fileName: `${language}.json`,
+        fileType: 'application/json',
+        content: i18nextJsonExporter(data),
       };
     }
     return undefined;

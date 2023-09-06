@@ -24,30 +24,33 @@ function mask(value, quoteWrapped) {
 }
 
 // get only the data for the language we need
-for (const [keyName, key] of Object.entries(input)) { // iterate over dictionary/object properties
+for (const [messageName, message] of Object.entries(input)) { // iterate over dictionary/object properties
 
-	console.log(key);
+	console.log('test')
+	console.log(message);
 	
-	if (!key.plural) {
+	if (!message.plural && !message.gender) {
 		// ==========================================
 		// Singular String found (e.g. Language = de)
 		// ==========================================
 
-		let stringValue = mask(key.translations[language]['other'].text, true);
+		let stringValue = mask(message.variants[language]['n']['other'].text, true);
 		
 
 		// creates an item with only the essential data to be serialized/printed
 		languageElement = {};
-		languageElement.key = keyName;
+		languageElement.messageName = messageName;
 		languageElement.value =  stringValue;
 		// languageElement.comment = translations.comment;
 		languageStrings.push(languageElement);
 	} else {
+		// TODO #11 implement this to support strings with plurals and gender 
+		/*
 		// ==========================================
 		// Plurals! (NO Singular String = assuming plurals)
 		// ==========================================
 		let pluralTranslations = {
-			key: keyName,
+			messageName: messageName,
 			translations: {
 
 			}
@@ -60,6 +63,8 @@ for (const [keyName, key] of Object.entries(input)) { // iterate over dictionary
 			pluralTranslations.translations[plural] = mask(key.translations[language][plural].text, true);
 		}
 		plurals.push(pluralTranslations)
+		*/
+		console.log('Plurals and Gender are not yet supportet for export - ignoring Message '+ messageName +'')
 	}
 
 }
@@ -87,7 +92,7 @@ for (const [keyName, key] of Object.entries(input)) { // iterate over dictionary
 		 <%_ if (languageStrings[i].comment != null) { _%>
      <!--Comment: <%-languageStrings[i].comment%> -->
 	   <%_ } _%>
-	 <string name="<%-languageStrings[i].key%>">"<%-languageStrings[i].value%>"</string>
+	 <string name="<%-languageStrings[i].messageName%>">"<%-languageStrings[i].value%>"</string>
 	 <%_ } _%>
 
 

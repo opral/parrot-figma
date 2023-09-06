@@ -88,16 +88,16 @@ export default function Export({
 
   const [exportTarget, setExportTarget] = useState<string | undefined>(undefined);
 
-  const exportPlatformOptions = [ /* {
+  const exportPlatformOptions = [{
     label: 'i18next - json format',
     value: 'i18next',
-  }, */ {
-      label: 'Android - Resource XML',
-      value: 'android-xml',
-    }, {
-      label: 'iOS - .strings File',
-      value: 'apple-strings',
-    }] as SelectOption[];
+  }, {
+    label: 'Android - Resource XML',
+    value: 'android-xml',
+  }, {
+    label: 'iOS - .strings File',
+    value: 'apple-strings',
+  }] as SelectOption[];
 
   const downloadFile = (fileName: string, fileType: string, content: string) => {
     const contentBlob = new Blob([content], { type: fileType });

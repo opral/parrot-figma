@@ -56,9 +56,9 @@ jobs:
           
     - name: Publish new Version to Figma
       run: | 
-        npx figcd release
+        # npx figcd release
       
-      # npx figcd release --release-notes-file changelog-{{VERSION}}.txt
+        npx figcd release --release-notes-file changelog-{{VERSION}}.txt
     - name: Update Metadata in public page
       run: |
         # the trigger token must be a personal acces token that can trigger actions

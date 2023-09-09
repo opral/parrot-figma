@@ -52,6 +52,8 @@ export interface DeltaOp {
     bold?: boolean,
     italic?: boolean,
     fontFamily?: string,
+    indentation?: number,
+    list?: string,
   }
   processed?: boolean,
   ignoreForLabelStyle?: boolean
@@ -141,6 +143,81 @@ export default class LocalizedLabelManager {
     }
 
     figma.on('documentchange', this.forwardDocumentChanges.bind(this));
+
+    const selectedNodeStateByUser = {} as any;
+    const that = this;
+    setInterval(() => {
+      const changeEvent = {
+        documentChanges: [] as any[],
+      };
+      // for (const user of [figma.currentUser]) { // NOTE: activeUsers is only available in figJam :/
+        // if (user?.id && user?.selection.length === 1) {
+      if (figma.currentPage.selection.length === 1) {
+        const activeNode = figma.currentPage.selection[0]; // figma.getNodeById(user.selection[0]);
+        const user = { id: 'singleUser' };
+        const currentState = {
+          nodeId: '',
+          textSegments: [] as any[],
+        };
+        if (activeNode !== undefined && activeNode?.type === 'TEXT') {
+          currentState.nodeId = activeNode?.id;
+          const unpropagatedTextSegments = activeNode.getStyledTextSegments(['indentation', 'listOptions']);
+          for (const textSegment of unpropagatedTextSegments) {
+            currentState.textSegments.push({
+              indentation: textSegment.indentation,
+              listOptions: textSegment.listOptions,
+            });
+          }
+
+          if (!selectedNodeStateByUser[user.id] || selectedNodeStateByUser[user.id].nodeId !== currentState.nodeId) {
+            selectedNodeStateByUser[user.id] = currentState;
+            console.log('no change');
+          } else if (selectedNodeStateByUser[user.id].textSegments.length !== currentState.textSegments.length) {
+            // TODO change detected
+            selectedNodeStateByUser[user.id] = currentState;
+            changeEvent.documentChanges.push({
+              id: activeNode.id,
+              origin: figma.currentUser?.id === user.id ? 'LOCAL' : 'REMOTE',
+              type: 'PROPERTY_CHANGE',
+              properties: ['listOptions'],
+
+              node: activeNode,
+            });
+            
+          } else {
+            // eslint-disable-next-line no-restricted-syntax, no-labels
+            checkStateLoop:
+            // eslint-disable-next-line no-plusplus
+            for (let i = 0; i < currentState.textSegments.length; i++) {
+              if (selectedNodeStateByUser[user.id].textSegments[i].indentation !== currentState.textSegments[i].indentation
+                  || selectedNodeStateByUser[user.id].textSegments[i].listOptions.type !== currentState.textSegments[i].listOptions.type) {
+                // TODO indentation change detected
+                selectedNodeStateByUser[user.id] = currentState;
+                changeEvent.documentChanges.push({
+                  id: activeNode.id,
+                  origin: figma.currentUser?.id === user.id ? 'LOCAL' : 'REMOTE',
+                  type: 'PROPERTY_CHANGE',
+                  properties: ['listOptions'],
+
+                  node: activeNode,
+                });
+                // eslint-disable-next-line no-labels, no-extra-label
+                break checkStateLoop;
+              }
+            }
+          }
+        } else {
+          // node has changed no need to keep the old ones state in memory
+          delete selectedNodeStateByUser[user.id];
+        }
+      }
+      // }
+
+      if (changeEvent.documentChanges.length > 0) {
+        console.log('emulating event');
+        that.forwardDocumentChanges(changeEvent);
+      }
+    }, 100);
   }
 
   forwardDocumentChanges(event: any) {
@@ -331,7 +408,6 @@ export default class LocalizedLabelManager {
   }
 
   async fillUpCache() {
-
     let start = Date.now();
     const containers = [];
     let textNodesToPrcoess = [] as TextNode[];
@@ -774,7 +850,16 @@ export default class LocalizedLabelManager {
       }
 
       for (const rangeStyle of changedProperties.ops!) {
-        // debugger;
+        debugger;
+
+        const list = rangeStyle.attributes?.list;
+        if (list === 'ordered') {
+          textNode.setRangeListOptions(rangeStyle.from, rangeStyle.to, { type: 'ORDERED' });
+        } else if (list === 'bullet') {
+          textNode.setRangeListOptions(rangeStyle.from, rangeStyle.to, { type: 'UNORDERED' });
+        } else {
+          textNode.setRangeListOptions(rangeStyle.from, rangeStyle.to, { type: 'NONE' });
+        }
 
         let linkUrl = rangeStyle.attributes?.link;
         if (linkUrl && linkUrl.startsWith('/')) {
@@ -1011,7 +1096,7 @@ export default class LocalizedLabelManager {
       ops: tokenizedTextResult.deltaOps,
       warnings: tokenizedTextResult.warnings,
       labelStyle: tokenizedTextResult.labelStyle,
-      unlinkedMessage: unlinkedMessage,
+      unlinkedMessage,
     };
   }
 
@@ -1056,7 +1141,7 @@ export default class LocalizedLabelManager {
 
   private getTextStyleDeltaOps(node: TextNode) {
     const textStyleDeltaOps = [] as DeltaOp[];
-    const textSegments = node.getStyledTextSegments(['fontName', 'textDecoration', 'hyperlink']);
+    const textSegments = node.getStyledTextSegments(['indentation', 'listOptions', 'fontName', 'textDecoration', 'hyperlink']);
 
     textSegments.forEach((textSegment) => {
       // if the node has one stile (non mixed) its not inline styling - ignore it
@@ -1064,10 +1149,20 @@ export default class LocalizedLabelManager {
       const weightName = textSegment.fontName.style.replace('italic', '').replace(' ', '');
       const bold = node.fontName !== figma.mixed ? undefined : weightName.toLowerCase().includes('bold');
       const textDecoration = node.textDecoration !== figma.mixed || textSegment.textDecoration === 'NONE' ? undefined : textSegment.textDecoration;
+      // TODO #12 const listOoptionType = textSegment.listOption.type !== "NONE" ? textSegment.listOptions.type
 
       let linkUrl = textSegment.hyperlink?.type === 'URL' ? textSegment.hyperlink?.value : undefined;
       if (linkUrl && textSegment.hyperlink?.value.startsWith(this.helperDomain)) {
         linkUrl = textSegment.hyperlink.value.substring(this.helperDomain.length);
+      }
+
+      let listType = undefined as undefined | 'bullet' | 'ordered';
+      if (textSegment.listOptions.type === 'ORDERED') {
+        listType = 'ordered';
+      }
+
+      if (textSegment.listOptions.type === 'UNORDERED') {
+        listType = 'bullet';
       }
 
       textStyleDeltaOps.push({
@@ -1078,6 +1173,8 @@ export default class LocalizedLabelManager {
           bold: bold ? true : undefined,
           italic: italic ? true : undefined,
           link: linkUrl,
+          list: listType,
+          indentation: textSegment.indentation,
         },
 
       });
@@ -1217,7 +1314,6 @@ export default class LocalizedLabelManager {
     } as LabelStyle;
 
     const deltaOps = this.getDeltaOps(node, fillins);
-    
 
     // get label styles
     for (const deltaOp of deltaOps) {

@@ -231,6 +231,8 @@ export class UILocalizedLabel implements LocalizedLabel {
   }
 
   static toTextAndOps(html: string, fillins: Fillins) {
+    // TODO #12 quill from html -> text + ops
+    debugger;
     const pattern = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;
 
     const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(fillins);

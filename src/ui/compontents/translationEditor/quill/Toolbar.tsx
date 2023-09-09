@@ -1,5 +1,7 @@
-import Toolbar from 'quill/modules/toolbar';
 import Quill, { Delta as DeltaType } from 'quill';
+
+
+import Toolbar from 'quill/modules/toolbar';
 import Emitter from 'quill/core/emitter';
 
 const Delta = Quill.import('delta') as typeof DeltaType;
@@ -54,9 +56,9 @@ export default class ParrotToolbar extends Toolbar {
   }
 
   restoreFocus() {
-    const { scrollTop } = this.quill.scrollingContainer;
+    const { scrollTop } = (this.quill as any).scroll.domNode.scrollTop;
     this.quill.focus();
-    this.quill.scrollingContainer.scrollTop = scrollTop;
+    (this.quill as any).scroll.domNode.scrollTop = scrollTop;
   }
 
   save() {
@@ -102,7 +104,7 @@ export default class ParrotToolbar extends Toolbar {
         this.currentRange,
         'link',
         valueToSet,
-        Emitter.sources.USER,
+        'user', // Emitter.sources.USER,
       );
       this.restoreFocus();
 
@@ -141,7 +143,7 @@ export default class ParrotToolbar extends Toolbar {
 
         const updatedDelta = beforeSelectionContents.concat(replacementDelta as any).concat(afterSelectionContents);
 
-        this.quill.setContents(updatedDelta, Emitter.sources.USER);
+        this.quill.setContents(updatedDelta, 'user' /* Emitter.sources.USER */);
       }
     }
 
@@ -179,7 +181,7 @@ export default class ParrotToolbar extends Toolbar {
 
         const updatedDelta = beforeSelectionContents.concat(replacementDelta as any).concat(afterSelectionContents);
 
-        this.quill.setContents(updatedDelta, Emitter.sources.USER);
+        this.quill.setContents(updatedDelta, 'user' /* Emitter.sources.USER */);
       }
 
       event.preventDefault();
@@ -330,7 +332,7 @@ export default class ParrotToolbar extends Toolbar {
       }
     }
 
-    this.controls.forEach((pair) => {
+    this.controls.forEach((pair: any) => {
       const [format, input] = pair;
       if (range == null) {
         input.classList.remove('ql-active');
@@ -339,7 +341,7 @@ export default class ParrotToolbar extends Toolbar {
         // '1' should match with 1 (headers)
         const isActive = formats[format] === input.getAttribute('value')
           || (formats[format] != null
-            && formats[format].toString() === input.getAttribute('value'))
+            && (formats[format] as any).toString() === input.getAttribute('value'))
           || (formats[format] == null && !input.getAttribute('value'));
         input.classList.toggle('ql-active', isActive);
       } else {
@@ -348,4 +350,4 @@ export default class ParrotToolbar extends Toolbar {
     });
   }
 }
-Toolbar.DEFAULTS = {};
+// Toolbar.DEFAULTS = {};

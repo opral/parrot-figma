@@ -6,7 +6,6 @@
 import * as React from 'react';
 import { useEffect, useRef } from 'react';
 import useState from 'react-usestateref';
-import OutsideClickHandler from 'react-outside-click-handler';
 import './quill.bubble.css';
 
 import Quill, {
@@ -16,19 +15,22 @@ import Quill, {
 } from 'quill';
 
 import Emitter from 'quill/core/emitter';
-import { Fillins, PlaceholderType } from '../../../lib/message/Message';
+import { Fillins } from '../../../lib/message/Message';
 import ParrotTheme from './quill/QuillTheme';
 import ParrotToolbar from './quill/Toolbar';
 import PlaceholderBlot from './blots/PlaceholderBlot';
 import BoldBlot from './blots/BoldBlot';
+import { MyListContainer, MyListItem } from './blots/MyList';
 import ItalicBlot from './blots/ItalicBlot';
 import LinkBlot from './blots/LinkBlot';
 import TextDecorationBlot from './blots/TextDecorationBlot';
 
+Quill.register(MyListItem, true);
 Quill.register(LinkBlot, true);
 Quill.register(ItalicBlot, true);
 Quill.register(BoldBlot, true);
 Quill.register(PlaceholderBlot, true);
+Quill.register(MyListContainer, true);
 
 Quill.register(TextDecorationBlot);
 const icons = Quill.import('ui/icons');
@@ -41,8 +43,6 @@ const saveOnEnter = true;
 const Delta = Quill.import('delta') as typeof DeltaType;
 Quill.register('themes/parrot', ParrotTheme, true);
 Quill.register('modules/toolbar', ParrotToolbar, false);
-
-const toolbarContainer = ['bold', 'italic', { textDecoration: 'UNDERLINE' }, { textDecoration: 'STRIKETHROUGH' }];
 
 type QuillEditorProps = {
   value?: string,
@@ -178,7 +178,14 @@ export default function QuillEditor({
       theme: 'parrot',
       modules: {
         toolbar: {
-          container: toolbarContainer,
+          container: [
+            { list: 'ordered' },
+            { list: 'bullet' },
+            'bold',
+            'italic',
+            { textDecoration: 'UNDERLINE' },
+            { textDecoration: 'STRIKETHROUGH' },
+          ],
           handlers: {
             placeholder() {
               // eslint-disable-next-line react/no-this-in-sfc

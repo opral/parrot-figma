@@ -331,7 +331,6 @@ export default class LocalizedLabelManager {
   }
 
   async fillUpCache() {
-
     let start = Date.now();
     const containers = [];
     let textNodesToPrcoess = [] as TextNode[];
@@ -643,10 +642,15 @@ export default class LocalizedLabelManager {
 
   async updateLabelProperties(nodeId: string, changedProperties: SandboxUpdateLabelProperties) {
     // setup queue for atomic label update processing
+    // - if no execution is ongoing hop right in and create a queue
+    // - if an execution is ongoing await the previous call
     if (this.labelUpdateQueue[nodeId]) {
       // eslint-disable-next-line no-promise-executor-return
       // console.log('queing update');
-      await (new Promise((resolver) => this.labelUpdateQueue[nodeId].push(resolver)));
+      await (new Promise((resolver: any) => {
+        // we don't resolve this promise - this is done by the excution of the current function
+        this.labelUpdateQueue[nodeId].push(resolver);
+      }));
       // console.log('dequied');
     } else {
       // console.log('queing not needed - prepare queue for next call');
@@ -655,184 +659,241 @@ export default class LocalizedLabelManager {
     }
 
     const textNode = figma.getNodeById(nodeId)! as TextNode;
-
-    if (changedProperties.labelName !== undefined) {
+    try {
+      if (changedProperties.labelName !== undefined) {
       // console.log('setting name');
-      textNode.name = changedProperties.labelName;
-      textNode.autoRename = false;
-      textNode.setPluginData(this.autoRenameHashKey, '');
-    }
+        textNode.name = changedProperties.labelName;
+        textNode.autoRename = false;
+        textNode.setPluginData(this.autoRenameHashKey, '');
+      }
 
-    if (changedProperties.messageId !== undefined) {
-      textNode.setPluginData(this.messageIdDataKey, changedProperties.messageId);
-    }
+      if (changedProperties.messageId !== undefined) {
+        textNode.setPluginData(this.messageIdDataKey, changedProperties.messageId);
+      }
 
-    if (changedProperties.messageLinkState !== undefined) {
-      textNode.setPluginData(this.messageLinkStateDataKey, changedProperties.messageLinkState);
-    }
+      if (changedProperties.messageLinkState !== undefined) {
+        textNode.setPluginData(this.messageLinkStateDataKey, changedProperties.messageLinkState);
+      }
 
-    if (changedProperties.messageVersion !== undefined) {
-      textNode.setPluginData(this.messageVersionDataKey, `${changedProperties.messageVersion}`);
-    }
+      if (changedProperties.messageVersion !== undefined) {
+        textNode.setPluginData(this.messageVersionDataKey, `${changedProperties.messageVersion}`);
+      }
 
-    if (changedProperties.showSampleValues !== undefined) {
-      textNode.setPluginData(this.sampleValuesDataKey, changedProperties.showSampleValues ? `${true}` : '');
-    }
+      if (changedProperties.showSampleValues !== undefined) {
+        textNode.setPluginData(this.sampleValuesDataKey, changedProperties.showSampleValues ? `${true}` : '');
+      }
 
-    if (changedProperties.fillins !== undefined) {
-      textNode.setPluginData(this.fillinsKey, JSON.stringify(changedProperties.fillins));
-    }
-
-    if (changedProperties.unlinkedMessage !== undefined) {
-      if (changedProperties.unlinkedMessage === null) {
+      if (changedProperties.unlinkedMessage !== undefined) {
+        if (changedProperties.unlinkedMessage === null) {
         // clean up the unlinked translation
-        textNode.setPluginData(this.anonymMessageDataKey, '');
-      } else {
-        textNode.setPluginData(this.anonymMessageDataKey, JSON.stringify(changedProperties.unlinkedMessage));
-      }
-    }
-
-    if (changedProperties.gender !== undefined) {
-      textNode.setPluginData(this.messageGenderDataKey, changedProperties.gender ? changedProperties.gender : '');
-    }
-
-    if (changedProperties.plural !== undefined) {
-      textNode.setPluginData(this.messagePluralDataKey, changedProperties.plural ? changedProperties.plural : '');
-    }
-
-    if (changedProperties.language !== undefined) {
-      if (changedProperties.language !== (await this.messageStore!.getConfig()).baseLanguage) {
-        if (textNode.autoRename) {
-          textNode.setPluginData(this.autoRenameHashKey, textNode.characters);
-          textNode.autoRename = false;
+          textNode.setPluginData(this.anonymMessageDataKey, '');
+        } else {
+          textNode.setPluginData(this.anonymMessageDataKey, JSON.stringify(changedProperties.unlinkedMessage));
         }
-      } else if (textNode.getPluginData(this.autoRenameHashKey) === textNode.name) {
-        textNode.autoRename = true;
-      }
-      textNode.setPluginData(this.languageDataKey, changedProperties.language ? changedProperties.language : '');
-    }
-
-    if (changedProperties.characters !== undefined) {
-      await this.loadFontsForTextNodes([textNode]);
-
-      // const textWithDecorators = this.toTextRangeObject(changedProperties.translation);
-
-      textNode.setPluginData(this.filledTemplateHashDataKey, changedProperties.filledTemplateHash ? changedProperties.filledTemplateHash : '');
-      // console.log(`setting characters from ${textNode.characters} to ${changedProperties.characters}`);
-
-      textNode.characters = changedProperties.characters;
-
-      // NOTE: when we are here and we have mixed font family we have warned the user already - we go for the first one
-      const textNodeFontFamily = (textNode.fontName as FontName).family ?? (textNode.getRangeFontName(0, 1) as FontName).family;
-      const fonts = await figma.listAvailableFontsAsync();
-      const fontFamily = fonts.filter((font: Font) => font.fontName.family === textNodeFontFamily).map((font) => font.fontName);
-
-      let regularFontName: FontName | undefined;
-      let boldFontName: FontName | undefined;
-      let italicFontName: FontName | undefined;
-      let boldItalicFontName: FontName | undefined;
-
-      fontFamily.forEach((fontFamilyVariant) => {
-        const styleLowerCase = fontFamilyVariant.style.toLowerCase();
-        if (styleLowerCase === 'regular') {
-          regularFontName = fontFamilyVariant;
-        }
-        if (!regularFontName && styleLowerCase === 'medium') {
-          regularFontName = fontFamilyVariant;
-        }
-
-        if (styleLowerCase === 'bold') {
-          boldFontName = fontFamilyVariant;
-        }
-
-        if (styleLowerCase === 'italic') {
-          italicFontName = fontFamilyVariant;
-        }
-
-        if (styleLowerCase.includes('bold italic')) {
-          boldItalicFontName = fontFamilyVariant;
-        }
-        if (!boldItalicFontName && styleLowerCase.includes('italic') && styleLowerCase.includes('bild')) {
-          boldItalicFontName = fontFamilyVariant;
-        }
-      });
-
-      if (regularFontName) {
-        await figma.loadFontAsync(regularFontName);
       }
 
-      if (boldFontName) {
-        await figma.loadFontAsync(boldFontName);
+      if (changedProperties.gender !== undefined) {
+        textNode.setPluginData(this.messageGenderDataKey, changedProperties.gender ? changedProperties.gender : '');
       }
 
-      if (italicFontName) {
-        await figma.loadFontAsync(italicFontName);
+      if (changedProperties.plural !== undefined) {
+        textNode.setPluginData(this.messagePluralDataKey, changedProperties.plural ? changedProperties.plural : '');
       }
 
-      if (boldItalicFontName) {
-        await figma.loadFontAsync(boldItalicFontName);
+      if (changedProperties.language !== undefined) {
+        if (changedProperties.language !== (await this.messageStore!.getConfig()).baseLanguage) {
+          if (textNode.autoRename) {
+            textNode.setPluginData(this.autoRenameHashKey, textNode.characters);
+            textNode.autoRename = false;
+          }
+        } else if (textNode.getPluginData(this.autoRenameHashKey) === textNode.name) {
+          textNode.autoRename = true;
+        }
+        textNode.setPluginData(this.languageDataKey, changedProperties.language ? changedProperties.language : '');
       }
 
-      for (const rangeStyle of changedProperties.ops!) {
-        // debugger;
+      if (changedProperties.fillins !== undefined) {
+        textNode.setPluginData(this.fillinsKey, JSON.stringify(changedProperties.fillins));
+      }
 
-        let linkUrl = rangeStyle.attributes?.link;
-        if (linkUrl && linkUrl.startsWith('/')) {
-          linkUrl = this.helperDomain + linkUrl;
+      // TODO think about the order - at the moment a lables characters might not get updated after fillins got set
+      // NOTE: we also send the characters even if only styling has changed
+      if (changedProperties.characters !== undefined) {
+        try {
+          await this.loadFontsForTextNodes([textNode]);
+        } catch (e: any) {
+          // rethrow with better error message
+          e.message = `Can't update label - not all Fonts could get loaded: ${e.message}`;
+          throw e;
         }
 
-        textNode.setRangeHyperlink(rangeStyle.from, rangeStyle.to, linkUrl ? { type: 'URL', value: linkUrl } : null);
+        // const textWithDecorators = this.toTextRangeObject(changedProperties.translation);
 
-        let decoration = 'NONE' as TextDecoration;
-        if (rangeStyle.attributes?.textDecoration === 'UNDERLINE') {
-          decoration = 'UNDERLINE';
-        } else if (rangeStyle.attributes?.textDecoration === 'STRIKETHROUGH') {
-          decoration = 'STRIKETHROUGH';
-        }
+        // console.log(`setting characters from ${textNode.characters} to ${changedProperties.characters}`);
 
-        textNode.setRangeTextDecoration(rangeStyle.from, rangeStyle.to, decoration);
+        // NOTE: when we are here and we have mixed font family we **should** have warned the user already - we go for the first one
+        // TODO warn user about problematic labels
+        const textNodeFontFamily = (textNode.fontName as FontName).family ?? (textNode.getRangeFontName(0, 1) as FontName).family;
+        const fonts = await figma.listAvailableFontsAsync();
+        const fontFamilyVariants = fonts.filter((font: Font) => font.fontName.family === textNodeFontFamily).map((font) => font.fontName);
 
-        // console.log(`Processing: ${textNode.characters.length} ${rangeStyle.to} ${textNode.characters} ${changedProperties.characters}`);
-
-        // check if we should apply styles at all... is bold/italic/regular swiched once? otherwise keep the orginal label
-        if (regularFontName
-          && !rangeStyle.attributes?.bold && !rangeStyle.attributes?.italic) {
-          if (rangeStyle.from === 0
-            && rangeStyle.to === textNode.characters.length) {
-            if (textNode.fontName === boldItalicFontName || textNode.fontName === boldFontName || (italicFontName && textNode.fontName === italicFontName)) {
-              textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, regularFontName);
-            }
+        // check what inline style variants we find (bold, italic, bold&italic, regular)
+        const fontStyleVariants = new Set<'bold' | 'italic' | 'bold italic' | 'regular'>();
+        for (const rangeStyle of changedProperties.ops!) {
+          if (rangeStyle.attributes?.italic && rangeStyle.attributes?.bold) {
+            fontStyleVariants.add('bold italic');
+          } else if (rangeStyle.attributes?.italic) {
+            fontStyleVariants.add('italic');
+          } else if (rangeStyle.attributes?.bold) {
+            fontStyleVariants.add('bold');
           } else {
-            textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, regularFontName);
+            fontStyleVariants.add('regular');
           }
         }
 
-        if (italicFontName
-          && !rangeStyle.attributes?.bold && rangeStyle.attributes?.italic) {
-          textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, italicFontName);
+        // TODO check style segments when creating localized labels and warn for incompatibility
+        // TODO also check for available fonts when creating the labels to disable bold/italic options for those labels that don't support it
+        // TODO only load thos font variants that are needed and fail if one tries to apply them
+
+        // find font names for style variants
+        let regularFontName: FontName | undefined;
+        let boldFontName: FontName | undefined;
+        let italicFontName: FontName | undefined;
+        let boldItalicFontName: FontName | undefined;
+
+        if (fontStyleVariants.size > 0) {
+          fontFamilyVariants.forEach((fontFamilyVariant) => {
+            const styleLowerCase = fontFamilyVariant.style.toLowerCase();
+            if (styleLowerCase === 'regular') {
+              regularFontName = fontFamilyVariant;
+            }
+            if (!regularFontName && styleLowerCase === 'medium') {
+              regularFontName = fontFamilyVariant;
+            }
+
+            if (styleLowerCase === 'bold') {
+              boldFontName = fontFamilyVariant;
+            }
+
+            if (styleLowerCase === 'italic') {
+              italicFontName = fontFamilyVariant;
+            }
+
+            if (styleLowerCase.includes('bold italic')) {
+              boldItalicFontName = fontFamilyVariant;
+            }
+            if (!boldItalicFontName && styleLowerCase.includes('italic') && styleLowerCase.includes('bold')) {
+              boldItalicFontName = fontFamilyVariant;
+            }
+          });
+
+          if (fontStyleVariants.has('regular')) {
+            if (!regularFontName) {
+              throw new Error(`No regular font variant for ${textNodeFontFamily}  found `);
+            }
+            try {
+              await figma.loadFontAsync(regularFontName);
+            } catch (e: any) {
+              e.message = `Could not load regular font for ${textNodeFontFamily}: ${e.message}`;
+              throw e;
+            }
+          }
+
+          if (fontStyleVariants.has('bold')) {
+            if (!boldFontName) {
+              throw new Error(`No bold font variant for ${textNodeFontFamily}  found `);
+            }
+            try {
+              await figma.loadFontAsync(boldFontName);
+            } catch (e: any) {
+              e.message = `Could not load bold font for ${textNodeFontFamily}: ${e.message}`;
+              throw e;
+            }
+          }
+
+          if (fontStyleVariants.has('italic')) {
+            if (!italicFontName) {
+              throw new Error(`No italic font variant for ${textNodeFontFamily}  found `);
+            }
+            try {
+              await figma.loadFontAsync(italicFontName);
+            } catch (e: any) {
+              e.message = `Could not load italic font for ${textNodeFontFamily}: ${e.message}`;
+              throw e;
+            }
+          }
+
+          if (fontStyleVariants.has('bold italic')) {
+            if (!boldItalicFontName) {
+              throw new Error(`No italic font variant for ${textNodeFontFamily}  found `);
+            }
+            try {
+              await figma.loadFontAsync(boldItalicFontName);
+            } catch (e: any) {
+              e.message = `Could not load italic+bold font for ${textNodeFontFamily}: ${e.message}`;
+              throw e;
+            }
+          }
         }
 
-        if (boldFontName
-          && rangeStyle.attributes?.bold && !rangeStyle.attributes?.italic) {
-          textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, boldFontName);
+        textNode.characters = changedProperties.characters;
+
+        for (const rangeStyle of changedProperties.ops!) {
+        // debugger;
+
+          let linkUrl = rangeStyle.attributes?.link;
+          if (linkUrl && linkUrl.startsWith('/')) {
+            linkUrl = this.helperDomain + linkUrl;
+          }
+
+          textNode.setRangeHyperlink(rangeStyle.from, rangeStyle.to, linkUrl ? { type: 'URL', value: linkUrl } : null);
+
+          let decoration = 'NONE' as TextDecoration;
+          if (rangeStyle.attributes?.textDecoration === 'UNDERLINE') {
+            decoration = 'UNDERLINE';
+          } else if (rangeStyle.attributes?.textDecoration === 'STRIKETHROUGH') {
+            decoration = 'STRIKETHROUGH';
+          }
+
+          textNode.setRangeTextDecoration(rangeStyle.from, rangeStyle.to, decoration);
+
+          // console.log(`Processing: ${textNode.characters.length} ${rangeStyle.to} ${textNode.characters} ${changedProperties.characters}`);
+
+          // check if we should apply styles at all... is bold/italic/regular swiched once? otherwise keep the orginal label
+          if (!rangeStyle.attributes?.bold && !rangeStyle.attributes?.italic) {
+            if (rangeStyle.from === 0
+              && rangeStyle.to === textNode.characters.length) {
+              if (textNode.fontName === boldItalicFontName
+                || textNode.fontName === boldFontName
+                || textNode.fontName === italicFontName) {
+                textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, regularFontName!);
+              }
+            } else {
+              textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, regularFontName!);
+            }
+          } else if (!rangeStyle.attributes?.bold && rangeStyle.attributes?.italic) {
+            textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, italicFontName!);
+          } else if (rangeStyle.attributes?.bold && !rangeStyle.attributes?.italic) {
+            textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, boldFontName!);
+          } else if (rangeStyle.attributes?.bold && rangeStyle.attributes?.italic) {
+            textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, boldItalicFontName!);
+          }
         }
 
-        if (boldItalicFontName
-          && rangeStyle.attributes?.bold && rangeStyle.attributes?.italic) {
-          textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, boldItalicFontName);
-        }
+        textNode.setPluginData(this.filledTemplateHashDataKey, changedProperties.filledTemplateHash ? changedProperties.filledTemplateHash : '');
       }
+    } finally {
+      // allow this function to return sucessfully before we start the next update in the queue
+      setTimeout(() => {
+        const nextUpdateResolver = this.labelUpdateQueue[nodeId].shift();
+        if (nextUpdateResolver) {
+          nextUpdateResolver();
+        } else {
+          delete this.labelUpdateQueue[nodeId];
+        }
+      }, 1);
     }
 
-    // allow this function to return sucessfully before we start the next update in the queue
-    setTimeout(() => {
-      const nextUpdateResolver = this.labelUpdateQueue[nodeId].shift();
-      if (nextUpdateResolver) {
-        nextUpdateResolver();
-      } else {
-        delete this.labelUpdateQueue[nodeId];
-      }
-    }, 1);
     return this.toLocalizedLabelOrUndefined(textNode)!;
   }
 
@@ -1011,7 +1072,7 @@ export default class LocalizedLabelManager {
       ops: tokenizedTextResult.deltaOps,
       warnings: tokenizedTextResult.warnings,
       labelStyle: tokenizedTextResult.labelStyle,
-      unlinkedMessage: unlinkedMessage,
+      unlinkedMessage,
     };
   }
 
@@ -1053,6 +1114,26 @@ export default class LocalizedLabelManager {
     }
     return placeholderDeltaOps.sort((op1, op2) => op1.start - op2.start);
   }
+
+  private textSegmentFields = [
+    'fontSize',
+    'fontName',
+    'fontWeight',
+    'textDecoration',
+    'textCase',
+    'lineHeight',
+    'letterSpacing',
+    'fills',
+    'textStyleId',
+    'fillStyleId',
+    'listOptions',
+    'indentation',
+    'hyperlink',
+  ];
+
+  private supportedInlineFields = [
+    'textDecoration', 'hyperlink', 'fontName', // 'listOptions', 'indentation',
+  ];
 
   private getTextStyleDeltaOps(node: TextNode) {
     const textStyleDeltaOps = [] as DeltaOp[];
@@ -1217,7 +1298,6 @@ export default class LocalizedLabelManager {
     } as LabelStyle;
 
     const deltaOps = this.getDeltaOps(node, fillins);
-    
 
     // get label styles
     for (const deltaOp of deltaOps) {
@@ -1228,6 +1308,7 @@ export default class LocalizedLabelManager {
       }
       if (deltaOp.attributes.fontFamily) {
         fontFamilies.add(deltaOp.attributes.fontFamily);
+        //console.log('adding font fimily: ' + deltaOp.attributes.fontFamily);
       }
 
       labelStyle.bold = labelStyle.bold !== null && labelStyle.bold !== deltaOp.attributes.bold ? 'MIXED' : deltaOp.attributes.bold;

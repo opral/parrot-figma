@@ -85,8 +85,8 @@ export default function QuillEditor({
         }
       }
       let htmlContent = quillEditor!.root.innerHTML;
-      console.log('QuillEditor.onEditorChange change! ----------------------------------------');
-      console.log(`QuillEditor.onEditorChange innerHTML:\n[${htmlContent}]`);
+      //console.log('QuillEditor.onEditorChange change! ----------------------------------------');
+      // console.log(`QuillEditor.onEditorChange innerHTML:\n[${htmlContent}]`);
       // start with real carrage returns
       htmlContent = htmlContent.split('<p><br></p>').join('\n');
       const paragraphs = htmlContent.split('</p>');
@@ -107,7 +107,7 @@ export default function QuillEditor({
         htmlContent = htmlContent.substring(0, htmlContent.length - 1);
       }
 
-      console.log(`QuillEditor.onEditorChange htmlContent:\n[${htmlContent}]`);
+      //console.log(`QuillEditor.onEditorChange htmlContent:\n[${htmlContent}]`);
 
       onChange(htmlContent, updatedFillins);
     } else if (eventName === 'selection-change') {
@@ -272,7 +272,6 @@ export default function QuillEditor({
 
   useEffect(() => {
     if (!quillEditor || isEditing) {
-      // console.log('skiping update because of focus');
       return;
     }
     updateQuill(quillEditor!, value ?? '', fillins);

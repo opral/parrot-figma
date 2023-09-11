@@ -112,9 +112,9 @@ export default class ParrotBubbleTooltip extends Tooltip {
   }
 
   restoreFocus() {
-    const { scrollTop } = this.quill.scrollingContainer;
+    const { scrollTop } = this.quill.scroll.domNode;
     this.quill.focus();
-    this.quill.scrollingContainer.scrollTop = scrollTop;
+    this.quill.scroll.domNode.scrollTop = scrollTop;
   }
 
   save() {

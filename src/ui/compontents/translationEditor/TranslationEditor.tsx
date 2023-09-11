@@ -54,9 +54,7 @@ export default function TranslationEditor({
 }: TranslationEditorProps) {
   const [textState, setTextState] = useState(variantHTML);
   const [fillinsState, setFillinsState] = useState(fillins);
-
-  //console.log('#23 QuillEditor() \n [' + translationHTML + ']');
-
+  
   const textRef = useRef(variantHTML);
   const fillinsRef = useRef(fillins);
 
@@ -67,10 +65,21 @@ export default function TranslationEditor({
 
   // useAutosizeTextArea(textAreaRef.current, translationText ? translationText : '')
 
+
+  const reset = () => {
+    ((document.activeElement) as any)?.blur?.();
+    setEditingState(false);
+    setTextState(variantHTML);
+    setFillinsState(fillins);
+
+    textRef.current = variantHTML;
+    fillinsRef.current = fillins;
+  }
+
   const handleChange = (value: string, updatedFillins: Fillins) => {
     // console.log('propagating change' + value);
     if (onChange !== undefined) {
-      onChange(value, updatedFillins);
+      onChange(value, updatedFillins, reset);
     }
     //console.log('#23 QuillEditor.handleChange  [' + value + ']');
     setTextState(value);
@@ -91,22 +100,17 @@ export default function TranslationEditor({
   const handleCancel = () => {
     //console.log('#23 QuillEditor.handleCancel');
 
-    setTextState(variantHTML);
-    setFillinsState(fillins);
-
-    textRef.current = variantHTML;
-    fillinsRef.current = fillins;
+    reset();
 
     if (onChange !== undefined) {
       onChange(variantHTML, fillins);
     }
 
-    setEditingState(false);
     onCancel?.();
   };
 
+
   useEffect(() => {
-    //console.log('#23 QuillEditor.useEffect(translationHTML)  [' + translationHTML + ']');
     setTextState(variantHTML);
     textRef.current = variantHTML;
   }, [variantHTML]);

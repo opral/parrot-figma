@@ -54,9 +54,10 @@ export default class ParrotToolbar extends Toolbar {
   }
 
   restoreFocus() {
-    const { scrollTop } = this.quill.scrollingContainer;
+
+    const { scrollTop } = this.quill.scroll.domNode;
     this.quill.focus();
-    this.quill.scrollingContainer.scrollTop = scrollTop;
+    this.quill.scroll.domNode.scrollTop = scrollTop;
   }
 
   save() {
@@ -280,7 +281,7 @@ export default class ParrotToolbar extends Toolbar {
   selectedPlacholder = [] as { name: string, type: string, fillin: string }[];
 
   update(range: any) {
-    const formats = range == null ? {} : this.quill.getFormat(range);
+    const formats = range == null ? {} as any : this.quill.getFormat(range);
     this.linkUrls = [];
 
     if (range) {

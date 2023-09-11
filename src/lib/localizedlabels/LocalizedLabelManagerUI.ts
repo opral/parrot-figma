@@ -50,7 +50,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
    * @param label the label to create a cache entry for or refresh the existing one
    * @returns true if a refresh was needed
    */
-  private refreshCachedLabel(labelToCache: LocalizedLabel) {
+  private refreshCachedLabel(labelToCache: LocalizedLabel, force = false) {
     const label = new UILocalizedLabel(this, labelToCache);
 
     // flag that signals if the parents of a node have changed (it was moved to another parent for example)
@@ -81,7 +81,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
       if (rootFrameDiffers) {
         this.removeCachedLabel(label.nodeId);
-      } else if (!stateDiffers
+      } else if (!force && !stateDiffers
           && cachedLabel.derivedKey === label.derivedKey
           && cachedLabel.height === label.height
           && cachedLabel.messageId === label.messageId
@@ -277,7 +277,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
     return [...this.cachedFrames[frameId].localizedLabelIds].map((labelId) => this.cachedLocalisedLabels[labelId]!);
   }
-
 
   async setFrameLanguage(frameId: string, targetLanguage: Locale, missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | null>) {
     const version = undefined as undefined | number; // todo fill with fixed version of the frame if set
@@ -491,7 +490,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   }
 
   async updateLabelTranslation(localizedLabel: LocalizedLabel, variantHTML: string) {
-    this.updateLabelProperties(localizedLabel.nodeId, {
+    await this.updateLabelProperties(localizedLabel.nodeId, {
       variantHTML,
     });
 
@@ -665,11 +664,19 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         changedPropertiesToForwared.unlinkedMessage = unlinkedMessage;
       }
     }
-
-    const localizedLabel = await this.localizedLabelMangerSandbox.updateLabelProperties(nodeId, changedPropertiesToForwared);
-    if (this.refreshCachedLabel(localizedLabel)) {
-      const event = new CustomEvent('updated', { });
-      this.dispatchEvent(event);
+    let localizedLabel: LocalizedLabel | undefined;
+    try {
+      localizedLabel = await this.localizedLabelMangerSandbox.updateLabelProperties(nodeId, changedPropertiesToForwared);
+    } finally {
+      let forceCacheRefresh = false;
+      if (localizedLabel === undefined) {
+        localizedLabel = await this.localizedLabelMangerSandbox.getById(nodeId);
+        forceCacheRefresh = true;
+      }
+      if (this.refreshCachedLabel(localizedLabel!, forceCacheRefresh)) {
+        const event = new CustomEvent('updated', { });
+        this.dispatchEvent(event);
+      }
     }
   }
 

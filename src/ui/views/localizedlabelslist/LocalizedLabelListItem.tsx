@@ -1,6 +1,7 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 import * as React from 'react';
+import * as Sentry from '@sentry/react';
 import { useEffect, useRef, useState } from 'react';
 import OutsideClickHandler from 'react-outside-click-handler';
 import { Plural } from '../../../lib/message/variants/Plural';
@@ -37,7 +38,7 @@ export default function LocalizedLabelListItem({
   localizedLabelManager,
   selected,
 }: LocalizedLabelListItemProps) {
-  const messageStore = localizedLabelManager.messageStore;
+  const { messageStore } = localizedLabelManager;
   const translatedKey = localizedLabel.messageLinkState !== MessageLinkState.Unset ? messageStore.getMessage(localizedLabel.messageId!) : undefined;
 
   const rowRef = React.useRef<HTMLDivElement>(null);
@@ -55,16 +56,25 @@ export default function LocalizedLabelListItem({
   const pluralsAvailable = [] as SelectOption[];
 
   async function createNewVersionFromDesign() {
-    await localizedLabelManager.createNewVersionFromLabelState(localizedLabel);
+    await localizedLabelManager.createNewVersionFromLabelState(localizedLabel).catch((e: Error) => {
+      Sentry.captureException(e);
+      figmaRemote.notifyError(e.message);
+    });
   }
 
   async function updateToLatestKeyVersion() {
     track('updateToLatestKeyVersion');
-    await localizedLabelManager.updateToLatestKeyVersion([localizedLabel]);
+    await localizedLabelManager.updateToLatestKeyVersion([localizedLabel]).catch((e: Error) => {
+      Sentry.captureException(e);
+      figmaRemote.notifyError(e.message);
+    });
   }
 
   async function revertDesignChanges() {
-    await localizedLabelManager.revertDesignChanges(localizedLabel);
+    await localizedLabelManager.revertDesignChanges(localizedLabel).catch((e: Error) => {
+      Sentry.captureException(e);
+      figmaRemote.notifyError(e.message);
+    });
   }
 
   async function onNodeSelect(nodeId: string) {
@@ -112,7 +122,10 @@ export default function LocalizedLabelListItem({
             text: 'Use Key',
             key: 'enter',
             callback: () => {
-              localizedLabelManager.linkKey(localizedLabel, drawerSelectedKey.current!, localizedLabel.rootFrameLanguage!, Gender.NEUTRAL, Plural.OTHER);
+              localizedLabelManager.linkKey(localizedLabel, drawerSelectedKey.current!, localizedLabel.rootFrameLanguage!, Gender.NEUTRAL, Plural.OTHER).catch((e) => {
+                figmaRemote.notifyError(`could not set message${e.message}`);
+                Sentry.captureException(e);
+              });
               setSearchKey(undefined);
             },
             disabled: drawerSelectedKey.current === undefined,
@@ -153,7 +166,10 @@ export default function LocalizedLabelListItem({
             <TextField
               singleClick={false}
               onSave={async (labelName: string) => {
-                await localizedLabelManager.updateLabelName(localizedLabel, labelName);
+                await localizedLabelManager.updateLabelName(localizedLabel, labelName).catch((e) => {
+                  figmaRemote.notifyError(`could not set message${e.message}`);
+                  Sentry.captureException(e);
+                });
               }}
               text={localizedLabel.name}
             />
@@ -324,10 +340,13 @@ export default function LocalizedLabelListItem({
                           onCancel={async () => {
                             localizedLabelManager.commitUndo();
                           }}
-                          onChange={async (value: string, fillins: Fillins) => {
+                          onChange={async (value: string, fillins: Fillins, handleCancel: any) => {
                             localizedLabelManager.updateLabelProperties(localizedLabel.nodeId, {
                               variantHTML: value,
                               fillins,
+                            }).catch((e: Error) => {
+                              figmaRemote.notifyError(e.message);
+                              handleCancel();
                             });
                           }}
                           fillins={localizedLabel.getFillins()}
@@ -348,7 +367,10 @@ export default function LocalizedLabelListItem({
                                 placeholder={entry[1]}
                                 fillin={localizedLabel.fillins?.[entry[0]]?.value ? localizedLabel.fillins?.[entry[0]]?.value : 'unset'}
                                 onValueChange={(placeholderName, fillinValue) => {
-                                  localizedLabelManager.updateLabelFillin(localizedLabel, placeholderName, fillinValue);
+                                  localizedLabelManager.updateLabelFillin(localizedLabel, placeholderName, fillinValue).catch((e: Error) => {
+                                    Sentry.captureException(e);
+                                    figmaRemote.notifyError(e.message);
+                                  });
                                 }}
                               />
 

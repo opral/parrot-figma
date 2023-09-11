@@ -11,6 +11,7 @@ env:
   FIGMA_TEXT_FILE: ${{ vars.FIGMA_TEXT_FILE }}
   SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
   SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+  MIXPANEL_ACCESS_TOKEN: ${{ secrets.MIXPANEL_ACCESS_TOKEN }}
   FIGMA_WEB_AUTHN_TOKEN: ${{ secrets.FIGMA_WEB_AUTHN_TOKEN }}
   GH_ACTION_TRIGGER_TOKEN: ${{ secrets.GH_ACTION_TRIGGER_TOKEN }}
 
@@ -56,9 +57,9 @@ jobs:
           
     - name: Publish new Version to Figma
       run: | 
-        # npx figcd release
+        npx figcd release
       
-        npx figcd release --release-notes-file changelog-{{VERSION}}.txt
+        # npx figcd release --release-notes-file changelog-{{VERSION}}.txt
     - name: Update Metadata in public page
       run: |
         # the trigger token must be a personal acces token that can trigger actions

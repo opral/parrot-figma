@@ -47,9 +47,18 @@ export default class GoogleTranslator {
       }
       // eslint-disable-next-line no-await-in-loop
       const translationResults = await result.json();
-      translatedSentences.push(translationResults[0][0][0].split('{{dot}}').join('.').split('{{route}}').join('#')
-        .split('{{newline}}')
-        .join('\n'));
+
+      if (!translationResults[0] || !translationResults[0][0] || translationResults[0][0][0]) {
+        const error = new Error('Expected a translation within [0][0][0] not found');
+        Sentry.captureException(error, {
+          extra: translationResults,
+        });
+      } else {
+        const resultMessage = translationResults[0][0][0];
+        translatedSentences.push(resultMessage.split('{{dot}}').join('.').split('{{route}}').join('#')
+          .split('{{newline}}')
+          .join('\n'));
+      }
     }
 
     const translationWithMaskedPlaceholders = translatedSentences.join('. ');

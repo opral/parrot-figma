@@ -40,6 +40,13 @@ export default class FigmaUtil {
     figma.notify(message);
   }
 
+  async notifyError(message: string) {
+    figma.notify(message, {
+      timeout: 3000,
+      error: true,
+    });
+  }
+
   async getUserId() {
     return figma.currentUser?.id;
   }

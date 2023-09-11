@@ -119,6 +119,7 @@ export class AsyncFunctionProxy {
   }
 
   handleInvocationRequest(pluginMessage: any) {
+    
     if (!this.invocationRequestHandler[pluginMessage.name]) {
       throw new Error(`${this.name} Invocation handler for [${pluginMessage.name}] does not exist (did you register the executing instance in [${this.name}]?`);
     }
@@ -135,12 +136,11 @@ export class AsyncFunctionProxy {
       this.postMessage(transferObj);
     }).catch((error: Error) => {
       // eslint-disable-next-line no-console
-      console.error(error);
       this.postMessage({
         target: 'AsyncFunctionProxy',
         type: AsyncMessageBus.invocationResult,
         invocationId: pluginMessage.id,
-        error,
+        error: this.toSerializableError(error),
       });
     });
   }
@@ -151,7 +151,8 @@ export class AsyncFunctionProxy {
     }
 
     if (pluginMessage.error !== undefined) {
-      this.invocationRequests[pluginMessage.invocationId].reject(pluginMessage.error);
+      const error = this.fromSerializableError(pluginMessage.error);
+      this.invocationRequests[pluginMessage.invocationId].reject(error);
     } else {
       const fn = this.invocationRequests[pluginMessage.invocationId].resolve;
       // console.log(this.name, " handleInvocationResult result "+ fn + ' ' + JSON.stringify(pluginMessage))
@@ -159,5 +160,23 @@ export class AsyncFunctionProxy {
     }
 
     return true;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  private toSerializableError(error: Error) {
+    return {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+    };
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  private fromSerializableError(serializedError: any) {
+    const { message, name, stack } = serializedError;
+    const error = new Error(message);
+    error.name = name;
+    error.stack = stack;
+    return error;
   }
 }

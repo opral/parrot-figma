@@ -25,6 +25,10 @@ export default class GoogleTranslator {
     const sentences = textWithMaskedPlaceholders.split('. ');
     const translatedSentences = [] as string[];
     for (const sentence of sentences) {
+      const patchedQuery = sentence.split('.').join('{{dot}}').split('#').join('{{route}}')
+      .split('\n')
+      .join('{{newline}}');
+
       // eslint-disable-next-line no-await-in-loop
       const result = await fetch(`https://translate.googleapis.com/translate_a/single?${new URLSearchParams({
         client: 'gtx',
@@ -48,10 +52,15 @@ export default class GoogleTranslator {
       // eslint-disable-next-line no-await-in-loop
       const translationResults = await result.json();
 
-      if (!translationResults[0] || !translationResults[0][0] || translationResults[0][0][0]) {
+      if (!translationResults[0] || !translationResults[0][0] || !translationResults[0][0][0]) {
         const error = new Error('Expected a translation within [0][0][0] not found');
         Sentry.captureException(error, {
-          extra: translationResults,
+          extra: {
+            sourceLanguage,
+            targetLanguage,
+            patchedQuery,
+            translationResults,
+          },
         });
       } else {
         const resultMessage = translationResults[0][0][0];

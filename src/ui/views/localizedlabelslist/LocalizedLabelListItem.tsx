@@ -345,6 +345,7 @@ export default function LocalizedLabelListItem({
                               variantHTML: value,
                               fillins,
                             }).catch((e: Error) => {
+                              Sentry.captureEvent(e);
                               figmaRemote.notifyError(e.message);
                               handleCancel();
                             });

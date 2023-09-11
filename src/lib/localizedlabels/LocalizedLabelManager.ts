@@ -701,7 +701,8 @@ export default class LocalizedLabelManager {
       }
 
       if (changedProperties.language !== undefined) {
-        if (changedProperties.language !== (await this.messageStore!.getConfig()).baseLanguage) {
+        const config = await this.messageStore!.getConfig();
+        if (changedProperties.language !== (config).baseLanguage) {
           if (textNode.autoRename) {
             textNode.setPluginData(this.autoRenameHashKey, textNode.characters);
             textNode.autoRename = false;

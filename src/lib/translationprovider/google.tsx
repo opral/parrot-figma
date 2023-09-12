@@ -2,6 +2,10 @@ import * as Sentry from '@sentry/browser';
 
 export default class GoogleTranslator {
   static async translate(text: string, sourceLanguage: string, targetLanguage: string) {
+    // if the text only contains whitespaces - uses the orignal one
+    if (/^\s*$/.test(text)) {
+      return text;
+    }
     // replace placeholder with numbers to not translate them
 
     const pattern = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;

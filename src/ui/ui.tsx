@@ -299,8 +299,8 @@ function App() {
     case 'design':
       view = (
         <LocalizedLabelsListView
-          showKey={(key: string) => {
-            setKeyQuery(MessageStoreMemory.toQueryObject(`key:${key}`));
+          showMessage={(messageName: string) => {
+            setKeyQuery(MessageStoreMemory.toQueryObject(`name:${messageName}`));
             setAppScreen('messages');
           }}
           localizedLabelManager={localizedLabelManager}

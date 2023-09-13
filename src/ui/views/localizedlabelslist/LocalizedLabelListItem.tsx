@@ -45,7 +45,7 @@ export default function LocalizedLabelListItem({
 
   const labelState = localizedLabel.state!;
 
-  const [searchKey, setSearchKey] = useState(undefined as any);
+  const [messageSearch, setMessageSearch] = useState(undefined as any);
   const drawerSelectedKey = useRef<string | undefined>(undefined);
   // Dummy state variable to trigger re-render when currentHighlightIndex.current changes
   const [, setDummyState] = useState<any>();
@@ -114,7 +114,7 @@ export default function LocalizedLabelListItem({
             text: 'Cancel',
             key: 'escape',
             callback: () => {
-              setSearchKey(undefined);
+              setMessageSearch(undefined);
             },
           },
           {
@@ -126,25 +126,25 @@ export default function LocalizedLabelListItem({
                 figmaRemote.notifyError(`could not set message${e.message}`);
                 Sentry.captureException(e);
               });
-              setSearchKey(undefined);
+              setMessageSearch(undefined);
             },
             disabled: drawerSelectedKey.current === undefined,
           },
 
         ]}
-        shown={searchKey !== undefined}
+        shown={messageSearch !== undefined}
       >
         <div className="history_view--topHeader" style={{ width: '3000px' }}>
           Select Key
         </div>
-        { searchKey !== undefined && (
+        { messageSearch !== undefined && (
         <MessageListView
           showSearchBar
           messageStore={messageStore}
           localizedLabelManager={localizedLabelManager}
           figmaRemote={figmaRemote}
           selectedMessageId={drawerSelectedKey.current}
-          initialSearchQuery={MessageStoreMemory.toQueryObject(`key:* ${searchKey.search}`)}
+          initialSearchQuery={MessageStoreMemory.toQueryObject(`name:* ${messageSearch.search}`)}
           select={(key: string, language: Locale, plural: Plural) => {
             drawerSelectedKey.current = key;
             setDummyState({});
@@ -192,7 +192,7 @@ export default function LocalizedLabelListItem({
                   onChange={async (selectedOption) => {
                     if (selectedOption.type === InputSelectionOptionType.ACTION) {
                       if (selectedOption.value === 'select-message') {
-                        setSearchKey({
+                        setMessageSearch({
                           search: localizedLabel.characters,
                         });
                       } else if (selectedOption.value === 'show-message') {

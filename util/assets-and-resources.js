@@ -7,71 +7,89 @@ async function main() {
     });
     const json = await result.json();
     
-    const keyPrefix = 'aar_k__';
+    const messagePluginDataPrefix = 'prt_m__';
   
-    const entries = json.document.pluginData['1205803482754362456'];
+    const rootNodePluginDataEntries = json.document.pluginData['1205803482754362456'];
   
-    const keys = {};
+    const extractedMessages = {};
   
     const configKey = 'aar_c';
-    const configRaw = entries[configKey];
+    const configRaw = rootNodePluginDataEntries[configKey];
     const config = JSON.parse(configRaw);
   
-    for (const entryKey of Object.keys(entries)) {
-      if (!entryKey.startsWith(keyPrefix)) {
+    for (const rootNodePluginDataEntry of Object.keys(rootNodePluginDataEntries)) {
+      if (!rootNodePluginDataEntry.startsWith(messagePluginDataPrefix)) {
         continue;
       }
   
-      const key = entryKey.substring(keyPrefix.length);
-      const keyRaw = entries[entryKey];
+      const messageId = rootNodePluginDataEntry.substring(messagePluginDataPrefix.length);
+      const messageHeadRaw = rootNodePluginDataEntries[rootNodePluginDataEntry];
   
-      if (keyRaw === '') {
+      if (messageHeadRaw === '') {
         continue;
       }
   
       try {
-        keys[key] = JSON.parse(keyRaw);
+        extractedMessages[messageId] = JSON.parse(messageHeadRaw);
       } catch (e) {
-        console.warn(`Couldnt parse entry for key ${key} ${keyRaw}`);
+        console.warn(`Couldnt parse entry for key ${messageId} ${messageHeadRaw}`);
       }
     }
   
-    console.log(`${Object.keys(keys).length} Keys found:`);
+    console.log(`${Object.keys(extractedMessages).length} Messages found:`);
 
-    const languages = {};
+    const locales = {};
   
-    for (const key of Object.keys(keys)) {
+    for (const messageId of Object.keys(extractedMessages)) {
         
-      for (const language of config.enabledLanguages) {
-        if (languages[language] === undefined) {
-          languages[language] = { translation: {} };
+      for (const enabledLocale of config.enabledLanguages) {
+        if (locales[enabledLocale] === undefined) {
+          locales[enabledLocale] = { translation: {} };
         }
+
+        const currentMessage = extractedMessages[messageId];
+        const messageName = currentMessage.name;
         
-        if (keys[key].translations[language] === undefined) {
-          console.warn('No translation of key ' + key +' for Language ' + language + ' found.');
+        if (currentMessage.variants[enabledLocale] === undefined) {
+          console.warn('No translation of message ' + messageName +' (id:'+messageId+') for Locale ' + enabledLocale + ' found.');
         } else {
-          if (keys[key].plural) {
-            for (let plural of Object.keys(keys[key].translations[language])) {
-              languages[language].translation[key+ '_' + plural] = keys[key].translations[language][plural].text ?? ''; //.replace('[%i:count]', '{{count}}') ?? '';
-            }
-          } else {
-            languages[language].translation[key] = keys[key].translations[language].other?.text.replace('[%i:count]', '{{count}}') ?? '';
-          }
+          // if (extractedMessages[key].plural) {
+            
+          //   for (let plural of Object.keys(extractedMessages[key].variants[enabledLocales])) {
+          //     locales[enabledLocales].translation[key+ '_' + plural] = extractedMessages[key].variants[enabledLocales][plural].text ?? ''; //.replace('[%i:count]', '{{count}}') ?? '';
+          //   }
+          // } else {
+            locales[enabledLocale].translation[messageName] = extractedMessages[messageId].variants[enabledLocale].n?.other?.text.replace('[%i:count]', '{{count}}') ?? '';
+          // }
         }
       }
       
     }
-    console.log('const Strings = ' + JSON.stringify(languages, null, 4));
+
+    sortMessagesByPropertyName(locales);
+
+    console.log('const Strings = ' + JSON.stringify(locales, null, 4));
 
     let translationFileContent = '/* eslint-disable @typescript-eslint/comma-dangle */\n';
     translationFileContent += '/* eslint-disable @typescript-eslint/quotes */\n';
     translationFileContent += '/* eslint-disable quote-props */\n';
     translationFileContent += '/* eslint-disable @typescript-eslint/indent */\n';
     translationFileContent += 'const Strings = ';
-    translationFileContent += JSON.stringify(languages, null, 4) + ';';
+    translationFileContent += JSON.stringify(locales, null, 4) + ';';
     translationFileContent += '\n\nexport default Strings;\n'
     fs.writeFileSync("./src/ui/localization/strings.ts", translationFileContent);
     // console.log(json.document.pluginData['1205803482754362456']);
+  }
+
+  function sortMessagesByPropertyName(obj) {
+    for (const propertyKey of Object.keys(obj)) {
+      const objToSortPropertiesOf = obj[propertyKey].translation;
+      const sortedObj = {};
+      Object.keys(objToSortPropertiesOf).sort().forEach((propName) => {
+          sortedObj[propName] = objToSortPropertiesOf[propName];
+      });
+      obj[propertyKey].translation = sortedObj;
+    }
   }
   
   main();

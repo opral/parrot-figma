@@ -3,7 +3,7 @@ import * as Sentry from '@sentry/browser';
 export default class GoogleTranslator {
   static async translate(text: string, sourceLanguage: string, targetLanguage: string) {
     // if the text only contains whitespaces - uses the orignal one
-    if (/^\s*$/.test(text)) {
+    if (/^\s*$/.test(text) || text === '') {
       return text;
     }
     // replace placeholder with numbers to not translate them
@@ -30,8 +30,13 @@ export default class GoogleTranslator {
     const translatedSentences = [] as string[];
     for (const sentence of sentences) {
       const patchedQuery = sentence.split('.').join('{{dot}}').split('#').join('{{route}}')
-      .split('\n')
-      .join('{{newline}}');
+        .split('\n')
+        .join('{{newline}}');
+
+      if (/^\s*$/.test(patchedQuery) || patchedQuery === '') {
+        translatedSentences.push(patchedQuery);
+        continue;
+      }
 
       // eslint-disable-next-line no-await-in-loop
       const result = await fetch(`https://translate.googleapis.com/translate_a/single?${new URLSearchParams({
@@ -39,9 +44,7 @@ export default class GoogleTranslator {
         dt: 't',
         sl: sourceLanguage === 'se' ? 'SV' : sourceLanguage,
         tl: targetLanguage === 'se' ? 'SV' : targetLanguage,
-        q: sentence.split('.').join('{{dot}}').split('#').join('{{route}}')
-          .split('\n')
-          .join('{{newline}}'),
+        q: patchedQuery,
       })}`, {
         method: 'GET',
         /* headers: {

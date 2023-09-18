@@ -39,12 +39,10 @@ export default abstract class BaseTextNodeLintRule {
       }
     }
 
-    const fieldDescriptor = Object.getOwnPropertyDescriptor(textNode, field);
-
-    if (fieldDescriptor?.set) {
+    try {
       // eslint-disable-next-line no-param-reassign
       (textNode as any)[field] = JSON.parse(mostPresentStyleSerialized!);
-    } else {
+    } catch (e) {
       throw new Error(`${field} inline styles can't get fixed automatically at the Moment. please remvoe those styles manually from the TextNode to use within Parrot.`);
     }
   }

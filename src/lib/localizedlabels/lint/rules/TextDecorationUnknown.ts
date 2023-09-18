@@ -1,9 +1,9 @@
 import BaseTextNodeLintRule from './BaseTextNodeLintRule';
 
 // eslint-disable-next-line max-classes-per-file
-export default class UnsupportedTextDecoration extends BaseTextNodeLintRule {
+export default class TextDecorationUnknown extends BaseTextNodeLintRule {
   constructor() {
-    super('UnsupportedTextDecoration');
+    super('TextDecorationUnknown');
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -11,7 +11,7 @@ export default class UnsupportedTextDecoration extends BaseTextNodeLintRule {
     if (textNode.characters.length === 0) {
       return false;
     }
-    
+
     if (textNode.textDecoration !== figma.mixed) {
       return false;
     }

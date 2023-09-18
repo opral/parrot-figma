@@ -1,9 +1,9 @@
 import BaseTextNodeLintRule from './rules/BaseTextNodeLintRule';
 import MixedStyleNotSupported from './rules/MixedStyleNotSupported';
 // eslint-disable-next-line import/no-named-as-default
-import UnmatchingFontWeightNotSupported from './rules/UnmatchingFontWeightNotSupported';
-import UnsupportedIndentation from './rules/UnsupportedIndentation';
-import UnsupportedTextDecoration from './rules/UnsupportedTextDecoration';
+import UnmatchingFontWeightNotSupported from './rules/FontWeightNotSupported';
+import IndentationNotSupported from './rules/IndentationNotSupported';
+import TextDecorationUnknown from './rules/TextDecorationUnknown';
 
 export default class TextNodeLinter {
   defaultRules = [
@@ -15,8 +15,8 @@ export default class TextNodeLinter {
     MixedStyleNotSupported.createRuleForField('leadingTrim'),
     MixedStyleNotSupported.createRuleForField('fills'),
     new UnmatchingFontWeightNotSupported(),
-    new UnsupportedIndentation(),
-    new UnsupportedTextDecoration(),
+    new IndentationNotSupported(),
+    new TextDecorationUnknown(),
   ];
 
   registeredRules = {} as { [ruleName: string]: BaseTextNodeLintRule };

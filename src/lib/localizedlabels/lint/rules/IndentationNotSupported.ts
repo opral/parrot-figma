@@ -1,9 +1,9 @@
-import BaseTextNodeLintRule from "./BaseTextNodeLintRule";
+import BaseTextNodeLintRule from './BaseTextNodeLintRule';
 
 // eslint-disable-next-line max-classes-per-file
-export default class UnsupportedIndentation extends BaseTextNodeLintRule {
+export default class IndentationNotSupported extends BaseTextNodeLintRule {
   constructor() {
-    super('UnsupportedIndentation');
+    super('IndentationNotSupported');
   }
 
   // eslint-disable-next-line class-methods-use-this

@@ -1,9 +1,9 @@
 import BaseTextNodeLintRule from './BaseTextNodeLintRule';
 
 // eslint-disable-next-line max-classes-per-file
-export default class UnsupportedListOptionType extends BaseTextNodeLintRule {
+export default class ListOptionTypeUnknown extends BaseTextNodeLintRule {
   constructor() {
-    super('UnsupportedListOptionType');
+    super('ListOptionTypeUnknown');
   }
 
   // eslint-disable-next-line class-methods-use-this

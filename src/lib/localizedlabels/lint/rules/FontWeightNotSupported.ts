@@ -1,14 +1,15 @@
 import BaseTextNodeLintRule from './BaseTextNodeLintRule';
 
 // eslint-disable-next-line max-classes-per-file
-export default class UnmatchingFontWeightNotSupported extends BaseTextNodeLintRule {
+export default class FontWeightNotSupported extends BaseTextNodeLintRule {
   styleField: string;
 
   constructor() {
-    super('UnmatchingFontWeightNotSupported');
+    super('FontWeightNotSupported');
     this.styleField = 'fontWeight';
   }
 
+  // eslint-disable-next-line class-methods-use-this
   matches(textNode: TextNode): boolean {
     console.log(JSON.stringify(textNode.fontName));
     console.log(JSON.stringify(textNode.fontWeight));

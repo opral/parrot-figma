@@ -8,6 +8,10 @@ export default class UnsupportedTextDecoration extends BaseTextNodeLintRule {
 
   // eslint-disable-next-line class-methods-use-this
   matches(textNode: TextNode): boolean {
+    if (textNode.characters.length === 0) {
+      return false;
+    }
+    
     if (textNode.textDecoration !== figma.mixed) {
       return false;
     }

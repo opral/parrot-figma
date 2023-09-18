@@ -8,6 +8,10 @@ export default class UnsupportedListOptionType extends BaseTextNodeLintRule {
 
   // eslint-disable-next-line class-methods-use-this
   matches(textNode: TextNode): boolean {
+    if (textNode.characters.length === 0) {
+      return false;
+    }
+    
     const indentations = textNode.getRangeListOptions(0, textNode.characters.length);
     if (indentations !== figma.mixed) {
       return false;

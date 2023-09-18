@@ -35,7 +35,6 @@ export const initializeSentry = () => {
         release: `parrot@${pjs.version}`,
         environment: process.env.ENVIRONMENT,
         tracesSampleRate: SAMPLING,
-        // @ts-expect-error  This is correct, but the types are wrong as of the current version. It states this property does not exist despite it working correctly
         profilesSampleRate: PROFILE_RATE,
         replaysSessionSampleRate: REPLAY_RATE,
         // We always want to replay errors

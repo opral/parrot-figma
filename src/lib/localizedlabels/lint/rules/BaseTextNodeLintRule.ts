@@ -1,0 +1,45 @@
+export default abstract class BaseTextNodeLintRule {
+  ruleName: string;
+
+  constructor(ruleName: string) {
+    this.ruleName = ruleName;
+  }
+
+  /**
+     *
+     * @param textNode the textnode to check if the lintRule matches against
+     * @returns if the lintrule matches
+     */
+  abstract matches(textNode: TextNode): boolean;
+
+  abstract fix(textNode: TextNode): void;
+
+  static fieldsToSetSegmentMethodName = {
+
+  } as any;
+
+  static fixWithMostProminent(textNode: TextNode, field: string) {
+    const currentStyleSegments = textNode.getStyledTextSegments([field as any]);
+    const stylesPresent = {} as any;
+    for (const stlyeSegment of currentStyleSegments) {
+      const serializedStyle = JSON.stringify(stlyeSegment[field]);
+      if (!stylesPresent[serializedStyle]) {
+        stylesPresent[serializedStyle] = stlyeSegment.end - stlyeSegment.start;
+      }
+      stylesPresent[serializedStyle] += stlyeSegment.end - stlyeSegment.start;
+    }
+
+    let mostPresentStyleSerialized : undefined | string;
+    let mostPresentStylePresens = 0 as number;
+
+    for (const [styleSerialized, presens] of Object.entries(stylesPresent)) {
+      if (mostPresentStylePresens < (presens as number)) {
+        mostPresentStylePresens = (presens as number);
+        mostPresentStyleSerialized = styleSerialized;
+      }
+    }
+
+    // eslint-disable-next-line no-param-reassign
+    (textNode as any)[field] = JSON.parse(mostPresentStyleSerialized!);
+  }
+}

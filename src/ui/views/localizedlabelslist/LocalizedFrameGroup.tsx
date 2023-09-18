@@ -13,7 +13,7 @@ import { NodeSelection } from '../../../lib/localizedlabels/LocalizedLabelManage
 import GoogleTranslator from '../../../lib/translationprovider/google';
 
 type LocalizedFrameGroupProps = {
-  showKey: Function,
+  showMessage: Function,
   localizedLabels: UILocalizedLabel[],
   selectedNodes: NodeSelection,
   figmaRemote: FigmaUtil
@@ -44,7 +44,7 @@ function toLanguageOption(language: string, baseLanguage?: string) {
 }
 
 export default function LocalizedFrameGroup({
-  showKey,
+  showMessage,
   localizedLabels,
   selectedNodes,
   figmaRemote,
@@ -122,7 +122,7 @@ export default function LocalizedFrameGroup({
 
         return (
           <LocalizedLabelListItem
-            showMessage={showKey}
+            showMessage={showMessage}
             key={translationState.nodeId}
             figmaRemote={figmaRemote}
             localizedLabelManager={localizedLabelManager}

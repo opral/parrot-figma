@@ -36,6 +36,7 @@ export class MyListContainer extends ListContainer {
 class ListItem extends Block {
   static create(value: string) {
     const node = super.create() as Element;
+
     node.setAttribute('data-list', value);
     return node;
   }

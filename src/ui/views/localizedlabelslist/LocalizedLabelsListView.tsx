@@ -68,13 +68,13 @@ if (!Element.prototype.scrollIntoViewIfNeeded) {
 }
 
 type LocalizedLabelsListViewProps = {
-  showKey: Function,
+  showMessage: Function,
   figmaRemote: FigmaUtil
   localizedLabelManager: LocalizedLabelManagerUI,
 };
 
 export default function LocalizedLabelsListView({
-  showKey,
+  showMessage,
   figmaRemote,
   localizedLabelManager,
 }: LocalizedLabelsListViewProps) {
@@ -83,7 +83,6 @@ export default function LocalizedLabelsListView({
   const tableRef = useRef<HTMLDivElement>(null);
 
   const [selection, setSelection] = useState({} as NodeSelection);
-  
 
   const [parentIds, setParentIds] = useState(new Set<string>());
 
@@ -178,7 +177,7 @@ export default function LocalizedLabelsListView({
         <div className="table" ref={tableRef}>
           {[...parentIds].map((parentId) => (
             <LocalizedFrameGroup
-              showKey={showKey}
+              showMessage={showMessage}
               localizedLabels={localizedLabels.filter((l) => l.rootFrameId === parentId).sort((a, b) => Math.hypot(a.x, a.y * (2) - Math.hypot(b.x, b.y * 2)))}
               selectedNodes={selection}
               figmaRemote={figmaRemote}

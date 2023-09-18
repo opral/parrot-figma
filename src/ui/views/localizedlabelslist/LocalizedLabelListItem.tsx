@@ -1,6 +1,7 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 import * as React from 'react';
+import * as Sentry from '@sentry/react';
 import { useEffect, useRef, useState } from 'react';
 import OutsideClickHandler from 'react-outside-click-handler';
 import { Plural } from '../../../lib/message/variants/Plural';
@@ -37,14 +38,14 @@ export default function LocalizedLabelListItem({
   localizedLabelManager,
   selected,
 }: LocalizedLabelListItemProps) {
-  const messageStore = localizedLabelManager.messageStore;
+  const { messageStore } = localizedLabelManager;
   const translatedKey = localizedLabel.messageLinkState !== MessageLinkState.Unset ? messageStore.getMessage(localizedLabel.messageId!) : undefined;
 
   const rowRef = React.useRef<HTMLDivElement>(null);
 
   const labelState = localizedLabel.state!;
 
-  const [searchKey, setSearchKey] = useState(undefined as any);
+  const [messageSearch, setMessageSearch] = useState(undefined as any);
   const drawerSelectedKey = useRef<string | undefined>(undefined);
   // Dummy state variable to trigger re-render when currentHighlightIndex.current changes
   const [, setDummyState] = useState<any>();
@@ -55,16 +56,32 @@ export default function LocalizedLabelListItem({
   const pluralsAvailable = [] as SelectOption[];
 
   async function createNewVersionFromDesign() {
-    await localizedLabelManager.createNewVersionFromLabelState(localizedLabel);
+    await localizedLabelManager.createNewVersionFromLabelState(localizedLabel).catch((e: Error) => {
+      Sentry.captureException(e);
+      figmaRemote.notifyError(e.message);
+    });
+  }
+
+  async function fixLints() {
+    await localizedLabelManager.fixLabelLints(localizedLabel, localizedLabel.matchingLabelLints).catch((e: Error) => {
+      Sentry.captureException(e);
+      figmaRemote.notifyError(e.message);
+    });
   }
 
   async function updateToLatestKeyVersion() {
     track('updateToLatestKeyVersion');
-    await localizedLabelManager.updateToLatestKeyVersion([localizedLabel]);
+    await localizedLabelManager.updateToLatestKeyVersion([localizedLabel]).catch((e: Error) => {
+      Sentry.captureException(e);
+      figmaRemote.notifyError(e.message);
+    });
   }
 
   async function revertDesignChanges() {
-    await localizedLabelManager.revertDesignChanges(localizedLabel);
+    await localizedLabelManager.revertDesignChanges(localizedLabel).catch((e: Error) => {
+      Sentry.captureException(e);
+      figmaRemote.notifyError(e.message);
+    });
   }
 
   async function onNodeSelect(nodeId: string) {
@@ -104,7 +121,7 @@ export default function LocalizedLabelListItem({
             text: 'Cancel',
             key: 'escape',
             callback: () => {
-              setSearchKey(undefined);
+              setMessageSearch(undefined);
             },
           },
           {
@@ -112,26 +129,29 @@ export default function LocalizedLabelListItem({
             text: 'Use Key',
             key: 'enter',
             callback: () => {
-              localizedLabelManager.linkKey(localizedLabel, drawerSelectedKey.current!, localizedLabel.rootFrameLanguage!, Gender.NEUTRAL, Plural.OTHER);
-              setSearchKey(undefined);
+              localizedLabelManager.linkKey(localizedLabel, drawerSelectedKey.current!, localizedLabel.rootFrameLanguage!, Gender.NEUTRAL, Plural.OTHER).catch((e) => {
+                figmaRemote.notifyError(`could not set message${e.message}`);
+                Sentry.captureException(e);
+              });
+              setMessageSearch(undefined);
             },
             disabled: drawerSelectedKey.current === undefined,
           },
 
         ]}
-        shown={searchKey !== undefined}
+        shown={messageSearch !== undefined}
       >
         <div className="history_view--topHeader" style={{ width: '3000px' }}>
           Select Key
         </div>
-        { searchKey !== undefined && (
+        { messageSearch !== undefined && (
         <MessageListView
           showSearchBar
           messageStore={messageStore}
           localizedLabelManager={localizedLabelManager}
           figmaRemote={figmaRemote}
           selectedMessageId={drawerSelectedKey.current}
-          initialSearchQuery={MessageStoreMemory.toQueryObject(`key:* ${searchKey.search}`)}
+          initialSearchQuery={MessageStoreMemory.toQueryObject(`name:* ${messageSearch.search}`)}
           select={(key: string, language: Locale, plural: Plural) => {
             drawerSelectedKey.current = key;
             setDummyState({});
@@ -153,7 +173,10 @@ export default function LocalizedLabelListItem({
             <TextField
               singleClick={false}
               onSave={async (labelName: string) => {
-                await localizedLabelManager.updateLabelName(localizedLabel, labelName);
+                await localizedLabelManager.updateLabelName(localizedLabel, labelName).catch((e) => {
+                  figmaRemote.notifyError(`could not set message${e.message}`);
+                  Sentry.captureException(e);
+                });
               }}
               text={localizedLabel.name}
             />
@@ -168,6 +191,7 @@ export default function LocalizedLabelListItem({
                 <InputSelect
                   className="key-select"
                   placeholder="Link Message..."
+                  isDisabled={localizedLabel.matchingLabelLints.length > 0}
                   inputPlaceholder="e.g. home__tagline"
                   tooltip="Link a Message to this Text to reuse messages and for a straight forwaredd Developer handover."
                   onCancel={() => {
@@ -176,7 +200,7 @@ export default function LocalizedLabelListItem({
                   onChange={async (selectedOption) => {
                     if (selectedOption.type === InputSelectionOptionType.ACTION) {
                       if (selectedOption.value === 'select-message') {
-                        setSearchKey({
+                        setMessageSearch({
                           search: localizedLabel.characters,
                         });
                       } else if (selectedOption.value === 'show-message') {
@@ -320,14 +344,19 @@ export default function LocalizedLabelListItem({
                       <div className="grid-item-translation translation-container translation">
                         <TranslationEditor
                           editable
+                          isDisabled={localizedLabel.matchingLabelLints.length > 0}
                           match={undefined}
                           onCancel={async () => {
                             localizedLabelManager.commitUndo();
                           }}
-                          onChange={async (value: string, fillins: Fillins) => {
+                          onChange={async (value: string, fillins: Fillins, handleCancel: any) => {
                             localizedLabelManager.updateLabelProperties(localizedLabel.nodeId, {
                               variantHTML: value,
                               fillins,
+                            }).catch((e: Error) => {
+                              Sentry.captureException(e);
+                              figmaRemote.notifyError(e.message);
+                              handleCancel();
                             });
                           }}
                           fillins={localizedLabel.getFillins()}
@@ -348,7 +377,10 @@ export default function LocalizedLabelListItem({
                                 placeholder={entry[1]}
                                 fillin={localizedLabel.fillins?.[entry[0]]?.value ? localizedLabel.fillins?.[entry[0]]?.value : 'unset'}
                                 onValueChange={(placeholderName, fillinValue) => {
-                                  localizedLabelManager.updateLabelFillin(localizedLabel, placeholderName, fillinValue);
+                                  localizedLabelManager.updateLabelFillin(localizedLabel, placeholderName, fillinValue).catch((e: Error) => {
+                                    Sentry.captureException(e);
+                                    figmaRemote.notifyError(e.message);
+                                  });
                                 }}
                               />
 
@@ -395,10 +427,11 @@ export default function LocalizedLabelListItem({
 
           </div>
           <div className="row-actions">
-            { ((localizedLabel.messageLinkState === MessageLinkState.Linked && localizedLabel.rootFrameLanguage !== localizedLabel.language)) && (
+            { ((localizedLabel.matchingLabelLints.length > 0)) && (
             <span
               className="row-action-icon"
-              data-tooltip-content="Frame Language differs from Label"
+              data-tooltip-content={`Label contains unsupported inline styles: ${localizedLabel.matchingLabelLints.join(', ')}`}
+              onClick={fixLints}
             >
               <span className="svg-container warning-svg" />
             </span>

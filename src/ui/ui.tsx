@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import * as ReactDOM from 'react-dom';
 import TimeAgo from 'javascript-time-ago';
 import en from 'javascript-time-ago/locale/en.json';
+import * as Sentry from '@sentry/react';
 import { initializeSentry } from './utils/sentry';
 import { initializeAnalytics, track, identify } from './utils/analytics';
 
@@ -112,6 +113,9 @@ asyncFunctionProxy.proxyAsyncMethods(figmaRemote);
 
 figmaRemote.getUserId().then((userId) => {
   identify(userId!);
+  if (userId) {
+    Sentry.setUser({ id: userId! });
+  }
 });
 
 
@@ -295,8 +299,8 @@ function App() {
     case 'design':
       view = (
         <LocalizedLabelsListView
-          showKey={(key: string) => {
-            setKeyQuery(MessageStoreMemory.toQueryObject(`key:${key}`));
+          showMessage={(messageName: string) => {
+            setKeyQuery(MessageStoreMemory.toQueryObject(`name:${messageName}`));
             setAppScreen('messages');
           }}
           localizedLabelManager={localizedLabelManager}

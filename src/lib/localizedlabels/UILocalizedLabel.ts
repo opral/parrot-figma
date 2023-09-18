@@ -82,7 +82,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   derivedKey?: string | undefined;
 
-  warnings: string[];
+  matchingLabelLints: string[];
 
   labelStyle: LabelStyle;
 
@@ -119,7 +119,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     this.derivedKey = localizedLabel.derivedKey;
     this.fillins = localizedLabel.fillins;
     this.ops = localizedLabel.ops;
-    this.warnings = localizedLabel.warnings;
+    this.matchingLabelLints = localizedLabel.matchingLabelLints;
     this.labelStyle = localizedLabel.labelStyle;
     this.variantHTML = UILocalizedLabel.toHtml(localizedLabel.characters, localizedLabel.ops, this.fillins, true);
     this.unlinkedMessage = localizedLabel.unlinkedMessage;
@@ -232,7 +232,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   static toTextAndOps(html: string, fillins: Fillins) {
     // TODO #12 quill from html -> text + ops
-    debugger;
+    
     const pattern = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;
 
     const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(fillins);
@@ -261,14 +261,30 @@ export class UILocalizedLabel implements LocalizedLabel {
       const text = node.data;
       return delta.insert(text);
     };
+    let removeLastCR = false;
 
+    if (htmlWithFilledPlaceholders.endsWith('</ol>') || htmlWithFilledPlaceholders.endsWith('</ul>')) {
+      removeLastCR = true;
+    }
+     
     htmlWithFilledPlaceholders += '<br>';
+    
     const contents = (quill.clipboard as any).convert({ html: htmlWithFilledPlaceholders }) as any;
-    const text = contents.filter((op: any) => typeof op.insert === 'string').map((op: any) => op.insert).join(''); // quill.getText();// tempCont.getElementsByClassName('ql-editor')[0].textContent ?? '';
+    let text = contents.filter((op: any) => typeof op.insert === 'string').map((op: any) => op.insert).join(''); // quill.getText();// tempCont.getElementsByClassName('ql-editor')[0].textContent ?? '';
+
+    if (removeLastCR) {
+      text = text.slice(0, -1);
+    }
 
     const ops = [] as any[];
     let currentPositon = 0;
     contents.ops?.forEach((operation: any) => {
+
+      if (currentPositon + operation.insert.length > text.length) {
+        // eslint-disable-next-line no-param-reassign
+        operation.insert = operation.insert.slice(0, -1);
+      }
+
       ops.push({
         from: currentPositon,
         to: currentPositon + operation.insert.length,
@@ -358,24 +374,17 @@ export class UILocalizedLabel implements LocalizedLabel {
       orginalVariantHTML: undefined as string | undefined,
     };
 
-    // debugger;
     const translatedKey = this.messageLinkState !== MessageLinkState.Unset ? this.manager.messageStore.getMessage(this.messageId!) : undefined;
 
     if (translatedKey) {
       const currentVersion = translatedKey.getHistoryEntry(this.language, this.genderId, this.pluralId, this.messageVersion);
 
-      if (currentVersion === undefined) {
-        state.variantDeleted = true;
-      } else {
-        state.behind = translatedKey.getChangesSince(this.language, this.genderId, this.pluralId, this.messageVersion);
-
-        const variantHtml = currentVersion.variants[this.language]?.[this.genderId]?.[this.pluralId]?.text!;
-
-        // eslint-disable-next-line no-param-reassign
-        if (variantHtml !== this.variantHTML) {
-          state.modified = true;
-          state.orginalVariantHTML = variantHtml;
-        }
+      state.behind = translatedKey.getChangesSince(this.language, this.genderId, this.pluralId, this.messageVersion);
+      const variantHtml = currentVersion?.variants[this.language]?.[this.genderId]?.[this.pluralId]?.text;
+      // eslint-disable-next-line no-param-reassign
+      if (variantHtml !== this.variantHTML) {
+        state.modified = true;
+        state.orginalVariantHTML = variantHtml;
       }
     }
 

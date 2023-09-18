@@ -528,6 +528,7 @@ export class MessageStoreFigmaRoot {
     defaultFillins?: Fillins
   }): Promise<Message> {
     // NOTE: this call will lead to a deep clone of the message - we can savely update it!
+    
     const messageToUpdate = this.getMessage(id);
     let changeFound = false;
 

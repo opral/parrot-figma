@@ -166,7 +166,7 @@ export default function MessageListView({
       <div className="searchResults">
         { searchQuery.name !== undefined && (
           <div className="searchResults-suggestion">
-            <div className="text">{`Key: ${searchQuery.name}`}</div>
+            <div className="text">{`Name: ${searchQuery.name}`}</div>
             <div
               className="close svg-container cross-svg"
               onClick={() => {

@@ -5,6 +5,8 @@
 /* eslint-disable jsx-a11y/label-has-associated-control */
 import * as React from 'react';
 import { useEffect, useState } from 'react';
+import * as Sentry from '@sentry/react';
+
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
 import OutsideClickHandler from 'react-outside-click-handler';
@@ -318,6 +320,7 @@ export default function TranslationKeyListItem({
                         <TranslationEditor
                           fillins={message.defaultFillins}
                           editable={select === undefined}
+                          isDisabled={false}
                           match={searchMatch?.textMatches[language]?.[gender as Gender]?.[plural as Plural]}
                           onSave={async (text: any, fillins: Fillins) => {
                             let skip = message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.skip ?? false;
@@ -521,7 +524,10 @@ export default function TranslationKeyListItem({
             key: 'enter',
             disabled: messageIdToDelete === undefined,
             callback: () => {
-              localizedLabelManager.deleteKey(message.id);
+              localizedLabelManager.deleteKey(message.id).catch((e: Error) => {
+                Sentry.captureException(e);
+                figmaRemote.notifyError(e.message);
+              });
               setMessageIdToDelete(undefined);
             },
           },

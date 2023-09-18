@@ -120,7 +120,7 @@ figmaRemote.getUserId().then((userId) => {
 
 
 const checkVersion = async () => {
-  const minVersionRequest = await fetch('https://parrot-global.github.io/parrot/min-version.json<', {
+  const minVersionRequest = await fetch('https://parrot-global.github.io/parrot/min-version.json', {
     cache: 'no-cache',
   });
   const { minVersion } = await minVersionRequest.json();

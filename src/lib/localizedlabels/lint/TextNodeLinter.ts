@@ -2,6 +2,8 @@ import BaseTextNodeLintRule from './rules/BaseTextNodeLintRule';
 import MixedStyleNotSupported from './rules/MixedStyleNotSupported';
 // eslint-disable-next-line import/no-named-as-default
 import UnmatchingFontWeightNotSupported from './rules/UnmatchingFontWeightNotSupported';
+import UnsupportedIndentation from './rules/UnsupportedIndentation';
+import UnsupportedTextDecoration from './rules/UnsupportedTextDecoration';
 
 export default class TextNodeLinter {
   defaultRules = [
@@ -11,7 +13,10 @@ export default class TextNodeLinter {
     MixedStyleNotSupported.createRuleForField('letterSpacing'),
     MixedStyleNotSupported.createRuleForField('lineHeight'),
     MixedStyleNotSupported.createRuleForField('leadingTrim'),
+    MixedStyleNotSupported.createRuleForField('fills'),
     new UnmatchingFontWeightNotSupported(),
+    new UnsupportedIndentation(),
+    new UnsupportedTextDecoration(),
   ];
 
   registeredRules = {} as { [ruleName: string]: BaseTextNodeLintRule };
@@ -45,26 +50,9 @@ export default class TextNodeLinter {
 
 // TODO:
 
-// TODO textStyleId ??
-// TODO range fills -> only available via getRangeFills
-
 // fontFamily source for bold/italic/regular
 // -> check if family does not differ
 // - fix find fontfamily that is used the most and replace all others
 // -> check if clear mapping to bold/italic is possible
 // - fix remove non clear mapping segments (replace with regular for now - later use project configs mapping)
 // fontWeight - ignore for - taken care of by bold? but check if it only differs on bold/italic?
-
-// indentation - mixed is ok
-// -> check if only 0 and 1 are present
-// -> check if 1 is only present within lists
-
-// only known properties
-// hyperlink - is ok
-// textDecoration:
-// -> check if only contains "NONE" | "UNDERLINE" | "STRIKETHROUGH"
-// - fix: set unsupported to none
-
-// listOptions
-// -> check if only  undefined/ordered/unordered are present
-// - fix: set unsupported to undefined

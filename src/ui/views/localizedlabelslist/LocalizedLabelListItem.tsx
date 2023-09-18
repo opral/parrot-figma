@@ -62,6 +62,13 @@ export default function LocalizedLabelListItem({
     });
   }
 
+  async function fixLints() {
+    await localizedLabelManager.fixLabelLints(localizedLabel, localizedLabel.matchingLabelLints).catch((e: Error) => {
+      Sentry.captureException(e);
+      figmaRemote.notifyError(e.message);
+    });
+  }
+
   async function updateToLatestKeyVersion() {
     track('updateToLatestKeyVersion');
     await localizedLabelManager.updateToLatestKeyVersion([localizedLabel]).catch((e: Error) => {
@@ -184,6 +191,7 @@ export default function LocalizedLabelListItem({
                 <InputSelect
                   className="key-select"
                   placeholder="Link Message..."
+                  isDisabled={localizedLabel.matchingLabelLints.length > 0}
                   inputPlaceholder="e.g. home__tagline"
                   tooltip="Link a Message to this Text to reuse messages and for a straight forwaredd Developer handover."
                   onCancel={() => {
@@ -336,6 +344,7 @@ export default function LocalizedLabelListItem({
                       <div className="grid-item-translation translation-container translation">
                         <TranslationEditor
                           editable
+                          isDisabled={localizedLabel.matchingLabelLints.length > 0}
                           match={undefined}
                           onCancel={async () => {
                             localizedLabelManager.commitUndo();
@@ -418,10 +427,11 @@ export default function LocalizedLabelListItem({
 
           </div>
           <div className="row-actions">
-            { ((localizedLabel.messageLinkState === MessageLinkState.Linked && localizedLabel.rootFrameLanguage !== localizedLabel.language)) && (
+            { ((localizedLabel.matchingLabelLints.length > 0)) && (
             <span
               className="row-action-icon"
-              data-tooltip-content="Frame Language differs from Label"
+              data-tooltip-content={`Label contains unsupported inline styles: ${localizedLabel.matchingLabelLints.join(', ')}`}
+              onClick={fixLints}
             >
               <span className="svg-container warning-svg" />
             </span>

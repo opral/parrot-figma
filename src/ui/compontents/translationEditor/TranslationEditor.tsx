@@ -33,6 +33,7 @@ type TranslationEditorProps = {
   onChange?: Function,
   onBlur?: Function,
   match: { start: number, length: number } | undefined
+  isDisabled: false | true
   editable: boolean,
   messageStore: MessageStoreMemory,
 };
@@ -43,6 +44,7 @@ type TranslationEditorProps = {
 
 export default function TranslationEditor({
   variantHTML: variantHTML,
+  isDisabled,
   fillins,
   onSave,
   onCancel,
@@ -136,7 +138,7 @@ export default function TranslationEditor({
       disabled={!editingState}
       display="contents"
     >
-      <div className={`translation-editor${editingState ? ' editing' : ''}`}>
+      <div className={`translation-editor${editingState ? ' editing' : ''} ${isDisabled ? ' translation-editor-disabled' : ''}`}>
         <div ref={textDivRef} onMouseOver={() => setMouseOver(true)} onMouseLeave={() => setMouseOver(false)} className={`translation-editor-text${editingState ? ' editing' : ''}`}>
 
           <div
@@ -152,7 +154,7 @@ export default function TranslationEditor({
               text={textToUse}
             />
           </div>
-          { (isMouseOver || editingState) && (
+          { (!isDisabled && (isMouseOver || editingState)) && (
 
           <QuillEditor
             value={textState}

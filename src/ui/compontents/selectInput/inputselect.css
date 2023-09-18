@@ -127,8 +127,15 @@ select.input-select-menu {
 }
 
 .input-select-menu__button:disabled:hover {
-  justify-content: flex-start;
+  
   border-color: transparent;
+  background-color: transparent;
+}
+
+.input-select-menu__button:disabled {
+  
+  border-color: transparent;
+  background-color: transparent;
 }
 
 .input-select-menu__button * {
@@ -160,8 +167,11 @@ select.input-select-menu {
 }
 
 .input-select-menu__button:disabled:hover .input-select-menu__caret {
-  color: var(--figma-color-text-tertiary-hover);
-  margin-left: -12px;
+  margin-left: unset;
+}
+
+.input-select-menu__button:disabled .input-select-menu__caret {
+  background-color: var(--figma-color-text-disabled);
 }
 
 .input-select-menu__button:disabled .input-select-menu__label {

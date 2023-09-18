@@ -107,6 +107,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
           && cachedLabel.labelStyle.textDecoration === label.labelStyle.textDecoration
           && JSON.stringify(cachedLabel.ops) === JSON.stringify(label.ops)
           && JSON.stringify(cachedLabel.fillins) === JSON.stringify(label.fillins)
+          && JSON.stringify(cachedLabel.matchingLabelLints) === JSON.stringify(label.matchingLabelLints)
           && cachedLabel.x === label.x
           && cachedLabel.y === label.y) {
         return false;
@@ -333,11 +334,18 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
       fillins: localizedLabel.fillins,
     });
 
+    debugger;
     await this.updateLabelProperties(localizedLabel.nodeId, {
-      keyVersion: localizedKey.latestVersion,
+      messageVersion: localizedKey.latestVersion,
     });
 
     await this.updateUnpinnedLabelsWithKey(localizedLabel.messageId!);
+
+    await this.localizedLabelMangerSandbox.commitUndo();
+  }
+
+  async fixLabelLints(localizedLabel: LocalizedLabel, lintsToFix: string[]) {
+    await this.localizedLabelMangerSandbox.fixLabelLints(localizedLabel.nodeId, lintsToFix);
 
     await this.localizedLabelMangerSandbox.commitUndo();
   }
@@ -362,7 +370,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
       // eslint-disable-next-line no-await-in-loop
       updatePromises.push(this.updateLabelProperties(localizedLabel.nodeId, {
-        keyVersion: message.latestVersion,
+        messageVersion: message.latestVersion,
         variantHTML: historyEntryForVersion!.variants?.[localizedLabel.rootFrameLanguage]?.[localizedLabel.genderId]?.[localizedLabel.pluralId]?.text,
         language: localizedLabel.rootFrameLanguage,
         gender: localizedLabel.genderId,
@@ -376,7 +384,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
   async revertDesignChanges(localizedLabel: UILocalizedLabel) {
     await this.updateLabelProperties(localizedLabel.nodeId, {
-      keyVersion: localizedLabel.messageVersion,
+      messageVersion: localizedLabel.messageVersion,
       variantHTML: localizedLabel.state?.orginalTranslationHTML,
     });
 
@@ -412,7 +420,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         gender,
         plural,
         language: locale,
-        keyVersion: message.latestVersion,
+        messageVersion: message.latestVersion,
         // showSampleValues: localizedLabel.rootFrameUseSampleValues,
         variantHTML: message.variants[locale]?.[gender]?.[plural]?.text ?? 'no translation',
       });
@@ -457,7 +465,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
       await this.updateLabelProperties(localizedLabel.nodeId, {
         messageId: message.id,
         messageLinkState: MessageLinkState.Linked,
-        keyVersion: message.latestVersion, // its save to use latest version here since we created a whole new key here.
+        messageVersion: message.latestVersion, // its save to use latest version here since we created a whole new key here.
         language: locale,
         gender,
         plural,
@@ -535,7 +543,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     labelName?: string,
     messageLinkState?: MessageLinkState,
     messageId?: string,
-    keyVersion?: number,
+    messageVersion?: number,
     language?: Locale,
     gender?: Gender,
     plural?: Plural,
@@ -570,12 +578,12 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
       if (changedProperties.language !== undefined
         || changedProperties.gender !== undefined
         || changedProperties.plural !== undefined
-        || changedProperties.keyVersion !== undefined) {
+        || changedProperties.messageVersion !== undefined) {
         // only language, plural have changed eventually
         const language = changedProperties.language ?? localizedLabelCached.language;
         const plural = changedProperties.plural ?? localizedLabelCached.pluralId;
         const gender = changedProperties.gender ?? localizedLabelCached.genderId;
-        const version = changedProperties.keyVersion ?? localizedLabelCached.messageVersion;
+        const version = changedProperties.messageVersion ?? localizedLabelCached.messageVersion;
 
         if (localizedLabelCached.messageLinkState === MessageLinkState.Linked) {
           const variantHTML = message?.getInVersion(version).variants[language]?.[gender]?.[plural]?.text ?? 'TODO Missinng Translation when setting Version';
@@ -603,6 +611,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         }
       }
     } else {
+      debugger;
       // TODO handle placeholders
       // const translationHtml = UILocalizedLabel.toText(translation, labelFillins); // TODO #9 how to deal with missing variants?
 

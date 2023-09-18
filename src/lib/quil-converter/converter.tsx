@@ -4,7 +4,6 @@ export default class FigmaTextNodeToDelta {
   static convertTextNode(textNode: TextNode) {
     const textSegments = textNode.getStyledTextSegments(['fontSize', 'fontName', 'fontWeight', 'textDecoration', 'textCase', 'lineHeight', 'letterSpacing', 'fills', 'textStyleId', 'fillStyleId', 'listOptions', 'indentation', 'hyperlink']);
     const deltaRaw = [] as any[];
-    
 
     textSegments.forEach((segment) => {
       deltaRaw.push({

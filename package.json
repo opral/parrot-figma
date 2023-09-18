@@ -62,7 +62,7 @@
     "localized-strings": "^0.2.4",
     "mixpanel-figma": "^2.0.2",
     "node-fetch": "^3.3.0",
-    "npm": "^9.4.2",
+    "npm": "^9.8.1",
     "pjs": "^5.1.2",
     "quill": "github:martin-lysk/quill#develop",
     "react": "^17.0.2",

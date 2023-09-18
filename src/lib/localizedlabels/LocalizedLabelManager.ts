@@ -12,6 +12,7 @@ import { Fillins, MessageEntry } from '../message/Message';
 import VirtualTree, { VirtualTreeNode } from './VirtualTree';
 import LinksLoadedEvent from './LinksLoadedEvent';
 import { Gender } from '../message/variants/Gender';
+import TextNodeLinter from './lint/TextNodeLinter';
 
 export interface NodeSelection {
   [nodeId: string]: {
@@ -52,6 +53,8 @@ export interface DeltaOp {
     bold?: boolean,
     italic?: boolean,
     fontFamily?: string,
+    indentation?: number,
+    list?: string,
   }
   processed?: boolean,
   ignoreForLabelStyle?: boolean
@@ -141,6 +144,80 @@ export default class LocalizedLabelManager {
     }
 
     figma.on('documentchange', this.forwardDocumentChanges.bind(this));
+
+    const selectedNodeStateByUser = {} as any;
+    const that = this;
+    setInterval(() => {
+      const changeEvent = {
+        documentChanges: [] as any[],
+      };
+      // for (const user of [figma.currentUser]) { // NOTE: activeUsers is only available in figJam :/
+        // if (user?.id && user?.selection.length === 1) {
+      if (figma.currentPage.selection.length === 1) {
+        const activeNode = figma.currentPage.selection[0]; // figma.getNodeById(user.selection[0]);
+        const user = { id: 'singleUser' };
+        const currentState = {
+          nodeId: '',
+          textSegments: [] as any[],
+        };
+        if (activeNode !== undefined && activeNode?.type === 'TEXT') {
+          currentState.nodeId = activeNode?.id;
+          const unpropagatedTextSegments = activeNode.getStyledTextSegments(['indentation', 'listOptions']);
+          for (const textSegment of unpropagatedTextSegments) {
+            currentState.textSegments.push({
+              indentation: textSegment.indentation,
+              listOptions: textSegment.listOptions,
+            });
+          }
+
+          if (!selectedNodeStateByUser[user.id] || selectedNodeStateByUser[user.id].nodeId !== currentState.nodeId) {
+            selectedNodeStateByUser[user.id] = currentState;
+            console.log('no change');
+          } else if (selectedNodeStateByUser[user.id].textSegments.length !== currentState.textSegments.length) {
+            // TODO change detected
+            selectedNodeStateByUser[user.id] = currentState;
+            changeEvent.documentChanges.push({
+              id: activeNode.id,
+              origin: figma.currentUser?.id === user.id ? 'LOCAL' : 'REMOTE',
+              type: 'PROPERTY_CHANGE',
+              properties: ['listOptions'],
+
+              node: activeNode,
+            });
+          } else {
+            // eslint-disable-next-line no-restricted-syntax, no-labels
+            checkStateLoop:
+            // eslint-disable-next-line no-plusplus
+            for (let i = 0; i < currentState.textSegments.length; i++) {
+              if (selectedNodeStateByUser[user.id].textSegments[i].indentation !== currentState.textSegments[i].indentation
+                  || selectedNodeStateByUser[user.id].textSegments[i].listOptions.type !== currentState.textSegments[i].listOptions.type) {
+                // TODO indentation change detected
+                selectedNodeStateByUser[user.id] = currentState;
+                changeEvent.documentChanges.push({
+                  id: activeNode.id,
+                  origin: figma.currentUser?.id === user.id ? 'LOCAL' : 'REMOTE',
+                  type: 'PROPERTY_CHANGE',
+                  properties: ['listOptions'],
+
+                  node: activeNode,
+                });
+                // eslint-disable-next-line no-labels, no-extra-label
+                break checkStateLoop;
+              }
+            }
+          }
+        } else {
+          // node has changed no need to keep the old ones state in memory
+          delete selectedNodeStateByUser[user.id];
+        }
+      }
+      // }
+
+      if (changeEvent.documentChanges.length > 0) {
+        console.log('emulating event');
+        that.forwardDocumentChanges(changeEvent);
+      }
+    }, 100);
   }
 
   forwardDocumentChanges(event: any) {
@@ -641,6 +718,7 @@ export default class LocalizedLabelManager {
   } as any;
 
   async updateLabelProperties(nodeId: string, changedProperties: SandboxUpdateLabelProperties) {
+    debugger;
     // setup queue for atomic label update processing
     // - if no execution is ongoing hop right in and create a queue
     // - if an execution is ongoing await the previous call
@@ -842,6 +920,15 @@ export default class LocalizedLabelManager {
         for (const rangeStyle of changedProperties.ops!) {
         // debugger;
 
+          const list = rangeStyle.attributes?.list;
+          if (list === 'ordered') {
+            textNode.setRangeListOptions(rangeStyle.from, rangeStyle.to, { type: 'ORDERED' });
+          } else if (list === 'bullet') {
+            textNode.setRangeListOptions(rangeStyle.from, rangeStyle.to, { type: 'UNORDERED' });
+          } else {
+            textNode.setRangeListOptions(rangeStyle.from, rangeStyle.to, { type: 'NONE' });
+          }
+
           let linkUrl = rangeStyle.attributes?.link;
           if (linkUrl && linkUrl.startsWith('/')) {
             linkUrl = this.helperDomain + linkUrl;
@@ -900,6 +987,13 @@ export default class LocalizedLabelManager {
 
   async commitUndo() {
     return figma.commitUndo();
+  }
+
+  async fixLabelLints(textNodeId: string, lintsToFix: string[]) {
+    const textNode = figma.getNodeById(textNodeId)! as TextNode;
+    await this.loadFontsForTextNodes([textNode]);
+    const linter = new TextNodeLinter();
+    linter.fix(textNode, lintsToFix);
   }
 
   private async loadFontsForTextNodes(textNodes: TextNode[]) {
@@ -1033,7 +1127,7 @@ export default class LocalizedLabelManager {
     const pluralId = node.getPluginData(this.messagePluralDataKey) === '' ? Plural.OTHER : node.getPluginData(this.messagePluralDataKey);
     const genderId = node.getPluginData(this.messageGenderDataKey) === '' ? Gender.NEUTRAL : node.getPluginData(this.messageGenderDataKey);
     const language = node.getPluginData(this.languageDataKey) === '' ? this.messageStore!.getConfigSync().baseLanguage! : node.getPluginData(this.languageDataKey) as Locale;
-    const keyVersion = node.getPluginData(this.messageVersionDataKey) === '' ? -1 : parseInt(node.getPluginData(this.messageVersionDataKey), 10);
+    const messageVersion = node.getPluginData(this.messageVersionDataKey) === '' ? -1 : parseInt(node.getPluginData(this.messageVersionDataKey), 10);
 
     const messageLinkState = node.getPluginData(this.messageLinkStateDataKey) === '' || node.getPluginData(this.messageLinkStateDataKey) === undefined ? MessageLinkState.Unset : node.getPluginData(this.messageLinkStateDataKey) as MessageLinkState;
     const messageId = node.getPluginData(this.messageIdDataKey) === '' ? undefined : node.getPluginData(this.messageIdDataKey);
@@ -1064,14 +1158,14 @@ export default class LocalizedLabelManager {
       y,
       messageLinkState,
       messageId,
-      messageVersion: keyVersion,
+      messageVersion,
       fillins,
       derivedKey: derivable ? derivedName : undefined,
       genderId: genderId as Gender,
       pluralId: pluralId as Plural,
       characters: labelText,
       ops: tokenizedTextResult.deltaOps,
-      warnings: tokenizedTextResult.warnings,
+      matchingLabelLints: tokenizedTextResult.matchingLabelLints,
       labelStyle: tokenizedTextResult.labelStyle,
       unlinkedMessage,
     };
@@ -1137,8 +1231,20 @@ export default class LocalizedLabelManager {
   ];
 
   private getTextStyleDeltaOps(node: TextNode) {
+    
+    // if (matchingRules.length > 0) {
+    //   console.log(`MATCHING RULES: ${matchingRules.join(', ')}`);
+    //   console.log('auto fixing...');
+
+    //   this.loadFontsForTextNodes([node]).then(() => {
+    //     linter.fix(node, matchingRules);
+    //   })
+    // } else {
+    //   console.log('MATCHIGN RULES: NONE');
+    // }
+
     const textStyleDeltaOps = [] as DeltaOp[];
-    const textSegments = node.getStyledTextSegments(['fontName', 'textDecoration', 'hyperlink']);
+    const textSegments = node.getStyledTextSegments(['indentation', 'listOptions', 'fontName', 'textDecoration', 'hyperlink']);
 
     textSegments.forEach((textSegment) => {
       // if the node has one stile (non mixed) its not inline styling - ignore it
@@ -1152,16 +1258,27 @@ export default class LocalizedLabelManager {
         linkUrl = textSegment.hyperlink.value.substring(this.helperDomain.length);
       }
 
+      const attributes = {
+        textDecoration,
+        bold: bold ? true : undefined,
+        italic: italic ? true : undefined,
+        link: linkUrl,
+        indentation: textSegment.indentation,
+      } as any;
+
+      // let listType = undefined as undefined | 'bullet' | 'ordered';
+      if (textSegment.listOptions.type === 'ORDERED') {
+        attributes.list = 'ordered';
+      }
+
+      if (textSegment.listOptions.type === 'UNORDERED') {
+        attributes.list = 'bullet';
+      }
+
       textStyleDeltaOps.push({
         start: textSegment.start,
         end: textSegment.end,
-        attributes: {
-          textDecoration,
-          bold: bold ? true : undefined,
-          italic: italic ? true : undefined,
-          link: linkUrl,
-        },
-
+        attributes,
       });
     });
 
@@ -1288,7 +1405,7 @@ export default class LocalizedLabelManager {
     return deltaOps.sort((op1, op2) => op1.start - op2.start);
   }
 
-  private extractDeltaOpsAndLabelStyles(node: TextNode, fillins: Fillins): { warnings: string[], deltaOps: any[], labelStyle: LabelStyle } {
+  private extractDeltaOpsAndLabelStyles(node: TextNode, fillins: Fillins): { matchingLabelLints: string[], deltaOps: any[], labelStyle: LabelStyle } {
     const fontFamilies = new Set<string>();
 
     const labelStyle = {
@@ -1300,6 +1417,9 @@ export default class LocalizedLabelManager {
 
     const deltaOps = this.getDeltaOps(node, fillins);
 
+    const linter = new TextNodeLinter();
+    const matchingLabelLints = linter.lint(node);
+
     // get label styles
     for (const deltaOp of deltaOps) {
       if (deltaOp.ignoreForLabelStyle) {
@@ -1309,7 +1429,7 @@ export default class LocalizedLabelManager {
       }
       if (deltaOp.attributes.fontFamily) {
         fontFamilies.add(deltaOp.attributes.fontFamily);
-        //console.log('adding font fimily: ' + deltaOp.attributes.fontFamily);
+        // console.log('adding font fimily: ' + deltaOp.attributes.fontFamily);
       }
 
       labelStyle.bold = labelStyle.bold !== null && labelStyle.bold !== deltaOp.attributes.bold ? 'MIXED' : deltaOp.attributes.bold;
@@ -1326,10 +1446,9 @@ export default class LocalizedLabelManager {
       deltaOp.attributes.fontFamily = labelStyle.fontFamily !== 'MIXED' ? undefined : deltaOp.attributes.fontFamily;
     }
 
-    const warnings = [] as string[];
 
     return {
-      warnings,
+      matchingLabelLints,
       // if we have no style changes within the label we don't handle styling
       deltaOps, // : deltaOps.length > 1 ? deltaOps : [],
       labelStyle,

@@ -320,6 +320,7 @@ export default function TranslationKeyListItem({
                         <TranslationEditor
                           fillins={message.defaultFillins}
                           editable={select === undefined}
+                          isDisabled={false}
                           match={searchMatch?.textMatches[language]?.[gender as Gender]?.[plural as Plural]}
                           onSave={async (text: any, fillins: Fillins) => {
                             let skip = message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.skip ?? false;

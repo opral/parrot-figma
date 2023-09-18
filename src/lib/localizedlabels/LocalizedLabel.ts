@@ -45,7 +45,7 @@ export interface LocalizedLabel {
   pluralId: Plural;
   characters: string;
   ops: DeltaOp[];
-  warnings: string[];
+  matchingLabelLints: string[];
   labelStyle: LabelStyle;
 
   // fillins needed to suppoert bidirectional template filling and extraction

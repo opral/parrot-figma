@@ -7,7 +7,7 @@ export default class IndentationNotSupported extends BaseTextNodeLintRule {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  matches(textNode: TextNode): boolean {
+  matches(textNode: TextNode) {
     if (textNode.characters.length === 0) {
       return false;
     }

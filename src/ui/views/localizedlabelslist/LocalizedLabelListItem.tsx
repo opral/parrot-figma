@@ -129,7 +129,9 @@ export default function LocalizedLabelListItem({
             text: 'Use Key',
             key: 'enter',
             callback: () => {
-              localizedLabelManager.linkKey(localizedLabel, drawerSelectedKey.current!, localizedLabel.rootFrameLanguage!, Gender.NEUTRAL, Plural.OTHER).catch((e) => {
+              const message = localizedLabelManager.messageStore.getMessage(drawerSelectedKey.current!)!;
+
+              localizedLabelManager.linkMessage(localizedLabel, message.name, localizedLabel.rootFrameLanguage!, Gender.NEUTRAL, Plural.OTHER).catch((e) => {
                 figmaRemote.notifyError(`could not set message${e.message}`);
                 Sentry.captureException(e);
               });
@@ -209,9 +211,9 @@ export default function LocalizedLabelListItem({
                         await localizedLabelManager.unsetLabel(localizedLabel);
                       }
                     } else if (selectedOption.type === InputSelectionOptionType.ADD) {
-                      await localizedLabelManager.linkKey(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!, Gender.NEUTRAL, Plural.OTHER);
+                      await localizedLabelManager.linkMessage(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!, Gender.NEUTRAL, Plural.OTHER);
                     } else if (selectedOption.type === InputSelectionOptionType.SUGGESTION) {
-                      await localizedLabelManager.linkKey(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!, Gender.NEUTRAL, Plural.OTHER);
+                      await localizedLabelManager.linkMessage(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!, Gender.NEUTRAL, Plural.OTHER);
                     }
                     /* if (selectedOption.type === 'action') {
                       if (selectedOption.value === 'no-translation') {
@@ -233,11 +235,12 @@ export default function LocalizedLabelListItem({
                   defaultValue={messageName}
                   getOptions={(enteredValue: string) => {
                     let options = [] as InputSelectOption[];
+                    
 
                     const keySearch = enteredValue === '' ? '*' : enteredValue;
-                    const textMatchQuery = MessageStoreMemory.toQueryObject(`exact_text:true key:${keySearch} ${localizedLabel.characters}`);
+                    const textMatchQuery = MessageStoreMemory.toQueryObject(`exact_text:true name:${keySearch} ${localizedLabel.characters}`);
                     const { matchingNames: suggestedKeys } = messageStore.findKeys(textMatchQuery);
-                    const keyMatchQuery = MessageStoreMemory.toQueryObject(`key:${keySearch}`);
+                    const keyMatchQuery = MessageStoreMemory.toQueryObject(`name:${keySearch}`);
                     const { matchingNames: matchingKeysByName } = messageStore.findKeys(keyMatchQuery);
 
                     const isValidKey = enteredValue.length >= 0 && /^[a-zA-Z0-9]$/.test(enteredValue[enteredValue.length - 1]);

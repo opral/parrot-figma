@@ -60,7 +60,7 @@ export class MessageStoreFigmaRoot {
 
   constructor(asProxy: boolean) {
     if (!asProxy) {
-      figma.on('documentchange', this.forwardDocumentChanges.bind(this));
+      // figma.on('documentchange', this.forwardDocumentChanges.bind(this));
     }
   }
 

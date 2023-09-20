@@ -160,6 +160,7 @@ function App() {
   useEffect(() => {
     // asynchronous fetch the state from figma helper
     (async () => {
+      await localizedLabelManager.prepare();
       // console.log('load - messages');
       await memoryTranslationKeyStore.load();
       localizedLabelManager.startFillupCache();

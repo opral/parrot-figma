@@ -14,7 +14,7 @@ export default class MixedStyleNotSupported extends BaseTextNodeLintRule {
     return new MixedStyleNotSupported(ruleName, styleField);
   }
 
-  matches(textNode: TextNode): boolean {
+  matches(textNode: TextNode) {
     return (textNode as any)[this.styleField] === figma.mixed;
   }
 

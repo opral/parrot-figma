@@ -13,6 +13,7 @@ import VirtualTree, { VirtualTreeNode } from './VirtualTree';
 import LinksLoadedEvent from './LinksLoadedEvent';
 import { Gender } from '../message/variants/Gender';
 import TextNodeLinter from './lint/TextNodeLinter';
+import FontHelper from './FontUtil';
 
 export interface NodeSelection {
   [nodeId: string]: {
@@ -402,6 +403,10 @@ export default class LocalizedLabelManager {
     figma.ui.postMessage(message);
   }
 
+  async prepare() {
+    await FontHelper.initialize();
+  }
+
   async startFillupCache() {
     // we start the async process here - this will load frame by frame and intercept each load with a tick
     this.fillUpCache().catch((e) => console.log(e));
@@ -718,7 +723,6 @@ export default class LocalizedLabelManager {
   } as any;
 
   async updateLabelProperties(nodeId: string, changedProperties: SandboxUpdateLabelProperties) {
-    debugger;
     // setup queue for atomic label update processing
     // - if no execution is ongoing hop right in and create a queue
     // - if an execution is ongoing await the previous call
@@ -1405,7 +1409,7 @@ export default class LocalizedLabelManager {
     return deltaOps.sort((op1, op2) => op1.start - op2.start);
   }
 
-  private extractDeltaOpsAndLabelStyles(node: TextNode, fillins: Fillins): { matchingLabelLints: string[], deltaOps: any[], labelStyle: LabelStyle } {
+  private extractDeltaOpsAndLabelStyles(node: TextNode, fillins: Fillins): { matchingLabelLints: string[], deltaOps: any[], labelStyle: LabelStyle/*, allowedFormats: string[]*/ } {
     const fontFamilies = new Set<string>();
 
     const labelStyle = {

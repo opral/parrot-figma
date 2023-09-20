@@ -24,7 +24,7 @@ export default abstract class BaseTextNodeLintRule {
     for (const stlyeSegment of currentStyleSegments) {
       const serializedStyle = JSON.stringify(stlyeSegment[field]);
       if (!stylesPresent[serializedStyle]) {
-        stylesPresent[serializedStyle] = stlyeSegment.end - stlyeSegment.start;
+        stylesPresent[serializedStyle] = 0;
       }
       stylesPresent[serializedStyle] += stlyeSegment.end - stlyeSegment.start;
     }

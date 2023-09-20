@@ -171,6 +171,10 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
   framesIdToLoad = [] as string[];
 
+  async prepare() {
+    await this.localizedLabelMangerSandbox.prepare();
+  }
+
   async startFillupCache() {
     // we don't await this promise since it will fill the cache in the background
     this.localizedLabelMangerSandbox.startFillupCache();
@@ -334,7 +338,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
       fillins: localizedLabel.fillins,
     });
 
-    debugger;
     await this.updateLabelProperties(localizedLabel.nodeId, {
       messageVersion: localizedKey.latestVersion,
     });
@@ -409,8 +412,9 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     }
   }
 
-  async linkKey(localizedLabel: UILocalizedLabel, keyNameToLinkTo: string, locale: Locale, gender: Gender, plural: Plural) {
-    let message = this.messageStore.getMessageByName(keyNameToLinkTo);
+  async linkMessage(localizedLabel: UILocalizedLabel, messageNameToLinkTo: string, locale: Locale, gender: Gender, plural: Plural) {
+    
+    let message = this.messageStore.getMessageByName(messageNameToLinkTo);
 
     if (message !== undefined) {
       // message does exist - we only have to link it
@@ -452,9 +456,9 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
             }
           }
         }
-        message = await this.messageStore.createMessage(keyNameToLinkTo, variants, localizedLabel.unlinkedMessage.gender, localizedLabel.unlinkedMessage.plural, localizedLabel.fillins);
+        message = await this.messageStore.createMessage(messageNameToLinkTo, variants, localizedLabel.unlinkedMessage.gender, localizedLabel.unlinkedMessage.plural, localizedLabel.fillins);
       } else {
-        message = await this.messageStore.createMessage(keyNameToLinkTo, [{
+        message = await this.messageStore.createMessage(messageNameToLinkTo, [{
           locale,
           gender,
           plural,
@@ -611,7 +615,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         }
       }
     } else {
-      debugger;
+      
       // TODO handle placeholders
       // const translationHtml = UILocalizedLabel.toText(translation, labelFillins); // TODO #9 how to deal with missing variants?
 

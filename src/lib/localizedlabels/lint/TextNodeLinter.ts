@@ -1,9 +1,10 @@
 import BaseTextNodeLintRule from './rules/BaseTextNodeLintRule';
 import MixedStyleNotSupported from './rules/MixedStyleNotSupported';
 // eslint-disable-next-line import/no-named-as-default
-import UnmatchingFontWeightNotSupported from './rules/FontWeightNotSupported';
+import UnmatchingFontWeightNotSupported from './rules/FontStyleNotSupported';
 import IndentationNotSupported from './rules/IndentationNotSupported';
 import TextDecorationUnknown from './rules/TextDecorationUnknown';
+import FontStyleNotSuppoorted from './rules/FontStyleNotSupported';
 
 export default class TextNodeLinter {
   defaultRules = [
@@ -17,6 +18,7 @@ export default class TextNodeLinter {
     new UnmatchingFontWeightNotSupported(),
     new IndentationNotSupported(),
     new TextDecorationUnknown(),
+    new FontStyleNotSuppoorted(),
   ];
 
   registeredRules = {} as { [ruleName: string]: BaseTextNodeLintRule };
@@ -34,7 +36,8 @@ export default class TextNodeLinter {
   lint(textNode: TextNode) {
     const matchingRules = [];
     for (const rule of Object.values(this.registeredRules)) {
-      if (rule.matches(textNode)) {
+      const currentRuleMatches = rule.matches(textNode)
+      if (currentRuleMatches) {
         matchingRules.push(rule.ruleName);
       }
     }

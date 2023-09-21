@@ -3,6 +3,7 @@
   "version": "0.9.68",
   "description": "Plugin to handle assets and resources directly within figma",
   "main": "code.js",
+  "type": "module",
   "scripts": {
     "generate-strings": "node ./util/assets-and-resources.js;",
     "start": "node ./util/assets-and-resources.js; webpack --mode development --watch",
@@ -36,7 +37,7 @@
     "read": "^2.1.0",
     "style-loader": "^3.2.1",
     "ts-loader": "^9.2.5",
-    "typescript": "^4.3.5",
+    "typescript": "^5.0.0",
     "url-loader": "^4.1.1",
     "webpack": "^5.51.1",
     "webpack-cli": "^4.8.0"

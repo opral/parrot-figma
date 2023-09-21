@@ -4,11 +4,15 @@
     "target": "es6",
     "strict": true,
 
+		// strict ES module
+		"module": "es2020",
+		// strict ES module
+		"moduleResolution": "Bundler",
+
     "resolveJsonModule": true,
     "jsx": "react",
     "noImplicitThis": false,
     "allowSyntheticDefaultImports": true,
-    "moduleResolution": "node",
     "typeRoots": [
       "./node_modules/@types",
       "./node_modules/@figma"

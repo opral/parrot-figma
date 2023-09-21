@@ -75,7 +75,6 @@ const pluralArrayByLanguage: { [key in Locale]: Plural[] } = {
   [Locale.PL]: [Plural.OTHER, Plural.ONE, Plural.FEW, Plural.MANY],
   [Locale.PS]: [Plural.OTHER, Plural.ONE],
   [Locale.PT]: [Plural.OTHER, Plural.ONE],
-  [Locale.PT]: [Plural.OTHER, Plural.ONE],
   [Locale.RO]: [Plural.OTHER, Plural.ONE, Plural.FEW],
   [Locale.RU]: [Plural.OTHER, Plural.ONE, Plural.FEW, Plural.MANY],
   [Locale.SK]: [Plural.OTHER, Plural.ONE, Plural.FEW],

@@ -1,10 +1,10 @@
-import { Message } from '../Message';
-import { Gender } from '../variants/Gender';
-import { Locale } from '../variants/Locale';
-import { Plural } from '../variants/Plural';
-import MessageLintRule, { MessageLintMatch } from './MessageLintRule';
+import { Message } from '../../Message';
+import { Gender } from '../../variants/Gender';
+import { Locale } from '../../variants/Locale';
+import { Plural } from '../../variants/Plural';
+import BaseMessageLintRule from './BaseMessageLintRule';
 
-export default class MissingTargetVariant extends MessageLintRule {
+export default class MissingTargetVariant extends BaseMessageLintRule {
   constructor() {
     super('MissingTargetVariant');
   }

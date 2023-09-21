@@ -1,10 +1,10 @@
-import { Message } from '../Message';
-import { Gender } from '../variants/Gender';
-import { Locale } from '../variants/Locale';
-import { Plural } from '../variants/Plural';
-import MessageLintRule, { MessageLintMatch } from './MessageLintRule';
+import { Message } from '../../Message';
+import { Gender } from '../../variants/Gender';
+import { Plural } from '../../variants/Plural';
+import { Locale } from '../../variants/Locale';
+import BaseMessageLintRule, { MessageLintMatch } from './BaseMessageLintRule';
 
-export default class MissingRefVariant extends MessageLintRule {
+export default class MissingRefVariant extends BaseMessageLintRule {
   constructor() {
     super('MissingRefVariant');
   }
@@ -21,6 +21,7 @@ export default class MissingRefVariant extends MessageLintRule {
         && message.variants[refLocale]?.[gender]?.[plural]?.skip) {
         if (!previousMatches.find((existingMatch) => existingMatch.gender === gender && existingMatch.plural === plural)) {
           return {
+            ruleName: this.ruleName,
             locale: refLocale,
             gender,
             plural,

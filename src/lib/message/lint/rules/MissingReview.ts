@@ -1,12 +1,12 @@
-import { Message } from '../Message';
-import { Gender } from '../variants/Gender';
-import { Plural } from '../variants/Plural';
-import { Locale } from '../variants/Locale';
-import MessageLintRule, { MessageLintMatch } from './MessageLintRule';
+import { Message } from '../../Message';
+import { Gender } from '../../variants/Gender';
+import { Plural } from '../../variants/Plural';
+import { Locale } from '../../variants/Locale';
+import BaseMessageLintRule, { MessageLintMatch } from './BaseMessageLintRule';
 
-export default class MachineTranslation extends MessageLintRule {
+export default class MissingReview extends BaseMessageLintRule {
   constructor() {
-    super('MachineTranslation');
+    super('MissingReview');
   }
 
   /**
@@ -18,7 +18,8 @@ export default class MachineTranslation extends MessageLintRule {
   matches(message: Message, locale: Locale, gender: Gender, plural: Plural, refLocale: Locale) {
     // TODO as soon as src is established
     // if (refLocale !== locale) {
-    //   if (message.variants[locale]?.[gender]?.[plural]?.src === 'maschine') {
+    // reviewed will be a flag that is not stored but calculated on applicaiton meta data
+    //   if (message.variants[locale]?.[gender]?.[plural]?.reviewed === false) {
     //     return {
     //       ruleName: this.ruleName,
     //       locale,

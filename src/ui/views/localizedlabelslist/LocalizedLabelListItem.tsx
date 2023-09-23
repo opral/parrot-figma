@@ -418,7 +418,7 @@ export default function LocalizedLabelListItem({
                 { ((localizedLabel.messageLinkState === MessageLinkState.Linked && labelState.modified)) && (
                 <span
                   className="layerIcon iconWrapper button"
-                  data-tooltip-content={`Push changes to (${localizedLabel.language}) Translation`}
+                  data-tooltip-content={`Push changes to Message`}
                   onClick={createNewVersionFromDesign}
                 >
                   <span className="svg-container use-label-svg" />

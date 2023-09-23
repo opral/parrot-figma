@@ -328,6 +328,11 @@ export default function TranslationKeyListItem({
                             if (text !== undefined && text !== '') {
                               skip = false;
                             }
+
+                            Object.values(fillins).forEach(fillin => {
+                              fillin.default = true;
+                            });
+                            
                             await localizedLabelManager.updateMessage(message.id!, {
                               variants: [{
                                 locale: language, plural: plural as Plural, gender: gender as Gender, text, skip,
@@ -524,7 +529,7 @@ export default function TranslationKeyListItem({
             key: 'enter',
             disabled: messageIdToDelete === undefined,
             callback: () => {
-              localizedLabelManager.deleteKey(message.id).catch((e: Error) => {
+              localizedLabelManager.deleteMessage(message.id).catch((e: Error) => {
                 Sentry.captureException(e);
                 figmaRemote.notifyError(e.message);
               });
@@ -538,13 +543,14 @@ export default function TranslationKeyListItem({
         <div className="history_view--topHeader">
           Delete
           {' '}
-          {messageIdToDelete}
+          {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.name}
         </div>
         <div>
           {keyToDeleteReferences !== undefined && keyToDeleteReferences > 0 && (
             <>
-              Deletion of the key
-              {messageIdToDelete}
+              Deletion of the Message
+              {' '}
+              {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.name}
               {' '}
               will unlink
               {' '}
@@ -558,7 +564,7 @@ export default function TranslationKeyListItem({
           <>
             Key
             {' '}
-            {messageIdToDelete}
+            {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.name}
             {' '}
             is not refrenced by a label
           </>

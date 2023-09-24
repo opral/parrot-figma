@@ -27,7 +27,7 @@ export default class PlaceholderBlot extends Inline {
 
     if (value.unnamed) {
       node.setAttribute('unnamed', '');
-    }
+    } 
 
     node.setAttribute('fillin', value.fillin);
     node.setAttribute('contenteditable', 'false');

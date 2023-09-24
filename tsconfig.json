@@ -3,6 +3,10 @@
     "sourceMap": true,
     "target": "es6",
     "strict": true,
+		// strict ES module
+		"module": "es2020",
+		// strict ES module
+		"moduleResolution": "Bundler",
 
 		// strict ES module
 		"module": "es2020",

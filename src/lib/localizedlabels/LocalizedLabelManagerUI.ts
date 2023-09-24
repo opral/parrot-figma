@@ -364,7 +364,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         if ((!fillins[placeholderName] || fillins[placeholderName].default) && message.defaultFillins[placeholderName]) {
           fillins[placeholderName] = {
             default: true,
-            value: message.defaultFillins[placeholderName].value,
+            value: message.defaultFillins[placeholderName].value ?? 'Lorem ipsum',
           };
         }
       }
@@ -394,9 +394,9 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     await this.localizedLabelMangerSandbox.commitUndo();
   }
 
-  async deleteKey(keyToDelete: string) {
-    await this.unlinLabelsWithKey(keyToDelete);
-    await this.messageStore.deleteMessage(keyToDelete);
+  async deleteMessage(messageId: string) {
+    await this.unlinLabelsWithKey(messageId);
+    await this.messageStore.deleteMessage(messageId);
 
     await this.localizedLabelMangerSandbox.commitUndo();
   }
@@ -413,7 +413,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   }
 
   async linkMessage(localizedLabel: UILocalizedLabel, messageNameToLinkTo: string, locale: Locale, gender: Gender, plural: Plural) {
-    
     let message = this.messageStore.getMessageByName(messageNameToLinkTo);
 
     if (message !== undefined) {

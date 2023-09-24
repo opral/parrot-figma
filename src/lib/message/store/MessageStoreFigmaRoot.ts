@@ -60,7 +60,7 @@ export class MessageStoreFigmaRoot {
 
   constructor(asProxy: boolean) {
     if (!asProxy) {
-      // figma.on('documentchange', this.forwardDocumentChanges.bind(this));
+      figma.on('documentchange', this.forwardDocumentChanges.bind(this));
     }
   }
 
@@ -283,7 +283,7 @@ export class MessageStoreFigmaRoot {
     for (const placeholderName of Object.keys(placeholders)) {
       // if the placeholder does not exist or is flagged as default value, enrich with default value
       const defaultValue = message.defaultFillins?.[placeholderName]?.default === true;
-      if (defaultValue) {
+      if (defaultValue && message.defaultFillins?.[placeholderName] === undefined) {
         const placehodlder = message.placeholders[placeholderName];
         let fillinDefaultValue = defaultStringFillinValue as string | number;
         if (placehodlder.type === PlaceholderType.float) {
@@ -525,7 +525,7 @@ export class MessageStoreFigmaRoot {
     gender?: boolean,
     plural?: boolean,
     quantity?: { value: number } | { placeholder: string },
-    defaultFillins?: Fillins
+    fillins?: Fillins
   }): Promise<Message> {
     // NOTE: this call will lead to a deep clone of the message - we can savely update it!
     
@@ -597,9 +597,15 @@ export class MessageStoreFigmaRoot {
       messageToUpdate.quantity = properties.quantity;
     }
 
-    if (properties.defaultFillins !== undefined && properties.defaultFillins !== null && JSON.stringify(messageToUpdate.defaultFillins) !== JSON.stringify(properties.defaultFillins)) {
-      changeFound = true;
-      messageToUpdate.defaultFillins = properties.defaultFillins;
+
+    
+    if (properties.fillins !== undefined) {
+       for (let [fillinName, fillinValue] of Object.entries(properties.fillins)) {
+        if (fillinValue.default && messageToUpdate.defaultFillins[fillinName]?.value !== fillinValue.value) {
+          changeFound = true;
+          messageToUpdate.defaultFillins[fillinName]= fillinValue;
+        }
+       }
     }
 
     if (properties.name !== undefined && messageToUpdate.name !== properties.name) {

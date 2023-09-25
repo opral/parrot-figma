@@ -22,7 +22,7 @@ import { Messages } from '../lib/message/Message';
 import MessageListView from './views/messages/MessageListView';
 
 import MessageStoreMemory, { MessagesUI } from '../lib/message/store/MessageStoreMemory';
-import { MessageStoreFigmaRoot } from '../lib/message/store/MessageStoreFigmaRoot';
+import { MessageStoreInlang } from '../lib/message/store/MessageStoreInlang';
 
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
 import LocalizedLabelManagerUI from '../lib/localizedlabels/LocalizedLabelManagerUI';
@@ -141,12 +141,12 @@ setInterval(() => {
   checkVersion().catch(console.log);
 }, versionCheckInterval);
 
-const figmaFileTranslationKeyStore = new MessageStoreFigmaRoot(true);
+const figmaFileTranslationKeyStore = new MessageStoreInlang(true);
 
-asyncFunctionProxy.proxyAsyncMethods(figmaFileTranslationKeyStore);
+//asyncFunctionProxy.proxyAsyncMethods(figmaFileTranslationKeyStore);
 const memoryTranslationKeyStore = new MessageStoreMemory(figmaFileTranslationKeyStore);
 
-const remoteLocalizedLabelManager = new LocalizedLabelManager(undefined);
+const remoteLocalizedLabelManager = new LocalizedLabelManager(true);
 asyncFunctionProxy.proxyAsyncMethods(remoteLocalizedLabelManager);
 const localizedLabelManager = new LocalizedLabelManagerUI(remoteLocalizedLabelManager, memoryTranslationKeyStore);
 

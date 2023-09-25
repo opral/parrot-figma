@@ -6,7 +6,7 @@ import {
   Fillins,
   HistoryTag, MessageEntry, Message,
 } from '../Message';
-import { Config, MessageStoreFigmaRoot } from './MessageStoreFigmaRoot';
+import { Config, MessageStoreInlang } from './MessageStoreInlang';
 import { MessageUI } from '../MessageUI';
 import { NodeSelection } from '../../localizedlabels/LocalizedLabelManager';
 import { Gender, genderList } from '../variants/Gender';
@@ -50,7 +50,7 @@ export interface MessagesUI {
 }
 
 export default class MessageStoreMemory extends EventTarget {
-  parentKeyStore: MessageStoreFigmaRoot;
+  parentKeyStore: MessageStoreInlang;
 
   config: Config | undefined;
 
@@ -58,7 +58,7 @@ export default class MessageStoreMemory extends EventTarget {
 
   messages: MessagesUI = { };
 
-  constructor(parentKeyStore: MessageStoreFigmaRoot) {
+  constructor(parentKeyStore: MessageStoreInlang) {
     super();
     this.parentKeyStore = parentKeyStore;
 
@@ -511,6 +511,7 @@ export default class MessageStoreMemory extends EventTarget {
   }
 
   async createTag(title: string, description: string | undefined) {
+    /* TODO #14 we skip this in inlang for now
     // TODO #11 we update the messages here - shouldn't we wait for the messaage bus instead?
     const tagId = this.historyTags.length;
     for (const messageId of Object.keys(this.messages)) {
@@ -519,6 +520,7 @@ export default class MessageStoreMemory extends EventTarget {
 
     this.historyTags[tagId] = await this.parentKeyStore.createTag(tagId, title, description);
     return this.historyTags[tagId];
+    */
   }
 
   async createMessage(name: string, messages: { locale: Locale; gender: Gender, plural: Plural; text: string | undefined; skip: boolean }[], gender: boolean, plural: boolean, fillins?: Fillins, quantity?: { value: number } | { placeholder: string }): Promise<MessageUI> {
@@ -547,7 +549,12 @@ export default class MessageStoreMemory extends EventTarget {
   }
 
   async load(): Promise<MessagesUI> {
-    this.config = await this.parentKeyStore.getConfig();
+    // TODO #14 get from real config eventual use figma util
+    this.config = {
+      baseLanguage: Locale.EN,
+      enabledLanguages: [Locale.EN, Locale.DE],
+    };
+    // TODO #14 load config from figma helper await this.parentKeyStore.getConfig();
     this.historyTags = await this.parentKeyStore.getHistoryTags();
     this.messages = {} as MessagesUI;
 

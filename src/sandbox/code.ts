@@ -11,7 +11,7 @@
 
 import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
 import MigrationManager from '../lib/migrations/MigrationManager'
-import { MessageStoreFigmaRoot } from '../lib/message/store/MessageStoreFigmaRoot';
+
 import FigmaUtil from '../shared/FigmaUtil';
 import FigmaHelper from '../shared/FigmaHelper';
 import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowManagerSandbox';
@@ -49,13 +49,11 @@ const asyncFunctionProxy = new AsyncFunctionProxy('SandboxAsyncFunctionProxy', (
 
 asyncFunctionProxy.registerInstance(figmaRemote);
 
-const localizationState = new MessageStoreFigmaRoot(false);
-asyncFunctionProxy.registerInstance(localizationState);
 
-const remoteLocalizedLabelManager = new LocalizedLabelManager(localizationState);
+const remoteLocalizedLabelManager = new LocalizedLabelManager(false);
 asyncFunctionProxy.registerInstance(remoteLocalizedLabelManager);
 
-const figmaHelper = new FigmaHelper(figma, localizationState);
+const figmaHelper = new FigmaHelper(figma);
 asyncFunctionProxy.registerInstance(figmaHelper);
 
 figma.on('selectionchange', () => {

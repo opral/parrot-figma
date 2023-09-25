@@ -118,6 +118,8 @@ export default function Export({
   // const [baseLanguage, setBaseLanguages] = useState(messageStore.getBaseLanugages());
 
   const onTagCurrentVersionClick = async () => {
+    // TODO #14 we dont do this in inlang for now
+    /* 
     const newTag = await labelManager.messageStore.createTag(title, description);
     const options = defaultOptions.concat(labelManager.messageStore.historyTags.slice().reverse().map((historyTag) => ({
       label: historyTag.title,
@@ -125,6 +127,7 @@ export default function Export({
     } as SelectOption)));
     setTagOptions(options);
     setSelectedVersion(newTag.versionId!);
+    */
   };
 
   const doExport = async (exportLanguage: Locale, format: string) => {

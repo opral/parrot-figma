@@ -7,7 +7,6 @@ import { Locale } from '../message/variants/Locale';
 import { MessageLinkState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../message/variants/Plural';
 import ChangeEvent from './ChangeEvent';
-import { MessageStoreFigmaRoot } from '../message/store/MessageStoreFigmaRoot';
 import { Fillins, MessageEntry } from '../message/Message';
 import VirtualTree, { VirtualTreeNode } from './VirtualTree';
 import LinksLoadedEvent from './LinksLoadedEvent';
@@ -61,11 +60,14 @@ export interface DeltaOp {
   ignoreForLabelStyle?: boolean
 }
 
+// TODO #14 configure this via method
+const config = {
+  refLocale: Locale.EN,
+};
+
 export const MARKER_CHARACTER = '​';
 // export const MARKER_CHARACTER = 'X​';
 export default class LocalizedLabelManager {
-  messageStore?: MessageStoreFigmaRoot;
-
   private containerSizeThreashold = 3000;
 
   public proxyClassName = 'LocalizedLabelManager';
@@ -110,6 +112,9 @@ export default class LocalizedLabelManager {
   firstTextnodeInViewport: undefined | string;
 
   private refreshLabelMessaheLinkCache(textNodeId: string, messageId: string | undefined) {
+    // TODO #14 remove this by adding a linked and key_keyname field to the label that allows fast lookup
+    // TODO #14 add cache to inlinang
+    /*
     const currentKey = this.labelToMessage[textNodeId];
     if (messageId === undefined || messageId === '') {
       if (currentKey) {
@@ -133,16 +138,14 @@ export default class LocalizedLabelManager {
         this.messageStore!.messageIdToLabels[currentKey]!.delete(textNodeId);
       }
       return currentKey;
-    }
+    } */
     return undefined;
   }
 
-  constructor(messageStore: MessageStoreFigmaRoot | undefined) {
-    this.messageStore = messageStore;
-
-    if (messageStore === undefined) {
+  constructor(asProxy: boolean) {
+    if (asProxy) {
       return;
-    }
+    } 
 
     figma.on('documentchange', this.forwardDocumentChanges.bind(this));
 
@@ -626,8 +629,9 @@ export default class LocalizedLabelManager {
   }
 
   async getWithMessage(messageId: string) {
+    // TODO fetch by key_messageid plugin property instead - should be fast enough!
     const labels = [] as LocalizedLabel[];
-    if (this.messageStore!.messageIdToLabels[messageId]) {
+    /* TODO #14 if (this.messageStore!.messageIdToLabels[messageId]) {
       for (const textNodeId of this.messageStore!.messageIdToLabels[messageId]) {
         const textNode = figma.getNodeById(textNodeId) as TextNode;
         const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode);
@@ -638,7 +642,7 @@ export default class LocalizedLabelManager {
           labels.push(lokalizedLabel);
         }
       }
-    }
+    } */
     return labels;
   }
 
@@ -783,8 +787,7 @@ export default class LocalizedLabelManager {
       }
 
       if (changedProperties.language !== undefined) {
-        const config = await this.messageStore!.getConfig();
-        if (changedProperties.language !== (config).baseLanguage) {
+        if (changedProperties.language !== config.refLocale) {
           if (textNode.autoRename) {
             textNode.setPluginData(this.autoRenameHashKey, textNode.characters);
             textNode.autoRename = false;
@@ -1130,12 +1133,12 @@ export default class LocalizedLabelManager {
     // if no plural id is specified than we fall back to "other" - the default plural
     const pluralId = node.getPluginData(this.messagePluralDataKey) === '' ? Plural.OTHER : node.getPluginData(this.messagePluralDataKey);
     const genderId = node.getPluginData(this.messageGenderDataKey) === '' ? Gender.NEUTRAL : node.getPluginData(this.messageGenderDataKey);
-    const language = node.getPluginData(this.languageDataKey) === '' ? this.messageStore!.getConfigSync().baseLanguage! : node.getPluginData(this.languageDataKey) as Locale;
+    const language = node.getPluginData(this.languageDataKey) === '' ? config.refLocale : node.getPluginData(this.languageDataKey) as Locale;
     const messageVersion = node.getPluginData(this.messageVersionDataKey) === '' ? -1 : parseInt(node.getPluginData(this.messageVersionDataKey), 10);
 
     const messageLinkState = node.getPluginData(this.messageLinkStateDataKey) === '' || node.getPluginData(this.messageLinkStateDataKey) === undefined ? MessageLinkState.Unset : node.getPluginData(this.messageLinkStateDataKey) as MessageLinkState;
     const messageId = node.getPluginData(this.messageIdDataKey) === '' ? undefined : node.getPluginData(this.messageIdDataKey);
-    const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === '' ? this.messageStore!.getConfigSync().baseLanguage! : rootFrame.getPluginData(this.languageDataKey) as Locale;
+    const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === '' ? config.refLocale : rootFrame.getPluginData(this.languageDataKey) as Locale;
     const rootFrameUseSampleValues = rootFrame.getPluginData(this.sampleValuesDataKey) !== '';
     const useSampleValues = node.getPluginData(this.sampleValuesDataKey) !== '';
 
@@ -1235,7 +1238,6 @@ export default class LocalizedLabelManager {
   ];
 
   private getTextStyleDeltaOps(node: TextNode) {
-    
     // if (matchingRules.length > 0) {
     //   console.log(`MATCHING RULES: ${matchingRules.join(', ')}`);
     //   console.log('auto fixing...');
@@ -1409,7 +1411,7 @@ export default class LocalizedLabelManager {
     return deltaOps.sort((op1, op2) => op1.start - op2.start);
   }
 
-  private extractDeltaOpsAndLabelStyles(node: TextNode, fillins: Fillins): { matchingLabelLints: string[], deltaOps: any[], labelStyle: LabelStyle/*, allowedFormats: string[]*/ } {
+  private extractDeltaOpsAndLabelStyles(node: TextNode, fillins: Fillins): { matchingLabelLints: string[], deltaOps: any[], labelStyle: LabelStyle/* , allowedFormats: string[] */ } {
     const fontFamilies = new Set<string>();
 
     const labelStyle = {
@@ -1449,7 +1451,6 @@ export default class LocalizedLabelManager {
       deltaOp.attributes.textDecoration = labelStyle.textDecoration !== 'MIXED' ? undefined : deltaOp.attributes.textDecoration;
       deltaOp.attributes.fontFamily = labelStyle.fontFamily !== 'MIXED' ? undefined : deltaOp.attributes.fontFamily;
     }
-
 
     return {
       matchingLabelLints,

@@ -1,10 +1,6 @@
 /* eslint-disable -- TODO remove this when most of the class is used again */
 
 
-import FigmaUtil from './FigmaUtil';
-import { Locale } from '../lib/message/variants/Locale';
-import { Plural } from '../lib/message/variants/Plural';
-import { MessageStoreFigmaRoot } from '../lib/message/store/MessageStoreFigmaRoot';
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
 import { MessageLinkState } from '../lib/localizedlabels/LocalizedLabel';
 
@@ -15,11 +11,9 @@ export default class FigmaHelper {
 
   figma: PluginAPI | undefined;
 
-  messageStore: MessageStoreFigmaRoot | undefined;
 
-  constructor(figma?: PluginAPI, keyStore?: MessageStoreFigmaRoot) {
+  constructor(figma?: PluginAPI) {
     this.figma = figma;
-    this.messageStore = keyStore;
   }
 
   async toggleKeyFrame(frameNodeId: string) {

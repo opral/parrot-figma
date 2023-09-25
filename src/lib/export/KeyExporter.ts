@@ -10,33 +10,35 @@ const i18nextJsonExporter = ejs.compile(require('./templates/i18nextJsonExporter
 export default class KeyExporter {
   static export(messageStore: MessageStoreMemory, language: Locale, format: string, versionId: string | undefined) {
     // prepare the data needed by the templates
-    const data = { input: messageStore.getMessagesByMessageName(language, versionId), language };
 
-    if (format === 'apple-strings') {
-      return {
-        fileName: `${language}.strings`,
-        fileType: 'application/xml',
-        content: appleStringsFileExporterTmpl(data),
-      };
-    } if (format === 'apple-dict') {
-      return {
-        fileName: `${language}.dict`,
-        fileType: 'application/xml',
-        content: appleDictFileExporterTmpl(data),
-      };
-    } if (format === 'android-xml') {
-      return {
-        fileName: 'strings.xml',
-        fileType: 'application/xml',
-        content: androidXmlExporterTmpl(data),
-      };
-    } if (format === 'i18next') {
-      return {
-        fileName: `${language}.json`,
-        fileType: 'application/json',
-        content: i18nextJsonExporter(data),
-      };
-    }
+    // TODO #14 use inlang for export
+    // const data = { input: messageStore.getMessagesByMessageName(language, versionId), language };
+
+    // if (format === 'apple-strings') {
+    //   return {
+    //     fileName: `${language}.strings`,
+    //     fileType: 'application/xml',
+    //     content: appleStringsFileExporterTmpl(data),
+    //   };
+    // } if (format === 'apple-dict') {
+    //   return {
+    //     fileName: `${language}.dict`,
+    //     fileType: 'application/xml',
+    //     content: appleDictFileExporterTmpl(data),
+    //   };
+    // } if (format === 'android-xml') {
+    //   return {
+    //     fileName: 'strings.xml',
+    //     fileType: 'application/xml',
+    //     content: androidXmlExporterTmpl(data),
+    //   };
+    // } if (format === 'i18next') {
+    //   return {
+    //     fileName: `${language}.json`,
+    //     fileType: 'application/json',
+    //     content: i18nextJsonExporter(data),
+    //   };
+    // }
     return undefined;
   }
 }

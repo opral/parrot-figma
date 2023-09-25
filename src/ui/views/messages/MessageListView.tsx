@@ -115,7 +115,9 @@ export default function MessageListView({
     }
   }, [highlightSelection]);
 
-  const fileHasMessages = Object.keys(messageStore.messages).length > 0;
+  const allMessages = messageStore.inlangProject?.query.messages.getAll() ?? [];
+
+  const fileHasMessages = allMessages.length > 0;
   if (!fileHasMessages) {
     return (
       <div className="emptyState">
@@ -139,7 +141,7 @@ export default function MessageListView({
     setSearchQuery(MessageStoreMemory.toQueryObject(searchString));
   };
 
-  const longestKey = Object.keys(messageStore.messages).reduce((acc, key) => (key.length > acc.length ? key : acc), '');
+  const longestKey = allMessages[0].id!; // TODO #14 find longest message Object.keys(messageStore.messages).reduce((acc, key) => (key.length > acc.length ? key : acc), '');
 
   let rendered = 0;
 
@@ -333,7 +335,7 @@ export default function MessageListView({
           messageStore={messageStore}
           localizedLabelManager={localizedLabelManager}
           searchMatch={undefined}
-          message={messageStore.messages[longestKey]}
+          messageId={longestKey}
           figmaRemote={figmaRemote}
           select={select}
           keySelected={false}
@@ -351,7 +353,7 @@ export default function MessageListView({
               messageStore={messageStore}
               localizedLabelManager={localizedLabelManager}
               searchMatch={filteredKeys.matches[messageId]}
-              message={messageStore.messages[messageId]}
+              messageId={messageId}
               figmaRemote={figmaRemote}
               select={select}
               keySelected={Object.values(selectedNodes).map((selectedNode) => selectedNode.messageId).includes(messageId) || selectedMessageId === messageId}

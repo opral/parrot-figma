@@ -374,18 +374,20 @@ export class UILocalizedLabel implements LocalizedLabel {
       orginalVariantHTML: undefined as string | undefined,
     };
 
-    const translatedKey = this.messageLinkState !== MessageLinkState.Unset ? this.manager.messageStore.getMessage(this.messageId!) : undefined;
+    const message = this.messageLinkState !== MessageLinkState.Unset ? this.manager.messageStore.getMessage(this.messageId!) : undefined;
 
-    if (translatedKey) {
-      const currentVersion = translatedKey.getHistoryEntry(this.language, this.genderId, this.pluralId, this.messageVersion);
+    if (message) {
+      // const currentVersion = message.getHistoryEntry(this.language, this.genderId, this.pluralId, this.messageVersion);
 
-      state.behind = translatedKey.getChangesSince(this.language, this.genderId, this.pluralId, this.messageVersion);
-      const variantHtml = currentVersion?.variants[this.language]?.[this.genderId]?.[this.pluralId]?.text;
-      // eslint-disable-next-line no-param-reassign
-      if (variantHtml !== this.variantHTML) {
-        state.modified = true;
-        state.orginalVariantHTML = variantHtml;
-      }
+      // state.behind = message.getChangesSince(this.language, this.genderId, this.pluralId, this.messageVersion);
+      // const variantHtml = currentVersion?.variants[this.language]?.[this.genderId]?.[this.pluralId]?.text;
+      // // eslint-disable-next-line no-param-reassign
+      // if (variantHtml !== this.variantHTML) {
+      //   state.modified = true;
+      //   state.orginalVariantHTML = variantHtml;
+      // }
+      state.modified = true;
+      state.behind = 1;
     }
 
     return state;

@@ -20,8 +20,6 @@ import FigmaUtil from '../../../shared/FigmaUtil';
 import TranslationEditor from '../../compontents/translationEditor/TranslationEditor';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 
-import HistoryEntryView from '../../compontents/history/HistoryEntryView';
-import { MessageUI } from '../../../lib/message/MessageUI';
 import PlaceholderEditorListItem from '../../compontents/placeholder/PlaceholderEditor';
 import AsyncImage from './AsyncImage';
 import FEATURES_FLAGS from '../../featuretoggle';
@@ -44,10 +42,10 @@ interface VersionEntry {
 
 type TranslationKeyListItemProps = {
   rowClassNames?: string | undefined,
-  message: MessageUI,
   figmaRemote: FigmaUtil,
   searchMatch: any,
   messageStore: MessageStoreMemory,
+  messageId: string,
   localizedLabelManager: LocalizedLabelManagerUI,
   select?: Function,
   keySelected: boolean,
@@ -55,10 +53,10 @@ type TranslationKeyListItemProps = {
 
 export default function TranslationKeyListItem({
   rowClassNames,
-  message,
   figmaRemote,
   searchMatch,
   messageStore,
+  messageId,
   localizedLabelManager,
   select,
   keySelected,
@@ -67,16 +65,19 @@ export default function TranslationKeyListItem({
   const [selected, setSelected] = useState(false);
   const [showUsage, setShowUsage] = useState(false);
   const [showPlaceholderEditor, setShowPlaceholderEditor] = useState(false);
-  const [defaultFillins, setDefaultFillins] = useState(message.defaultFillins);
-  const [history, setHistory] = useState<undefined | VersionEntry[]>(undefined);
+  // TODO #14 add fillin handling
+  const [defaultFillins, setDefaultFillins] = useState({});
+  // const [history, setHistory] = useState<undefined | VersionEntry[]>(undefined);
   const [messageIdToDelete, setMessageIdToDelete] = useState<undefined | string>(undefined);
   const [keyToDeleteReferences, setKeyToDeleteReferences] = useState<undefined | number>(undefined);
+
+  const [message, _setMessage] = useState(localizedLabelManager.messageStore.getMessage(messageId)!);
 
   const [showHistory, setShowHistory] = useState<undefined | { language: Locale, gender: Gender, plural: Plural }>(undefined);
 
   const rowRef = React.useRef<HTMLDivElement>(null);
 
-  const referencingLabels = message.referencingTextNodes;
+  const referencingLabels = [] as any[]; // TODO source referencing nodes message.referencingTextNodes;
 
   async function onNodeSelect(nodeId: string) {
     await figmaRemote.scrollIntoViewIfNeeded(nodeId, true);
@@ -140,69 +141,70 @@ export default function TranslationKeyListItem({
   const languages = [baseLang, ...messageStore.getLanugages()!.filter((l) => l !== baseLang)] as Locale[];
 
   const onShowHistoryClick = (language: Locale, gender: Gender, plural: Plural) => {
-    const specificHistory = [] as VersionEntry[];
+    // TODO #14 implement when inlang history is in place
+    // const specificHistory = [] as VersionEntry[];
 
-    let lastRelevantVersion = undefined as VersionEntry | undefined;
+    // let lastRelevantVersion = undefined as VersionEntry | undefined;
 
-    let currentVersion = 0;
+    // let currentVersion = 0;
 
-    const taggedVersions = [] as number[];
+    // const taggedVersions = [] as number[];
 
-    for (const tagIndex of Object.keys(message.historyTags)) {
-      if (message.historyTags[parseInt(tagIndex, 10)]) {
-        taggedVersions.push(parseInt(tagIndex, 10));
-      }
-    }
+    // for (const tagIndex of Object.keys(message.historyTags)) {
+    //   if (message.historyTags[parseInt(tagIndex, 10)]) {
+    //     taggedVersions.push(parseInt(tagIndex, 10));
+    //   }
+    // }
 
-    // historyTags maps from the tag index to a key version
-    // a key may no exist in every tag ->
-    let currentTagIndex = 0;
-    let currentVersionTagIndex = taggedVersions[currentTagIndex] as number | undefined;
-    let currentTaggedKeyVersion = currentVersionTagIndex && message.historyTags[currentVersionTagIndex] ? message.historyTags[currentVersionTagIndex] : -1;
-    let currentTag = currentVersionTagIndex ? messageStore.historyTags[currentVersionTagIndex] : undefined;
+    // // historyTags maps from the tag index to a key version
+    // // a key may no exist in every tag ->
+    // let currentTagIndex = 0;
+    // let currentVersionTagIndex = taggedVersions[currentTagIndex] as number | undefined;
+    // let currentTaggedKeyVersion = currentVersionTagIndex && message.historyTags[currentVersionTagIndex] ? message.historyTags[currentVersionTagIndex] : -1;
+    // let currentTag = currentVersionTagIndex ? messageStore.historyTags[currentVersionTagIndex] : undefined;
 
-    console.log('taqgs');
-    console.log(messageStore.historyTags);
-    console.log('key');
-    console.log(message);
+    // console.log('taqgs');
+    // console.log(messageStore.historyTags);
+    // console.log('key');
+    // console.log(message);
 
-    // filter relevant history changes for the given key
-    for (const messageHistoryEntry of message.history) {
-      if (messageHistoryEntry.variants?.[language]?.[gender]?.[plural] !== undefined) {
-        if (currentTaggedKeyVersion < currentVersion) {
-          currentTagIndex += 1;
-          currentVersionTagIndex = taggedVersions[currentTagIndex] as number | undefined;
-          currentTaggedKeyVersion = currentVersionTagIndex && message.historyTags[currentVersionTagIndex] ? message.historyTags[currentVersionTagIndex] : -1;
-          currentTag = currentVersionTagIndex ? messageStore.historyTags[currentVersionTagIndex] : undefined;
-        }
+    // // filter relevant history changes for the given key
+    // for (const messageHistoryEntry of message.history) {
+    //   if (messageHistoryEntry.variants?.[language]?.[gender]?.[plural] !== undefined) {
+    //     if (currentTaggedKeyVersion < currentVersion) {
+    //       currentTagIndex += 1;
+    //       currentVersionTagIndex = taggedVersions[currentTagIndex] as number | undefined;
+    //       currentTaggedKeyVersion = currentVersionTagIndex && message.historyTags[currentVersionTagIndex] ? message.historyTags[currentVersionTagIndex] : -1;
+    //       currentTag = currentVersionTagIndex ? messageStore.historyTags[currentVersionTagIndex] : undefined;
+    //     }
 
-        const currentRelevantVersion = {
-          versionTag: currentTag,
-          text: messageHistoryEntry.variants?.[language]?.[gender]?.[plural]?.text ?? lastRelevantVersion?.text,
-          previousText: lastRelevantVersion?.text,
-          userName: messageHistoryEntry.user,
-          version: currentVersion,
-          date: messageHistoryEntry.date,
-          userIconUrl: messageHistoryEntry.user,
-          skip: messageHistoryEntry.variants?.[language]?.[gender]?.[plural]?.skip ?? false,
-          verified: messageHistoryEntry.variants?.[language]?.[gender]?.[plural]?.verified ?? false, // TODO #9 check correct state for history view
-        };
+    //     const currentRelevantVersion = {
+    //       versionTag: currentTag,
+    //       text: messageHistoryEntry.variants?.[language]?.[gender]?.[plural]?.text ?? lastRelevantVersion?.text,
+    //       previousText: lastRelevantVersion?.text,
+    //       userName: messageHistoryEntry.user,
+    //       version: currentVersion,
+    //       date: messageHistoryEntry.date,
+    //       userIconUrl: messageHistoryEntry.user,
+    //       skip: messageHistoryEntry.variants?.[language]?.[gender]?.[plural]?.skip ?? false,
+    //       verified: messageHistoryEntry.variants?.[language]?.[gender]?.[plural]?.verified ?? false, // TODO #9 check correct state for history view
+    //     };
 
-        // relevant historyEntry
-        specificHistory.push(currentRelevantVersion);
+    //     // relevant historyEntry
+    //     specificHistory.push(currentRelevantVersion);
 
-        if (currentTaggedKeyVersion >= currentVersion && lastRelevantVersion && currentRelevantVersion.versionTag === lastRelevantVersion.versionTag) {
-          // remove tag from last entry since this one is a better candidate
-          lastRelevantVersion.versionTag = undefined;
-        }
-        lastRelevantVersion = currentRelevantVersion;
-      }
+    //     if (currentTaggedKeyVersion >= currentVersion && lastRelevantVersion && currentRelevantVersion.versionTag === lastRelevantVersion.versionTag) {
+    //       // remove tag from last entry since this one is a better candidate
+    //       lastRelevantVersion.versionTag = undefined;
+    //     }
+    //     lastRelevantVersion = currentRelevantVersion;
+    //   }
 
-      currentVersion += 1;
-    }
+    //   currentVersion += 1;
+    // }
 
-    setHistory(specificHistory.reverse());
-    setShowHistory({ language, gender, plural });
+    // setHistory(specificHistory.reverse());
+    // setShowHistory({ language, gender, plural });
   };
 
   return (
@@ -223,12 +225,13 @@ export default function TranslationKeyListItem({
             <TextField
               singleClick={false}
               onSave={async (messageName: string) => {
-                localizedLabelManager.updateMessage(message.id, {
-                  variants: [],
-                  name: messageName,
-                });
+                // TODO #14 support message renaming
+                // localizedLabelManager.updateMessage(message.id, {
+                //   variants: [],
+                //   name: messageName,
+                // });
               }}
-              text={message.name}
+              text={message.id}
             />
           </span>
         </div>
@@ -248,10 +251,10 @@ export default function TranslationKeyListItem({
             <span
               className="layerIcon iconWrapper button"
               onClick={() => {
-                localizedLabelManager.updateMessage(message.id, { variants: [], plural: !message.plural });
+                // localizedLabelManager.updateMessage(message.id, { variants: [], plural: !message.plural });
               }}
             >
-              <span className={'svg-container ' + (message.plural ? 'plural-svg' : 'no-plural-svg')} />
+              <span className={'svg-container ' + (/* message.plural */ false ? 'plural-svg' : 'no-plural-svg')} />
             </span>
             )}
 
@@ -259,11 +262,13 @@ export default function TranslationKeyListItem({
           )}
         </div>
         <div>
+          {/*
+          // TODO #14 add placeholder handling
           { false && Object.values(message.placeholders).map((placeholder: Placeholder) => (
             <div>
               {placeholder.name + ' ' + (placeholder.derivedArgumentPosition) + ' ' + (placeholder.specifiedArgumentPosition ? placeholder.specifiedArgumentPosition : '-') + ' ' + placeholder.named }
             </div>
-          )) }
+          )) } */}
         </div>
         { false && select === undefined && (
         <div className="key-usage">
@@ -291,64 +296,80 @@ export default function TranslationKeyListItem({
         )}
       </div>
       {languages.map((language, i, allLanguages) => {
-        let languageSkipped = false;
-        if (message.variants[language as Locale] !== undefined) {
-          for (const gender of Object.keys(message.variants[language as Locale]!)) {
-            for (const plural of Object.keys(message.variants[language as Locale]![gender as Gender]!)) {
-              if (message.variants[language as Locale]![gender as Gender]![plural as Plural]!.skip !== true) {
-                languageSkipped = false;
-                break;
-              } else {
-                languageSkipped = true;
-              }
-            }
-          }
+        const languageSkipped = false;
+        // TODO #14 enable when language skip is active
+        // if (message.variants[language as Locale] !== undefined) {
+        //   for (const gender of Object.keys(message.variants[language as Locale]!)) {
+        //     for (const plural of Object.keys(message.variants[language as Locale]![gender as Gender]!)) {
+        //       if (message.variants[language as Locale]![gender as Gender]![plural as Plural]!.skip !== true) {
+        //         languageSkipped = false;
+        //         break;
+        //       } else {
+        //         languageSkipped = true;
+        //       }
+        //     }
+        //   }
+        // }
+
+        const variant = message.variants.find((variant) => variant.languageTag === language);
+        let variantHTML = '// TODO #14 define fallback';
+        if (variant !== undefined) {
+          variantHTML = MessageStoreMemory.patternToHtml(variant.pattern);
         }
 
         return (
           <div className={`group language-group ${languageSkipped ? ' skipped ' : ''}${language === baseLang ? ' baselanguage grid-item-border grid-item-border-top' : ''}${i === (allLanguages.length - 1) ? ' grid-item-border grid-item-border-bottom ' : ''}`} key={language}>
             <div className="column column-language grid-item-language"><span className="rowText">{language}</span></div>
-            {genderList.filter(((gender) => message.gender || gender === Gender.NEUTRAL)).map((gender, genderIndex, allGenders) => (
-              <div key={gender} className={`group gender-group ${genderIndex === (allGenders.length - 1) ? 'lastGender  grid-item-border grid-item-border-bottom' : ''} ${genderIndex === 0 ? 'firstGender  grid-item-border grid-item-border-top' : ''} ${message.gender ? 'oneGender' : ' multipleGenders'}`}>
-                <div className="column column-gender grid-item-gender grid-item-border"><span className="rowText">{message.gender ? gender : ''}</span></div>
-                {getPluralFormsByLanguage(language).filter((plural) => message.plural || plural === Plural.OTHER).map((plural, pluralsIndex, allPlurals) =>
+            {/* {genderList.filter(((gender) => message.gender || gender === Gender.NEUTRAL)).map((gender, genderIndex, allGenders) => ( */}
+            {/* <div key={gender} className={`group gender-group ${genderIndex === (allGenders.length - 1) ? 'lastGender  grid-item-border grid-item-border-bottom' : ''} ${genderIndex === 0 ? 'firstGender  grid-item-border grid-item-border-top' : ''} ${message.gender ? 'oneGender' : ' multipleGenders'}`}> */}
+            <div className="group gender-group lastGender  grid-item-border grid-item-border-bottom firstGender  grid-item-border grid-item-border-top oneGender">
+              <div className="column column-gender grid-item-gender grid-item-border"><span className="rowText">{ /* message.gender ? gender : '' */ }</span></div>
+              {/* {getPluralFormsByLanguage(language).filter((plural) => message.plural || plural === Plural.OTHER).map((plural, pluralsIndex, allPlurals) =>
                 // eslint-disable-next-line consistent-return
-                  (
-                    <div key={plural} className={`group plural-group ${pluralsIndex === (allPlurals.length - 1) ? 'lastPlural  grid-item-border grid-item-border-bottom' : ''} ${pluralsIndex === 0 ? 'firstPlural  grid-item-border grid-item-border-top' : ''} ${message.plural ? 'onePlural' : ' multiplePlurals'}${message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.skip === true ? ' skipped' : ''}`}>
-                      <div className="column column-plural grid-item-plural grid-item-border"><span className="rowText">{message.plural ? plural : ''}</span></div>
-                      <div className="column  column-translation grid-item-translation grid-item-border translation-container translation">
-                        <TranslationEditor
-                          fillins={message.defaultFillins}
-                          editable={select === undefined}
-                          isDisabled={false}
-                          match={searchMatch?.textMatches[language]?.[gender as Gender]?.[plural as Plural]}
-                          onSave={async (text: any, fillins: Fillins) => {
-                            let skip = message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.skip ?? false;
+                  ( */}
+              {/* <div key={plural} className={`group plural-group ${pluralsIndex === (allPlurals.length - 1) ? 'lastPlural  grid-item-border grid-item-border-bottom' : ''} ${pluralsIndex === 0 ? 'firstPlural  grid-item-border grid-item-border-top' : ''} ${message.plural ? 'onePlural' : ' multiplePlurals'}${message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.skip === true ? ' skipped' : ''}`}> */}
+              <div className="group plural-group lastPlural  grid-item-border grid-item-border-bottom firstPlural  grid-item-border grid-item-border-top onePlural">
+                <div className="column column-plural grid-item-plural grid-item-border"><span className="rowText">{ /* message.plural ? plural : '' */ }</span></div>
+                <div className="column  column-translation grid-item-translation grid-item-border translation-container translation">
+                  <TranslationEditor
+                    fillins={{} /* TODO #14 support fillins message.defaultFillins */}
+                    editable={select === undefined}
+                    isDisabled={false}
+                    match={searchMatch?.textMatches[language]?.['*']}
+                    onSave={async (text: any, fillins: Fillins) => {
+                      // let skip = message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.skip ?? false;
 
-                            if (text !== undefined && text !== '') {
-                              skip = false;
-                            }
+                      // if (text !== undefined && text !== '') {
+                      //   skip = false;
+                      // }
 
-                            Object.values(fillins).forEach(fillin => {
-                              fillin.default = true;
-                            });
-                            
-                            await localizedLabelManager.updateMessage(message.id!, {
-                              variants: [{
-                                locale: language, plural: plural as Plural, gender: gender as Gender, text, skip,
-                              }],
-                              fillins,
-                            });
-                          }}
-                          variantHTML={message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.text}
-                          messageStore={messageStore}
-                        />
+                      Object.values(fillins).forEach((fillin) => {
+                        // eslint-disable-next-line no-param-reassign
+                        fillin.default = true;
+                      });
 
-                      </div>
-                      <div className="column column-actions grid-item-actions grid-item-border grid-item-border-right">
-                        { select === undefined && (
-                        <>
-                          { FEATURES_FLAGS.disableKeyLanguage
+                      await localizedLabelManager.updateMessage({
+                        id: message.id,
+                        variants: [{
+                          languageTag: language,
+                          match: {},
+                          pattern: [{
+                            type: 'Text',
+                            value: text,
+                          }],
+                        }],
+                        selectors: [], // TODO #14 think about selectors selectors: 
+                      }, fillins);
+                    }}
+                    variantHTML={variantHTML}
+                    messageStore={messageStore}
+                  />
+
+                </div>
+                <div className="column column-actions grid-item-actions grid-item-border grid-item-border-right">
+                  { select === undefined && (
+                    <>
+                      {/* { FEATURES_FLAGS.disableKeyLanguage
                       && (
                       <span
                         className="layerIcon iconWrapper button"
@@ -368,35 +389,36 @@ export default function TranslationKeyListItem({
                         <span className={'svg-container' + (message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.skip === true ? ' eye-closed-svg' : ' eye-svg')} />
                       </span>
                       )}
-                          { FEATURES_FLAGS.versioning && (
-                          <span
-                            className="layerIcon iconWrapper button"
-                            onClick={async () => {
-                              onShowHistoryClick(language, gender, plural);
-                            }}
-                          >
-                            <span className="svg-container history-svg" />
-                          </span>
-                          )}
-                          <span
-                            className="layerIcon iconWrapper button"
-                            onClick={async () => {
-                              setShowPlaceholderEditor(true);
-                            }}
-                          >
-                            <span className="svg-container placeholder-svg" />
-                          </span>
-                        </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                      { FEATURES_FLAGS.versioning && (
+                      <span
+                        className="layerIcon iconWrapper button"
+                        onClick={async () => {
+                          // TODO #14 history onShowHistoryClick(language, gender, plural);
+                        }}
+                      >
+                        <span className="svg-container history-svg" />
+                      </span>
+                      )} */}
+                      <span
+                        className="layerIcon iconWrapper button"
+                        onClick={async () => {
+                          setShowPlaceholderEditor(true);
+                        }}
+                      >
+                        <span className="svg-container placeholder-svg" />
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
-            ))}
+              {/* ))} */}
+            </div>
+            {/* ))} */}
 
           </div>
         );
       })}
+      {/* TODO #14 enable when inlang supports history
       <OutsideClickHandler
         onOutsideClick={() => { setShowHistory(undefined); }}
         disabled={showHistory === undefined}
@@ -445,7 +467,8 @@ export default function TranslationKeyListItem({
             />
           ))}
         </div>
-      </OutsideClickHandler>
+      </OutsideClickHandler> */}
+      {/* TODO #14 add fillins editor
       <OutsideClickHandler
         onOutsideClick={() => { setShowPlaceholderEditor(false); }}
         disabled={showPlaceholderEditor === false}
@@ -510,7 +533,7 @@ export default function TranslationKeyListItem({
             }}
           />
         </div>
-      </OutsideClickHandler>
+      </OutsideClickHandler> */}
       <Drawer
         position="top"
         buttons={[
@@ -543,14 +566,14 @@ export default function TranslationKeyListItem({
         <div className="history_view--topHeader">
           Delete
           {' '}
-          {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.name}
+          {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id}
         </div>
         <div>
           {keyToDeleteReferences !== undefined && keyToDeleteReferences > 0 && (
             <>
               Deletion of the Message
               {' '}
-              {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.name}
+              {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id}
               {' '}
               will unlink
               {' '}
@@ -564,7 +587,7 @@ export default function TranslationKeyListItem({
           <>
             Key
             {' '}
-            {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.name}
+            {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id}
             {' '}
             is not refrenced by a label
           </>

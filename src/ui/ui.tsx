@@ -18,10 +18,9 @@ import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
 import './ui.css';
 import WindowManagerUi from '../lib/windowManager/WindowManagerUI';
 import { WindowMode } from '../lib/windowManager/WindowManagerSandbox';
-import { Messages } from '../lib/message/Message';
 import MessageListView from './views/messages/MessageListView';
 
-import MessageStoreMemory, { MessagesUI } from '../lib/message/store/MessageStoreMemory';
+import MessageStoreMemory from '../lib/message/store/MessageStoreMemory';
 import { MessageStoreInlang } from '../lib/message/store/MessageStoreInlang';
 
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';

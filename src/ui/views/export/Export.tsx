@@ -76,15 +76,15 @@ export default function Export({
     divider: true,
   }] as SelectOption[];
 
-  const initTagOptions = defaultOptions.concat(labelManager.messageStore.historyTags.slice().reverse().map((historyTag) => ({
-    label: historyTag.title,
-    value: historyTag.versionId!,
-  } as SelectOption)));
+  // const initTagOptions = defaultOptions.concat(labelManager.messageStore.historyTags.slice().reverse().map((historyTag) => ({
+  //   label: historyTag.title,
+  //   value: historyTag.versionId!,
+  // } as SelectOption)));
 
   const [selectedVersion, setSelectedVersion] = useState<string>('head');
   const [title, setTitle] = useState('test');
   const [description, setDescription] = useState('');
-  const [tagOptions, setTagOptions] = useState(initTagOptions);
+  // const [tagOptions, setTagOptions] = useState(initTagOptions);
 
   const [exportTarget, setExportTarget] = useState<string | undefined>(undefined);
 
@@ -131,10 +131,11 @@ export default function Export({
   };
 
   const doExport = async (exportLanguage: Locale, format: string) => {
-    const exportedFile = KeyExporter.export(translationKeyStore, exportLanguage, format, selectedVersion);
-    if (exportedFile) {
-      downloadFile(exportedFile.fileName, exportedFile.fileType, exportedFile.content);
-    }
+    // TODO #14 export inlang
+    // const exportedFile = KeyExporter.export(translationKeyStore, exportLanguage, format, selectedVersion);
+    // if (exportedFile) {
+    //   downloadFile(exportedFile.fileName, exportedFile.fileType, exportedFile.content);
+    // }
   };
 
   const [keySummary, setKeySummary] = useState(labelManager.messageStore.findMessages({}, undefined));
@@ -152,7 +153,7 @@ export default function Export({
 
   return (
     <div>
-      { FEATURES_FLAGS.versioning && (
+      {/* { FEATURES_FLAGS.versioning && (
       <div>
         Please select the version you want to export
         <Select
@@ -162,7 +163,7 @@ export default function Export({
           defaultValue={tagOptions.find((option) => option.value === selectedVersion)!}
         />
       </div>
-      )}
+      )} */}
       <div style={{ display: 'flex' }}>
         <div className="setup-header-title">
           Export

@@ -51,7 +51,7 @@ export default function LocalizedLabelListItem({
   const [, setDummyState] = useState<any>();
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO remove when we implemented the design != keystore resolution
-  const messages = translatedKey?.variants[localizedLabel.language];
+  const messages = translatedKey?.variants.filter((variant) => variant.languageTag === localizedLabel.language);
 
   const pluralsAvailable = [] as SelectOption[];
 
@@ -88,18 +88,19 @@ export default function LocalizedLabelListItem({
     await figmaRemote.scrollIntoViewIfNeeded(nodeId, true);
   }
 
-  if (messages) {
-    for (const plural of Object.keys(messages)) {
-      const pluralOption = {
-        value: plural, label: plural,
-      };
-      pluralsAvailable.push(pluralOption);
-    }
-  } else {
-    pluralsAvailable.push({
-      value: Plural.OTHER, label: Plural.OTHER,
-    });
-  }
+  // TODO #14 check if inlang supports plurals
+  // if (messages) {
+  //   for (const plural of Object.keys(messages)) {
+  //     const pluralOption = {
+  //       value: plural, label: plural,
+  //     };
+  //     pluralsAvailable.push(pluralOption);
+  //   }
+  // } else {
+  pluralsAvailable.push({
+    value: Plural.OTHER, label: Plural.OTHER,
+  });
+  // }
 
   let messageName = '';
 
@@ -131,7 +132,7 @@ export default function LocalizedLabelListItem({
             callback: () => {
               const message = localizedLabelManager.messageStore.getMessage(drawerSelectedKey.current!)!;
 
-              localizedLabelManager.linkMessage(localizedLabel, message.name, localizedLabel.rootFrameLanguage!, Gender.NEUTRAL, Plural.OTHER).catch((e) => {
+              localizedLabelManager.linkMessage(localizedLabel, message.id, localizedLabel.rootFrameLanguage!).catch((e) => {
                 figmaRemote.notifyError(`could not set message${e.message}`);
                 Sentry.captureException(e);
               });
@@ -211,9 +212,9 @@ export default function LocalizedLabelListItem({
                         await localizedLabelManager.unsetLabel(localizedLabel);
                       }
                     } else if (selectedOption.type === InputSelectionOptionType.ADD) {
-                      await localizedLabelManager.linkMessage(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!, Gender.NEUTRAL, Plural.OTHER);
+                      await localizedLabelManager.linkMessage(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!);
                     } else if (selectedOption.type === InputSelectionOptionType.SUGGESTION) {
-                      await localizedLabelManager.linkMessage(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!, Gender.NEUTRAL, Plural.OTHER);
+                      await localizedLabelManager.linkMessage(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!);
                     }
                     /* if (selectedOption.type === 'action') {
                       if (selectedOption.value === 'no-translation') {
@@ -235,7 +236,6 @@ export default function LocalizedLabelListItem({
                   defaultValue={messageName}
                   getOptions={(enteredValue: string) => {
                     let options = [] as InputSelectOption[];
-                    
 
                     const keySearch = enteredValue === '' ? '*' : enteredValue;
                     const textMatchQuery = MessageStoreMemory.toQueryObject(`exact_text:true name:${keySearch} ${localizedLabel.characters}`);
@@ -265,8 +265,8 @@ export default function LocalizedLabelListItem({
                       matchingKeysByName.delete(key);
                       return {
                         type: InputSelectionOptionType.SUGGESTION,
-                        value: messageStore.getMessage(key)!.name,
-                        label: messageStore.getMessage(key)!.name,
+                        value: messageStore.getMessage(key)!.id,
+                        label: messageStore.getMessage(key)!.id,
                       };
                     }));
 
@@ -279,8 +279,8 @@ export default function LocalizedLabelListItem({
 
                       options = options.concat([...matchingKeysByName].map((key) => ({
                         type: InputSelectionOptionType.SUGGESTION,
-                        value: messageStore.getMessage(key)!.name,
-                        label: messageStore.getMessage(key)!.name,
+                        value: messageStore.getMessage(key)!.id,
+                        label: messageStore.getMessage(key)!.id,
                       })));
                     }
 
@@ -320,13 +320,14 @@ export default function LocalizedLabelListItem({
                       <span className="rowText">{localizedLabel.messageLinkState === MessageLinkState.Linked ? localizedLabel.language : localizedLabel.rootFrameLanguage}</span>
 
                     </div>
-                    <div key={localizedLabel.pluralId} className={`keyPluralWrapper ${translatedKey?.plural ? 'onePlural' : ' multiplePlurals'}`}>
+                    {/* <div key={localizedLabel.pluralId} className={`keyPluralWrapper ${translatedKey?.plural ? 'onePlural' : ' multiplePlurals'}`}> */}
+                    <div key={localizedLabel.pluralId} className="keyPluralWrapper onePlural">
                       { FEATURES_FLAGS.plurals
                       && (
                       <div className="grid-item-plural">
                         {localizedLabel.messageLinkState === MessageLinkState.Linked && (
                         <>
-                          {translatedKey?.plural && (
+                          {/* {translatedKey?.plural && (
                           <Select
                             onChange={(value) => {
                               localizedLabelManager.updateLabelPlural(localizedLabel, value.value! as Plural);
@@ -336,9 +337,10 @@ export default function LocalizedLabelListItem({
                             placeholder=""
                           />
                           )}
-                          {!translatedKey?.plural && (
+                          {!translatedKey?.plural && ( */}
+                          {/* TODO #14 check pluralid */}
                           <span className="rowText">{localizedLabel.pluralId}</span>
-                          )}
+                          {/* )} */}
                         </>
                         )}
 
@@ -418,7 +420,7 @@ export default function LocalizedLabelListItem({
                 { ((localizedLabel.messageLinkState === MessageLinkState.Linked && labelState.modified)) && (
                 <span
                   className="layerIcon iconWrapper button"
-                  data-tooltip-content={`Push changes to Message`}
+                  data-tooltip-content="Push changes to Message"
                   onClick={createNewVersionFromDesign}
                 >
                   <span className="svg-container use-label-svg" />

@@ -5,7 +5,6 @@ import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { use } from 'i18next';
 import Select, { SelectOption } from '../select/select';
-import { SearchQuery, MessagesUI } from '../../../lib/message/store/MessageStoreMemory';
 import { Locale } from '../../../lib/message/variants/Locale';
 import './LanguageSetup.css';
 import ReactSelect, { MultiValueRemoveProps, components } from 'react-select';

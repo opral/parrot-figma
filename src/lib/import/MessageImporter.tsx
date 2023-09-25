@@ -45,21 +45,22 @@ export default class MessageImporter {
       updatedVariants: [] as ImportMessage[],
     };
 
-    for (const messageToImport of importMessages) {
-      const currentMessage = messageStore.getMessageByName(messageToImport.name);
-      if (!currentMessage) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        changedMessages.newMessages.push(messageToImport);
-      } else if (!currentMessage.variants[language]) {
-        changedMessages.newVariants.push(messageToImport);
-      } else if (!currentMessage.variants[language]![messageToImport.gender]) {
-        changedMessages.newVariants.push(messageToImport);
-      } else if (!currentMessage.variants[language]![messageToImport.gender]![messageToImport.plural]) {
-        changedMessages.newVariants.push(messageToImport);
-      } else if (currentMessage.variants[language]![messageToImport.gender]![messageToImport.plural]!.text !== messageToImport.text) {
-        changedMessages.updatedVariants.push(messageToImport);
-      }
-    }
+    // TODO #14 use inlang for import
+    // for (const messageToImport of importMessages) {
+    //   const currentMessage = messageStore.getMessageByName(messageToImport.name);
+    //   if (!currentMessage) {
+    //     // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    //     changedMessages.newMessages.push(messageToImport);
+    //   } else if (!currentMessage.variants[language]) {
+    //     changedMessages.newVariants.push(messageToImport);
+    //   } else if (!currentMessage.variants[language]![messageToImport.gender]) {
+    //     changedMessages.newVariants.push(messageToImport);
+    //   } else if (!currentMessage.variants[language]![messageToImport.gender]![messageToImport.plural]) {
+    //     changedMessages.newVariants.push(messageToImport);
+    //   } else if (currentMessage.variants[language]![messageToImport.gender]![messageToImport.plural]!.text !== messageToImport.text) {
+    //     changedMessages.updatedVariants.push(messageToImport);
+    //   }
+    // }
 
     return changedMessages;
   }
@@ -104,11 +105,13 @@ export default class MessageImporter {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         console.log(`creating key${messageToImport.name}`);
         // TODO #8 implement import logic for placeholders and quantities
-        const createdMessage = await labelManager.messageStore.createMessage(messageToImport.name, toChangeArray(messageToImport, language), false, false);
+        // TODO #14 implemnt imported 
+        // const createdMessage = await labelManager.messageStore.createMessage(messageToImport.name, toChangeArray(messageToImport, language), false, false);
       } else {
         console.log(`updateing key${messageToImport.name}`);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const updatedMessage = await labelManager.updateMessage(currentKey.id, { variants: toChangeArray(messageToImport, language) });
+        // TODO #14 implemnt imported 
+        // const updatedMessage = await labelManager.updateMessage(currentKey.id, { variants: toChangeArray(messageToImport, language) });
       }
     }
     // TODO keyStore.commit();

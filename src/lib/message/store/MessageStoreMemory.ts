@@ -1,7 +1,7 @@
 /* eslint-disable no-plusplus */
 /* eslint-disable no-await-in-loop */
 import {
-  ProjectSettings, loadProject, getVariant, InlangProject,
+  ProjectSettings, loadProject, getVariant, InlangProject, LanguageTag,
 } from '@inlang/sdk';
 import { createMessage } from '@inlang/sdk/test-utilities';
 import type { Message, Pattern } from '@inlang/message';
@@ -12,6 +12,7 @@ import { Config, MessageStoreInlang } from './MessageStoreInlang';
 import { NodeSelection } from '../../localizedlabels/LocalizedLabelManager';
 import { Gender, genderList } from '../variants/Gender';
 import { createNodeishMemoryFs } from './inlang/FigmaRootFs';
+import { Fillins } from '../Message';
 
 export type SearchQuery = {
   selected?: 'FRAME' | 'LABEL' | undefined,
@@ -47,10 +48,6 @@ export type SearchResult = {
 
 };
 
-export interface MessagesUI {
-  [messageName: string]: MessageUI
-}
-
 const fs = createNodeishMemoryFs();
 
 export default class MessageStoreMemory extends EventTarget {
@@ -64,7 +61,7 @@ export default class MessageStoreMemory extends EventTarget {
     window.addEventListener('message', (event : MessageEvent) => {
       if (event.data.pluginMessage.target === 'TranslationKeyStore') {
         if (event.data.pluginMessage.type === 'cacheUpdate') {
-          // TODO #15 make this part of the FS
+          // TODO #14 make this part of the FS
           // this.processCacheUpdate(event.data.pluginMessage.changedKeys, event.data.pluginMessage.updatedHistoryTags);
         }
       }
@@ -91,9 +88,9 @@ export default class MessageStoreMemory extends EventTarget {
     */
   }
 
-  private async processCacheUpdate(changedMessages: { deleted: string[], added: string[], updated: string[] }, updatedHistoryTags: HistoryTag[] | undefined) {
+  /* private async processCacheUpdate(changedMessages: { deleted: string[], added: string[], updated: string[] }, updatedHistoryTags: HistoryTag[] | undefined) {
     // TODO #14 handle updated comming from the fs in inlang
-    /*
+
     const changes = {
       deleted: [] as string[],
       updated: [] as string[],
@@ -136,8 +133,8 @@ export default class MessageStoreMemory extends EventTarget {
 
     const event = new CustomEvent<any>('updated', { detail: changes });
     this.dispatchEvent(event);
-    */
-  }
+
+  } */
 
   getLanugages(): Locale[] | undefined {
     // TODO #14 update to use inlangs project
@@ -374,7 +371,7 @@ export default class MessageStoreMemory extends EventTarget {
       matches: {} as { [name:string] : {
         messageNameMatch: { start: number, length: number } | undefined,
         textMatches: {
-          [language in Locale]?: { [gender in Gender]?: { [plural in Plural]?: { start: number, length: number } } }
+          [language: string]: { [matches: string]: { start: number, length: number } }
         }
       } },
     };
@@ -390,54 +387,34 @@ export default class MessageStoreMemory extends EventTarget {
       });
     }
 
-    for (const message of Object.values(this.messages)) {
-      for (const locale of this.getLanugages()!) {
-        for (const gender of genderList) {
-          for (const plural of getPluralFormsByLanguage(locale as Locale)) {
-            const variant = message.variants[locale]?.[gender]?.[plural];
-            if (query.text === undefined || query.text === '') {
-              results.matchingNames.add(message.id);
-            } else if (variant?.text !== undefined) {
-              const matchStartText = variant!.text!.toLowerCase().indexOf(query.text.toLowerCase());
-              if ((query.exactText && matchStartText === 0 && variant!.text!.length === query.text.length)
-                || (!query.exactText && matchStartText !== -1)) {
-                if (!results.matches[message.id]) {
-                  results.matches[message.id] = { textMatches: {}, messageNameMatch: undefined };
-                }
+    for (const message of Object.values(this.inlangProject!.query.messages.getAll())) {
+      if (query.text === undefined || query.text === '') {
+        results.matchingNames.add(message.id);
+      } else {
+        for (const messageVariant of message.variants) {
+          const patternsLower = messageVariant.pattern.map((pattern) => {
+            if (pattern.type === 'Text') {
+              return pattern.value.toLowerCase();
+            } if (pattern.type === 'VariableReference') {
+              return pattern.name.toLowerCase();
+            }
+            return '';
+          })
+            .join('');
 
-                if (!results.matches[message.id].textMatches![locale as Locale]) {
-                  results.matches[message.id].textMatches![locale as Locale]! = {};
-                }
+          const matchStartText = patternsLower.indexOf(query.text.toLowerCase());
 
-                if (!results.matches[message.id].textMatches![locale as Locale]![gender as Gender]) {
-                  results.matches[message.id].textMatches![locale as Locale]![gender as Gender] = {};
-                }
-
-                results.matches[message.id].textMatches![locale as Locale]![gender as Gender]![plural as Plural] = { start: matchStartText, length: query.text.length };
-                results.matchingNames.add(message.id);
-                results.inText.add(message.id);
-              }
+          if (matchStartText !== -1) {
+            if (!results.matches[message.id]) {
+              results.matches[message.id] = { textMatches: {}, messageNameMatch: undefined };
             }
 
-            if (variant?.text === undefined) {
-              if (variant?.skip !== true) {
-                if (message.plural || plural === Plural.OTHER) {
-                  if ((!variant?.text || variant?.text === '')) {
-                    if (message.plural || plural === Plural.OTHER) {
-                      results.withMissingVariants.add(message.id);
-
-                      if (results.withMissingVariantsPerLanguage[locale] === undefined) {
-                        results.withMissingVariantsPerLanguage[locale] = new Set<string>();
-                      }
-                      results.withMissingVariantsPerLanguage[locale]!.add(message.id);
-                    }
-                  }
-                }
-              }
+            if (!results.matches[message.id].textMatches![messageVariant.languageTag]) {
+              results.matches[message.id].textMatches![messageVariant.languageTag]! = {};
             }
 
-            if (variant && !variant!.verified) {
-              results.withMissingReview.add(message.id);
+            if (!results.matches[message.id].textMatches![messageVariant.languageTag]!['*']) {
+              results.matches[message.id].textMatches![messageVariant.languageTag]!['*'] = { start: matchStartText, length: query.text.length };
             }
           }
         }
@@ -445,7 +422,7 @@ export default class MessageStoreMemory extends EventTarget {
 
       if (query.name) {
         if (query.name !== '*') {
-          const mameMatchStart = message.name.toLowerCase().indexOf(query.name.toLowerCase());
+          const mameMatchStart = message.id.toLowerCase().indexOf(query.name.toLowerCase());
 
           if (mameMatchStart === 0) {
             if (!results.matches[message.id]) {
@@ -459,7 +436,7 @@ export default class MessageStoreMemory extends EventTarget {
           }
         }
       } else if (query.text !== undefined && query.text !== '') {
-        const nameMatchStart = message.name.toLowerCase().indexOf(query.text.toLowerCase());
+        const nameMatchStart = message.id.toLowerCase().indexOf(query.text.toLowerCase());
         if (nameMatchStart !== -1) {
           if (!results.matches[message.id]) {
             results.matches[message.id] = { textMatches: {}, messageNameMatch: undefined };
@@ -513,26 +490,16 @@ export default class MessageStoreMemory extends EventTarget {
     */
   }
 
-  async createMessage(name: string, messages: { locale: Locale; gender: Gender, plural: Plural; text: string | undefined; skip: boolean }[], gender: boolean, plural: boolean, fillins?: Fillins, quantity?: { value: number } | { placeholder: string }): Promise<Message> {
-    if (name === '') {
-      throw new Error('message name must have at least one character');
-    }
-    // TODO #14 create message in inlang project
-    const createdMessage = await this.parentKeyStore.createMessage(name, messages, gender, plural, quantity, fillins);
-    return this.upsertCache(createdMessage);
+  async createMessage(message: Message, defaultFillins: Fillins): Promise<Message> {
+    // TODO store fillins
+    this.inlangProject?.query.messages.create({ data: message });
+    return this.getMessage(message.id!)!;
   }
 
-  async updateMessage(id: string, properties: {
-    name?: string,
-    variants: { locale: Locale, gender: Gender, plural: Plural, text: string | undefined, skip: boolean }[],
-    gender?: boolean,
-    plural?: boolean,
-    fillins?: Fillins,
-    quantity?: { value: number } | { placeholder: string }
-  }) {
+  async updateMessage(message: Partial<Message>, defaultFillins: Fillins) {
+    // TODO store fillins
     // TODO #14 update message in inlang project
-    const updatedMessage = await this.parentKeyStore.updateMessage(id, properties);
-    return this.upsertCache(updatedMessage);
+    this.inlangProject?.query.messages.update({ where: { id: message.id! }, data: message });
   }
 
   async deleteMessage(id: string) {
@@ -543,8 +510,6 @@ export default class MessageStoreMemory extends EventTarget {
   }
 
   private async loadInlang() {
-    const messages = {} as Messages;
-
     // creating a project file
     const config = {
       sourceLanguageTag: 'en',
@@ -593,38 +558,6 @@ export default class MessageStoreMemory extends EventTarget {
         // return import('./inlang/FigmaPlugin');
       },
     });
-    for (const inlangMessage of this.inlangProject.query.messages.getAll()) {
-      const messageVariants = {} as Variants;
-      for (const variant of inlangMessage.variants) {
-        messageVariants[variant.languageTag as Locale] = {
-          [Gender.NEUTRAL]: {
-            [Plural.OTHER]: {
-              version: 0,
-              verified: false,
-              skip: false,
-              text: (variant.pattern[0] as any).value,
-            },
-          },
-        };
-      }
-      messages[inlangMessage.id] = {
-        id: inlangMessage.id,
-        history: [],
-        name: inlangMessage.id,
-        latestVersion: 1,
-        historyTags: { },
-        labels: [],
-        referencingTextNodes: [],
-        gender: false,
-        plural: false,
-        variants: messageVariants,
-        quantity: { value: 1 },
-        placeholders: {},
-        defaultFillins: {},
-      };
-    }
-
-    return messages;
   }
 
   async load(): Promise<Readonly<Message[]>> {
@@ -637,5 +570,33 @@ export default class MessageStoreMemory extends EventTarget {
 
     await this.loadInlang();
     return this.inlangProject!.query.messages.getAll();
+  }
+
+  static patternToHtml(patterns: Pattern) {
+    let html = '';
+    // TODO #14 support other patterns or get rid of html representation
+    for (const pattern of patterns) {
+      if (pattern.type === 'Text') {
+        html += pattern.value;
+      }
+    }
+
+    return html;
+  }
+
+  static htmlInLangugage(message: Message, language: string) {
+    let html = '';
+
+    const variantInLanguage = message.variants.find((variant) => variant.languageTag === language);
+    if (variantInLanguage) {
+      // TODO #14 support other patterns or get rid of html representation
+      for (const pattern of variantInLanguage.pattern) {
+        if (pattern.type === 'Text') {
+          html += pattern.value;
+        }
+      }
+    }
+
+    return html;
   }
 }

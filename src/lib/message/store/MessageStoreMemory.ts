@@ -558,6 +558,13 @@ export default class MessageStoreMemory extends EventTarget {
         // return import('./inlang/FigmaPlugin');
       },
     });
+
+    const onMessagesUpdated = () => {
+      console.log('MESSAGES UPDATED!!!! MESSAGES UPDATED!!!! MESSAGES UPDATED!!!!');
+      const event = new CustomEvent<any>('updated', { });
+      this.dispatchEvent(event);
+    };
+    this.inlangProject?.query.messages.getAll.subscribe(onMessagesUpdated);
   }
 
   async load(): Promise<Readonly<Message[]>> {
@@ -585,18 +592,35 @@ export default class MessageStoreMemory extends EventTarget {
   }
 
   static htmlInLangugage(message: Message, language: string) {
-    let html = '';
+    let html = undefined as string | undefined;
 
     const variantInLanguage = message.variants.find((variant) => variant.languageTag === language);
     if (variantInLanguage) {
       // TODO #14 support other patterns or get rid of html representation
       for (const pattern of variantInLanguage.pattern) {
         if (pattern.type === 'Text') {
+          if (html === undefined) {
+            html = '';
+          }
           html += pattern.value;
         }
       }
     }
 
     return html;
+  }
+
+  static htmlForPattern(message: Message, languageTag: string, selectors?: Record<string, string>) {
+    const variant = getVariant(message, { where: { languageTag, selectors } });
+    return this.patternToHtml(variant!.pattern);
+  }
+
+  static refLanguageHash(message: Message, language: string, selectors?: Record<string, string>) {
+    const variant = getVariant(message, { where: { languageTag: language, selectors } });
+    if (variant) {
+      return (variant as any).refLanguageHash as string;
+    }
+
+    return undefined;
   }
 }

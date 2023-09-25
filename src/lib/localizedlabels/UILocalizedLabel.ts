@@ -1,14 +1,16 @@
 import Quill, { Delta as DeltaType, DeltaOperation } from 'quill';
 import blake from 'blakejs';
+import { Message } from '@inlang/message';
 import { Locale } from '../message/variants/Locale';
 import { Plural } from '../message/variants/Plural';
 import { MessageLinkState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
 
 import {
-  Fillins, PlaceholdersByName, MessageEntry,
+  Fillins, PlaceholdersByName,
 } from '../message/Message';
 import LocalizedLabelManager, { DeltaOp, MARKER_CHARACTER } from './LocalizedLabelManager';
 import { Gender } from '../message/variants/Gender';
+import MessageStoreMemory from '../message/store/MessageStoreMemory';
 
 const Delta = Quill.import('delta') as typeof DeltaType;
 
@@ -86,7 +88,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   labelStyle: LabelStyle;
 
-  unlinkedMessage: MessageEntry; // | undefined;
+  unlinkedMessage: Message; // | undefined;
 
   // utils
   // to manage the label within the UI keep a reference of the Label manager
@@ -232,7 +234,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   static toTextAndOps(html: string, fillins: Fillins) {
     // TODO #12 quill from html -> text + ops
-    
+
     const pattern = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;
 
     const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(fillins);
@@ -266,9 +268,9 @@ export class UILocalizedLabel implements LocalizedLabel {
     if (htmlWithFilledPlaceholders.endsWith('</ol>') || htmlWithFilledPlaceholders.endsWith('</ul>')) {
       removeLastCR = true;
     }
-     
+
     htmlWithFilledPlaceholders += '<br>';
-    
+
     const contents = (quill.clipboard as any).convert({ html: htmlWithFilledPlaceholders }) as any;
     let text = contents.filter((op: any) => typeof op.insert === 'string').map((op: any) => op.insert).join(''); // quill.getText();// tempCont.getElementsByClassName('ql-editor')[0].textContent ?? '';
 
@@ -279,7 +281,6 @@ export class UILocalizedLabel implements LocalizedLabel {
     const ops = [] as any[];
     let currentPositon = 0;
     contents.ops?.forEach((operation: any) => {
-
       if (currentPositon + operation.insert.length > text.length) {
         // eslint-disable-next-line no-param-reassign
         operation.insert = operation.insert.slice(0, -1);
@@ -427,17 +428,18 @@ export class UILocalizedLabel implements LocalizedLabel {
       const baseLanguage = this.manager.messageStore.getBaseLanugage()! as Locale;
       // TODO check if the target language is avaialable and up to date
       let variantUpToDate = false;
-      const baseLanguageHTML = this.language === baseLanguage ? this.variantHTML : this.unlinkedMessage.variants?.[baseLanguage]?.[this.genderId]?.[this.pluralId]?.text!;
+      // TODO #15 use undefined for language if ref language
+      const baseLanguageHTML = this.language === baseLanguage ? this.variantHTML : MessageStoreMemory.htmlInLangugage(this.unlinkedMessage, baseLanguage);
 
       if (this.unlinkedMessage
-        && this.unlinkedMessage.variants?.[targetLanguage]?.[this.genderId]?.[this.pluralId]?.text) {
-        const currentTranslationBaseLangHash = this.unlinkedMessage.variants?.[targetLanguage]?.[this.genderId]?.[this.pluralId]?.baseLangHash;
+        && MessageStoreMemory.htmlInLangugage(this.unlinkedMessage, targetLanguage)) {
+        const currentTranslationBaseLangHash = MessageStoreMemory.refLanguageHash(this.unlinkedMessage, targetLanguage);
         if (baseLanguageHTML && blake.blake2sHex(baseLanguageHTML) === currentTranslationBaseLangHash) {
           variantUpToDate = true;
         }
       }
       let variantHTML = undefined as string | undefined;
-      if (!variantUpToDate) {
+      if (!variantUpToDate && baseLanguageHTML) {
         variantHTML = await missingTranslationProvider(baseLanguageHTML, baseLanguage as string, targetLanguage) ?? 'no translation';
       }
 

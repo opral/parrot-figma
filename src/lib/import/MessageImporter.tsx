@@ -45,7 +45,7 @@ export default class MessageImporter {
       updatedVariants: [] as ImportMessage[],
     };
 
-    // TODO #14 use inlang for import
+    // TODO #14 import/export use inlang for import
     // for (const messageToImport of importMessages) {
     //   const currentMessage = messageStore.getMessageByName(messageToImport.name);
     //   if (!currentMessage) {
@@ -105,12 +105,12 @@ export default class MessageImporter {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         console.log(`creating key${messageToImport.name}`);
         // TODO #8 implement import logic for placeholders and quantities
-        // TODO #14 implemnt imported 
+        // TODO #14 import/export implemnt imported 
         // const createdMessage = await labelManager.messageStore.createMessage(messageToImport.name, toChangeArray(messageToImport, language), false, false);
       } else {
         console.log(`updateing key${messageToImport.name}`);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        // TODO #14 implemnt imported 
+        // TODO #14 import/export implemnt imported 
         // const updatedMessage = await labelManager.updateMessage(currentKey.id, { variants: toChangeArray(messageToImport, language) });
       }
     }

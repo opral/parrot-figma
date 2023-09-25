@@ -160,9 +160,10 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     });
 
     this.messageStore.addEventListener('updated', (changesEvent: any) => {
-      for (const changedKey of changesEvent.detail.changedKeys) {
-        this.handleKeyUpdate(changedKey);
-      }
+      // TODO #14 reactiveness - how do i update label cache? do i subscribe per label? how do i unsubscribe
+      // for (const changedKey of changesEvent.detail.changedKeys) {
+      //   this.handleKeyUpdate(changedKey);
+      // }
     });
   }
 
@@ -181,11 +182,11 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     this.localizedLabelMangerSandbox.startFillupCache();
   }
 
-  private handleKeyUpdate(keyId: string) {
+  private handleMessageUpdate(messageId: string) {
     let cacheUpdated = false;
 
     for (const labelToUpdate of Object.values(this.cachedLocalisedLabels)) {
-      if (labelToUpdate.messageId === keyId) {
+      if (labelToUpdate.messageId === messageId) {
         if (this.refreshCachedLabel(labelToUpdate)) {
           cacheUpdated = true;
         }
@@ -407,6 +408,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   }
 
   async linkMessage(localizedLabel: UILocalizedLabel, messageNameToLinkTo: string, locale: Locale) {
+    
     let message = this.messageStore.getMessageByName(messageNameToLinkTo);
 
     if (message !== undefined) {
@@ -421,46 +423,49 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
       // TODO check if design is sync with translation - if not offer update with prompt
     } else {
-      // if (localizedLabel.unlinkedMessage) {
-      // const variants = Object.entries(localizedLabel.unlinkedMessage.variants!).flatMap(([languageFound, pluralsFound]) => Object.entries(pluralsFound).map(([pluralFound, { text }]) => {
+      if (localizedLabel.unlinkedMessage) {
+        // const variants = Object.entries(localizedLabel.unlinkedMessage.variants!).flatMap(([languageFound, pluralsFound]) => Object.entries(pluralsFound).map(([pluralFound, { text }]) => {
 
-      // TODO #14 create message from link
-      // const variants = [] as { locale: Locale; gender: Gender, plural: Plural; text: string | undefined; skip: boolean }[];
-      // for (const [localeFound, genders] of Object.entries(localizedLabel.unlinkedMessage.variants!)) {
-      //   for (const [genderFound, plurals] of Object.entries(genders)) {
-      //     for (const [pluralFound, variant] of Object.entries(plurals)) {
-      //       if (localeFound === locale && plural === pluralFound) {
-      //         variants.push({
-      //           locale: localeFound,
-      //           gender: genderFound,
-      //           plural: pluralFound,
-      //           text: localizedLabel.variantHTML,
-      //         } as { locale: Locale, gender: Gender, plural: Plural, text: string, skip: false });
-      //       } else {
-      //         variants.push({
-      //           locale: localeFound,
-      //           gender: genderFound,
-      //           plural: pluralFound,
-      //           text: variant.text,
-      //         } as { locale: Locale, gender: Gender, plural: Plural, text: string, skip: false });
-      //       }
-      //     }
-      //   }
-      // }
-      // message = await this.messageStore.createMessage(messageNameToLinkTo, variants, localizedLabel.unlinkedMessage.gender, localizedLabel.unlinkedMessage.plural, localizedLabel.fillins);
-      // } else {
-      message = await this.messageStore.createMessage({
-        id: messageNameToLinkTo,
-        selectors: [],
-        variants: [{
-          match: {},
-          languageTag: locale,
-          pattern: [
-            { type: 'Text', value: localizedLabel.variantHTML },
-          ],
-        }],
-      }, localizedLabel.fillins);
-      // }
+        
+        // const variants = [] as { locale: Locale; gender: Gender, plural: Plural; text: string | undefined; skip: boolean }[];
+        // for (const [localeFound, genders] of Object.entries(localizedLabel.unlinkedMessage.variants!)) {
+        //   for (const [genderFound, plurals] of Object.entries(genders)) {
+        //     for (const [pluralFound, variant] of Object.entries(plurals)) {
+        //       if (localeFound === locale && plural === pluralFound) {
+        //         variants.push({
+        //           locale: localeFound,
+        //           gender: genderFound,
+        //           plural: pluralFound,
+        //           text: localizedLabel.variantHTML,
+        //         } as { locale: Locale, gender: Gender, plural: Plural, text: string, skip: false });
+        //       } else {
+        //         variants.push({
+        //           locale: localeFound,
+        //           gender: genderFound,
+        //           plural: pluralFound,
+        //           text: variant.text,
+        //         } as { locale: Locale, gender: Gender, plural: Plural, text: string, skip: false });
+        //       }
+        //     }
+        //   }
+        // }
+        // TODO #13 check if we need to update the unlinked message
+        // eslint-disable-next-line no-param-reassign
+        localizedLabel.unlinkedMessage.id = messageNameToLinkTo;
+        message = await this.messageStore.createMessage(localizedLabel.unlinkedMessage, localizedLabel.fillins);
+      } else {
+        message = await this.messageStore.createMessage({
+          id: messageNameToLinkTo,
+          selectors: [],
+          variants: [{
+            match: {},
+            languageTag: locale,
+            pattern: [
+              { type: 'Text', value: localizedLabel.variantHTML },
+            ],
+          }],
+        }, localizedLabel.fillins);
+      }
 
       await this.updateLabelProperties(localizedLabel.nodeId, {
         messageId: message.id,
@@ -580,17 +585,18 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         || changedProperties.messageVersion !== undefined) {
         // only language, plural have changed eventually
         const language = changedProperties.language ?? localizedLabelCached.language;
-        const plural = changedProperties.plural ?? localizedLabelCached.pluralId;
-        const gender = changedProperties.gender ?? localizedLabelCached.genderId;
-        const version = changedProperties.messageVersion ?? localizedLabelCached.messageVersion;
+
+        // TODO #14 make this general selectors instead
+        // const plural = changedProperties.plural ?? localizedLabelCached.pluralId;
+        // const gender = changedProperties.gender ?? localizedLabelCached.genderId;
+        // const version = changedProperties.messageVersion ?? localizedLabelCached.messageVersion;
 
         if (localizedLabelCached.messageLinkState === MessageLinkState.Linked) {
           // TODO #14 use version when inlang is ready
           // TODO #14 use matchers when in place - for now only use language
-          let variantHTML = 'TODO Missinng Translation when setting Version';
-          const variantPattern = message ? getVariant(message, { where: { languageTag: language, selectors: { /* gender: plural: */ } } })?.pattern : undefined;
-          if (variantPattern) {
-            variantHTML = MessageStoreMemory.patternToHtml(variantPattern);
+          let variantHTML = 'TODO #14 Missinng Translation when setting Version';
+          if (message) {
+            variantHTML = MessageStoreMemory.htmlForPattern(message, language, {});
           }
 
           const textAndOps = UILocalizedLabel.toTextAndOps(variantHTML, labelFillins);
@@ -606,7 +612,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
             throw new Error('unlinked message expected when no message HTML is passed...');
           }
           // NOTE instead of missing translation we could mark the label and use the base language...
-          const variantHTML = localizedLabelCached.unlinkedMessage!.variants![language]?.[gender]?.[plural]?.text ?? 'TODO Missinng Translation when setting Version';
+          const variantHTML = MessageStoreMemory.htmlInLangugage(localizedLabelCached.unlinkedMessage!, language) ?? 'TODO #14 Missinng Translation when setting Version';
           const textAndOps = UILocalizedLabel.toTextAndOps(variantHTML, labelFillins);
 
           // TODO handle placeholders

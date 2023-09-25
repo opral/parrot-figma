@@ -11,7 +11,7 @@ export default class KeyExporter {
   static export(messageStore: MessageStoreMemory, language: Locale, format: string, versionId: string | undefined) {
     // prepare the data needed by the templates
 
-    // TODO #14 use inlang for export
+    // TODO #14 import/export use inlang for export
     // const data = { input: messageStore.getMessagesByMessageName(language, versionId), language };
 
     // if (format === 'apple-strings') {

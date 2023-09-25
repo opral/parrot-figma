@@ -3,6 +3,7 @@ import { Plural } from '../message/variants/Plural';
 import { Fillins, MessageEntry } from '../message/Message';
 import { DeltaOp } from './LocalizedLabelManager';
 import { Gender } from '../message/variants/Gender';
+import { Message } from '@inlang/sdk';
 
 export enum MessageLinkState {
   Unset = 'unset', // label has not yet modified by the plugin
@@ -94,5 +95,6 @@ export interface LocalizedLabel {
 
   derivedKey?: string;
 
-  unlinkedMessage: MessageEntry;
+  // TODO #14 migrate unlinekd message to Message format
+  unlinkedMessage: Message;
 }

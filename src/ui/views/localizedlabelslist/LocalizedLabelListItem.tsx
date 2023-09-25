@@ -239,9 +239,9 @@ export default function LocalizedLabelListItem({
 
                     const keySearch = enteredValue === '' ? '*' : enteredValue;
                     const textMatchQuery = MessageStoreMemory.toQueryObject(`exact_text:true name:${keySearch} ${localizedLabel.characters}`);
-                    const { matchingNames: suggestedKeys } = messageStore.findKeys(textMatchQuery);
+                    const { matchingNames: suggestedKeys } = messageStore.findMessages(textMatchQuery);
                     const keyMatchQuery = MessageStoreMemory.toQueryObject(`name:${keySearch}`);
-                    const { matchingNames: matchingKeysByName } = messageStore.findKeys(keyMatchQuery);
+                    const { matchingNames: matchingKeysByName } = messageStore.findMessages(keyMatchQuery);
 
                     const isValidKey = enteredValue.length >= 0 && /^[a-zA-Z0-9]$/.test(enteredValue[enteredValue.length - 1]);
 

@@ -97,10 +97,10 @@ export default function LanguageSetup({
     updatedVariants: ImportMessage[],
   } | undefined>(undefined);
 
-  const [keySummary, setKeySummary] = useState(labelManager.messageStore.findKeys({}, undefined));
+  const [keySummary, setKeySummary] = useState(labelManager.messageStore.findMessages({}, undefined));
 
   useEffect(() => {
-    const updateSummary = () => { setKeySummary(labelManager.messageStore.findKeys({}, undefined)); };
+    const updateSummary = () => { setKeySummary(labelManager.messageStore.findMessages({}, undefined)); };
 
     labelManager.messageStore.addEventListener('updated', updateSummary);
 

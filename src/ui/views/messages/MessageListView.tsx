@@ -47,7 +47,7 @@ export default function MessageListView({
 
   // const [keys, setKeys] = useState: UITranslationKeys,
   const [searchQuery, setSearchQuery] = useState<SearchQuery>(initialSearchQuery);
-  const filteredKeys = messageStore.findKeys(searchQuery, selectedNodes);
+  const filteredKeys = messageStore.findMessages(searchQuery, selectedNodes);
   const tableRef = useRef<HTMLDivElement>(null);
 
   async function refreshSelection(triggerHighlight: boolean) {

@@ -1,15 +1,17 @@
 /* eslint-disable no-plusplus */
 /* eslint-disable no-await-in-loop */
+import {
+  ProjectSettings, loadProject, getVariant, InlangProject,
+} from '@inlang/sdk';
+import { createMessage } from '@inlang/sdk/test-utilities';
+import type { Message, Pattern } from '@inlang/message';
 import { Locale } from '../variants/Locale';
 import { Plural, getPluralFormsByLanguage } from '../variants/Plural';
-import {
-  Fillins,
-  HistoryTag, MessageEntry, Message,
-} from '../Message';
 import { Config, MessageStoreInlang } from './MessageStoreInlang';
-import { MessageUI } from '../MessageUI';
+
 import { NodeSelection } from '../../localizedlabels/LocalizedLabelManager';
 import { Gender, genderList } from '../variants/Gender';
+import { createNodeishMemoryFs } from './inlang/FigmaRootFs';
 
 export type SearchQuery = {
   selected?: 'FRAME' | 'LABEL' | undefined,
@@ -49,29 +51,29 @@ export interface MessagesUI {
   [messageName: string]: MessageUI
 }
 
-export default class MessageStoreMemory extends EventTarget {
-  parentKeyStore: MessageStoreInlang;
+const fs = createNodeishMemoryFs();
 
+export default class MessageStoreMemory extends EventTarget {
   config: Config | undefined;
 
-  historyTags: HistoryTag[] = [];
-
-  messages: MessagesUI = { };
+  inlangProject: InlangProject | undefined;
 
   constructor(parentKeyStore: MessageStoreInlang) {
     super();
-    this.parentKeyStore = parentKeyStore;
 
     window.addEventListener('message', (event : MessageEvent) => {
       if (event.data.pluginMessage.target === 'TranslationKeyStore') {
         if (event.data.pluginMessage.type === 'cacheUpdate') {
-          this.processCacheUpdate(event.data.pluginMessage.changedKeys, event.data.pluginMessage.updatedHistoryTags);
+          // TODO #15 make this part of the FS
+          // this.processCacheUpdate(event.data.pluginMessage.changedKeys, event.data.pluginMessage.updatedHistoryTags);
         }
       }
     });
   }
 
   public async updateMessageLinks(messageIds: string[]) {
+    // TODO #14 rething message links
+    /*
     const changes = {
       updated: [] as string[],
       changedKeys: messageIds,
@@ -86,9 +88,12 @@ export default class MessageStoreMemory extends EventTarget {
 
     const event = new CustomEvent<any>('updated', { detail: changes });
     this.dispatchEvent(event);
+    */
   }
 
   private async processCacheUpdate(changedMessages: { deleted: string[], added: string[], updated: string[] }, updatedHistoryTags: HistoryTag[] | undefined) {
+    // TODO #14 handle updated comming from the fs in inlang
+    /*
     const changes = {
       deleted: [] as string[],
       updated: [] as string[],
@@ -131,82 +136,67 @@ export default class MessageStoreMemory extends EventTarget {
 
     const event = new CustomEvent<any>('updated', { detail: changes });
     this.dispatchEvent(event);
-  }
-
-  private async upsertCache(message: Message): Promise<MessageUI> {
-    this.messages[message.id] = new MessageUI(this, message);
-    return this.messages[message.id];
-  }
-
-  private removeCache(id: string) {
-    delete this.messages[id];
+    */
   }
 
   getLanugages(): Locale[] | undefined {
+    // TODO #14 update to use inlangs project
     return this.config!.enabledLanguages;
   }
 
   async setLanguages(languages: Locale[]) {
     this.config!.enabledLanguages = languages;
-    const parentConfig = await this.parentKeyStore.getConfig();
+    // TODO #14 update config within inlangs project
+    // this.inlangProject?.setSettings()
+    // const parentConfig = await this.parentKeyStore.getConfig();
 
-    parentConfig.enabledLanguages = languages;
-    await this.parentKeyStore.setConfig(parentConfig);
+    // parentConfig.enabledLanguages = languages;
+    // await this.parentKeyStore.setConfig(parentConfig);
   }
 
   getBaseLanugage(): Locale | undefined {
+    // TODO #14 update to use inlangs project
     return this.config!.baseLanguage;
   }
 
   async setBaseLanguage(language: Locale) {
     this.config!.baseLanguage = language;
-    const parentConfig = await this.parentKeyStore.getConfig();
-    parentConfig.baseLanguage = language;
-    await this.parentKeyStore.setConfig(parentConfig);
+    // TODO #14 set baselanguage in inlang project
+    // const parentConfig = await this.parentKeyStore.getConfig();
+    // parentConfig.baseLanguage = language;
+    // await this.parentKeyStore.setConfig(parentConfig);
   }
 
-  getTagIndexByVersionId(versionId: string) {
-    let tagIndex = -1;
-    for (let i = 0; i < this.historyTags.length; i++) {
-      if (this.historyTags[i].versionId === versionId) {
-        tagIndex = i;
-      }
-    }
-    return tagIndex;
-  }
-
-  getMessagesByMessageName(language: Locale, versionId: string | undefined): { [messageName: string]: MessageEntry } {
+  getMessagesByMessageName(language: Locale, versionId: string): { [messageName: string]: Message } {
     const messages = {} as { [id: string]: Message };
 
-    const tagIndex = versionId ? this.getTagIndexByVersionId(versionId) : -1;
+    // TODO #14 used by exporter - rewrite exporter to use inlangs project directly
+    // const tagIndex = versionId ? this.getTagIndexByVersionId(versionId) : -1;
 
-    for (const messageId of Object.keys(this.messages)) {
-      const currentMessage = this.messages[messageId];
-      if (tagIndex >= 0) {
-        const messageVersion = currentMessage.getMessageVersionByTagIndex(tagIndex);
-        if (messageVersion !== undefined) {
-          const messageInVersion = currentMessage.getInVersion(messageVersion);
-          messages[messageInVersion.name] = messageInVersion;
-        }
-      } else if (currentMessage.variants[language]) {
-        messages[currentMessage.name] = currentMessage;
-      }
-    }
+    // for (const messageId of Object.keys(this.messages)) {
+    //   const currentMessage = this.messages[messageId];
+    //   if (tagIndex >= 0) {
+    //     const messageVersion = currentMessage.getMessageVersionByTagIndex(tagIndex);
+    //     if (messageVersion !== undefined) {
+    //       const messageInVersion = currentMessage.getInVersion(messageVersion);
+    //       messages[messageInVersion.name] = messageInVersion;
+    //     }
+    //   } else if (currentMessage.variants[language]) {
+    //     messages[currentMessage.name] = currentMessage;
+    //   }
+    // }
 
     return messages;
   }
 
-  getMessage(id: string) : MessageUI | undefined {
-    return this.messages[id];
+  getMessage(id: string) : Message | undefined {
+    // TOOD #14 use inlang Message as return instead of UI
+    return this.inlangProject!.query.messages.get({ where: { id } });
   }
 
-  getMessageByName(messageName: string) : MessageUI | undefined {
-    for (const message of Object.values(this.messages)) {
-      if (message.name === messageName) {
-        return message;
-      }
-    }
-    return undefined;
+  getMessageByName(messageName: string) : Message | undefined {
+    // TOOD #14 use inlang Message as return instead of UI
+    return this.inlangProject!.query.messages.get({ where: { id: messageName } });
   }
 
   static toSearchString(searchQuery: SearchQuery): string {
@@ -369,7 +359,7 @@ export default class MessageStoreMemory extends EventTarget {
    *
    *
    */
-  findKeys(query: SearchQuery, selection?: NodeSelection): SearchResult {
+  findMessages(query: SearchQuery, selection?: NodeSelection): SearchResult {
     const results = {
       inNames: new Set<string>(),
       inText: new Set<string>(),
@@ -523,10 +513,11 @@ export default class MessageStoreMemory extends EventTarget {
     */
   }
 
-  async createMessage(name: string, messages: { locale: Locale; gender: Gender, plural: Plural; text: string | undefined; skip: boolean }[], gender: boolean, plural: boolean, fillins?: Fillins, quantity?: { value: number } | { placeholder: string }): Promise<MessageUI> {
+  async createMessage(name: string, messages: { locale: Locale; gender: Gender, plural: Plural; text: string | undefined; skip: boolean }[], gender: boolean, plural: boolean, fillins?: Fillins, quantity?: { value: number } | { placeholder: string }): Promise<Message> {
     if (name === '') {
       throw new Error('message name must have at least one character');
     }
+    // TODO #14 create message in inlang project
     const createdMessage = await this.parentKeyStore.createMessage(name, messages, gender, plural, quantity, fillins);
     return this.upsertCache(createdMessage);
   }
@@ -539,29 +530,112 @@ export default class MessageStoreMemory extends EventTarget {
     fillins?: Fillins,
     quantity?: { value: number } | { placeholder: string }
   }) {
+    // TODO #14 update message in inlang project
     const updatedMessage = await this.parentKeyStore.updateMessage(id, properties);
     return this.upsertCache(updatedMessage);
   }
 
   async deleteMessage(id: string) {
-    await this.parentKeyStore.deleteMessage(id);
-    this.removeCache(id);
+    // await this.parentKeyStore.deleteMessage(id);
+    this.inlangProject?.query.messages.delete({ where: { id } });
+    // TODO #14 listen on deletions to propagate changes
+    // this.removeCache(id);
   }
 
-  async load(): Promise<MessagesUI> {
+  private async loadInlang() {
+    const messages = {} as Messages;
+
+    // creating a project file
+    const config = {
+      sourceLanguageTag: 'en',
+      modules: ['./plugin.js'],
+      languageTags: ['en', 'de'],
+    } satisfies ProjectSettings;
+
+    // writing the project file to the virtual filesystem
+    await fs.writeFile('/project.inlang.json', JSON.stringify(config));
+
+    // opening the project file and loading the plugin
+    this.inlangProject = await loadProject({
+      nodeishFs: fs,
+      settingsFilePath: '/project.inlang.json',
+      // simulate the import function that the SDK uses
+      // to inject the plugin into the project
+      _import: async () => {
+        console.log('import called');
+        return {
+          default: {
+          // id: id as Plugin["id"],
+            id: 'plugin.organization.pluginName', // as Plugin['id'],
+            displayName: { en: 'test' }, // as Plugin['displayName'],
+            description: { en: 'test' }, // as Plugin['description'],
+            // displayName,
+            // description,
+            loadMessages: async () => {
+              const fakeMessages = [
+                createMessage('this-is-a-test-message', {
+                  en: 'Hello world!',
+                  de: 'Hallo welt!',
+                }),
+                createMessage('this-is-a-test-message-2', {
+                  en: 'Hello world2!',
+                  de: 'Hallo welt2!',
+                }),
+              ] as any[];
+              return fakeMessages;
+            },
+            saveMessages: () => {
+
+            },
+          },
+
+        };
+        // return import('./inlang/FigmaPlugin');
+      },
+    });
+    for (const inlangMessage of this.inlangProject.query.messages.getAll()) {
+      const messageVariants = {} as Variants;
+      for (const variant of inlangMessage.variants) {
+        messageVariants[variant.languageTag as Locale] = {
+          [Gender.NEUTRAL]: {
+            [Plural.OTHER]: {
+              version: 0,
+              verified: false,
+              skip: false,
+              text: (variant.pattern[0] as any).value,
+            },
+          },
+        };
+      }
+      messages[inlangMessage.id] = {
+        id: inlangMessage.id,
+        history: [],
+        name: inlangMessage.id,
+        latestVersion: 1,
+        historyTags: { },
+        labels: [],
+        referencingTextNodes: [],
+        gender: false,
+        plural: false,
+        variants: messageVariants,
+        quantity: { value: 1 },
+        placeholders: {},
+        defaultFillins: {},
+      };
+    }
+
+    return messages;
+  }
+
+  async load(): Promise<Readonly<Message[]>> {
     // TODO #14 get from real config eventual use figma util
+    // TODO #14 load config from figma helper await this.parentKeyStore.getConfig();
     this.config = {
       baseLanguage: Locale.EN,
       enabledLanguages: [Locale.EN, Locale.DE],
     };
-    // TODO #14 load config from figma helper await this.parentKeyStore.getConfig();
-    this.historyTags = await this.parentKeyStore.getHistoryTags();
-    this.messages = {} as MessagesUI;
 
-    const allMessages = await this.parentKeyStore.load();
-    for (const message of Object.values(allMessages)) {
-      this.messages[message.id] = new MessageUI(this, message);
-    }
-    return this.messages;
+    await this.loadInlang();
+    return this.inlangProject!.query.messages.getAll();
   }
 }

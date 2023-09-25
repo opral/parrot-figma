@@ -425,29 +425,32 @@ export class UILocalizedLabel implements LocalizedLabel {
     missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | null>,
   ) {
     if (this.messageLinkState === MessageLinkState.Unset) {
-      const baseLanguage = this.manager.messageStore.getBaseLanugage()! as Locale;
-      // TODO check if the target language is avaialable and up to date
-      let variantUpToDate = false;
-      // TODO #15 use undefined for language if ref language
-      const baseLanguageHTML = this.language === baseLanguage ? this.variantHTML : MessageStoreMemory.htmlInLangugage(this.unlinkedMessage, baseLanguage);
+      const refLanguage = this.manager.messageStore.getBaseLanugage()! as Locale;
 
-      if (this.unlinkedMessage
-        && MessageStoreMemory.htmlInLangugage(this.unlinkedMessage, targetLanguage)) {
+      const refLanguagePattern = this.unlinkedMessage !== undefined ? MessageStoreMemory.htmlInLangugage(this.unlinkedMessage, refLanguage) : undefined;
+
+      let patternToUpdateTo = undefined as string | undefined;
+      if (targetLanguage === refLanguage) {
+        // use the message language
+        patternToUpdateTo = refLanguagePattern ?? this.variantHTML;
+      } else {
+        // TODO check if the target language is avaialable and up to date
+
+        // TODO #15 use undefined for language if ref language
+
         const currentTranslationBaseLangHash = MessageStoreMemory.refLanguageHash(this.unlinkedMessage, targetLanguage);
-        if (baseLanguageHTML && blake.blake2sHex(baseLanguageHTML) === currentTranslationBaseLangHash) {
-          variantUpToDate = true;
+        if (refLanguagePattern && blake.blake2sHex(refLanguagePattern) !== currentTranslationBaseLangHash) {
+          patternToUpdateTo = await missingTranslationProvider(refLanguagePattern, refLanguage as string, targetLanguage) ?? 'no translation';
+        } else {
+          patternToUpdateTo = this.unlinkedMessage ? MessageStoreMemory.htmlInLangugage(this.unlinkedMessage, targetLanguage) : 'no translation in unlinked msg';
         }
-      }
-      let variantHTML = undefined as string | undefined;
-      if (!variantUpToDate && baseLanguageHTML) {
-        variantHTML = await missingTranslationProvider(baseLanguageHTML, baseLanguage as string, targetLanguage) ?? 'no translation';
       }
 
       await this.manager.updateLabelProperties(this.nodeId, {
         language: targetLanguage,
         gender: this.genderId,
         plural: this.pluralId,
-        variantHTML,
+        variantHTML: patternToUpdateTo,
       });
       return;
     }

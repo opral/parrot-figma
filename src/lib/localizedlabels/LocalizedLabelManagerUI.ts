@@ -424,31 +424,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
       // TODO check if design is sync with translation - if not offer update with prompt
     } else {
       if (localizedLabel.unlinkedMessage) {
-        // const variants = Object.entries(localizedLabel.unlinkedMessage.variants!).flatMap(([languageFound, pluralsFound]) => Object.entries(pluralsFound).map(([pluralFound, { text }]) => {
-
-        
-        // const variants = [] as { locale: Locale; gender: Gender, plural: Plural; text: string | undefined; skip: boolean }[];
-        // for (const [localeFound, genders] of Object.entries(localizedLabel.unlinkedMessage.variants!)) {
-        //   for (const [genderFound, plurals] of Object.entries(genders)) {
-        //     for (const [pluralFound, variant] of Object.entries(plurals)) {
-        //       if (localeFound === locale && plural === pluralFound) {
-        //         variants.push({
-        //           locale: localeFound,
-        //           gender: genderFound,
-        //           plural: pluralFound,
-        //           text: localizedLabel.variantHTML,
-        //         } as { locale: Locale, gender: Gender, plural: Plural, text: string, skip: false });
-        //       } else {
-        //         variants.push({
-        //           locale: localeFound,
-        //           gender: genderFound,
-        //           plural: pluralFound,
-        //           text: variant.text,
-        //         } as { locale: Locale, gender: Gender, plural: Plural, text: string, skip: false });
-        //       }
-        //     }
-        //   }
-        // }
         // TODO #13 check if we need to update the unlinked message
         // eslint-disable-next-line no-param-reassign
         localizedLabel.unlinkedMessage.id = messageNameToLinkTo;
@@ -548,6 +523,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     messageId?: string,
     messageVersion?: number,
     language?: Locale,
+    // TODO #14 replace with selectors or variables
     gender?: Gender,
     plural?: Plural,
     variantHTML?: string,

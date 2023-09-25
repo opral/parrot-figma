@@ -39,7 +39,7 @@ export default function LocalizedLabelListItem({
   selected,
 }: LocalizedLabelListItemProps) {
   const { messageStore } = localizedLabelManager;
-  const translatedKey = localizedLabel.messageLinkState !== MessageLinkState.Unset ? messageStore.getMessage(localizedLabel.messageId!) : undefined;
+  const message = localizedLabel.messageLinkState !== MessageLinkState.Unset ? messageStore.getMessage(localizedLabel.messageId!) : undefined;
 
   const rowRef = React.useRef<HTMLDivElement>(null);
 
@@ -51,8 +51,7 @@ export default function LocalizedLabelListItem({
   const [, setDummyState] = useState<any>();
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO remove when we implemented the design != keystore resolution
-  const messages = translatedKey?.variants.filter((variant) => variant.languageTag === localizedLabel.language);
-
+  
   const pluralsAvailable = [] as SelectOption[];
 
   async function createNewVersionFromDesign() {
@@ -165,7 +164,7 @@ export default function LocalizedLabelListItem({
 
       </Drawer>
 
-      <div className={`row ${selected}${localizedLabel.messageLinkState === MessageLinkState.Linked && translatedKey !== undefined ? ' key-set ' : ' key-unset '}`} onClick={() => { onNodeSelect(localizedLabel.nodeId); }}>
+      <div className={`row ${selected}${localizedLabel.messageLinkState === MessageLinkState.Linked && message !== undefined ? ' key-set ' : ' key-unset '}`} onClick={() => { onNodeSelect(localizedLabel.nodeId); }}>
         <div className="column-1">
           <div className="localized-label">
             <div className="spacer" />

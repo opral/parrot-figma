@@ -26,7 +26,6 @@ export interface ILocalizedLabelManagerUI {
     plural?: Plural,
     variantHTML?: string,
     filledTemplateHash?: string,
-    showSampleValues?: boolean,
   }): Promise<void>;
 }
 
@@ -392,31 +391,6 @@ export class UILocalizedLabel implements LocalizedLabel {
     }
 
     return state;
-  }
-
-  async setUseSampleValues(showSampleValues: boolean) {
-    if (this.messageLinkState !== MessageLinkState.Linked) {
-      return;
-    }
-
-    const message = this.manager.messageStore.getMessage(this.messageId!);
-
-    if (this.messageLinkState !== MessageLinkState.Linked
-      || this.state!.modified
-      || message === undefined) {
-      // we don't change any property also not on the parent - no need to update the label at all
-      return;
-    }
-
-    const versionToApply = message.getHistoryEntry(this.language, this.genderId, this.pluralId, this.messageVersion);
-
-    const text = versionToApply?.messages?.[this.language]?.[this.genderId]?.[this.pluralId]?.text;
-    if (text) {
-      await this.manager.updateLabelProperties(this.nodeId, {
-        showSampleValues,
-        variantHTML: text,
-      });
-    }
   }
 
   async setLanguage(

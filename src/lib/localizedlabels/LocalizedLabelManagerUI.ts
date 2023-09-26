@@ -417,7 +417,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         messageId: message.id,
         messageLinkState: MessageLinkState.Linked,
         language: locale,
-        // showSampleValues: localizedLabel.rootFrameUseSampleValues,
         variantHTML: MessageStoreMemory.htmlInLangugage(message, locale),
       });
 
@@ -447,7 +446,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         messageLinkState: MessageLinkState.Linked,
         // messageVersion: message.latestVersion, // its save to use latest version here since we created a whole new key here.
         language: locale,
-        // showSampleValues: localizedLabel.rootFrameUseSampleValues,
         variantHTML: localizedLabel.variantHTML,
       });
     }

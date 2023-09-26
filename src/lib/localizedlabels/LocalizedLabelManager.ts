@@ -3,11 +3,12 @@
 import { t } from 'i18next';
 import { debug } from 'console';
 import { text } from 'stream/consumers';
+import { Message } from '@inlang/sdk';
 import { Locale } from '../message/variants/Locale';
 import { MessageLinkState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../message/variants/Plural';
 import ChangeEvent from './ChangeEvent';
-import { Fillins, MessageEntry } from '../message/Message';
+import { Fillins } from '../message/Message';
 import VirtualTree, { VirtualTreeNode } from './VirtualTree';
 import LinksLoadedEvent from './LinksLoadedEvent';
 import { Gender } from '../message/variants/Gender';
@@ -27,8 +28,10 @@ export interface NodeSelection {
 export interface SandboxUpdateLabelProperties {
   labelName?: string,
   messageLinkState?: MessageLinkState,
+  unlinkedMessage?: Message | null
   messageId?: string,
   language?: Locale,
+  // TODO #14 replace with variables
   gender?: Gender,
   plural?: Plural,
   messageVersion?: number,
@@ -36,8 +39,6 @@ export interface SandboxUpdateLabelProperties {
   characters?: string,
   ops?: any
   fillins?: Fillins,
-  showSampleValues?: boolean,
-  unlinkedMessage?: MessageEntry | null
 }
 
 export interface DeltaOp {
@@ -763,10 +764,6 @@ export default class LocalizedLabelManager {
 
       if (changedProperties.messageVersion !== undefined) {
         textNode.setPluginData(this.messageVersionDataKey, `${changedProperties.messageVersion}`);
-      }
-
-      if (changedProperties.showSampleValues !== undefined) {
-        textNode.setPluginData(this.sampleValuesDataKey, changedProperties.showSampleValues ? `${true}` : '');
       }
 
       if (changedProperties.unlinkedMessage !== undefined) {

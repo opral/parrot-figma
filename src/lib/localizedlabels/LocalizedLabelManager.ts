@@ -5,7 +5,7 @@ import { debug } from 'console';
 import { text } from 'stream/consumers';
 import { Message } from '@inlang/sdk';
 import { Locale } from '../message/variants/Locale';
-import { MessageLinkState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
+import { LabelStyle, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../message/variants/Plural';
 import ChangeEvent from './ChangeEvent';
 import { Fillins } from '../message/Message';
@@ -14,6 +14,7 @@ import LinksLoadedEvent from './LinksLoadedEvent';
 import { Gender } from '../message/variants/Gender';
 import TextNodeLinter from './lint/TextNodeLinter';
 import FontHelper from './FontUtil';
+import { InlangMessageStore } from '../message/store/InlangMessageStoreFigmaRoot';
 
 export interface NodeSelection {
   [nodeId: string]: {
@@ -27,17 +28,15 @@ export interface NodeSelection {
 
 export interface SandboxUpdateLabelProperties {
   labelName?: string,
-  messageLinkState?: MessageLinkState,
   unlinkedMessage?: Message | null
-  messageId?: string,
+  messageId?: string | null,
   language?: Locale,
-  // TODO #14 replace with variables
-  gender?: Gender,
-  plural?: Plural,
+  unmanaged?: boolean
   messageVersion?: number,
-  filledTemplateHash?: string,
+  variantPatternHTMLHash?: string,
   characters?: string,
   ops?: any
+  // TODO #18 selectors replace with variables
   fillins?: Fillins,
 }
 
@@ -47,7 +46,8 @@ export interface DeltaOp {
   attributes: {
     placeholder?: {
       name: string,
-      invisibleMarkers: number
+      invisibleMarkers: number,
+      type: string,
     },
     link?: string,
     textDecoration?: TextDecoration,
@@ -60,11 +60,6 @@ export interface DeltaOp {
   processed?: boolean,
   ignoreForLabelStyle?: boolean
 }
-
-// TODO #14 configure this via method
-const config = {
-  refLocale: Locale.EN,
-};
 
 export const MARKER_CHARACTER = '​';
 // export const MARKER_CHARACTER = 'X​';
@@ -79,7 +74,7 @@ export default class LocalizedLabelManager {
 
   public separator = '__';
 
-  public filledTemplateHashDataKey = 'fth';
+  public variantPatternHTMLHashDataKey = 'fth';
 
   public sampleValuesDataKey = 'sv';
 
@@ -91,6 +86,8 @@ export default class LocalizedLabelManager {
 
   public messageLinkStateDataKey = 'mt';
 
+  public messageUnmanagedKey = 'mum';
+
   public messageVersionDataKey = 'mv';
 
   public messagePluralDataKey = 'mp';
@@ -98,6 +95,8 @@ export default class LocalizedLabelManager {
   public messageGenderDataKey = 'mg';
 
   public messageIdDataKey = 'mi';
+
+  public messageNamePrefixKey = 'mn_';
 
   // hash that allows detection of autorename
   public autoRenameHashKey = 'arh';
@@ -112,10 +111,7 @@ export default class LocalizedLabelManager {
 
   firstTextnodeInViewport: undefined | string;
 
-  private refreshLabelMessaheLinkCache(textNodeId: string, messageId: string | undefined) {
-    // TODO #14 remove this by adding a linked and key_keyname field to the label that allows fast lookup
-    // TODO #14 add cache to inlinang
-    /*
+  private refreshLabelMessageLinkCache(textNodeId: string, messageId: string | undefined) {
     const currentKey = this.labelToMessage[textNodeId];
     if (messageId === undefined || messageId === '') {
       if (currentKey) {
@@ -139,14 +135,18 @@ export default class LocalizedLabelManager {
         this.messageStore!.messageIdToLabels[currentKey]!.delete(textNodeId);
       }
       return currentKey;
-    } */
+    }
     return undefined;
   }
 
-  constructor(asProxy: boolean) {
-    if (asProxy) {
+  messageStore: InlangMessageStore | undefined;
+
+  constructor(messageStore?: InlangMessageStore) {
+    if (!messageStore) {
       return;
-    } 
+    }
+
+    this.messageStore = messageStore;
 
     figma.on('documentchange', this.forwardDocumentChanges.bind(this));
 
@@ -243,16 +243,16 @@ export default class LocalizedLabelManager {
             const localizedLabel = this.toLocalizedLabelOrUndefined(createdNode as TextNode);
             if (localizedLabel) {
               this.virtualTree.addNode(createdNode, createdNode.id);
-              if (localizedLabel.messageLinkState === MessageLinkState.Linked) {
-                const previousKey = this.refreshLabelMessaheLinkCache(localizedLabel.nodeId, localizedLabel.messageId!);
-                if (previousKey !== localizedLabel.messageId!) {
+              if (localizedLabel.messageId) {
+                const previousKey = this.refreshLabelMessageLinkCache(localizedLabel.nodeId, localizedLabel.messageId);
+                if (previousKey !== localizedLabel.messageId) {
                   if (previousKey) {
                     keysChanged.add(previousKey);
                   }
-                  keysChanged.add(localizedLabel.messageId!);
+                  keysChanged.add(localizedLabel.messageId);
                 }
               } else {
-                const previousKey = this.refreshLabelMessaheLinkCache(localizedLabel.nodeId, undefined);
+                const previousKey = this.refreshLabelMessageLinkCache(localizedLabel.nodeId, undefined);
                 if (previousKey) {
                   keysChanged.add(previousKey);
                 }
@@ -268,16 +268,16 @@ export default class LocalizedLabelManager {
               const localizedLabel = this.toLocalizedLabelOrUndefined(createdTextNode);
               if (localizedLabel) {
                 this.virtualTree.addNode(createdNode, createdNode.id);
-                if (localizedLabel.messageLinkState === MessageLinkState.Linked) {
-                  const previousKey = this.refreshLabelMessaheLinkCache(localizedLabel.nodeId, localizedLabel.messageId!);
-                  if (previousKey !== localizedLabel.messageId!) {
+                if (localizedLabel.messageId) {
+                  const previousKey = this.refreshLabelMessageLinkCache(localizedLabel.nodeId, localizedLabel.messageId);
+                  if (previousKey !== localizedLabel.messageId) {
                     if (previousKey) {
                       keysChanged.add(previousKey);
                     }
-                    keysChanged.add(localizedLabel.messageId!);
+                    keysChanged.add(localizedLabel.messageId);
                   }
                 } else {
-                  const previousKey = this.refreshLabelMessaheLinkCache(localizedLabel.nodeId, undefined);
+                  const previousKey = this.refreshLabelMessageLinkCache(localizedLabel.nodeId, undefined);
                   if (previousKey) {
                     keysChanged.add(previousKey);
                   }
@@ -295,7 +295,7 @@ export default class LocalizedLabelManager {
           // about this node from figma :-/ The ui layer will know what this change affects
           const deletedLeafs = this.virtualTree.removeBranch(change.id).filter((node) => node.cacheRelevant);
           deletedLeafs.forEach((node) => {
-            this.refreshLabelMessaheLinkCache(node.id, undefined);
+            this.refreshLabelMessageLinkCache(node.id, undefined);
             deletedIds.add(node.id);
           });
           // console.log(`Node deleted ${change.id} leafs: ${JSON.stringify(deletedIds)}`);
@@ -329,8 +329,8 @@ export default class LocalizedLabelManager {
 
             const localizedLabel = this.toLocalizedLabelOrUndefined(changedNode as TextNode);
             if (localizedLabel) {
-              if (localizedLabel.messageLinkState === MessageLinkState.Linked) {
-                const previousKey = this.refreshLabelMessaheLinkCache(localizedLabel.nodeId, localizedLabel.messageId!);
+              if (localizedLabel.messageId) {
+                const previousKey = this.refreshLabelMessageLinkCache(localizedLabel.nodeId, localizedLabel.messageId);
                 if (previousKey !== localizedLabel.messageId!) {
                   if (previousKey) {
                     keysChanged.add(previousKey);
@@ -338,7 +338,7 @@ export default class LocalizedLabelManager {
                   keysChanged.add(localizedLabel.messageId!);
                 }
               } else {
-                const previousKey = this.refreshLabelMessaheLinkCache(localizedLabel.nodeId, undefined);
+                const previousKey = this.refreshLabelMessageLinkCache(localizedLabel.nodeId, undefined);
                 if (previousKey) {
                   keysChanged.add(previousKey);
                 }
@@ -362,16 +362,16 @@ export default class LocalizedLabelManager {
                 if (movedFigmaNode && movedFigmaNode.type === 'TEXT') {
                   const localizedLabel = this.toLocalizedLabelOrUndefined(movedFigmaNode as TextNode);
                   if (localizedLabel) {
-                    if (localizedLabel.messageLinkState === MessageLinkState.Linked) {
-                      const previousKey = this.refreshLabelMessaheLinkCache(localizedLabel.nodeId, localizedLabel.messageId!);
-                      if (previousKey !== localizedLabel.messageId!) {
+                    if (localizedLabel.messageId) {
+                      const previousKey = this.refreshLabelMessageLinkCache(localizedLabel.nodeId, localizedLabel.messageId);
+                      if (previousKey !== localizedLabel.messageId) {
                         if (previousKey) {
                           keysChanged.add(previousKey);
                         }
-                        keysChanged.add(localizedLabel.messageId!);
+                        keysChanged.add(localizedLabel.messageId);
                       }
                     } else {
-                      const previousKey = this.refreshLabelMessaheLinkCache(localizedLabel.nodeId, undefined);
+                      const previousKey = this.refreshLabelMessageLinkCache(localizedLabel.nodeId, undefined);
                       if (previousKey) {
                         keysChanged.add(previousKey);
                       }
@@ -514,17 +514,14 @@ export default class LocalizedLabelManager {
       const textNodeId = textNode.id;
       this.virtualTree.addNode(textNode, textNodeId);
 
-      const messageLinkState = textNode.getPluginData(this.messageLinkStateDataKey);
-      if (messageLinkState !== '' && (messageLinkState as MessageLinkState) === MessageLinkState.Linked) {
-        const messageId = textNode.getPluginData(this.messageIdDataKey);
-        if (messageId !== '') {
-          const previousKey = this.refreshLabelMessaheLinkCache(textNodeId, messageId);
-          if (previousKey) {
-            keysLoaded.add(previousKey);
-            this.virtualTree.addNode(textNode, textNodeId);
-          }
-          keysLoaded.add(messageId);
+      const messageId = textNode.getPluginData(this.messageIdDataKey);
+      if (messageId) {
+        const previousMessage = this.refreshLabelMessageLinkCache(textNodeId, messageId);
+        if (previousMessage) {
+          keysLoaded.add(previousMessage);
+          this.virtualTree.addNode(textNode, textNodeId);
         }
+        keysLoaded.add(messageId);
       }
     }
 
@@ -555,7 +552,7 @@ export default class LocalizedLabelManager {
           directSelection: true,
           isLabel: selectedNode.type === 'TEXT',
           selectedNodeId: selectedNode.id,
-          messageId: textNode?.messageLinkState === MessageLinkState.Linked ? textNode?.messageId : undefined,
+          messageId: textNode?.messageId,
         };
       } else {
         selectionEnhanced[selectedNode.id] = {
@@ -577,7 +574,7 @@ export default class LocalizedLabelManager {
                 isLabel: true,
                 rootFrameId: rootFrame?.id,
                 selectedNodeId: virtualNode.id,
-                messageId: textNode?.messageLinkState === MessageLinkState.Linked ? textNode?.messageId : undefined,
+                messageId: textNode?.messageId,
               };
             }
           });
@@ -630,20 +627,22 @@ export default class LocalizedLabelManager {
   }
 
   async getWithMessage(messageId: string) {
-    // TODO fetch by key_messageid plugin property instead - should be fast enough!
     const labels = [] as LocalizedLabel[];
-    /* TODO #14 if (this.messageStore!.messageIdToLabels[messageId]) {
-      for (const textNodeId of this.messageStore!.messageIdToLabels[messageId]) {
-        const textNode = figma.getNodeById(textNodeId) as TextNode;
-        const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode);
-        if (lokalizedLabel) {
-          if (!this.virtualTree.hasNode(textNode.id)) {
-            this.virtualTree.addNode(textNode, textNode.id);
-          }
-          labels.push(lokalizedLabel);
+    const linkedNodes = figma.root.findAllWithCriteria({
+      pluginData: {
+        keys: [`${this.messageNamePrefixKey}_${messageId}`],
+      },
+    });
+
+    for (const textNode of linkedNodes) {
+      const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode as TextNode);
+      if (lokalizedLabel) {
+        if (!this.virtualTree.hasNode(textNode.id)) {
+          this.virtualTree.addNode(textNode, textNode.id);
         }
+        labels.push(lokalizedLabel);
       }
-    } */
+    }
     return labels;
   }
 
@@ -727,6 +726,19 @@ export default class LocalizedLabelManager {
 
   } as any;
 
+  private updateMessageReference(textNode: TextNode, messageId: string | null) {
+    for (const dataKey of textNode.getPluginDataKeys()) {
+      if (dataKey.startsWith(`${this.messageNamePrefixKey}_`)) {
+        if (messageId === null || dataKey !== `${this.messageNamePrefixKey}_${messageId}`) {
+          textNode.setPluginData(dataKey, '');
+        }
+      }
+    }
+    if (textNode.getPluginData(this.messageIdDataKey) !== messageId) {
+      textNode.setPluginData(this.messageIdDataKey, '');
+    }
+  }
+
   async updateLabelProperties(nodeId: string, changedProperties: SandboxUpdateLabelProperties) {
     // setup queue for atomic label update processing
     // - if no execution is ongoing hop right in and create a queue
@@ -754,12 +766,21 @@ export default class LocalizedLabelManager {
         textNode.setPluginData(this.autoRenameHashKey, '');
       }
 
-      if (changedProperties.messageId !== undefined) {
+      if (changedProperties.messageId === null) {
+        this.updateMessageReference(textNode, null);
+      } else if (changedProperties.messageId !== undefined) {
+        this.updateMessageReference(textNode, changedProperties.messageId);
+        textNode.setPluginData(this.messageUnmanagedKey, JSON.stringify(false));
         textNode.setPluginData(this.messageIdDataKey, changedProperties.messageId);
+        textNode.setPluginData(this.anonymMessageDataKey, '');
+        textNode.setPluginData(`${this.messageNamePrefixKey}_${changedProperties.messageId}`, changedProperties.messageId);
       }
 
-      if (changedProperties.messageLinkState !== undefined) {
-        textNode.setPluginData(this.messageLinkStateDataKey, changedProperties.messageLinkState);
+      if (changedProperties.unmanaged !== undefined) {
+        this.updateMessageReference(textNode, null);
+        textNode.setPluginData(this.messageUnmanagedKey, JSON.stringify(changedProperties.unmanaged));
+        textNode.setPluginData(this.messageIdDataKey, '');
+        textNode.setPluginData(this.anonymMessageDataKey, '');
       }
 
       if (changedProperties.messageVersion !== undefined) {
@@ -767,24 +788,28 @@ export default class LocalizedLabelManager {
       }
 
       if (changedProperties.unlinkedMessage !== undefined) {
+        this.updateMessageReference(textNode, null);
         if (changedProperties.unlinkedMessage === null) {
         // clean up the unlinked translation
           textNode.setPluginData(this.anonymMessageDataKey, '');
         } else {
           textNode.setPluginData(this.anonymMessageDataKey, JSON.stringify(changedProperties.unlinkedMessage));
+          textNode.setPluginData(this.messageUnmanagedKey, JSON.stringify(false));
+          textNode.setPluginData(this.messageIdDataKey, '');
         }
       }
 
-      if (changedProperties.gender !== undefined) {
-        textNode.setPluginData(this.messageGenderDataKey, changedProperties.gender ? changedProperties.gender : '');
-      }
+      // TODO #18 selectors set variables instead
+      // if (changedProperties.gender !== undefined) {
+      //   textNode.setPluginData(this.messageGenderDataKey, changedProperties.gender ? changedProperties.gender : '');
+      // }
 
-      if (changedProperties.plural !== undefined) {
-        textNode.setPluginData(this.messagePluralDataKey, changedProperties.plural ? changedProperties.plural : '');
-      }
+      // if (changedProperties.plural !== undefined) {
+      //   textNode.setPluginData(this.messagePluralDataKey, changedProperties.plural ? changedProperties.plural : '');
+      // }
 
       if (changedProperties.language !== undefined) {
-        if (changedProperties.language !== config.refLocale) {
+        if (changedProperties.language !== this.messageStore?.getConfigSync().refLanguage!) {
           if (textNode.autoRename) {
             textNode.setPluginData(this.autoRenameHashKey, textNode.characters);
             textNode.autoRename = false;
@@ -972,7 +997,7 @@ export default class LocalizedLabelManager {
           }
         }
 
-        textNode.setPluginData(this.filledTemplateHashDataKey, changedProperties.filledTemplateHash ? changedProperties.filledTemplateHash : '');
+        textNode.setPluginData(this.variantPatternHTMLHashDataKey, changedProperties.variantPatternHTMLHash ? changedProperties.variantPatternHTMLHash : '');
       }
     } finally {
       // allow this function to return sucessfully before we start the next update in the queue
@@ -1128,18 +1153,12 @@ export default class LocalizedLabelManager {
     // get plugin 1192ms -> 938ms
 
     // if no plural id is specified than we fall back to "other" - the default plural
-    const pluralId = node.getPluginData(this.messagePluralDataKey) === '' ? Plural.OTHER : node.getPluginData(this.messagePluralDataKey);
-    const genderId = node.getPluginData(this.messageGenderDataKey) === '' ? Gender.NEUTRAL : node.getPluginData(this.messageGenderDataKey);
-    const language = node.getPluginData(this.languageDataKey) === '' ? config.refLocale : node.getPluginData(this.languageDataKey) as Locale;
-    const messageVersion = node.getPluginData(this.messageVersionDataKey) === '' ? -1 : parseInt(node.getPluginData(this.messageVersionDataKey), 10);
-
-    const messageLinkState = node.getPluginData(this.messageLinkStateDataKey) === '' || node.getPluginData(this.messageLinkStateDataKey) === undefined ? MessageLinkState.Unset : node.getPluginData(this.messageLinkStateDataKey) as MessageLinkState;
+    const language = node.getPluginData(this.languageDataKey) === '' ? this.messageStore?.getConfigSync()!.refLanguage! : node.getPluginData(this.languageDataKey) as Locale;
+    const unmanaged = node.getPluginData(this.messageUnmanagedKey) === 'true';
     const messageId = node.getPluginData(this.messageIdDataKey) === '' ? undefined : node.getPluginData(this.messageIdDataKey);
-    const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === '' ? config.refLocale : rootFrame.getPluginData(this.languageDataKey) as Locale;
-    const rootFrameUseSampleValues = rootFrame.getPluginData(this.sampleValuesDataKey) !== '';
-    const useSampleValues = node.getPluginData(this.sampleValuesDataKey) !== '';
+    const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === '' ? this.messageStore?.getConfigSync()!.refLanguage! : rootFrame.getPluginData(this.languageDataKey) as Locale;
 
-    const filledTemplateHash = node.getPluginData(this.filledTemplateHashDataKey) !== '' ? node.getPluginData(this.filledTemplateHashDataKey) : undefined;
+    const variantPatternHTMLHash = node.getPluginData(this.variantPatternHTMLHashDataKey) !== '' ? node.getPluginData(this.variantPatternHTMLHashDataKey) : undefined;
     const unlinkedMessage = node.getPluginData(this.anonymMessageDataKey) !== '' ? JSON.parse(node.getPluginData(this.anonymMessageDataKey)) : undefined;
 
     // eslint-disable-next-line consistent-return
@@ -1150,23 +1169,17 @@ export default class LocalizedLabelManager {
       rootFrameName: rootFrame.name,
       rootFrameLanguage,
       language,
-      rootFrameUseSampleValues,
-      textChangedAfterGeneration: false,
-      filledTemplateHash,
-      useSampleValues,
+      variantPatternHTMLHash,
       nodeId: node.id,
       name: node.name,
       height: node.height,
       width: node.width,
       x,
       y,
-      messageLinkState,
       messageId,
-      messageVersion,
+      unmanaged,
       fillins,
       derivedKey: derivable ? derivedName : undefined,
-      genderId: genderId as Gender,
-      pluralId: pluralId as Plural,
       characters: labelText,
       ops: tokenizedTextResult.deltaOps,
       matchingLabelLints: tokenizedTextResult.matchingLabelLints,
@@ -1203,6 +1216,7 @@ export default class LocalizedLabelManager {
                 placeholder: {
                   invisibleMarkers: markerLength,
                   name: currentPlaceholderName,
+                  type: 'string',
                 },
               },
             });

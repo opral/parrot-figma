@@ -21,7 +21,7 @@ import { WindowMode } from '../lib/windowManager/WindowManagerSandbox';
 import MessageListView from './views/messages/MessageListView';
 
 import MessageStoreMemory from '../lib/message/store/MessageStoreMemory';
-import { MessageStoreInlang } from '../lib/message/store/MessageStoreInlang';
+
 
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
 import LocalizedLabelManagerUI from '../lib/localizedlabels/LocalizedLabelManagerUI';
@@ -37,6 +37,7 @@ import Export from './views/export/Export';
 import FEATURES_FLAGS from './featuretoggle';
 import SetupView from './views/setup/SetupView';
 import * as pjs from '../../package.json';
+import { InlangMessageStore } from '../lib/message/store/InlangMessageStoreFigmaRoot';
 
 console.log(`Starting Figma UI - Version ${pjs.version}`);
 
@@ -117,7 +118,6 @@ figmaRemote.getUserId().then((userId) => {
   }
 });
 
-
 const checkVersion = async () => {
   const minVersionRequest = await fetch('https://parrot-global.github.io/parrot/min-version.json', {
     cache: 'no-cache',
@@ -140,12 +140,12 @@ setInterval(() => {
   checkVersion().catch(console.log);
 }, versionCheckInterval);
 
-const figmaFileTranslationKeyStore = new MessageStoreInlang(true);
+const figmaFileTranslationKeyStore = new InlangMessageStore(true);
 
-//asyncFunctionProxy.proxyAsyncMethods(figmaFileTranslationKeyStore);
+asyncFunctionProxy.proxyAsyncMethods(figmaFileTranslationKeyStore);
 const memoryTranslationKeyStore = new MessageStoreMemory(figmaFileTranslationKeyStore);
 
-const remoteLocalizedLabelManager = new LocalizedLabelManager(true);
+const remoteLocalizedLabelManager = new LocalizedLabelManager();
 asyncFunctionProxy.proxyAsyncMethods(remoteLocalizedLabelManager);
 const localizedLabelManager = new LocalizedLabelManagerUI(remoteLocalizedLabelManager, memoryTranslationKeyStore);
 

@@ -19,7 +19,7 @@ export default function SetupView({
   return (
     <LanguageSetup
       labelManager={labelManager}
-      baseLanguage={labelManager.messageStore.getBaseLanugage()}
+      baseLanguage={labelManager.messageStore.getRefLanugage()}
       activeLanguages={labelManager.messageStore.getLanugages()!}
       onChange={async (baselanguage: Locale, activeLanguages: Locale[]) => {
         

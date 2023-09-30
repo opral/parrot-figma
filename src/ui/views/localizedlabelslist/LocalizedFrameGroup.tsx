@@ -60,14 +60,14 @@ export default function LocalizedFrameGroup({
 
   const languages = localizedLabelManager.messageStore.getLanugages()!.sort();
 
-  languageOptiones.push(toLanguageOption(localizedLabelManager.messageStore.getBaseLanugage()!));
+  languageOptiones.push(toLanguageOption(localizedLabelManager.messageStore.getRefLanugage()!));
 
   for (const language of languages) {
     const currentLanguageOption = toLanguageOption(language);
     if (language === firstTranslationState.rootFrameLanguage) {
       rootFrameLanguage = currentLanguageOption;
     }
-    if (localizedLabelManager.messageStore.getBaseLanugage()! !== language) {
+    if (localizedLabelManager.messageStore.getRefLanugage()! !== language) {
       languageOptiones.push(currentLanguageOption);
     }
   }

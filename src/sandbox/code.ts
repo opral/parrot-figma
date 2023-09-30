@@ -16,6 +16,7 @@ import FigmaUtil from '../shared/FigmaUtil';
 import FigmaHelper from '../shared/FigmaHelper';
 import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowManagerSandbox';
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager'; // TODO change this to a config when implemented
+import { InlangMessageStore } from '../lib/message/store/InlangMessageStoreFigmaRoot';
 
 const figmaRemote = new FigmaUtil();
 
@@ -50,7 +51,10 @@ const asyncFunctionProxy = new AsyncFunctionProxy('SandboxAsyncFunctionProxy', (
 asyncFunctionProxy.registerInstance(figmaRemote);
 
 
-const remoteLocalizedLabelManager = new LocalizedLabelManager(false);
+const inlangMessageStore = new InlangMessageStore(false);
+asyncFunctionProxy.registerInstance(inlangMessageStore);
+
+const remoteLocalizedLabelManager = new LocalizedLabelManager(inlangMessageStore);
 asyncFunctionProxy.registerInstance(remoteLocalizedLabelManager);
 
 const figmaHelper = new FigmaHelper(figma);

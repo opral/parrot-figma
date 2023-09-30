@@ -77,7 +77,7 @@ export default function TranslationKeyListItem({
 
   const rowRef = React.useRef<HTMLDivElement>(null);
 
-  const referencingLabels = [] as any[]; // TODO source referencing nodes message.referencingTextNodes;
+  const referencingLabels = [] as any[]; // TODO #14 source referencing nodes message.referencingTextNodes;
 
   async function onNodeSelect(nodeId: string) {
     await figmaRemote.scrollIntoViewIfNeeded(nodeId, true);
@@ -134,14 +134,15 @@ export default function TranslationKeyListItem({
 
     await figmaRemote.scrollAndZoomNodesIntoView([referencingLabels[indexToSelect]]);
   }
+  
 
-  const baseLang = messageStore.getBaseLanugage();
+  const baseLang = messageStore.getRefLanugage();
 
   // create an array of languages with baselanguage at position zero
   const languages = [baseLang, ...messageStore.getLanugages()!.filter((l) => l !== baseLang)] as Locale[];
 
   const onShowHistoryClick = (language: Locale, gender: Gender, plural: Plural) => {
-    // TODO #14 implement when inlang history is in place
+    // TODO #17 versioning implement when inlang history is in place
     // const specificHistory = [] as VersionEntry[];
 
     // let lastRelevantVersion = undefined as VersionEntry | undefined;
@@ -225,7 +226,7 @@ export default function TranslationKeyListItem({
             <TextField
               singleClick={false}
               onSave={async (messageName: string) => {
-                // TODO #14 support message renaming
+                // TODO #17 versioning - support message renaming. We will allow to rename not before we have the history that can keep track of name changes
                 // localizedLabelManager.updateMessage(message.id, {
                 //   variants: [],
                 //   name: messageName,
@@ -312,7 +313,7 @@ export default function TranslationKeyListItem({
         // }
 
         const variant = message.variants.find((variant) => variant.languageTag === language);
-        let variantHTML = '// TODO #14 define fallback';
+        let variantHTML = '';
         if (variant !== undefined) {
           variantHTML = MessageStoreMemory.patternToHtml(variant.pattern);
         }
@@ -348,18 +349,8 @@ export default function TranslationKeyListItem({
                         fillin.default = true;
                       });
 
-                      await localizedLabelManager.updateMessage({
-                        id: message.id,
-                        variants: [{
-                          languageTag: language,
-                          match: {},
-                          pattern: [{
-                            type: 'Text',
-                            value: text,
-                          }],
-                        }],
-                        selectors: [], // TODO #14 think about selectors selectors: 
-                      }, fillins);
+                      const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(message, undefined, language, {}, text);
+                      await localizedLabelManager.updateMessage(updatedMessage, fillins);
                     }}
                     variantHTML={variantHTML}
                     messageStore={messageStore}
@@ -393,7 +384,7 @@ export default function TranslationKeyListItem({
                       <span
                         className="layerIcon iconWrapper button"
                         onClick={async () => {
-                          // TODO #14 history onShowHistoryClick(language, gender, plural);
+                          // TODO #17 versioning - history onShowHistoryClick(language, gender, plural);
                         }}
                       >
                         <span className="svg-container history-svg" />
@@ -418,7 +409,7 @@ export default function TranslationKeyListItem({
           </div>
         );
       })}
-      {/* TODO #14 enable when inlang supports history
+      {/* TODO #17 versioning - enable when inlang supports history
       <OutsideClickHandler
         onOutsideClick={() => { setShowHistory(undefined); }}
         disabled={showHistory === undefined}

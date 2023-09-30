@@ -1,18 +1,19 @@
 /* eslint-disable no-plusplus */
 /* eslint-disable no-await-in-loop */
 import {
-  ProjectSettings, loadProject, getVariant, InlangProject, LanguageTag,
+  ProjectSettings, loadProject, getVariant, InlangProject, LanguageTag, updateVariantPattern, createVariant,
 } from '@inlang/sdk';
 import { createMessage } from '@inlang/sdk/test-utilities';
-import type { Message, Pattern } from '@inlang/message';
+import { Message, Pattern } from '@inlang/message';
+import blake from 'blakejs';
 import { Locale } from '../variants/Locale';
 import { Plural, getPluralFormsByLanguage } from '../variants/Plural';
-import { Config, MessageStoreInlang } from './MessageStoreInlang';
 
 import { NodeSelection } from '../../localizedlabels/LocalizedLabelManager';
 import { Gender, genderList } from '../variants/Gender';
 import { createNodeishMemoryFs } from './inlang/FigmaRootFs';
 import { Fillins } from '../Message';
+import { Config, InlangMessageStore } from './InlangMessageStoreFigmaRoot';
 
 export type SearchQuery = {
   selected?: 'FRAME' | 'LABEL' | undefined,
@@ -55,13 +56,16 @@ export default class MessageStoreMemory extends EventTarget {
 
   inlangProject: InlangProject | undefined;
 
-  constructor(parentKeyStore: MessageStoreInlang) {
+  parentKeyStore: InlangMessageStore;
+
+  constructor(parentKeyStore: InlangMessageStore) {
     super();
+    this.parentKeyStore = parentKeyStore;
 
     window.addEventListener('message', (event : MessageEvent) => {
       if (event.data.pluginMessage.target === 'TranslationKeyStore') {
         if (event.data.pluginMessage.type === 'cacheUpdate') {
-          // TODO #14 make this part of the FS
+          // TODO #14 CACHING make this part of the FS
           // this.processCacheUpdate(event.data.pluginMessage.changedKeys, event.data.pluginMessage.updatedHistoryTags);
         }
       }
@@ -69,7 +73,7 @@ export default class MessageStoreMemory extends EventTarget {
   }
 
   public async updateMessageLinks(messageIds: string[]) {
-    // TODO #14 rething message links
+    // TODO #14 CACHING rething message links
     /*
     const changes = {
       updated: [] as string[],
@@ -88,8 +92,8 @@ export default class MessageStoreMemory extends EventTarget {
     */
   }
 
-  /* private async processCacheUpdate(changedMessages: { deleted: string[], added: string[], updated: string[] }, updatedHistoryTags: HistoryTag[] | undefined) {
-    // TODO #14 handle updated comming from the fs in inlang
+  /*
+  private async processCacheUpdate(changedMessages: { deleted: string[], added: string[], updated: string[] }, updatedHistoryTags: HistoryTag[] | undefined) {
 
     const changes = {
       deleted: [] as string[],
@@ -137,37 +141,43 @@ export default class MessageStoreMemory extends EventTarget {
   } */
 
   getLanugages(): Locale[] | undefined {
-    // TODO #14 update to use inlangs project
     return this.config!.enabledLanguages;
   }
 
   async setLanguages(languages: Locale[]) {
+    const parentConfig = await this.parentKeyStore.getConfig();
+    parentConfig.enabledLanguages = languages;
     this.config!.enabledLanguages = languages;
-    // TODO #14 update config within inlangs project
-    // this.inlangProject?.setSettings()
-    // const parentConfig = await this.parentKeyStore.getConfig();
 
-    // parentConfig.enabledLanguages = languages;
-    // await this.parentKeyStore.setConfig(parentConfig);
+    await this.parentKeyStore.setConfig(parentConfig);
+    this.inlangProject?.setSettings({
+      sourceLanguageTag: this.config?.refLanguage!,
+      languageTags: languages as string[],
+      modules: [],
+    });
   }
 
-  getBaseLanugage(): Locale | undefined {
-    // TODO #14 update to use inlangs project
-    return this.config!.baseLanguage;
+  getRefLanugage(): Locale | undefined {
+    return this.config!.refLanguage;
   }
 
   async setBaseLanguage(language: Locale) {
-    this.config!.baseLanguage = language;
-    // TODO #14 set baselanguage in inlang project
-    // const parentConfig = await this.parentKeyStore.getConfig();
-    // parentConfig.baseLanguage = language;
-    // await this.parentKeyStore.setConfig(parentConfig);
+    const parentConfig = await this.parentKeyStore.getConfig();
+    this.config!.refLanguage = language;
+    parentConfig.refLanguage = language;
+
+    await this.parentKeyStore.setConfig(parentConfig);
+    this.inlangProject?.setSettings({
+      sourceLanguageTag: language,
+      languageTags: this.config!.enabledLanguages as string[],
+      modules: [],
+    });
   }
 
-  getMessagesByMessageName(language: Locale, versionId: string): { [messageName: string]: Message } {
+  getMessagesByMessageName(): { [messageName: string]: Message } {
     const messages = {} as { [id: string]: Message };
 
-    // TODO #14 used by exporter - rewrite exporter to use inlangs project directly
+    // TODO #14 import/export used by exporter - rewrite exporter to use inlangs project directly
     // const tagIndex = versionId ? this.getTagIndexByVersionId(versionId) : -1;
 
     // for (const messageId of Object.keys(this.messages)) {
@@ -477,8 +487,8 @@ export default class MessageStoreMemory extends EventTarget {
     return results;
   }
 
-  async createTag(title: string, description: string | undefined) {
-    /* TODO #14 we skip this in inlang for now
+  async createTag() {
+    /* TODO #17 versioning we skip this in inlang for now
     // TODO #11 we update the messages here - shouldn't we wait for the messaage bus instead?
     const tagId = this.historyTags.length;
     for (const messageId of Object.keys(this.messages)) {
@@ -490,32 +500,37 @@ export default class MessageStoreMemory extends EventTarget {
     */
   }
 
-  async createMessage(message: Message, defaultFillins: Fillins): Promise<Message> {
-    // TODO store fillins
-    this.inlangProject?.query.messages.create({ data: message });
-    return this.getMessage(message.id!)!;
-  }
+  async upsertMessage(message: Message, defaultFillins: Fillins) {
+    this.upsertedMessageIds.add(message.id);
+    this.inlangProject?.query.messages.upsert({ where: { id: message.id }, data: message });
 
-  async updateMessage(message: Partial<Message>, defaultFillins: Fillins) {
-    // TODO store fillins
-    // TODO #14 update message in inlang project
-    this.inlangProject?.query.messages.update({ where: { id: message.id! }, data: message });
+    setTimeout(() => {
+      const event = new CustomEvent<any>('updated', { });
+      this.dispatchEvent(event);
+    }, 1);
+    
+    return this.getMessage(message.id!)!;
   }
 
   async deleteMessage(id: string) {
     // await this.parentKeyStore.deleteMessage(id);
     this.inlangProject?.query.messages.delete({ where: { id } });
-    // TODO #14 listen on deletions to propagate changes
+    // TODO #14 CACHING listen on deletions to propagate changes
     // this.removeCache(id);
   }
 
+  upsertedMessageIds = new Set<string>();
+
   private async loadInlang() {
+    // TODO #14 SETUP we can not initialize the inlang project before we have a valid config
+    this.config = await this.parentKeyStore.getConfig();
     // creating a project file
     const config = {
-      sourceLanguageTag: 'en',
+      sourceLanguageTag: this.config.refLanguage,
       modules: ['./plugin.js'],
-      languageTags: ['en', 'de'],
-    } satisfies ProjectSettings;
+      languageTags: this.config.enabledLanguages,
+      // languageTags: ['en', 'de'],
+    };
 
     // writing the project file to the virtual filesystem
     await fs.writeFile('/project.inlang.json', JSON.stringify(config));
@@ -537,20 +552,16 @@ export default class MessageStoreMemory extends EventTarget {
             // displayName,
             // description,
             loadMessages: async () => {
-              const fakeMessages = [
-                createMessage('this-is-a-test-message', {
-                  en: 'Hello world!',
-                  de: 'Hallo welt!',
-                }),
-                createMessage('this-is-a-test-message-2', {
-                  en: 'Hello world2!',
-                  de: 'Hallo welt2!',
-                }),
-              ] as any[];
-              return fakeMessages;
+              const messages = await this.parentKeyStore.load();
+              return messages;
             },
-            saveMessages: () => {
-
+            saveMessages: async ({ messages, settings, nodeishFs }: { messages: Message[], settings: any, nodeishFs: any }) => {
+              for (const message of messages) {
+                if (this.upsertedMessageIds.has(message.id)) {
+                  this.parentKeyStore.saveMessage(message);
+                }
+              }
+              this.upsertedMessageIds = new Set<string>();
             },
           },
 
@@ -568,23 +579,114 @@ export default class MessageStoreMemory extends EventTarget {
   }
 
   async load(): Promise<Readonly<Message[]>> {
-    // TODO #14 get from real config eventual use figma util
-    // TODO #14 load config from figma helper await this.parentKeyStore.getConfig();
-    this.config = {
-      baseLanguage: Locale.EN,
-      enabledLanguages: [Locale.EN, Locale.DE],
-    };
-
+    // TODO #14 SETUP get from real config eventual use figma util
+    // TODO #14 SETUP load config from figma helper 
+    // await this.parentKeyStore.getConfig();
     await this.loadInlang();
     return this.inlangProject!.query.messages.getAll();
   }
 
+  // wrapper methods to centralize the integration of inlang in case of api changes
+
+  static hasVariant(message: Message, targetLanguage: Locale, selectors?: Record<string, string>) {
+    return getVariant(message, { where: { languageTag: targetLanguage, selectors } }) !== undefined;
+  }
+
+  static isVariantsTranslationOutdated(
+    message: Message,
+    sourceLanguage: Locale,
+    targetLanguage: Locale,
+    selectors?: Record<string, string>,
+  ) {
+    const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, selectors);
+    const currentVariant = getVariant(message, { where: { languageTag: targetLanguage, selectors } });
+
+    if (!currentVariant || blake.blake2sHex(sourceVariantPatternHTML) !== (currentVariant as any).translationSrcHash) {
+      return true;
+    }
+
+    return false;
+  }
+
+  static upsertVariantPatternHtml(message: Message, sourceLanguage: Locale | undefined, language: Locale, match: Record<string, string>, patternHtml: string) {
+    // const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, match);
+    const currentVariantClone = getVariant(message, { where: { languageTag: language, selectors: match } });
+    // let variantPatternHTMLHash = '';
+    let messageClone: Message;
+
+    if (currentVariantClone) {
+      // variantPatternHTMLHash = (blake.blake2sHex(sourceVariantPatternHTML));
+      // TODO #14 XXX find the variant using language an pattern to be able to mutate it in place
+      messageClone = updateVariantPattern(message, { where: { languageTag: language, selectors: match }, data: MessageStoreMemory.patternHtmlToPattern(patternHtml) }).data!;
+    } else {
+      const tranlatedVariant = {
+        languageTag: language,
+        match,
+        pattern: MessageStoreMemory.patternHtmlToPattern(patternHtml),
+      };
+      // add properties to variant
+      // (tranlatedVariant as any).translationSrcHash = (blake.blake2sHex(sourceVariantPatternHTML));
+      messageClone = createVariant(message, { data: tranlatedVariant }).data!;
+    }
+
+    // const updatedVariantClone = getVariant(message, { where: { languageTag: language, selectors: match } });
+    // TODO #14 XXX this is uses json stringify on the variant to check if equal - sdk will change anyway and we change this
+    // const mutableVariant = message.variants.find((variant) => variant.languageTag === updatedVariantClone?.languageTag && JSON.stringify(variant.match) === JSON.stringify(updatedVariantClone.match));
+    // (mutableVariant as any).translationSrcHash = variantPatternHTMLHash;
+
+    return messageClone;
+  }
+
+  static async upsertUsingAutoTranslateMessage(
+    translationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | null>,
+    message: Message,
+    sourceLanguage: Locale,
+    targetLanguage: Locale,
+    selectors: Record<string, string>,
+  ) {
+    const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, selectors);
+
+    const translatedPattern = await translationProvider(sourceVariantPatternHTML, sourceLanguage as string, targetLanguage);
+
+    return this.upsertVariantPatternHtml(message, sourceLanguage, targetLanguage, selectors, translatedPattern!);
+  }
+
+  static patternHtmlToPattern(patternHtml: string): Pattern {
+    const regex = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;
+    const result = [] as Pattern;
+    let match;
+
+    let textStart = 0;
+
+    // eslint-disable-next-line no-cond-assign
+    while ((match = regex.exec(patternHtml)) !== null) {
+      const [wholeMatch, , type, , format, , argumentPosition, unnamed, , , name] = match;
+      const { index } = match;
+
+      // is ther text before the ph?
+      if (textStart < index) {
+        result.push({ type: 'Text', value: patternHtml.substring(textStart, index) });
+      }
+
+      textStart = index + wholeMatch.length;
+      result.push({ type: 'VariableReference', name });
+    }
+
+    if (patternHtml.length > textStart) {
+      result.push({ type: 'Text', value: patternHtml.substring(textStart, patternHtml.length) });
+    }
+
+    return result;
+  }
+
   static patternToHtml(patterns: Pattern) {
     let html = '';
-    // TODO #14 support other patterns or get rid of html representation
+    // TODO #14 inlang rich text - support other patterns or get rid of html representation
     for (const pattern of patterns) {
       if (pattern.type === 'Text') {
         html += pattern.value;
+      } else if (pattern.type === 'VariableReference') {
+        html += `<ph type="string" >${pattern.name}</ph>`;
       }
     }
 
@@ -596,7 +698,7 @@ export default class MessageStoreMemory extends EventTarget {
 
     const variantInLanguage = message.variants.find((variant) => variant.languageTag === language);
     if (variantInLanguage) {
-      // TODO #14 support other patterns or get rid of html representation
+      // TODO #14 inlang rich text - support other patterns or get rid of html representation
       for (const pattern of variantInLanguage.pattern) {
         if (pattern.type === 'Text') {
           if (html === undefined) {

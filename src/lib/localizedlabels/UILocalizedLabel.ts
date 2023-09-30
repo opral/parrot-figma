@@ -2,7 +2,6 @@ import Quill, { Delta as DeltaType, DeltaOperation } from 'quill';
 import blake from 'blakejs';
 import { Message } from '@inlang/message';
 import { Locale } from '../message/variants/Locale';
-import { Plural } from '../message/variants/Plural';
 import { MessageLinkState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
 
 import {
@@ -20,12 +19,10 @@ export interface ILocalizedLabelManagerUI {
     labelName?: string,
     messageLinkState?: MessageLinkState,
     messageId?: string,
-    messageVersion?: number,
+    unlinkedMessage?: Message,
     language?: Locale,
-    gender?: Gender,
-    plural?: Plural,
-    variantHTML?: string,
-    filledTemplateHash?: string,
+    fillins?: Fillins,
+    variantPatternHTML?: string
   }): Promise<void>;
 }
 
@@ -54,25 +51,13 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   language: Locale;
 
-  rootFrameUseSampleValues: boolean;
-
-  useSampleValues: boolean;
-
   messageLinkState: MessageLinkState;
 
   messageId?: string | undefined;
 
-  messageVersion: number;
-
-  genderId: Gender;
-
-  pluralId: Plural;
-
   characters: string;
 
-  state?: { behind: number; orginalTranslationHTML?: string | undefined; modified: boolean; } | undefined;
-
-  textChangedAfterGeneration: boolean;
+  state?: { modified: boolean; } | undefined;
 
   /**
    * contains the translation representation with placeholders and later formation tags
@@ -108,42 +93,62 @@ export class UILocalizedLabel implements LocalizedLabel {
     this.height = localizedLabel.height;
     this.rootFrameLanguage = localizedLabel.rootFrameLanguage;
     this.language = localizedLabel.language;
-    this.rootFrameUseSampleValues = localizedLabel.rootFrameUseSampleValues;
-    this.useSampleValues = localizedLabel.useSampleValues;
-    this.messageLinkState = localizedLabel.messageLinkState;
+    this.unlinkedMessage = localizedLabel.unlinkedMessage;
     this.messageId = localizedLabel.messageId;
-    this.messageVersion = localizedLabel.messageVersion;
-    this.genderId = localizedLabel.genderId;
-    this.pluralId = localizedLabel.pluralId;
-    this.characters = localizedLabel.characters;
-    this.textChangedAfterGeneration = localizedLabel.textChangedAfterGeneration;
+    this.unmanaged = localizedLabel.unmanaged;
+
     this.derivedKey = localizedLabel.derivedKey;
     this.fillins = localizedLabel.fillins;
+
+    this.characters = localizedLabel.characters;
     this.ops = localizedLabel.ops;
+  
+    this.currentPatternHTML = UILocalizedLabel.toHtml(localizedLabel.characters, localizedLabel.ops, this.fillins);
+
+    if (localizedLabel.unmanaged) {
+      // localized label was marked as unmanaged - ignore message reference / unlinked messages
+      this.messageLinkState = MessageLinkState.Unmanaged;
+    } else if (localizedLabel.unlinkedMessage) {
+      this.messageLinkState = MessageLinkState.Unlinked;
+
+      const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
+      // override the currents label variant with state form label
+      this.unlinkedMessage = MessageStoreMemory.upsertVariantPatternHtml(localizedLabel.unlinkedMessage, refLanguage, this.rootFrameLanguage, {}, this.currentPatternHTML);
+    } else if (localizedLabel.messageId) {
+      this.messageId = localizedLabel.messageId;
+      if (!this.manager.messageStore.getMessage(this.messageId)) {
+        this.messageLinkState = MessageLinkState.MissingMessage;
+      } else {
+        this.messageLinkState = MessageLinkState.Linked;
+      }
+    } else {
+      this.messageLinkState = MessageLinkState.Unset;
+    }
+
     this.matchingLabelLints = localizedLabel.matchingLabelLints;
     this.labelStyle = localizedLabel.labelStyle;
-    this.variantHTML = UILocalizedLabel.toHtml(localizedLabel.characters, localizedLabel.ops, this.fillins, true);
-    this.unlinkedMessage = localizedLabel.unlinkedMessage;
     this.state = this.getState();
   }
 
-  variantHTML: string;
+  unmanaged: boolean;
+
+  currentPatternHTML: string;
 
   ops: DeltaOp[];
 
-  filledTemplateHash?: string | undefined;
+  variantPatternHTMLHash?: string | undefined;
 
   getMessageName(): string | undefined {
     if (this.messageId === undefined) return undefined;
     const message = this.manager.messageStore.getMessage(this.messageId);
     if (message) {
-      return message.name;
+      return message.id;
     }
 
     return undefined;
   }
 
-  static toHtml(text: string, ops: DeltaOp[], fillins: Fillins, trimLabelStyles: boolean) {
+  static toHtml(text: string, ops: DeltaOp[], fillins: Fillins) {
     if (text === '') {
       return '';
     }
@@ -153,6 +158,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 
     // allways add an additional line break at the end
     if (ops.length > 0) {
+      // eslint-disable-next-line no-param-reassign
       ops[ops.length - 1].end += 1;
     }
     const rawtext = `${text}\n`;
@@ -203,6 +209,7 @@ export class UILocalizedLabel implements LocalizedLabel {
           },
         };
         // enrich fillin
+        // TODO #14 check fillins - seems like we drop them later anyway - shall we remove this and but than we need to drop it from the regex later aswell!
         (parameterOperation.attributes.placeholder! as any).fillin = fillins[insert].value;
 
         deltaOps.push(parameterOperation);
@@ -366,144 +373,206 @@ export class UILocalizedLabel implements LocalizedLabel {
    * @param localizedLabel the label to provide the state for
    * @returns
    */
-  getState(): { behind: number, orginalTranslationHTML?: string, modified: boolean } {
+  getState(): { modified: boolean } {
+    
     const state = {
       modified: false,
-      variantDeleted: false,
-      behind: 0,
-      orginalVariantHTML: undefined as string | undefined,
+      // variantDeleted: false, // TODO #17 versioning - matches changed?
+      // behind: this.variantPatternHTMLHash ? blake.blake2sHex(this.currentPatternHTML) !== this.variantPatternHTMLHash : false,
+      // orginalVariantHTML: undefined as string | undefined,
     };
 
-    const message = this.messageLinkState !== MessageLinkState.Unset ? this.manager.messageStore.getMessage(this.messageId!) : undefined;
+    if (this.messageLinkState === MessageLinkState.Linked) {
+      const message = this.manager.messageStore.getMessage(this.messageId!);
 
-    if (message) {
-      // const currentVersion = message.getHistoryEntry(this.language, this.genderId, this.pluralId, this.messageVersion);
+      if (!message) {
+        // message has been deleted - has the label not been fixed on first cache load?
+        throw new Error('Message does not exist');
+      }
 
-      // state.behind = message.getChangesSince(this.language, this.genderId, this.pluralId, this.messageVersion);
-      // const variantHtml = currentVersion?.variants[this.language]?.[this.genderId]?.[this.pluralId]?.text;
-      // // eslint-disable-next-line no-param-reassign
-      // if (variantHtml !== this.variantHTML) {
-      //   state.modified = true;
-      //   state.orginalVariantHTML = variantHtml;
-      // }
-      state.modified = true;
-      state.behind = 1;
+      const variantPatternHtml = MessageStoreMemory.htmlForPattern(message, this.language, {
+        /** TODO #18 selectors build selectors based on variableValues */
+      });
+      state.modified = variantPatternHtml !== this.currentPatternHTML;
     }
 
+    console.log('getState ' + JSON.stringify(state));
     return state;
   }
 
-  async setLanguage(
+  async setLanguageOnUnsetLabel(
     targetLanguage: Locale,
-    version: number | undefined,
     missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | null>,
   ) {
-    if (this.messageLinkState === MessageLinkState.Unset) {
-      const refLanguage = this.manager.messageStore.getBaseLanugage()! as Locale;
+    const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
+    const toRefLanguage = targetLanguage === refLanguage;
 
-      const refLanguagePattern = this.unlinkedMessage !== undefined ? MessageStoreMemory.htmlInLangugage(this.unlinkedMessage, refLanguage) : undefined;
-
-      let patternToUpdateTo = undefined as string | undefined;
-      if (targetLanguage === refLanguage) {
-        // use the message language
-        patternToUpdateTo = refLanguagePattern ?? this.variantHTML;
-      } else {
-        // TODO check if the target language is avaialable and up to date
-
-        // TODO #15 use undefined for language if ref language
-
-        const currentTranslationBaseLangHash = MessageStoreMemory.refLanguageHash(this.unlinkedMessage, targetLanguage);
-        if (refLanguagePattern && blake.blake2sHex(refLanguagePattern) !== currentTranslationBaseLangHash) {
-          patternToUpdateTo = await missingTranslationProvider(refLanguagePattern, refLanguage as string, targetLanguage) ?? 'no translation';
-        } else {
-          patternToUpdateTo = this.unlinkedMessage ? MessageStoreMemory.htmlInLangugage(this.unlinkedMessage, targetLanguage) : 'no translation in unlinked msg';
-        }
-      }
-
-      await this.manager.updateLabelProperties(this.nodeId, {
-        language: targetLanguage,
-        gender: this.genderId,
-        plural: this.pluralId,
-        variantHTML: patternToUpdateTo,
-      });
-      return;
-    }
-
-    const messageId = this.messageId ?? this.derivedKey;
-    const labelState = this.state!;
-    let labelVersion = this.messageVersion;
-
-    if (this.messageLinkState === MessageLinkState.NoKey // we don't update unlinked labels
-      || messageId === undefined // or labels where we cant derive or get the message
-      || labelState.modified) { // or that are modified
-      // root language has changed - trigger cache update
+    if (toRefLanguage) {
+      // keep the label untouched if we just switch to the ref language
       await this.manager.updateLabelProperties(this.nodeId, {});
       return;
     }
 
-    let message = this.manager.messageStore.getMessage(messageId);
-    // check if message exists
-    if (message === undefined) {
-      throw new Error('Message linked to label does not exist - not removed when Message was deleted?');
-      /* const translation = await missingTranslationProvider(this.translationHTML!, this.language, targetLanguage);
+    // eslint-disable-next-line no-case-declarations
+    const unlinkedMessage = {
+      id: '____unlinked',
+      // we start with no pattern - unlinked messages cannot have variants other than language - for more complex messages a linked message is required
+      selectors: [],
+      variants: [
+        {
+          languageTag: refLanguage,
+          match: {},
+          pattern: MessageStoreMemory.patternHtmlToPattern(this.currentPatternHTML),
+        },
+      ],
+    };
 
-      // ok we have a fresh message to create - no translation to expect
-      message = await this.manager.keyStore.createKey(messageName, [{
-        language: this.language,
-        plural: this.pluralId,
-        text: this.translationHTML,
-        skip: false,
-      }, {
+    // eslint-disable-next-line no-case-declarations
+    try {
+      const updatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(missingTranslationProvider, unlinkedMessage, refLanguage, targetLanguage, { });
+      await this.manager.updateLabelProperties(this.nodeId, {
         language: targetLanguage,
-        plural: this.pluralId,
-        text: translation,
-        skip: false,
-      }], this.pluralId !== Plural.OTHER);
-      labelVersion = message.latestVersion; */
+        unlinkedMessage: updatedMessage,
+      });
+    } catch {
+      await this.manager.updateLabelProperties(this.nodeId, {
+      });
+    }
+  }
+
+  async setLanguageOnUnlinkedLabel(
+    targetLanguage: Locale,
+    missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | null>,
+  ) {
+    const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
+    const toRefLanguage = targetLanguage === refLanguage;
+    const { unlinkedMessage } = this;
+
+    let hasVariantInTargetLanguage = MessageStoreMemory.hasVariant(unlinkedMessage, targetLanguage, {});
+    // let isVariantsTranslationOutdated = await MessageStoreMemory.isVariantsTranslationOutdated(unlinkedMessage, refLanguage, targetLanguage, {});
+
+    let eventuallyUpdatedMessage = this.unlinkedMessage;
+
+    // if (isVariantsTranslationOutdated) {
+    try {
+      eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(missingTranslationProvider, unlinkedMessage, refLanguage, targetLanguage, {});
+      hasVariantInTargetLanguage = true;
+    } catch (e) {
+      // we handle the error using isVariantsTranslationOutdated flag
+    }
+    // if (!isVariantsTranslationOutdated) {
+    //   hasVariantInTargetLanguage = true;
+    // }
+    // }
+
+    if (hasVariantInTargetLanguage) {
+      await this.manager.updateLabelProperties(this.nodeId, {
+        language: targetLanguage,
+        unlinkedMessage: eventuallyUpdatedMessage,
+      });
     } else {
-      if (labelState.behind === 0) {
-        // updating message
-        if (message.variants[targetLanguage]?.[this.genderId]?.[this.pluralId]?.text === undefined) {
-          if (message.variants[targetLanguage]?.[this.genderId]?.[this.pluralId]?.skip === true) {
-            // TODO #3 think about fall back mechanism:
-            // in case the variant for the given plural is skipped try to fall back to others
-            // if this is skipped as well fall back to base language
-            //  - for now we just don't change the label
-            await this.manager.updateLabelProperties(this.nodeId, {});
-            return;
-          }
+      await this.manager.updateLabelProperties(this.nodeId, { });
+    }
+  }
 
-          // translation missing - generate it and update the message
-          let originLanguage = this.manager.messageStore.getBaseLanugage();
-          let originText = message.variants[this.manager.messageStore.getBaseLanugage()!]?.[this.genderId]?.[this.pluralId]?.text;
-
-          if (originText === undefined) {
-            originLanguage = this.language;
-            originText = message.variants[this.language]![this.genderId]?.[this.pluralId]?.text!;
-          }
-
-          const translation = await missingTranslationProvider(originText, originLanguage as string, targetLanguage) ?? 'no translation';
-          message = await this.manager.messageStore.updateMessage(messageId, [{
-            language: targetLanguage,
-            gender: this.genderId,
-            plural: this.pluralId,
-            text: translation,
-            skip: false,
-          }]);
-        }
-        labelVersion = message.latestVersion;
+  async setLanguageOnLinkedLabel(
+    targetLanguage: Locale,
+    missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | null>,
+  ) {
+    const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
+    const toRefLanguage = targetLanguage === refLanguage;
+    const message = this.manager.messageStore.getMessage(this.messageId)!;
+    const hasVariantInTargetLanguage = MessageStoreMemory.hasVariant(message, targetLanguage, {});
+    // updating message
+    if (!hasVariantInTargetLanguage) {
+      if (!toRefLanguage) {
+        try {
+          const eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(missingTranslationProvider, message, refLanguage, targetLanguage, {});
+          this.manager.messageStore.upsetMessage(eventuallyUpdatedMessage);
+          return;
+        } catch (e) { /* empty */ }
       }
+      // TODO #3 think about fall back mechanism:
+      // in case the variant for the given plural is skipped try to fall back to others
+      // if this is skipped as well fall back to base language
+      //  - for now we just don't change the label
+      await this.manager.updateLabelProperties(this.nodeId, {});
+      return;
+    }
+    await this.manager.updateLabelProperties(this.nodeId, {
+      messageId: this.messageId,
+      language: targetLanguage,
+    });
+  }
 
-      const versionToApply = message.getHistoryEntry(targetLanguage, this.genderId, this.pluralId, labelVersion);
+  async setLanguage(
+    targetLanguage: Locale,
+    // NOTE we dont support versioning for now version: number | undefined,
+    missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | null>,
+  ) {
+    
+    switch (this.messageLinkState) {
+      case MessageLinkState.MissingMessage:
+        // we don't change any label that is in this state - got to be manually fixed by the user
+        // just trigger cache update to propagate the changed root language
+        await this.manager.updateLabelProperties(this.nodeId, {});
+        return;
+
+      case MessageLinkState.Unmanaged:
+        // just trigger cache update to propagate the changed root language
+        await this.manager.updateLabelProperties(this.nodeId, {});
+        return;
+
+      case MessageLinkState.Unset:
+        await this.setLanguageOnUnsetLabel(targetLanguage, missingTranslationProvider);
+        break;
+
+      case MessageLinkState.Unlinked:
+        await this.setLanguageOnUnlinkedLabel(targetLanguage, missingTranslationProvider);
+        break;
+      case MessageLinkState.Linked:
+        await this.setLanguageOnLinkedLabel(targetLanguage, missingTranslationProvider);
+        break;
+      default:
+        throw new Error(`unhandled Linksstate ${this.messageLinkState}`);
+        break;
+    }
+  }
+
+  async setLabelPattern(patternHtml: string, fillins: Fillins) {
+    const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
+    if (this.messageLinkState === MessageLinkState.Unset) {
+      // TODO in unset - create message
+      // eslint-disable-next-line no-case-declarations
+      const unlinkedMessage = {
+        id: '____unlinked',
+        // we start with no pattern - unlinked messages cannot have variants other than language - for more complex messages a linked message is required
+        selectors: [],
+        variants: [
+          {
+            languageTag: refLanguage,
+            match: {},
+            pattern: MessageStoreMemory.patternHtmlToPattern(patternHtml),
+          },
+        ],
+      };
 
       await this.manager.updateLabelProperties(this.nodeId, {
-        messageId,
-        messageLinkState: MessageLinkState.Linked,
-        gender: this.genderId,
-        language: targetLanguage,
-        plural: this.pluralId,
-        variantHTML: versionToApply?.messages?.[targetLanguage]?.[this.pluralId]?.text,
-        messageVersion: labelVersion,
+        language: refLanguage,
+        fillins,
+        unlinkedMessage,
+      });
+    } else if (this.messageLinkState === MessageLinkState.Unlinked) {
+      const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(this.unlinkedMessage, refLanguage, this.rootFrameLanguage, {}, patternHtml);
+
+      await this.manager.updateLabelProperties(this.nodeId, {
+        fillins,
+        unlinkedMessage: updatedMessage,
+      });
+    } else if (this.messageLinkState === MessageLinkState.Linked) {
+      await this.manager.updateLabelProperties(this.nodeId, {
+        fillins,
+        variantPatternHTML: patternHtml,
       });
     }
   }

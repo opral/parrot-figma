@@ -7,8 +7,10 @@ import { Message } from '@inlang/sdk';
 
 export enum MessageLinkState {
   Unset = 'unset', // label has not yet modified by the plugin
-  NoKey = 'nokey', // state when the label has not been translated by the plugin yet
+  Unlinked = 'unlinked',
   Linked = 'linked', // key was set to a fixed key
+  MissingMessage = 'missingMessage', // key was set to a fixed key
+  Unmanaged = 'unmanaged',
 }
 
 export interface LabelStyle {
@@ -36,14 +38,8 @@ export interface LocalizedLabel {
   rootFrameLanguage: Locale;
 
   language: Locale;
-  rootFrameUseSampleValues: boolean;
-
-  useSampleValues: boolean;
-  messageLinkState: MessageLinkState
+  unmanaged: boolean;
   messageId?: string;
-  messageVersion: number,
-  genderId: Gender,
-  pluralId: Plural;
   characters: string;
   ops: DeltaOp[];
   matchingLabelLints: string[];
@@ -90,8 +86,7 @@ export interface LocalizedLabel {
   //  The available parameters of a key have changed (one is removed)? shall we cleanup?
 
   fillins: Fillins;
-  filledTemplateHash?: string;
-  textChangedAfterGeneration: boolean;
+  variantPatternHTMLHash?: string;
 
   derivedKey?: string;
 

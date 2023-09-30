@@ -11,7 +11,6 @@ export const plugin: Plugin = {
   // displayName,
   // description,
   loadMessages: async () => {
-    debugger;
     const fakeMessages = [
       createMessage('this-is-a-test-message', {
         en: 'Hello world!',

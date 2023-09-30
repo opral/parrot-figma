@@ -70,14 +70,7 @@ export default function LocalizedLabelListItem({
 
   async function updateToLatestKeyVersion() {
     track('updateToLatestKeyVersion');
-    await localizedLabelManager.updateToLatestKeyVersion([localizedLabel]).catch((e: Error) => {
-      Sentry.captureException(e);
-      figmaRemote.notifyError(e.message);
-    });
-  }
-
-  async function revertDesignChanges() {
-    await localizedLabelManager.revertDesignChanges(localizedLabel).catch((e: Error) => {
+    await localizedLabelManager.updateToMessageHead([localizedLabel]).catch((e: Error) => {
       Sentry.captureException(e);
       figmaRemote.notifyError(e.message);
     });
@@ -87,7 +80,7 @@ export default function LocalizedLabelListItem({
     await figmaRemote.scrollIntoViewIfNeeded(nodeId, true);
   }
 
-  // TODO #14 check if inlang supports plurals
+  // TODO #18 selectors check if inlang supports plurals
   // if (messages) {
   //   for (const plural of Object.keys(messages)) {
   //     const pluralOption = {
@@ -103,7 +96,7 @@ export default function LocalizedLabelListItem({
 
   let messageName = '';
 
-  if (localizedLabel.messageLinkState === MessageLinkState.Linked && localizedLabel.messageId) {
+  if (localizedLabel.messageLinkState === MessageLinkState.Linked) {
     messageName = localizedLabel.getMessageName()!;
   }
 
@@ -129,9 +122,9 @@ export default function LocalizedLabelListItem({
             text: 'Use Key',
             key: 'enter',
             callback: () => {
-              const message = localizedLabelManager.messageStore.getMessage(drawerSelectedKey.current!)!;
+              const messageToLink = localizedLabelManager.messageStore.getMessage(drawerSelectedKey.current!)!;
 
-              localizedLabelManager.linkMessage(localizedLabel, message.id, localizedLabel.rootFrameLanguage!).catch((e) => {
+              localizedLabelManager.linkMessage(localizedLabel, messageToLink.id, localizedLabel.rootFrameLanguage!).catch((e) => {
                 figmaRemote.notifyError(`could not set message${e.message}`);
                 Sentry.captureException(e);
               });
@@ -207,7 +200,7 @@ export default function LocalizedLabelListItem({
                         });
                       } else if (selectedOption.value === 'show-message') {
                         showMessage(localizedLabel.getMessageName());
-                      } else if (selectedOption.value === 'reset') {
+                      } else if (selectedOption.value === 'reset') { // triggered by empty field - option added by the select field it self
                         await localizedLabelManager.unsetLabel(localizedLabel);
                       }
                     } else if (selectedOption.type === InputSelectionOptionType.ADD) {
@@ -235,6 +228,7 @@ export default function LocalizedLabelListItem({
                   defaultValue={messageName}
                   getOptions={(enteredValue: string) => {
                     let options = [] as InputSelectOption[];
+                    
 
                     const keySearch = enteredValue === '' ? '*' : enteredValue;
                     const textMatchQuery = MessageStoreMemory.toQueryObject(`exact_text:true name:${keySearch} ${localizedLabel.characters}`);
@@ -316,11 +310,11 @@ export default function LocalizedLabelListItem({
                       className="grid-item-language"
                       data-tooltip-content="Current Language of this Label"
                     >
-                      <span className="rowText">{localizedLabel.messageLinkState === MessageLinkState.Linked ? localizedLabel.language : localizedLabel.rootFrameLanguage}</span>
+                      <span className="rowText">{localizedLabel.language}</span>
 
                     </div>
                     {/* <div key={localizedLabel.pluralId} className={`keyPluralWrapper ${translatedKey?.plural ? 'onePlural' : ' multiplePlurals'}`}> */}
-                    <div key={localizedLabel.pluralId} className="keyPluralWrapper onePlural">
+                    <div className="keyPluralWrapper onePlural">
                       { FEATURES_FLAGS.plurals
                       && (
                       <div className="grid-item-plural">
@@ -337,8 +331,8 @@ export default function LocalizedLabelListItem({
                           />
                           )}
                           {!translatedKey?.plural && ( */}
-                          {/* TODO #14 check pluralid */}
-                          <span className="rowText">{localizedLabel.pluralId}</span>
+                          {/* TODO #18  selectors - check pluralid */}
+                          <span className="rowText">{/* localizedLabel.pluralId */}</span>
                           {/* )} */}
                         </>
                         )}
@@ -354,17 +348,17 @@ export default function LocalizedLabelListItem({
                             localizedLabelManager.commitUndo();
                           }}
                           onChange={async (value: string, fillins: Fillins, handleCancel: any) => {
-                            localizedLabelManager.updateLabelProperties(localizedLabel.nodeId, {
-                              variantHTML: value,
+                            localizedLabelManager.updateLabelPatternHtml(localizedLabel,
+                              value,
                               fillins,
-                            }).catch((e: Error) => {
+                            ).catch((e: Error) => {
                               Sentry.captureException(e);
                               figmaRemote.notifyError(e.message);
                               handleCancel();
                             });
                           }}
                           fillins={localizedLabel.getFillins()}
-                          variantHTML={localizedLabel.variantHTML}
+                          variantHTML={localizedLabel.currentPatternHTML}
                           messageStore={messageStore}
                         />
                         { selected !== 'unselected' && (
@@ -396,23 +390,13 @@ export default function LocalizedLabelListItem({
                   </div>
                 </div>
 
-                { (localizedLabel.messageLinkState === MessageLinkState.Linked && (labelState.modified || labelState.behind > 0 || localizedLabel.language !== localizedLabel.rootFrameLanguage)) && ( // allow the user to catch up with the keys version
+                { (localizedLabel.messageLinkState === MessageLinkState.Linked && (labelState.modified || localizedLabel.language !== localizedLabel.rootFrameLanguage)) && ( // allow the user to catch up with the keys version
                 <span
                   className="layerIcon iconWrapper button"
                   data-tooltip-content="Reset all changes"
                   onClick={updateToLatestKeyVersion}
                 >
                   <span className="svg-container reset-instance-svg" />
-                </span>
-                )}
-
-                { ((false && localizedLabel.messageLinkState === MessageLinkState.Linked && labelState.modified && labelState.orginalTranslationHTML !== undefined)) && ( // allow the user revert the changes in design to the last versioned text
-                <span
-                  className="layerIcon iconWrapper button"
-                  data-tooltip-content="Revert changes in Design"
-                  onClick={revertDesignChanges}
-                >
-                  <span className="svg-container restore-svg" />
                 </span>
                 )}
 

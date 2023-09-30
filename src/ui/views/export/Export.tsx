@@ -58,7 +58,7 @@ export default function Export({
   const { t } = useTranslation();
   const translationKeyStore = labelManager.messageStore;
 
-  const baseLanguage = labelManager.messageStore.getBaseLanugage()!;
+  const baseLanguage = labelManager.messageStore.getRefLanugage()!;
   const selectedLanguages = toLanguageOptions(labelManager.messageStore.getLanugages()!.filter((language) => language !== baseLanguage));
   const selectedBaseLanguage = toLanguageOption(baseLanguage);
 
@@ -115,10 +115,10 @@ export default function Export({
   const onVersionSelect = (version: string) => {
     setSelectedVersion(version);
   };
-  // const [baseLanguage, setBaseLanguages] = useState(messageStore.getBaseLanugages());
+  // const [baseLanguage, setBaseLanguages] = useState(messageStore.getRefLanugage());
 
   const onTagCurrentVersionClick = async () => {
-    // TODO #14 we dont do this in inlang for now
+    // TODO #17 versioning we dont do this in inlang for now
     /* 
     const newTag = await labelManager.messageStore.createTag(title, description);
     const options = defaultOptions.concat(labelManager.messageStore.historyTags.slice().reverse().map((historyTag) => ({
@@ -131,7 +131,7 @@ export default function Export({
   };
 
   const doExport = async (exportLanguage: Locale, format: string) => {
-    // TODO #14 export inlang
+    // TODO #14 import/export inlang
     // const exportedFile = KeyExporter.export(translationKeyStore, exportLanguage, format, selectedVersion);
     // if (exportedFile) {
     //   downloadFile(exportedFile.fileName, exportedFile.fileType, exportedFile.content);

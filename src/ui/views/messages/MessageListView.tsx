@@ -88,6 +88,7 @@ export default function MessageListView({
     };
   }, []);
 
+
   // rendering is done in chunks the first time to give the dom time to settle
   const renderChunkSize = 250;
   useEffect(() => {

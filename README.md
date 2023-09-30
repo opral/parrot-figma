@@ -614,6 +614,18 @@ Pricing
     Arthur Wetzel
 
 
+# inlang integration: 
+
+ - how to store metadata in parrot - what metadata do i need to store?
+
+ - translation source (ref lang variant) hash 
+    - if i don't want to update the source language with every change in the design - which i could for now
+ - translation source auto translate 
+    - if i don't want to provide the auto translate button next to each (empty message)
+    
+ - marked as reviewed? 
+
+
 # Test multyplayer
 
 ## Test how the plugindata behaves in offline scenario
@@ -640,6 +652,7 @@ setTimeout(10000, () => console.log('modify_test_online: with delay:' + figma.ge
 figma.setPluginData('create_test_online', 'Created by user1');
 console.log('create_test_online: ' + figma.getPluginData('create_test_online'));
 setTimeout(10000, () => console.log('create_test_online: with delay:' + figma.getPluginData('create_test_online')))
+
 
 #### User2: 
 figma.setPluginData('create_test_online', 'Created by user2');

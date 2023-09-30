@@ -21,7 +21,7 @@ export default function Onboarding({
   onFinishSetup,
 }: OnboardingProps) {
   const [selectedLanguages, setSelectedLanguages] = useState<Locale[]>(labelManager.messageStore.getLanugages() ?? []);
-  const [selectedBaseLanguage, setSelectedBaseLanguage] = useState<Locale | undefined>(labelManager.messageStore.getBaseLanugage());
+  const [selectedBaseLanguage, setSelectedBaseLanguage] = useState<Locale | undefined>(labelManager.messageStore.getRefLanugage());
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollHeightCheckInterval = useRef<any | undefined>(undefined);
 

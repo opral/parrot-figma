@@ -153,7 +153,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     });
 
     this.messageStore.addEventListener('updated', (changesEvent: any) => {
-      // TODO #14 reactiveness - how do i update label cache? do i subscribe per label? how do i unsubscribe - when is this needed?
+      // TODO #14 CACHING reactiveness - how do i update label cache? do i subscribe per label? how do i unsubscribe - when is this needed?
       // for (const changedKey of changesEvent.detail.changedKeys) {
       //   this.handleMessageUpdate(changedKey);
       // }

@@ -150,6 +150,8 @@ export default class MessageStoreMemory extends EventTarget {
     this.config!.enabledLanguages = languages;
 
     await this.parentKeyStore.setConfig(parentConfig);
+
+    // forwared languages to inlang project - if initialzied already
     this.inlangProject?.setSettings({
       sourceLanguageTag: this.config?.refLanguage!,
       languageTags: languages as string[],
@@ -167,6 +169,8 @@ export default class MessageStoreMemory extends EventTarget {
     parentConfig.refLanguage = language;
 
     await this.parentKeyStore.setConfig(parentConfig);
+
+    // forwared ref language to inlang project - if initialzied already
     this.inlangProject?.setSettings({
       sourceLanguageTag: language,
       languageTags: this.config!.enabledLanguages as string[],
@@ -397,6 +401,10 @@ export default class MessageStoreMemory extends EventTarget {
       });
     }
 
+    if (!this.inlangProject) {
+      return results;
+    }
+
     for (const message of Object.values(this.inlangProject!.query.messages.getAll())) {
       if (query.text === undefined || query.text === '') {
         results.matchingNames.add(message.id);
@@ -508,7 +516,7 @@ export default class MessageStoreMemory extends EventTarget {
       const event = new CustomEvent<any>('updated', { });
       this.dispatchEvent(event);
     }, 1);
-    
+
     return this.getMessage(message.id!)!;
   }
 
@@ -521,19 +529,17 @@ export default class MessageStoreMemory extends EventTarget {
 
   upsertedMessageIds = new Set<string>();
 
-  private async loadInlang() {
-    // TODO #14 SETUP we can not initialize the inlang project before we have a valid config
-    this.config = await this.parentKeyStore.getConfig();
+  private async loadInlangProject() {
     // creating a project file
-    const config = {
-      sourceLanguageTag: this.config.refLanguage,
+    const inlangConfig = {
+      sourceLanguageTag: this.config!.refLanguage,
       modules: ['./plugin.js'],
-      languageTags: this.config.enabledLanguages,
+      languageTags: this.config!.enabledLanguages,
       // languageTags: ['en', 'de'],
     };
 
     // writing the project file to the virtual filesystem
-    await fs.writeFile('/project.inlang.json', JSON.stringify(config));
+    await fs.writeFile('/project.inlang.json', JSON.stringify(inlangConfig));
 
     // opening the project file and loading the plugin
     this.inlangProject = await loadProject({
@@ -579,10 +585,13 @@ export default class MessageStoreMemory extends EventTarget {
   }
 
   async load(): Promise<Readonly<Message[]>> {
-    // TODO #14 SETUP get from real config eventual use figma util
-    // TODO #14 SETUP load config from figma helper 
-    // await this.parentKeyStore.getConfig();
-    await this.loadInlang();
+    this.config = await this.parentKeyStore.getConfig();
+
+    if (this.config?.refLanguage === undefined) {
+      return [];
+    }
+
+    await this.loadInlangProject();
     return this.inlangProject!.query.messages.getAll();
   }
 
@@ -681,7 +690,7 @@ export default class MessageStoreMemory extends EventTarget {
 
   static patternToHtml(patterns: Pattern) {
     let html = '';
-    // TODO #14 inlang rich text - support other patterns or get rid of html representation
+    // 8 inlang rich text - support other patterns or get rid of html representation
     for (const pattern of patterns) {
       if (pattern.type === 'Text') {
         html += pattern.value;
@@ -698,7 +707,7 @@ export default class MessageStoreMemory extends EventTarget {
 
     const variantInLanguage = message.variants.find((variant) => variant.languageTag === language);
     if (variantInLanguage) {
-      // TODO #14 inlang rich text - support other patterns or get rid of html representation
+      // TODO #18 inlang rich text - support other patterns or get rid of html representation
       for (const pattern of variantInLanguage.pattern) {
         if (pattern.type === 'Text') {
           if (html === undefined) {

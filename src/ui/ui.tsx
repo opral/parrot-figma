@@ -22,7 +22,6 @@ import MessageListView from './views/messages/MessageListView';
 
 import MessageStoreMemory from '../lib/message/store/MessageStoreMemory';
 
-
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
 import LocalizedLabelManagerUI from '../lib/localizedlabels/LocalizedLabelManagerUI';
 
@@ -159,11 +158,11 @@ function App() {
   useEffect(() => {
     // asynchronous fetch the state from figma helper
     (async () => {
+      const fileSetupCompleted = await figmaRemote.getRootPluginData('fileSetupCompleted');
+
       await localizedLabelManager.prepare();
-      // console.log('load - messages');
       await memoryTranslationKeyStore.load();
       localizedLabelManager.startFillupCache();
-      const fileSetupCompleted = await figmaRemote.getRootPluginData('fileSetupCompleted');
 
       let initialScreen = (await figmaRemote.getLocalFileConfig('lastView')) ?? 'design';
       if (fileSetupCompleted === undefined || fileSetupCompleted === '') {
@@ -266,6 +265,7 @@ function App() {
             onFinishSetup={async () => {
               await figmaRemote.setRootPluginData('fileSetupCompleted', 'true');
               WindowManagerUi.instance?.requestWindowMode(WindowMode.BottomSheet, false);
+              await memoryTranslationKeyStore.load();
               setAppScreen('design');
             }}
           />

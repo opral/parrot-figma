@@ -4,8 +4,8 @@
 import TextEncoding from 'text-encoding';
 
 import blake from 'blakejs';
-import { Locale } from '../variants/Locale';
 import { Message } from '@inlang/sdk';
+import { Locale } from '../variants/Locale';
 
 const encoder = new TextEncoding.TextEncoder();
 
@@ -39,7 +39,7 @@ export class InlangMessageStore {
    */
   messagePrefix = 'prt_im__';
 
-  // contains a map from messageId to message hash 
+  // contains a map from messageId to message hash
   messageState = { } as {
     [messageId: string]: string
   };
@@ -57,60 +57,53 @@ export class InlangMessageStore {
   // eslint-disable-next-line class-methods-use-this
   forwardDocumentChanges(event: any) {
     for (const change of event.documentChanges) {
-      if (change.origin === 'LOCAL') {
+      if (change.origin === 'LOCAL'
+      || change.type !== 'PROPERTY_CHANGE'
+      || change.node.parent === null
+      || change.properties.indexOf('pluginData') === -1) {
         // eslint-disable-next-line no-continue
         continue;
       }
-      // TODO #14 CACHING implement for multi user - keep track of messages with there hash? we propagated
-      // TODO #14 CACHING implement for multi user - keep trac of changes in config as well
+      // TODO #14 TEST Multi user - check if a message update triggered by another user is propagated to parrot
+      // TODO #14 CACHING implement for multi user - keep tracK of changes in config as well
       // eslint-disable-next-line default-case
-      /* switch (change.type) {
-        case 'PROPERTY_CHANGE': {
-          if (change.node.parent === null // easy way to check if the node is the root node
-          && change.properties.indexOf('pluginData') !== -1) {
-            const currentFileStorageKeys = figma.root.getPluginDataKeys().filter((value) => value.indexOf(this.messageHistoryPrefix) === 0);
-            let currentCachedMessageIds = Object.keys(this.messageState);
+      const currentFileStorageKeys = figma.root.getPluginDataKeys().filter((value) => value.indexOf(this.messagePrefix) === 0);
+      let currentCachedMessageIds = Object.keys(this.messageState);
 
-            const changedKeys = {
-              deleted: [] as string[],
-              updated: [] as string[],
-              added: [] as string[],
-            };
+      const changedKeys = {
+        deleted: [] as string[],
+        updated: [] as string[],
+        added: [] as string[],
+      };
 
-            for (const currentFileStorageKey of currentFileStorageKeys) {
-              const id = currentFileStorageKey.slice(this.messageHistoryPrefix.length);
+      for (const currentFileStorageKey of currentFileStorageKeys) {
+        const id = currentFileStorageKey.slice(this.messagePrefix.length);
 
-              if (this.messageState[id] === undefined) {
-                if (JSON.parse(figma.root.getPluginData(currentFileStorageKey)).ref === undefined) {
-                  changedKeys.added.push(id);
-                }
-              } else {
-                if (figma.root.getPluginData(currentFileStorageKey).length !== this.messageState[id]) {
-                  changedKeys.updated.push(id);
-                }
-
-                currentCachedMessageIds = currentCachedMessageIds.filter((messageId) => messageId !== id);
-              }
-            }
-            changedKeys.deleted = currentCachedMessageIds;
-
-            for (const deletedKey of currentCachedMessageIds) {
-              delete this.messageState[deletedKey];
-            }
-
-            if (changedKeys.deleted.length > 0
-              || changedKeys.added.length > 0
-              || changedKeys.updated.length > 0) {
-              figma.ui.postMessage({
-                target: 'TranslationKeyStore',
-                type: 'cacheUpdate',
-                changedKeys,
-              });
-            }
+        if (this.messageState[id] === undefined) {
+          changedKeys.added.push(id);
+        } else {
+          if (blake.blake2sHex(figma.root.getPluginData(currentFileStorageKey)) !== this.messageState[id]) {
+            changedKeys.updated.push(id);
           }
-          break;
+
+          currentCachedMessageIds = currentCachedMessageIds.filter((messageId) => messageId !== id);
         }
-      } */
+      }
+      changedKeys.deleted = currentCachedMessageIds;
+
+      for (const deletedKey of currentCachedMessageIds) {
+        delete this.messageState[deletedKey];
+      }
+
+      if (changedKeys.deleted.length > 0
+        || changedKeys.added.length > 0
+        || changedKeys.updated.length > 0) {
+        figma.ui.postMessage({
+          target: 'TranslationKeyStore',
+          type: 'cacheUpdate',
+          changedKeys,
+        });
+      }
     }
   }
 
@@ -147,10 +140,13 @@ export class InlangMessageStore {
     const messages = [] as Message[];
     for (const messageStorageKey of figma.root.getPluginDataKeys()) {
       if (messageStorageKey.startsWith(this.messagePrefix)) {
+        const messageRaw = figma.root.getPluginData(messageStorageKey);
+        const messageRawHash = blake.blake2sHex(messageRaw);
         const message = JSON.parse(figma.root.getPluginData(messageStorageKey));
         if (message !== undefined) {
           messages.push(message);
         }
+        this.messageState[message.id] = messageRawHash;
       }
     }
     return messages;

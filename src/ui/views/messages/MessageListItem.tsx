@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import OutsideClickHandler from 'react-outside-click-handler';
 import { Locale } from '../../../lib/message/variants/Locale';
 import { Plural, getPluralFormsByLanguage } from '../../../lib/message/variants/Plural';
-import { Fillins, HistoryTag, Placeholder } from '../../../lib/message/Message';
+
 import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
 
 import FigmaUtil from '../../../shared/FigmaUtil';
@@ -26,19 +26,8 @@ import FEATURES_FLAGS from '../../featuretoggle';
 import Drawer from '../../compontents/drawer/Drawer';
 import TextField from '../../compontents/textfield/TextField';
 import { Gender, genderList } from '../../../lib/message/variants/Gender';
+import { FillinToPlaceholder, MessageParameterValues } from '../../../lib/message/MessageExtnesions';
 // import ReactQuill from 'react-quill';
-
-interface VersionEntry {
-  version: number,
-  versionTag: HistoryTag | undefined
-  text: string | undefined
-  previousText: string | undefined
-  date: number,
-  userName: string
-  userIconUrl: string
-  skip: boolean
-  verified: boolean
-}
 
 type TranslationKeyListItemProps = {
   rowClassNames?: string | undefined,
@@ -333,24 +322,27 @@ export default function TranslationKeyListItem({
                 <div className="column column-plural grid-item-plural grid-item-border"><span className="rowText">{ /* message.plural ? plural : '' */ }</span></div>
                 <div className="column  column-translation grid-item-translation grid-item-border translation-container translation">
                   <TranslationEditor
-                    fillins={{} /* TODO #14 support fillins message.defaultFillins */}
+                    parameterValues={{} /* TODO #14 support fillins message.defaultFillins */}
                     editable={select === undefined}
                     isDisabled={false}
                     match={searchMatch?.textMatches[language]?.['*']}
-                    onSave={async (text: any, fillins: Fillins) => {
+                    onSave={async (text: string | undefined, parameters: MessageParameterValues) => {
                       // let skip = message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.skip ?? false;
 
-                      // if (text !== undefined && text !== '') {
-                      //   skip = false;
-                      // }
-
-                      Object.values(fillins).forEach((fillin) => {
+                      if (text === undefined || text !== '') {
+                        console.log('unhandled case text is empty or undefined...');
+                        throw new Error('unhandled case text is empty or undefined... in MessageListItem');
+                      }
+                      
+                      Object.values(parameters).forEach((parameter) => {
                         // eslint-disable-next-line no-param-reassign
-                        fillin.default = true;
+                        parameter.default = true;
                       });
 
-                      const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(message, undefined, language, {}, text);
-                      await localizedLabelManager.updateMessage(updatedMessage, fillins);
+                      // TODO #14 variables how to deal with default values acutally - as soon as we have variants this can become tricky since the matcher does differ from the default value :( )
+                      // - one thought on this - variables used in selectors can not have a default value...
+                      const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(message, undefined, language, { /** this should not be the parameters parsed but the selectors of the given item */}, text);
+                      await localizedLabelManager.updateMessage(updatedMessage, parameters);
                     }}
                     variantHTML={variantHTML}
                     messageStore={messageStore}

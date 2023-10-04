@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { Placeholder } from '../../../lib/message/Message';
+import { Placeholder } from '../../../lib/message/MessageExtnesions';
+
 
 // placeholder editor should be able to:
 // - change the name of a placeholder
@@ -41,9 +42,9 @@ export default function PlaceholderEditorListItem({
     <>
       <div></div>
       <div>
-        {false && placeholder.type === 's' && 'T'}
-        {false && placeholder.type === 'f' && '%'}
-        {false && placeholder.type === 'd' && '#'}
+        {/* { placeholder.type === 's' && 'T'}
+        { placeholder.type === 'f' && '%'}
+        { placeholder.type === 'd' && '#'} */}
       </div>
       <div>{placeholder.name}</div>
       <div>
@@ -61,7 +62,9 @@ export default function PlaceholderEditorListItem({
         />
 
       </div>
-      <div>{ placeholder.type === 'f' && placeholder.decimalPlaces}</div>
+      <div>
+        {/* { placeholder.type === 'f' && placeholder.decimalPlaces} */}
+      </div>
     </>
   );
 }

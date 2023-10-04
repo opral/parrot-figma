@@ -1,4 +1,4 @@
-import { MessageStoreFigmaRoot } from '../message/store/MessageStoreFigmaRoot';
+// import { MessageStoreFigmaRoot } from '../message/store/MessageStoreFigmaRoot';
 import { Gender } from '../message/variants/Gender';
 
 export default class MigrationManager {
@@ -51,7 +51,7 @@ export default class MigrationManager {
             delete oldMessage.keyName;
             oldMessage.name = messageName;
             oldMessage.gender = false;
-            const messageId = MessageStoreFigmaRoot.createMessageId(messageName, 0);
+            const messageId = 'TODO' // TODO #14 migration MessageStoreFigmaRoot.createMessageId(messageName, 0);
             figma.root.setPluginData(messagePrefix + messageId, JSON.stringify(oldMessage));
 
             console.log(`migrating ${keyHistoryPrefixOld}${messageName}`);
@@ -87,7 +87,7 @@ export default class MigrationManager {
 
             // use new storage key
             figma.root.setPluginData(messageHistoryPrefix + messageId, JSON.stringify(oldMessageHistory));
-            
+
             // remove old keys
             figma.root.setPluginData(keyHistoryPrefixOld + messageName, '');
             figma.root.setPluginData(oldDataKey, '');
@@ -99,7 +99,6 @@ export default class MigrationManager {
           console.log(`Migration of config;${configOld}`);
           figma.root.setPluginData(configDataKey, configOld);
         }
-
 
         // go through all textnodes with references to messages and update to slot 0
         const textNodesToMigrate = (figma.root as any).findAllWithCriteria({
@@ -151,7 +150,8 @@ export default class MigrationManager {
           // migrate key (messageName) to message id
           const messageName = textNodeToMigrate.getPluginData('key');
           if (messageName !== '') {
-            textNodeToMigrate.setPluginData('mi', MessageStoreFigmaRoot.createMessageId(messageName, 0));
+            // TODO #14 migration - we skip the old format for new versions
+            textNodeToMigrate.setPluginData('mi', 'i' /* MessageStoreFigmaRoot.createMessageId(messageName, 0) */);
             textNodeToMigrate.setPluginData('key', '');
           }
         }

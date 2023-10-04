@@ -12,8 +12,8 @@ import { Plural, getPluralFormsByLanguage } from '../variants/Plural';
 import { NodeSelection } from '../../localizedlabels/LocalizedLabelManager';
 import { Gender, genderList } from '../variants/Gender';
 import { createNodeishMemoryFs } from './inlang/FigmaRootFs';
-import { Fillins } from '../Message';
 import { Config, InlangMessageStore } from './InlangMessageStoreFigmaRoot';
+import { FillinToPlaceholder, MessageParameterValues } from '../MessageExtnesions';
 
 export type SearchQuery = {
   selected?: 'FRAME' | 'LABEL' | undefined,
@@ -508,7 +508,9 @@ export default class MessageStoreMemory extends EventTarget {
     */
   }
 
-  async upsertMessage(message: Message, defaultFillins: Fillins) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async upsertMessage(message: Message, _defaultParameters: MessageParameterValues) {
+    // TODO #14 store the default parameters for this message ( we no longer store them in the message it self )
     this.upsertedMessageIds.add(message.id);
     this.inlangProject?.query.messages.upsert({ where: { id: message.id }, data: message });
 

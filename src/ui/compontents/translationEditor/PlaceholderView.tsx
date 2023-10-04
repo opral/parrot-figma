@@ -1,9 +1,7 @@
 import * as React from 'react';
-import { PlaceholderType } from '../../../lib/message/Message';
 
 export type PlaceholderViewProps = {
   name: string,
-  type: PlaceholderType,
   specifiedArgumentPositon?: number,
   derivedArgumentPosition: number,
   decimalPlaces?: number,
@@ -13,7 +11,6 @@ export type PlaceholderViewProps = {
 
 export function PlaceholderView({
   name,
-  type,
   specifiedArgumentPositon,
   decimalPlaces,
   derivedArgumentPosition,
@@ -34,7 +31,7 @@ export function PlaceholderView({
           {specifiedArgumentPositon}
         </span>
       )}
-     
+      {/*
       {type === PlaceholderType.float && decimalPlaces === undefined && (
       <>
         <span className="placholder-placeholder-type-spacer">:</span>
@@ -52,7 +49,7 @@ export function PlaceholderView({
         <span className="placholder-placeholder-type-spacer">:</span>
         <span className="placholder-placeholder-type">d</span>
       </>
-      )}
+      )} */}
     </span>
   );
 }

@@ -4,12 +4,14 @@ import { Message } from '@inlang/message';
 import { Locale } from '../message/variants/Locale';
 import { MessageLinkState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
 
-import {
-  Fillins, PlaceholdersByName,
-} from '../message/Message';
 import LocalizedLabelManager, { DeltaOp, MARKER_CHARACTER } from './LocalizedLabelManager';
 import { Gender } from '../message/variants/Gender';
 import MessageStoreMemory from '../message/store/MessageStoreMemory';
+import {
+  FillinToPlaceholder,
+  MessageParameterValues, Placeholder, PlaceholdersByName,
+} from '../message/MessageExtnesions';
+import PlaceholderBlot from '../../ui/compontents/translationEditor/blots/PlaceholderBlot';
 
 const Delta = Quill.import('delta') as typeof DeltaType;
 
@@ -21,7 +23,7 @@ export interface ILocalizedLabelManagerUI {
     messageId?: string,
     unlinkedMessage?: Message,
     language?: Locale,
-    fillins?: Fillins,
+    parameterValues?: MessageParameterValues,
     variantPatternHTML?: string
   }): Promise<void>;
 }
@@ -64,7 +66,9 @@ export class UILocalizedLabel implements LocalizedLabel {
    */
   // translation: string;
 
-  fillins: Fillins;
+  parameters: ParameterValues;
+
+  fillinsToPlaceholder: FillinToPlaceholder;
 
   derivedKey?: string | undefined;
 
@@ -98,12 +102,14 @@ export class UILocalizedLabel implements LocalizedLabel {
     this.unmanaged = localizedLabel.unmanaged;
 
     this.derivedKey = localizedLabel.derivedKey;
-    this.fillins = localizedLabel.fillins;
+    this.parameters = localizedLabel.parameters;
+    this.fillinsToPlaceholder = localizedLabel.fillinsToPlaceholder;
 
     this.characters = localizedLabel.characters;
     this.ops = localizedLabel.ops;
-  
-    this.currentPatternHTML = UILocalizedLabel.toHtml(localizedLabel.characters, localizedLabel.ops, this.fillins);
+
+    // TODO #14 variables we passed the fillins to toHtml before do we need to take parameters into account?
+    this.currentPatternHTML = UILocalizedLabel.toHtml(localizedLabel.characters, localizedLabel.ops);
 
     if (localizedLabel.unmanaged) {
       // localized label was marked as unmanaged - ignore message reference / unlinked messages
@@ -148,7 +154,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     return undefined;
   }
 
-  static toHtml(text: string, ops: DeltaOp[], fillins: Fillins) {
+  static toHtml(text: string, ops: DeltaOp[]) {
     if (text === '') {
       return '';
     }
@@ -209,8 +215,8 @@ export class UILocalizedLabel implements LocalizedLabel {
           },
         };
         // enrich fillin
-        // TODO #14 check fillins - seems like we drop them later anyway - shall we remove this and but than we need to drop it from the regex later aswell!
-        (parameterOperation.attributes.placeholder! as any).fillin = fillins[insert].value;
+        // TODO #14 variables check fillins (previously an additional parameter) - seems like we drop them later anyway - shall we remove this and but than we need to drop it from the regex later aswell!
+        // (parameterOperation.attributes.placeholder! as any).fillin = fillins[insert].value;
 
         deltaOps.push(parameterOperation);
       } else {
@@ -238,24 +244,40 @@ export class UILocalizedLabel implements LocalizedLabel {
     return htmlContent;
   }
 
-  static toTextAndOps(html: string, fillins: Fillins) {
+  static toTextOpsAndFillinsToPlaceholder(html: string, messageParameterValues: MessageParameterValues) {
     // TODO #12 quill from html -> text + ops
 
-    const pattern = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;
+    // TODO #14 variables - check if we can use parameters for this function instead and return the fillins
 
-    const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(fillins);
     // const wholeMatch = paramMatch[0];
     // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
     // const name = paramMatch[2];
+    
+    // helper to be able to create unique identifierts by fillins
+    const fillinsCounts = { } as { [fillinValue: string] : number };
+    const fillinsToPlaceholder = {} as {
+      [fillinValue: string]: Placeholder
+    };
 
-    let htmlWithFilledPlaceholders = html.replace(pattern, (match, _helper1, type, _helper3, format, _helper5, argumentPosition, unnamed, _helper8, _helper9, name) => {
-      const placeholderName = name;
-      if (placeholderName && fillins[placeholderName]) {
-        const extensionLength = placeholderByFillin.indexOf(placeholderName) + 1;
-        return fillins[placeholderName].value + MARKER_CHARACTER.repeat(extensionLength);
+    // - extract all placeholders from the patternHtml providded
+    const placeholderPattern = /<ph([^>])*>([^<]*)<\/ph>/g;
+    let htmlWithFilledPlaceholders = html.replace(placeholderPattern, (match, attributesStrings, placeholderName) => {
+      const placeholder = PlaceholderBlot.extractFromRawHtml(placeholderName, attributesStrings);
+      const parameterValue = messageParameterValues[placeholder.name].value;
+      // TODO #14 variables take formatting function into account
+      // - create all values based on formatting function
+      const formatedValue = parameterValue;
+      if (fillinsCounts[formatedValue] === undefined) {
+        fillinsCounts[formatedValue] = 0;
       }
+      fillinsCounts[formatedValue] += 1;
 
-      return match;
+      // - create unique fillins with markers for unification - each fillin has at least one marker at the end but eventually multiple if it is not unique idenfifiably
+      const fillinValue = formatedValue + MARKER_CHARACTER.repeat(fillinsCounts[formatedValue]);
+      fillinsToPlaceholder[fillinValue] = placeholder;
+
+      // - replace html placeholders with injected values
+      return fillinValue;
     });
 
     const tempCont = document.createElement('pre');
@@ -304,28 +326,31 @@ export class UILocalizedLabel implements LocalizedLabel {
     return {
       text,
       ops,
+      fillinsToPlaceholder,
     };
   }
 
-  getFillins(messageIdToUse?: string, fillins?: Fillins) {
-    const messageId = messageIdToUse ?? this.messageId;
-    const message = messageId ? this.manager.messageStore.getMessage(messageId) : undefined;
+  // used when updating a message on a label by its message id - we should update both - parameters and fillins to placeholders 
+  // used to feed in parameter on a localizedLabelListItem
+  // getFillins(messageIdToUse?: string, fillins?: Fillins) {
+  //   const messageId = messageIdToUse ?? this.messageId;
+  //   const message = messageId ? this.manager.messageStore.getMessage(messageId) : undefined as Message | undefined;
 
-    const defaultFillIns = message ? { ...message.defaultFillins } : {} as Fillins;
-    const labelFillins = fillins ?? this.fillins;
+  //   const defaultFillIns = message ? { ...message.defaultFillins } : {} as Fillins;
+  //   const labelFillins = fillins ?? this.parameters;
 
-    for (const parameterName of Object.keys(defaultFillIns)) {
-      if (labelFillins[parameterName] && labelFillins[parameterName].default) {
-        labelFillins[parameterName] = { default: true, value: defaultFillIns[parameterName].value };
-      }
-    }
+  //   for (const parameterName of Object.keys(defaultFillIns)) {
+  //     if (labelFillins[parameterName] && labelFillins[parameterName].default) {
+  //       labelFillins[parameterName] = { default: true, value: defaultFillIns[parameterName].value };
+  //     }
+  //   }
 
-    return labelFillins;
-  }
+  //   return labelFillins;
+  // }
 
   getPlaceholders() {
     const placeholders = {} as PlaceholdersByName;
-    return placeholders; // TODO
+    return placeholders; // TODO #14 variables
     /*
     const labelTranslationPlaceholders = UITranslationKey.extractPlaceholdersInText(this.translation);
 
@@ -343,24 +368,6 @@ export class UILocalizedLabel implements LocalizedLabel {
     return placeholders; */
   }
 
-  static toText(text: string, fillins: Fillins) {
-    const pattern = /\[\[([A-Za-z_]{2,})?(?:#(\d+))?(?::*([sdf])(?:\.(\d+))?)?\]\]/g;
-
-    const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(fillins);
-    // const wholeMatch = paramMatch[0];
-    // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
-    // const name = paramMatch[2];
-
-    return text.replace(pattern, (match, name, _argumentPosition) => {
-      const placeholderName = name;
-      if (placeholderName && fillins[placeholderName]) {
-        const extensionLength = placeholderByFillin.indexOf(placeholderName) + 1;
-        return fillins[placeholderName].value + MARKER_CHARACTER.repeat(extensionLength);
-      }
-      return match;
-    });
-  }
-
   /**
    * The state of a label is represented by two main properties:
    * modified: was the labels text changed in the design compared to the version of the key which the label is pointing to
@@ -374,7 +381,6 @@ export class UILocalizedLabel implements LocalizedLabel {
    * @returns
    */
   getState(): { modified: boolean } {
-    
     const state = {
       modified: false,
       // variantDeleted: false, // TODO #17 versioning - matches changed?
@@ -396,7 +402,7 @@ export class UILocalizedLabel implements LocalizedLabel {
       state.modified = variantPatternHtml !== this.currentPatternHTML;
     }
 
-    console.log('getState ' + JSON.stringify(state));
+    console.log(`getState ${JSON.stringify(state)}`);
     return state;
   }
 
@@ -510,7 +516,6 @@ export class UILocalizedLabel implements LocalizedLabel {
     // NOTE we dont support versioning for now version: number | undefined,
     missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | null>,
   ) {
-    
     switch (this.messageLinkState) {
       case MessageLinkState.MissingMessage:
         // we don't change any label that is in this state - got to be manually fixed by the user
@@ -539,7 +544,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     }
   }
 
-  async setLabelPattern(patternHtml: string, fillins: Fillins) {
+  async setLabelPattern(patternHtml: string, parameterValues: MessageParameterValues) {
     const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
     if (this.messageLinkState === MessageLinkState.Unset) {
       // TODO in unset - create message
@@ -559,19 +564,19 @@ export class UILocalizedLabel implements LocalizedLabel {
 
       await this.manager.updateLabelProperties(this.nodeId, {
         language: refLanguage,
-        fillins,
+        parameterValues,
         unlinkedMessage,
       });
     } else if (this.messageLinkState === MessageLinkState.Unlinked) {
-      const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(this.unlinkedMessage, refLanguage, this.rootFrameLanguage, {}, patternHtml);
+      const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(this.unlinkedMessage, refLanguage, this.language, {}, patternHtml);
 
       await this.manager.updateLabelProperties(this.nodeId, {
-        fillins,
+        parameterValues,
         unlinkedMessage: updatedMessage,
       });
     } else if (this.messageLinkState === MessageLinkState.Linked) {
       await this.manager.updateLabelProperties(this.nodeId, {
-        fillins,
+        parameterValues,
         variantPatternHTML: patternHtml,
       });
     }

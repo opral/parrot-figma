@@ -3,14 +3,12 @@ import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import ReactTimeAgo from 'react-time-ago';
-import StringDiff from './DiffView';
 import './HistoryEntryView.css';
-import { HistoryTag } from '../../../lib/message/Message';
 
 interface HistoryEntryViewProps {
   first: boolean,
   last: boolean,
-  tag?: HistoryTag;
+  tag?: string;
   text?: string;
   version: number;
   time: number;
@@ -86,7 +84,7 @@ export default function HistoryEntryView({
                 data-tooltip-content="Created by ... at... "
                 style={{ maxWidth: '165px' }}
               >
-                {tag.title}
+                {tag}
               </div>
             )}
 

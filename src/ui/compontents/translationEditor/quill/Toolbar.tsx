@@ -1,8 +1,9 @@
 import Quill, { Delta as DeltaType } from 'quill';
 
-
 import Toolbar from 'quill/modules/toolbar';
 import Emitter from 'quill/core/emitter';
+import { PlaceholderProps } from 'react-select';
+import { Placeholder } from '../../../../lib/message/MessageExtnesions';
 
 const Delta = Quill.import('delta') as typeof DeltaType;
 
@@ -18,6 +19,10 @@ export default class ParrotToolbar extends Toolbar {
   linkEditButton: HTMLButtonElement;
 
   currentRange: any;
+
+  getParameters: undefined | ((name: string) => any);
+
+  setParameter: undefined | ((name: string, value: any) => void);
 
   constructor(quill: Quill, options: any) {
     super(quill as any, options);
@@ -53,6 +58,11 @@ export default class ParrotToolbar extends Toolbar {
     });
 
     this.container!.appendChild(wrapper);
+  }
+
+  setParameterHandler(getParameters: (name: string) => any, setParameter: (name: string, value: any) => void) {
+    this.getParameters = getParameters;
+    this.setParameter = setParameter;
   }
 
   restoreFocus() {
@@ -111,11 +121,10 @@ export default class ParrotToolbar extends Toolbar {
       this.quill.root.scrollTop = scrollTop;
     } else if (this.editMode === 'placeholder') {
       this.restoreFocus();
-
       const range = this.quill.getSelection();
 
       // TODO check for defaults in case we have an empty value...
-      const fillin = this.selectedPlacholder.length === 0 ? this.quill.getText(range!) : this.selectedPlacholder[0].fillin;
+      const parameterValue = this.selectedPlacholder.length === 0 ? this.quill.getText(range!) : this.selectedPlacholder[0].fillin;
       if (range) {
         const contents = this.quill.getContents();
         const beforeSelectionContents = contents.slice(0, range.index);
@@ -130,13 +139,15 @@ export default class ParrotToolbar extends Toolbar {
             ...selectionContents.ops[0].attributes,
           };
           updatedAttributes.placeholder = null;
-          replacementDelta = (new Delta()).insert(fillin, updatedAttributes);
+          replacementDelta = (new Delta()).insert(parameterValue, updatedAttributes);
         } else {
           const updatedAttributes = {
             ...selectionContents.ops[0].attributes,
           };
-          updatedAttributes.placeholder = { type: 's', name: value, fillin };
+          updatedAttributes.placeholder = { name: value, named: true } as Placeholder;
+          this.setParameter?.(value, parameterValue);
 
+          // TODO #14 variables - we want to somehow update the parameters based on the input
           replacementDelta = (new Delta()).insert(value, updatedAttributes);
         }
         // TODO weight the formats - for now use the first
@@ -163,20 +174,20 @@ export default class ParrotToolbar extends Toolbar {
   onFillinValueChanged(event: any) {
     if (event.key === 'Enter') {
       const range = this.currentRange;
-      const { name } = this.selectedPlacholder[0];
+      const parameterName = this.selectedPlacholder[0].name;
       // TODO check for defaults in case we have an empty value...
-      const fillin = this.placholderFillinInput.value;
+      const parameterValue = this.placholderFillinInput.value;
       if (range) {
         const contents = this.quill.getContents();
         const beforeSelectionContents = contents.slice(0, range.index);
         const selectionContents = contents.slice(range.index, range.index + range.length);
         const afterSelectionContents = contents.slice(range.index + range.length, contents.length());
 
-        selectionContents.ops[0].attributes!.placeholder = { type: 'string', name, fillin };
+        selectionContents.ops[0].attributes!.placeholder = { name: parameterName, named: true } as Placeholder;
+        this.setParameter?.(parameterName, parameterValue);
         // TODO weight the formats - for now use the first
-        const replacementDelta = (new Delta()).insert(name, {
+        const replacementDelta = (new Delta()).insert(parameterName, {
           ...selectionContents.ops[0].attributes,
-
         });
 
         const updatedDelta = beforeSelectionContents.concat(replacementDelta as any).concat(afterSelectionContents);
@@ -186,6 +197,7 @@ export default class ParrotToolbar extends Toolbar {
 
       event.preventDefault();
     } else if (event.key === 'Escape') {
+      // TODO #14 variables - we need to store the parameter value before we udpated to be able to undo it for now
       this.placholderFillinInput.value = this.placholderFillinInput.getAttribute('data-orginal-value')!;
       event.preventDefault();
     }
@@ -320,8 +332,11 @@ export default class ParrotToolbar extends Toolbar {
       } else if (!selectionChunkWithNoPlaceholder && this.selectedPlacholder.length === 1) {
         // show edit placeholder
         this.placholderFillinInput.classList.toggle('ql-hidden', false);
-        this.placholderFillinInput.value = this.selectedPlacholder[0].fillin;
-        this.placholderFillinInput.setAttribute('data-orginal-value', this.selectedPlacholder[0].fillin);
+        // TODO #14 variables replace this with the parameters from parameter of the current label
+        // what if we do not edit a label but a message? Default values should only be used for non selectors...
+        const paramValue = this.getParameters?.(this.selectedPlacholder[0].name) ?? 'getter not set!';
+        this.placholderFillinInput.value = paramValue;
+        this.placholderFillinInput.setAttribute('data-orginal-value', paramValue);
         this.placholderEditButton.classList.toggle('ql-hidden', false);
         this.placholderEditButton.classList.toggle('ql-active', true);
       } else if (this.selectedPlacholder.length === 0) {

@@ -1,20 +1,15 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable class-methods-use-this */
-import { t } from 'i18next';
-import { debug } from 'console';
-import { text } from 'stream/consumers';
 import { Message } from '@inlang/sdk';
 import { Locale } from '../message/variants/Locale';
 import { LabelStyle, LocalizedLabel } from './LocalizedLabel';
-import { Plural } from '../message/variants/Plural';
 import ChangeEvent from './ChangeEvent';
-import { Fillins } from '../message/Message';
 import VirtualTree, { VirtualTreeNode } from './VirtualTree';
 import LinksLoadedEvent from './LinksLoadedEvent';
-import { Gender } from '../message/variants/Gender';
 import TextNodeLinter from './lint/TextNodeLinter';
 import FontHelper from './FontUtil';
 import { InlangMessageStore } from '../message/store/InlangMessageStoreFigmaRoot';
+import { FillinToPlaceholder as FillinsToPlaceholder, MessageParameterValues } from '../message/MessageExtnesions';
 
 export interface NodeSelection {
   [nodeId: string]: {
@@ -37,7 +32,8 @@ export interface SandboxUpdateLabelProperties {
   characters?: string,
   ops?: any
   // TODO #18 selectors replace with variables
-  fillins?: Fillins,
+  fillinsToPlaceholder?: FillinsToPlaceholder,
+  parameterValues?: MessageParameterValues,
 }
 
 export interface DeltaOp {
@@ -46,8 +42,11 @@ export interface DeltaOp {
   attributes: {
     placeholder?: {
       name: string,
+      unnamed: boolean,
+      argumentPosition?: number,
+      formatFn?: string,
+      options?: any,
       invisibleMarkers: number,
-      type: string,
     },
     link?: string,
     textDecoration?: TextDecoration,
@@ -61,8 +60,8 @@ export interface DeltaOp {
   ignoreForLabelStyle?: boolean
 }
 
-export const MARKER_CHARACTER = '​';
-// export const MARKER_CHARACTER = 'X​';
+//export const MARKER_CHARACTER = '​';
+ export const MARKER_CHARACTER = 'X​';
 export default class LocalizedLabelManager {
   private containerSizeThreashold = 3000;
 
@@ -80,7 +79,10 @@ export default class LocalizedLabelManager {
 
   public anonymMessageDataKey = 'am';
 
-  public fillinsKey = 'fi';
+  public fillinsToPlaceholderKey = 'fitp';
+  // TODO #14 migration - old fillin format? public fillinsKey = 'fi';
+
+  public parameterValuesKey = 'pv';
 
   public languageDataKey = 'l';
 
@@ -766,6 +768,11 @@ export default class LocalizedLabelManager {
         textNode.setPluginData(this.autoRenameHashKey, '');
       }
 
+      // TODO #14 variables - check cleanup of parameterValues
+      if (changedProperties.parameterValues !== undefined) {
+        textNode.setPluginData(this.parameterValuesKey, JSON.stringify(changedProperties.parameterValues));
+      }
+
       if (changedProperties.messageId === null) {
         this.updateMessageReference(textNode, null);
       } else if (changedProperties.messageId !== undefined) {
@@ -820,8 +827,8 @@ export default class LocalizedLabelManager {
         textNode.setPluginData(this.languageDataKey, changedProperties.language ? changedProperties.language : '');
       }
 
-      if (changedProperties.fillins !== undefined) {
-        textNode.setPluginData(this.fillinsKey, JSON.stringify(changedProperties.fillins));
+      if (changedProperties.fillinsToPlaceholder !== undefined) {
+        textNode.setPluginData(this.fillinsToPlaceholderKey, JSON.stringify(changedProperties.fillinsToPlaceholder));
       }
 
       // TODO think about the order - at the moment a lables characters might not get updated after fillins got set
@@ -1063,20 +1070,6 @@ export default class LocalizedLabelManager {
 
   helperDomain = 'https://relativeUrl';
 
-  /**
-   * Provides the placholders sorted for the fillin and text extractions
-   */
-  static getPlaceholdersByFillins(fillins: Fillins) {
-    const placeholderByFillin = Object.keys(fillins).sort((placeholderA, placeholderB) => {
-      if (fillins[placeholderA].value !== fillins[placeholderB].value) {
-        // TODO #8 we just convert the fillin values to a string. The value is a number or a string do we need to take formating into account?
-        return (`${fillins[placeholderA].value}`).localeCompare(`${fillins[placeholderB].value}`);
-      }
-      return placeholderA.localeCompare(placeholderB);
-    });
-    return placeholderByFillin;
-  }
-
   private toLocalizedLabelOrUndefined(node: TextNode): LocalizedLabel | undefined {
     let derivable = true;
 
@@ -1143,7 +1136,8 @@ export default class LocalizedLabelManager {
     // 1562ms -> 1071ms ~ 1/4
     const labelText = node.characters;
 
-    const fillins = node.getPluginData(this.fillinsKey) === '' ? {} : JSON.parse(node.getPluginData(this.fillinsKey));
+    const fillins = node.getPluginData(this.fillinsToPlaceholderKey) === '' ? {} : JSON.parse(node.getPluginData(this.fillinsToPlaceholderKey));
+    const parameterValues = node.getPluginData(this.parameterValuesKey) === '' ? {} : JSON.parse(node.getPluginData(this.parameterValuesKey));
     const tokenizedTextResult = this.extractDeltaOpsAndLabelStyles(node, fillins);
 
     if (labelText.length === 1 && !/[0-9a-zA-Z\n\s]/.test(labelText)) {
@@ -1178,7 +1172,8 @@ export default class LocalizedLabelManager {
       y,
       messageId,
       unmanaged,
-      fillins,
+      parameters: parameterValues,
+      fillinsToPlaceholder: fillins,
       derivedKey: derivable ? derivedName : undefined,
       characters: labelText,
       ops: tokenizedTextResult.deltaOps,
@@ -1188,24 +1183,25 @@ export default class LocalizedLabelManager {
     };
   }
 
-  private getPlaceholderDeltaOps(characters: string, fillins: Fillins) {
+  // tries to find the fillins in the characters set to map them to placeholders
+  private getPlaceholderDeltaOps(characters: string, fillins: FillinsToPlaceholder) {
     const placeholderDeltaOps = [] as DeltaOp[];
-    const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(fillins);
+
+    // TODO #14 sort by fillin length - process longest first
+    const fillinValues = Object.keys(fillins);
 
     // eslint-disable-next-line for-direction, no-plusplus
-    for (let i = placeholderByFillin.length - 1; i >= 0; i--) {
-      const currentPlaceholderName = placeholderByFillin[i];
-      const fillinValue = fillins[currentPlaceholderName].value;
+    for (let i = fillinValues.length - 1; i >= 0; i--) {
+      const fillinValue = fillinValues[i];
+      const placeholder = fillins[fillinValue]!;
 
       let matchIndex = 0;
-      const markerLength = i + 1;
-
       while (matchIndex !== -1) {
-        matchIndex = characters.indexOf(fillinValue + MARKER_CHARACTER.repeat(markerLength), matchIndex);
+        matchIndex = characters.indexOf(fillinValue, matchIndex);
 
         if (matchIndex !== -1) {
           const start = matchIndex;
-          const end = matchIndex + markerLength + (`${fillinValue}`).length;
+          const end = matchIndex + (`${fillinValue}`).length;
 
           // ensure no conflict with previous match
           if (placeholderDeltaOps.find((op) => op.start < end && start < op.end) === undefined) {
@@ -1214,9 +1210,12 @@ export default class LocalizedLabelManager {
               end,
               attributes: {
                 placeholder: {
-                  invisibleMarkers: markerLength,
-                  name: currentPlaceholderName,
-                  type: 'string',
+                  name: placeholder.name,
+                  unnamed: !placeholder.named,
+                  argumentPosition: placeholder.specifiedArgumentPosition,
+                  formatFn: placeholder.formatFunctionName,
+                  options: placeholder.options,
+                  invisibleMarkers: fillinValue.split(MARKER_CHARACTER).length,
                 },
               },
             });
@@ -1302,7 +1301,7 @@ export default class LocalizedLabelManager {
     return textStyleDeltaOps;
   }
 
-  private getDeltaOps(node: TextNode, fillins: Fillins) {
+  private getDeltaOps(node: TextNode, fillins: FillinsToPlaceholder) {
     const deltaOps = [] as DeltaOp[];
     const textStyleDeltaOps = this.getTextStyleDeltaOps(node);
     const placehodlderDeltaOps = this.getPlaceholderDeltaOps(node.characters, fillins);
@@ -1326,7 +1325,7 @@ export default class LocalizedLabelManager {
           } else if (textStyleDeltaOp.start === placehodlderDeltaOp.start
             && textStyleDeltaOp.end > (placehodlderDeltaOp.end - placehodlderDeltaOp.attributes.placeholder!.invisibleMarkers)
             && textStyleDeltaOp.end < placehodlderDeltaOp.end) {
-            // style delta only formats the placeholder - but its end sits within the markers
+            // style delta only formats the placeholder - but its end sits within the invisible markers
             // - no split needed but set end to the end of the text marker
             textStyleDeltaOp.attributes.placeholder = placehodlderDeltaOp.attributes.placeholder;
             textStyleDeltaOp.end = placehodlderDeltaOp.end;
@@ -1422,7 +1421,7 @@ export default class LocalizedLabelManager {
     return deltaOps.sort((op1, op2) => op1.start - op2.start);
   }
 
-  private extractDeltaOpsAndLabelStyles(node: TextNode, fillins: Fillins): { matchingLabelLints: string[], deltaOps: any[], labelStyle: LabelStyle/* , allowedFormats: string[] */ } {
+  private extractDeltaOpsAndLabelStyles(node: TextNode, fillins: FillinsToPlaceholder): { matchingLabelLints: string[], deltaOps: any[], labelStyle: LabelStyle/* , allowedFormats: string[] */ } {
     const fontFamilies = new Set<string>();
 
     const labelStyle = {

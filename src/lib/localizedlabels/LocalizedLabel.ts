@@ -1,8 +1,6 @@
+import { FillinToPlaceholder } from '../message/MessageExtnesions';
 import { Locale } from '../message/variants/Locale';
-import { Plural } from '../message/variants/Plural';
-import { Fillins, MessageEntry } from '../message/Message';
 import { DeltaOp } from './LocalizedLabelManager';
-import { Gender } from '../message/variants/Gender';
 import { Message } from '@inlang/sdk';
 
 export enum MessageLinkState {
@@ -85,7 +83,8 @@ export interface LocalizedLabel {
   //  The label needs to be updated when the parameterDefault has changed and the fillins is not overriden in the label
   //  The available parameters of a key have changed (one is removed)? shall we cleanup?
 
-  fillins: Fillins;
+  parameters: ParameterValues;
+  fillinsToPlaceholder: FillinToPlaceholder;
   variantPatternHTMLHash?: string;
 
   derivedKey?: string;

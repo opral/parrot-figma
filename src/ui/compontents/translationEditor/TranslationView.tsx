@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { MessageUI } from '../../../lib/message/MessageUI';
+import { MessageExtension } from '../../../lib/message/MessageExtnesions';
 import { PlaceholderView } from './PlaceholderView';
+import PlaceholderBlot from './blots/PlaceholderBlot';
 
 type TranslationViewProps = {
   match: { start: number, length: number } | undefined
@@ -12,20 +13,18 @@ export default function TranslationView({
   text,
 }: TranslationViewProps) {
   const result = [];
-  const placeholders = MessageUI.extractPlaceholdersInText(text);
+  const placeholderMatches = PlaceholderBlot.extractPlaceholdersFromPatterHTML(text);
   const fixedPosition = 3; // TODO #8 source this from the keys parameters instead
   let lastEnd = 0;
   let placeHolderIndex = 0;
-  for (const placeholder of placeholders) {
-    const { specifiedArgumentPosition } = placeholder;
+  for (const placeholderMatch of placeholderMatches) {
+    const { specifiedArgumentPosition } = placeholderMatch.placeholder;
     const paramsRendered = (
-      <React.Fragment key={placeholder.name + placeHolderIndex}>
-        {text.substring(lastEnd, placeholder.positionInString)}
+      <React.Fragment key={placeholderMatch.placeholder.name + placeHolderIndex}>
+        {text.substring(lastEnd, placeholderMatch.start)}
         <PlaceholderView
-          name={placeholder.name}
-          type={placeholder.type}
+          name={placeholderMatch.placeholder.name}
           specifiedArgumentPositon={specifiedArgumentPosition}
-          decimalPlaces={placeholder.decimalPlaces}
           derivedArgumentPosition={fixedPosition}
           fillIn="TODO"
         />
@@ -35,7 +34,7 @@ export default function TranslationView({
     placeHolderIndex += 1;
 
     result.push(paramsRendered);
-    lastEnd = placeholder.positionInString + placeholder.length;
+    lastEnd = placeholderMatch.start + placeholderMatch.length;
 
     // we do not mask if the cursor is placed within a placeholder
   }

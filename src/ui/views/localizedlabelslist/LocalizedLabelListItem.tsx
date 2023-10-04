@@ -17,11 +17,11 @@ import TextField from '../../compontents/textfield/TextField';
 import MessageListView from '../messages/MessageListView';
 import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
 import PlaceholderEditorListItem from '../../compontents/placeholder/PlaceholderEditor';
-import { Fillins } from '../../../lib/message/Message';
 import FEATURES_FLAGS from '../../featuretoggle';
 import { track } from '../../utils/analytics';
 import Drawer from '../../compontents/drawer/Drawer';
 import { Gender } from '../../../lib/message/variants/Gender';
+import { FillinToPlaceholder, MessageParameterValues } from '../../../lib/message/MessageExtnesions';
 
 type LocalizedLabelListItemProps = {
   showMessage: Function,
@@ -51,7 +51,7 @@ export default function LocalizedLabelListItem({
   const [, setDummyState] = useState<any>();
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO remove when we implemented the design != keystore resolution
-  
+
   const pluralsAvailable = [] as SelectOption[];
 
   async function createNewVersionFromDesign() {
@@ -228,7 +228,6 @@ export default function LocalizedLabelListItem({
                   defaultValue={messageName}
                   getOptions={(enteredValue: string) => {
                     let options = [] as InputSelectOption[];
-                    
 
                     const keySearch = enteredValue === '' ? '*' : enteredValue;
                     const textMatchQuery = MessageStoreMemory.toQueryObject(`exact_text:true name:${keySearch} ${localizedLabel.characters}`);
@@ -347,17 +346,25 @@ export default function LocalizedLabelListItem({
                           onCancel={async () => {
                             localizedLabelManager.commitUndo();
                           }}
-                          onChange={async (value: string, fillins: Fillins, handleCancel: any) => {
-                            localizedLabelManager.updateLabelPatternHtml(localizedLabel,
-                              value,
-                              fillins,
+                          onChange={async (patternHtml: string | undefined, parameters: MessageParameterValues, reset: any) => {
+                            if (patternHtml === undefined) {
+                              // TODO #14 variables check how we want to deal with emtpy patternhtml
+                              console.log('cant handle patternHtml undefined atm in label list itm');
+                              throw new Error('cant handle patternHtml undefined atm in label list itm');
+                            }
+
+                            localizedLabelManager.updateLabelPatternHtml(
+                              localizedLabel,
+                              patternHtml,
+                              parameters,
                             ).catch((e: Error) => {
                               Sentry.captureException(e);
                               figmaRemote.notifyError(e.message);
-                              handleCancel();
+                              reset();
                             });
                           }}
-                          fillins={localizedLabel.getFillins()}
+                          // TODO #14 variables - we used getFillins before shall we use a function instead?
+                          parameterValues={localizedLabel.parameters}
                           variantHTML={localizedLabel.currentPatternHTML}
                           messageStore={messageStore}
                         />
@@ -373,8 +380,9 @@ export default function LocalizedLabelListItem({
                               <PlaceholderEditorListItem
                                 key={entry[0]}
                                 placeholder={entry[1]}
-                                fillin={localizedLabel.fillins?.[entry[0]]?.value ? localizedLabel.fillins?.[entry[0]]?.value : 'unset'}
+                                fillin={localizedLabel.parameters?.[entry[0]]?.value ? localizedLabel.parameters?.[entry[0]]?.value : 'unset'}
                                 onValueChange={(placeholderName, fillinValue) => {
+                                  // TODO #14 variables - this is not used at the moment but bases on fillins instead of parameters
                                   localizedLabelManager.updateLabelFillin(localizedLabel, placeholderName, fillinValue).catch((e: Error) => {
                                     Sentry.captureException(e);
                                     figmaRemote.notifyError(e.message);

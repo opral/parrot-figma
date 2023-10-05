@@ -347,21 +347,17 @@ export default function LocalizedLabelListItem({
                             localizedLabelManager.commitUndo();
                           }}
                           onChange={async (patternHtml: string | undefined, parameters: MessageParameterValues, reset: any) => {
-                            if (patternHtml === undefined) {
-                              // TODO #14 variables check how we want to deal with emtpy patternhtml
-                              console.log('cant handle patternHtml undefined atm in label list itm');
-                              throw new Error('cant handle patternHtml undefined atm in label list itm');
+                            if (patternHtml !== undefined && patternHtml !== '') {
+                              localizedLabelManager.updateLabelPatternHtml(
+                                localizedLabel,
+                                patternHtml,
+                                parameters,
+                              ).catch((e: Error) => {
+                                Sentry.captureException(e);
+                                figmaRemote.notifyError(e.message);
+                                reset();
+                              });
                             }
-
-                            localizedLabelManager.updateLabelPatternHtml(
-                              localizedLabel,
-                              patternHtml,
-                              parameters,
-                            ).catch((e: Error) => {
-                              Sentry.captureException(e);
-                              figmaRemote.notifyError(e.message);
-                              reset();
-                            });
                           }}
                           parameterValues={localizedLabel.parameterValues}
                           variantHTML={localizedLabel.currentPatternHTML}
@@ -382,7 +378,7 @@ export default function LocalizedLabelListItem({
                                 placeholder={entry[1]}
                                 fillin={localizedLabel.parameterValues?.[entry[0]]?.value ? localizedLabel.parameterValues?.[entry[0]]?.value : 'unset'}
                                 onValueChange={(placeholderName, fillinValue) => {
-                                  // TODO #14 variables - this is not used at the moment but bases on fillins instead of parameters
+                                  // TODO #18 variables - this is not used at the moment but bases on fillins instead of parameters
                                   localizedLabelManager.updateLabelFillin(localizedLabel, placeholderName, fillinValue).catch((e: Error) => {
                                     Sentry.captureException(e);
                                     figmaRemote.notifyError(e.message);

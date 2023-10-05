@@ -86,7 +86,7 @@ export default function QuillEditor({
       }
       htmlContent = paragraphs.join('\n').split('<p>').join('');
       const regex = /.<span contenteditable="false">([^<]*)<\/span>./g;
-      htmlContent = htmlContent.replace(/value="([^"])*" contenteditable="false">/g, '>');
+      htmlContent = htmlContent.replace(/contenteditable="false">/g, '>');
       htmlContent = htmlContent.replace(regex, (match, group1) => group1);
 
       if (htmlContent[htmlContent.length - 1] === '\n') {

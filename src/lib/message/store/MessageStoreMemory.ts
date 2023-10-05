@@ -14,6 +14,7 @@ import { Gender, genderList } from '../variants/Gender';
 import { createNodeishMemoryFs } from './inlang/FigmaRootFs';
 import { Config, InlangMessageStore } from './InlangMessageStoreFigmaRoot';
 import { FillinToPlaceholder, MessageParameterValues } from '../MessageExtnesions';
+import PlaceholderBlot from '../../../ui/compontents/translationEditor/blots/PlaceholderBlot';
 
 export type SearchQuery = {
   selected?: 'FRAME' | 'LABEL' | undefined,
@@ -510,7 +511,7 @@ export default class MessageStoreMemory extends EventTarget {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async upsertMessage(message: Message, _defaultParameters: MessageParameterValues) {
-    // TODO #14 variables - store the default parameters for this message ( we no longer store them in the message it self )
+    // TODO #18 variables - store the default parameters for this message ( we no longer store them in the message it self )
     this.upsertedMessageIds.add(message.id);
     this.inlangProject?.query.messages.upsert({ where: { id: message.id }, data: message });
 
@@ -599,18 +600,18 @@ export default class MessageStoreMemory extends EventTarget {
 
   // wrapper methods to centralize the integration of inlang in case of api changes
 
-  static hasVariant(message: Message, targetLanguage: Locale, selectors?: Record<string, string>) {
-    return getVariant(message, { where: { languageTag: targetLanguage, selectors } }) !== undefined;
+  static hasVariant(message: Message, targetLanguage: Locale, match?: string[]) {
+    return getVariant(message, { where: { languageTag: targetLanguage, match } }) !== undefined;
   }
 
   static isVariantsTranslationOutdated(
     message: Message,
     sourceLanguage: Locale,
     targetLanguage: Locale,
-    selectors?: Record<string, string>,
+    match?: string[],
   ) {
-    const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, selectors);
-    const currentVariant = getVariant(message, { where: { languageTag: targetLanguage, selectors } });
+    const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, match);
+    const currentVariant = getVariant(message, { where: { languageTag: targetLanguage, match } });
 
     if (!currentVariant || blake.blake2sHex(sourceVariantPatternHTML) !== (currentVariant as any).translationSrcHash) {
       return true;
@@ -619,16 +620,16 @@ export default class MessageStoreMemory extends EventTarget {
     return false;
   }
 
-  static upsertVariantPatternHtml(message: Message, sourceLanguage: Locale | undefined, language: Locale, match: Record<string, string>, patternHtml: string) {
+  static upsertVariantPatternHtml(message: Message, sourceLanguage: Locale | undefined, language: Locale, match: string[], patternHtml: string) {
     // const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, match);
-    const currentVariantClone = getVariant(message, { where: { languageTag: language, selectors: match } });
+    const currentVariantClone = getVariant(message, { where: { languageTag: language, match } });
     // let variantPatternHTMLHash = '';
     let messageClone: Message;
 
     if (currentVariantClone) {
       // variantPatternHTMLHash = (blake.blake2sHex(sourceVariantPatternHTML));
       // XXX find the variant using language an pattern to be able to mutate it in place
-      messageClone = updateVariantPattern(message, { where: { languageTag: language, selectors: match }, data: MessageStoreMemory.patternHtmlToPattern(patternHtml) }).data!;
+      messageClone = updateVariantPattern(message, { where: { languageTag: language, match }, data: MessageStoreMemory.patternHtmlToPattern(patternHtml) }).data!;
     } else {
       const tranlatedVariant = {
         languageTag: language,
@@ -653,38 +654,41 @@ export default class MessageStoreMemory extends EventTarget {
     message: Message,
     sourceLanguage: Locale,
     targetLanguage: Locale,
-    selectors: Record<string, string>,
+    match: string[],
   ) {
-    const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, selectors);
+    const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, match);
 
     const translatedPattern = await translationProvider(sourceVariantPatternHTML, sourceLanguage as string, targetLanguage);
 
-    return this.upsertVariantPatternHtml(message, sourceLanguage, targetLanguage, selectors, translatedPattern!);
+    return this.upsertVariantPatternHtml(message, sourceLanguage, targetLanguage, match, translatedPattern!);
   }
 
   static patternHtmlToPattern(patternHtml: string): Pattern {
-    const regex = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;
     const result = [] as Pattern;
-    let match;
 
-    let textStart = 0;
+    const placeholders = PlaceholderBlot.extractPlaceholdersFromPatterHTML(patternHtml);
 
-    // eslint-disable-next-line no-cond-assign
-    while ((match = regex.exec(patternHtml)) !== null) {
-      const [wholeMatch, , type, , format, , argumentPosition, unnamed, , , name] = match;
-      const { index } = match;
+    let lastExtractionEnd = 0;
 
-      // is ther text before the ph?
-      if (textStart < index) {
-        result.push({ type: 'Text', value: patternHtml.substring(textStart, index) });
+    for (const placeholder of placeholders) {
+      if (placeholder.start > lastExtractionEnd) {
+        result.push({
+          type: 'Text',
+          value: patternHtml.substring(lastExtractionEnd, placeholder.start),
+        });
       }
-
-      textStart = index + wholeMatch.length;
-      result.push({ type: 'VariableReference', name });
+      result.push({
+        type: 'VariableReference',
+        name: placeholder.placeholder.name,
+      });
+      lastExtractionEnd = placeholder.start + placeholder.length;
     }
 
-    if (patternHtml.length > textStart) {
-      result.push({ type: 'Text', value: patternHtml.substring(textStart, patternHtml.length) });
+    if (patternHtml.length > lastExtractionEnd) {
+      result.push({
+        type: 'Text',
+        value: patternHtml.substring(lastExtractionEnd, patternHtml.length),
+      });
     }
 
     return result;
@@ -697,7 +701,7 @@ export default class MessageStoreMemory extends EventTarget {
       if (pattern.type === 'Text') {
         html += pattern.value;
       } else if (pattern.type === 'VariableReference') {
-        html += `<ph type="string" >${pattern.name}</ph>`;
+        html += `<ph>${pattern.name}</ph>`;
       }
     }
 
@@ -723,13 +727,13 @@ export default class MessageStoreMemory extends EventTarget {
     return html;
   }
 
-  static htmlForPattern(message: Message, languageTag: string, selectors?: Record<string, string>) {
-    const variant = getVariant(message, { where: { languageTag, selectors } });
+  static htmlForPattern(message: Message, languageTag: string, match?: string[]) {
+    const variant = getVariant(message, { where: { languageTag, match } });
     return this.patternToHtml(variant!.pattern);
   }
 
-  static refLanguageHash(message: Message, language: string, selectors?: Record<string, string>) {
-    const variant = getVariant(message, { where: { languageTag: language, selectors } });
+  static refLanguageHash(message: Message, language: string, match?: string[]) {
+    const variant = getVariant(message, { where: { languageTag: language, match } });
     if (variant) {
       return (variant as any).refLanguageHash as string;
     }

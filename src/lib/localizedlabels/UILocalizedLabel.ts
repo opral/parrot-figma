@@ -9,6 +9,7 @@ import { Gender } from '../message/variants/Gender';
 import MessageStoreMemory from '../message/store/MessageStoreMemory';
 import {
   FillinToPlaceholder,
+  MessageExtension,
   MessageParameterValues, Placeholder, PlaceholdersByName,
 } from '../message/MessageExtnesions';
 import PlaceholderBlot from '../../ui/compontents/translationEditor/blots/PlaceholderBlot';
@@ -117,7 +118,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 
       const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
       // override the currents label variant with state form label
-      this.unlinkedMessage = MessageStoreMemory.upsertVariantPatternHtml(localizedLabel.unlinkedMessage, refLanguage, this.rootFrameLanguage, {}, this.currentPatternHTML);
+      this.unlinkedMessage = MessageStoreMemory.upsertVariantPatternHtml(localizedLabel.unlinkedMessage, refLanguage, this.rootFrameLanguage, [], this.currentPatternHTML);
     } else if (localizedLabel.messageId) {
       this.messageId = localizedLabel.messageId;
       if (!this.manager.messageStore.getMessage(this.messageId)) {
@@ -228,8 +229,8 @@ export class UILocalizedLabel implements LocalizedLabel {
     (new Quill(tempCont)).setContents(delta);
     let htmlContent = tempCont.getElementsByClassName('ql-editor')[0].innerHTML;
     // remove all quill helper attributes
-
-    htmlContent = htmlContent.replace(/fillin="([^"])*" contenteditable="false">/g, '>');
+debugger;
+    htmlContent = htmlContent.replace(/ contenteditable="false">/g, '>');
     htmlContent = htmlContent.split('<p><br></p>').join('\n');
     htmlContent = htmlContent.split('</p>').join('\n');
 
@@ -344,10 +345,13 @@ export class UILocalizedLabel implements LocalizedLabel {
         throw new Error('Message does not exist');
       }
 
-      const variantPatternHtml = MessageStoreMemory.htmlForPattern(message, this.language, {
+      const variantPatternHtml = MessageStoreMemory.htmlForPattern(message, this.language, [
         /** TODO #18 selectors build selectors based on variableValues */
-      });
+      ]);
       state.modified = variantPatternHtml !== this.currentPatternHTML;
+      if (variantPatternHtml !== this.currentPatternHTML) {
+        //debugger;
+      }
     }
 
     console.log(`getState ${JSON.stringify(state)}`);
@@ -375,7 +379,7 @@ export class UILocalizedLabel implements LocalizedLabel {
       variants: [
         {
           languageTag: refLanguage,
-          match: {},
+          match: [],
           pattern: MessageStoreMemory.patternHtmlToPattern(this.currentPatternHTML),
         },
       ],
@@ -383,7 +387,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 
     // eslint-disable-next-line no-case-declarations
     try {
-      const updatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(missingTranslationProvider, unlinkedMessage, refLanguage, targetLanguage, { });
+      const updatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(missingTranslationProvider, unlinkedMessage, refLanguage, targetLanguage, []);
       await this.manager.updateLabelProperties(this.nodeId, {
         language: targetLanguage,
         messageState: { type: 'unlinked', unlinkedMessage: updatedMessage, parameterValues: this.parameterValues },
@@ -402,14 +406,14 @@ export class UILocalizedLabel implements LocalizedLabel {
     const toRefLanguage = targetLanguage === refLanguage;
     const { unlinkedMessage } = this;
 
-    let hasVariantInTargetLanguage = MessageStoreMemory.hasVariant(unlinkedMessage, targetLanguage, {});
+    let hasVariantInTargetLanguage = MessageStoreMemory.hasVariant(unlinkedMessage, targetLanguage, []);
     // let isVariantsTranslationOutdated = await MessageStoreMemory.isVariantsTranslationOutdated(unlinkedMessage, refLanguage, targetLanguage, {});
 
     let eventuallyUpdatedMessage = this.unlinkedMessage;
 
     // if (isVariantsTranslationOutdated) {
     try {
-      eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(missingTranslationProvider, unlinkedMessage, refLanguage, targetLanguage, {});
+      eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(missingTranslationProvider, unlinkedMessage, refLanguage, targetLanguage, []);
       hasVariantInTargetLanguage = true;
     } catch (e) {
       // we handle the error using isVariantsTranslationOutdated flag
@@ -436,12 +440,12 @@ export class UILocalizedLabel implements LocalizedLabel {
     const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
     const toRefLanguage = targetLanguage === refLanguage;
     const message = this.manager.messageStore.getMessage(this.messageId)!;
-    const hasVariantInTargetLanguage = MessageStoreMemory.hasVariant(message, targetLanguage, {});
+    const hasVariantInTargetLanguage = MessageStoreMemory.hasVariant(message, targetLanguage, []);
     // updating message
     if (!hasVariantInTargetLanguage) {
       if (!toRefLanguage) {
         try {
-          const eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(missingTranslationProvider, message, refLanguage, targetLanguage, {});
+          const eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(missingTranslationProvider, message, refLanguage, targetLanguage, []);
           this.manager.messageStore.upsetMessage(eventuallyUpdatedMessage);
           return;
         } catch (e) { /* empty */ }
@@ -506,7 +510,7 @@ export class UILocalizedLabel implements LocalizedLabel {
         variants: [
           {
             languageTag: refLanguage,
-            match: {},
+            match: [],
             pattern: MessageStoreMemory.patternHtmlToPattern(patternHtml),
           },
         ],
@@ -517,21 +521,19 @@ export class UILocalizedLabel implements LocalizedLabel {
         language: refLanguage,
       });
     } else if (this.messageLinkState === MessageLinkState.Unlinked) {
-      const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(this.unlinkedMessage, refLanguage, this.language, {}, patternHtml);
+      const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(this.unlinkedMessage, refLanguage, this.language, [], patternHtml);
 
       await this.manager.updateLabelProperties(this.nodeId, {
-        messageState: { type: 'unlinked', parameterValues, unlinkedMessage: updatedMessage }
+        messageState: { type: 'unlinked', parameterValues, unlinkedMessage: updatedMessage },
       });
     } else if (this.messageLinkState === MessageLinkState.Linked) {
-      // TODO #14 variables in case we have a linked message the parameters on the label could differ from the once provided by the label
-      // TODO #18 we need a way to extract parameters not only from messages but from messages and the pattern of a label
       await this.manager.updateLabelProperties(this.nodeId, {
         messageState: {
           type: 'linked',
           messageId: this.messageId!,
           parameterValues,
           variantPatternHTML: patternHtml,
-        }
+        },
       });
     }
   }

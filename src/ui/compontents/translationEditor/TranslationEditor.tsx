@@ -63,7 +63,6 @@ export default function TranslationEditor({
 
   // useAutosizeTextArea(textAreaRef.current, translationText ? translationText : '')
 
-
   const reset = () => {
     ((document.activeElement) as any)?.blur?.();
     setEditingState(false);
@@ -71,7 +70,7 @@ export default function TranslationEditor({
 
     textRef.current = variantHTML;
     parameterValuesRef.current = parameterValues;
-  }
+  };
 
   const handleChange = (value: string, updatedParameters: MessageParameterValues) => {
     // console.log('propagating change' + value);

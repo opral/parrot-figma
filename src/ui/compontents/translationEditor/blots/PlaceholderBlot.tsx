@@ -13,8 +13,8 @@ export default class PlaceholderBlot extends Inline {
     if (value.specifiedArgumentPosition) {
       node.setAttribute('arg', `${value.specifiedArgumentPosition}`);
     }
-
-    if (!value.named) {
+    
+    if (value.named === false) {
       node.setAttribute('unnamed', '');
     }
 
@@ -69,7 +69,7 @@ export default class PlaceholderBlot extends Inline {
 
       placeholderMatches.push({
         start: match.index,
-        length: match.length,
+        length: match[0].length,
         placeholder,
       });
     }

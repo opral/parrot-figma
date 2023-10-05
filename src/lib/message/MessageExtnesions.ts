@@ -1,4 +1,7 @@
-import { Message } from "@inlang/sdk"
+import { Message, Variant, getVariant } from '@inlang/sdk';
+import { Placeholder } from 'react-select/animated';
+import { Locale } from './variants/Locale';
+import MessageStoreMemory from './store/MessageStoreMemory';
 
 export enum ParameterType {
   string = 's',
@@ -33,7 +36,7 @@ export interface Placeholder {
   // if defined the position to provide the argument at when using printf for example
   specifiedArgumentPosition: undefined | number,
   // the argument position derived by analyzing all variants
- //  derivedArgumentPosition: undefined | number,
+  //  derivedArgumentPosition: undefined | number,
 
   // formatting function like :number :datetime or custom function
   formatFunctionName?: string,
@@ -66,11 +69,82 @@ export interface MessageParameterValues {
 }
 
 export class MessageExtension {
+  /**
+   *
+   * @param message the message to extract the parameters from
+   * @param refLanguage the ref language (we use this is the starting point to derive the parameter position)
+   * @param currentLanguage the languague we want to skip in favour of variantHtml
+   * @param currentParameterValues the parameters used to get the variant, variantHtml overrides
+   * @param variantHtml the variant to use instead of the one found in the message
+   */
+  static getParameter(message: Message, /* TODO #20 add ref language to analize message including index - order is important refLanguage: Locale, */ overrideVariant?: {
+    locale: Locale,
+    parameterValues: MessageParameterValues,
+    variantHtml: string
+  }) {
+    const parameterToPlaceholders = {} as {
+      [plarameterName: string]: Placeholder[],
+    };
 
-  static getParameter(message: Message, currentParameterValues: MessageParameterValues, variantHtml: string) {
-    // TODO #14 variables go through all variants and collect the parameters
-    // TODO #14 variables go through selectors and collect parameters
-    // build union 
+
+    let overwrittenVariant: Variant | undefined;
+    if (overrideVariant) {
+      // function  was called with overrideVariant (labels text differs from linked message)
+      overwrittenVariant = getVariant(message, {
+        where: {
+          languageTag: overrideVariant.locale,
+          match: [], // TODO #18 TODO use matching based on variantParameterValues
+        },
+      });
+
+      if (overrideVariant) {
+        overwrittenVariant!.pattern = MessageStoreMemory.patternHtmlToPattern(overrideVariant.variantHtml);
+      }
+    }
+
+    // build union
+    for (let variant of message.variants) {
+      // a variant to be overwritten was found - check if the  current variant is the one
+      if (overwrittenVariant !== undefined
+        && variant.languageTag === overwrittenVariant?.languageTag
+        && JSON.stringify(variant.match) === JSON.stringify(overwrittenVariant)) {
+        variant = overwrittenVariant;
+      }
+
+      for (const patternPart of variant.pattern) {
+        if (patternPart.type === 'VariableReference') {
+          if (!parameterToPlaceholders[patternPart.name]) {
+            parameterToPlaceholders[patternPart.name] = [];
+          }
+          parameterToPlaceholders[patternPart.name].push({
+            name: patternPart.name,
+            // TODO #20 index based parameter (might lead to named false and specification of the argument postion )
+            named: true,
+            specifiedArgumentPosition: undefined,
+
+            // TODO #19 until we support other parameter types than string no format function or options are required
+            // formatFunctionName
+            // options
+
+          });
+        }
+      }
+    }
+
+    const parameters = [] as Parameter[];
+
+    for (const parameterName of Object.keys(parameterToPlaceholders)) {
+      // TODO #19 check format function of each placeholder in the parameter map
+      parameters.push({
+        name: parameterName,
+        named: true,
+        type: ParameterType.string,
+        specifiedArgumentPosition: undefined,
+        derivedArgumentPosition: undefined,
+      });
+    }
+
+    return parameters;
   }
   /**
      * Placeholder index:

@@ -54,8 +54,7 @@ export default function TranslationKeyListItem({
   const [selected, setSelected] = useState(false);
   const [showUsage, setShowUsage] = useState(false);
   const [showPlaceholderEditor, setShowPlaceholderEditor] = useState(false);
-  // TODO #14 add fillin handling
-  const [defaultFillins, setDefaultFillins] = useState({});
+
   // const [history, setHistory] = useState<undefined | VersionEntry[]>(undefined);
   const [messageIdToDelete, setMessageIdToDelete] = useState<undefined | string>(undefined);
   const [keyToDeleteReferences, setKeyToDeleteReferences] = useState<undefined | number>(undefined);
@@ -123,7 +122,6 @@ export default function TranslationKeyListItem({
 
     await figmaRemote.scrollAndZoomNodesIntoView([referencingLabels[indexToSelect]]);
   }
-  
 
   const baseLang = messageStore.getRefLanugage();
 
@@ -251,15 +249,6 @@ export default function TranslationKeyListItem({
           </>
           )}
         </div>
-        <div>
-          {/*
-          // TODO #14 add placeholder handling
-          { false && Object.values(message.placeholders).map((placeholder: Placeholder) => (
-            <div>
-              {placeholder.name + ' ' + (placeholder.derivedArgumentPosition) + ' ' + (placeholder.specifiedArgumentPosition ? placeholder.specifiedArgumentPosition : '-') + ' ' + placeholder.named }
-            </div>
-          )) } */}
-        </div>
         { false && select === undefined && (
         <div className="key-usage">
           { /* TODO add references to keys */ }
@@ -329,17 +318,18 @@ export default function TranslationKeyListItem({
                     onSave={async (text: string | undefined, parameters: MessageParameterValues) => {
                       // let skip = message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.skip ?? false;
 
-                      if (text === undefined || text !== '') {
+                      if (text === undefined || text === '') {
+                        debugger;
                         console.log('unhandled case text is empty or undefined...');
                         throw new Error('unhandled case text is empty or undefined... in MessageListItem');
                       }
-                      
+
                       Object.values(parameters).forEach((parameter) => {
                         // eslint-disable-next-line no-param-reassign
                         parameter.default = true;
                       });
 
-                      // TODO #14 variables how to deal with default values acutally - as soon as we have variants this can become tricky since the matcher does differ from the default value :( )
+                      // TODO #18 variables how to deal with default values acutally - as soon as we have variants this can become tricky since the matcher does differ from the default value :( )
                       // - one thought on this - variables used in selectors can not have a default value...
                       const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(message, undefined, language, { /** this should not be the parameters parsed but the selectors of the given item */}, text);
                       await localizedLabelManager.updateMessage(updatedMessage, parameters);
@@ -451,7 +441,7 @@ export default function TranslationKeyListItem({
           ))}
         </div>
       </OutsideClickHandler> */}
-      {/* TODO #14 add fillins editor
+      {/* TODO #18 variables add fillins editor
       <OutsideClickHandler
         onOutsideClick={() => { setShowPlaceholderEditor(false); }}
         disabled={showPlaceholderEditor === false}

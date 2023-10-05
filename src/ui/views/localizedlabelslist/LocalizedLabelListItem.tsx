@@ -363,24 +363,24 @@ export default function LocalizedLabelListItem({
                               reset();
                             });
                           }}
-                          // TODO #14 variables - we used getFillins before shall we use a function instead?
-                          parameterValues={localizedLabel.parameters}
+                          parameterValues={localizedLabel.parameterValues}
                           variantHTML={localizedLabel.currentPatternHTML}
                           messageStore={messageStore}
                         />
+                        {/* TODO #18 make paramter editable again when we have selectors in place - variables only used as selectors can't be accesed otherwise
                         { selected !== 'unselected' && (
-                          <div className="placeholder-view-grid" style={{ display: Object.keys(localizedLabel.getPlaceholders()).length > 0 ? undefined : 'none' }}>
+                          <div className="placeholder-view-grid" style={{ display: Object.keys(localizedLabel.parameterValues).length > 0 ? undefined : 'none' }}>
 
                             <div />
                             <div />
                             <div>Placeholder</div>
                             <div />
                             <div />
-                            {Object.entries(localizedLabel.getPlaceholders()).map((entry, i, array) => (
+                            {Object.entries(localizedLabel.parameterValues).map((entry, i, array) => (
                               <PlaceholderEditorListItem
                                 key={entry[0]}
                                 placeholder={entry[1]}
-                                fillin={localizedLabel.parameters?.[entry[0]]?.value ? localizedLabel.parameters?.[entry[0]]?.value : 'unset'}
+                                fillin={localizedLabel.parameterValues?.[entry[0]]?.value ? localizedLabel.parameterValues?.[entry[0]]?.value : 'unset'}
                                 onValueChange={(placeholderName, fillinValue) => {
                                   // TODO #14 variables - this is not used at the moment but bases on fillins instead of parameters
                                   localizedLabelManager.updateLabelFillin(localizedLabel, placeholderName, fillinValue).catch((e: Error) => {
@@ -392,7 +392,7 @@ export default function LocalizedLabelListItem({
 
                             ))}
                           </div>
-                        )}
+                        )} */}
                       </div>
                     </div>
                   </div>

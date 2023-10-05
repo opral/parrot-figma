@@ -18,7 +18,7 @@ export default class PlaceholderBlot extends Inline {
       node.setAttribute('unnamed', '');
     }
 
-    // TODO #14 variables add formatOptions as namespaced attributes
+    // TODO #19 variables add formatOptions as namespaced attributes
 
     node.setAttribute('contenteditable', 'false');
     return node;
@@ -30,7 +30,7 @@ export default class PlaceholderBlot extends Inline {
       named: node.getAttribute('unnamed') === null,
       formatFunctionName: node.getAttribute('format') ?? undefined,
       specifiedArgumentPosition: node.getAttribute('arg') ? parseInt(node.getAttribute('arg')!, 10) : undefined,
-      // TODO #14 variables handle options as attributes with option- prefix
+      // TODO #19 variables handle options as attributes with option- prefix
     };
   }
 
@@ -40,7 +40,7 @@ export default class PlaceholderBlot extends Inline {
       named: domNode.getAttribute('unnamed') === null,
       specifiedArgumentPosition: domNode.getAttribute('arg') ? parseInt(domNode.getAttribute('arg')!, 10) : undefined,
       formatFunctionName: domNode.getAttribute('formatFn') ?? undefined,
-      // TODO #14 variables handle options as attributes with option- prefix
+      // TODO #19 variables handle options as attributes with option- prefix
     };
   }
 
@@ -109,7 +109,7 @@ export default class PlaceholderBlot extends Inline {
       options,
     } as Placeholder;
 
-    // TODO #14 variables - extract all atributes from the
+    // TODO #19 variables - extract all atributes from the attributes like options
     return foundPlaceholder;
   }
 }

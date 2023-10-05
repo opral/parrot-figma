@@ -83,12 +83,12 @@ export interface LocalizedLabel {
   //  The label needs to be updated when the parameterDefault has changed and the fillins is not overriden in the label
   //  The available parameters of a key have changed (one is removed)? shall we cleanup?
 
-  parameters: ParameterValues;
+  parameterValues: ParameterValues;
   fillinsToPlaceholder: FillinToPlaceholder;
   variantPatternHTMLHash?: string;
 
   derivedKey?: string;
 
-  // TODO #14 migrate unlinekd message to Message format
+  // TODO #14 migration - unlinekd message to Message format
   unlinkedMessage: Message;
 }

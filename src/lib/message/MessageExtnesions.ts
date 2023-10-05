@@ -1,3 +1,5 @@
+import { Message } from "@inlang/sdk"
+
 export enum ParameterType {
   string = 's',
   float = 'f',
@@ -60,12 +62,16 @@ export interface FillinToPlaceholder {
 }
 
 export interface MessageParameterValues {
-  [parameterName: string]: { type: 'string', value: string, default?: boolean } // TODO #14 add other types | { type: 'number', value: number, default?: boolean }
+  [parameterName: string]: { type: 'string', value: string, default?: boolean } // TODO #19 variables - add other types | { type: 'number', value: number, default?: boolean }
 }
 
 export class MessageExtension {
-  
 
+  static getParameter(message: Message, currentParameterValues: MessageParameterValues, variantHtml: string) {
+    // TODO #14 variables go through all variants and collect the parameters
+    // TODO #14 variables go through selectors and collect parameters
+    // build union 
+  }
   /**
      * Placeholder index:
      * The placeholder format should always have a type. The position index as well as the name is optional.
@@ -129,7 +135,7 @@ export class MessageExtension {
      * - how shall we flag false positives - parameters that are not needed in a specific language?
      *
      */
-  /* TODO #14 variables check if this function can become handy in inlang scope
+  /* TODO #19 variables check if this function can become handy in inlang scope
   static extractParameters(messages: Variants, baseLanguage: Locale, includeGenderForms: boolean, includePluralForms: boolean) : PlaceholdersByName {
     // a placeholder can be processed in two ways:
     // 1. with a argument postion [[1:...]]

@@ -19,12 +19,11 @@ export interface ILocalizedLabelManagerUI {
   messageStore: any; // TODO make this UITranslationKeyStore and add all methods to the interface needed
   updateLabelProperties(nodeId: string, changedProperties: {
     labelName?: string,
-    messageLinkState?: MessageLinkState,
-    messageId?: string,
-    unlinkedMessage?: Message,
+    messageState?: { type: 'linked', messageId: string, parameterValues: MessageParameterValues, variantPatternHTML?: string }
+    | { type: 'unlinked', unlinkedMessage: Message, parameterValues: MessageParameterValues }
+    | { type: 'unmanaged', unmanaged: boolean } | { type: 'unset' }
+    | undefined
     language?: Locale,
-    parameterValues?: MessageParameterValues,
-    variantPatternHTML?: string
   }): Promise<void>;
 }
 
@@ -66,7 +65,7 @@ export class UILocalizedLabel implements LocalizedLabel {
    */
   // translation: string;
 
-  parameters: ParameterValues;
+  parameterValues: ParameterValues;
 
   fillinsToPlaceholder: FillinToPlaceholder;
 
@@ -102,13 +101,12 @@ export class UILocalizedLabel implements LocalizedLabel {
     this.unmanaged = localizedLabel.unmanaged;
 
     this.derivedKey = localizedLabel.derivedKey;
-    this.parameters = localizedLabel.parameters;
+    this.parameterValues = localizedLabel.parameterValues;
     this.fillinsToPlaceholder = localizedLabel.fillinsToPlaceholder;
 
     this.characters = localizedLabel.characters;
     this.ops = localizedLabel.ops;
 
-    // TODO #14 variables we passed the fillins to toHtml before do we need to take parameters into account?
     this.currentPatternHTML = UILocalizedLabel.toHtml(localizedLabel.characters, localizedLabel.ops);
 
     if (localizedLabel.unmanaged) {
@@ -214,10 +212,6 @@ export class UILocalizedLabel implements LocalizedLabel {
             ...op.attributes,
           },
         };
-        // enrich fillin
-        // TODO #14 variables check fillins (previously an additional parameter) - seems like we drop them later anyway - shall we remove this and but than we need to drop it from the regex later aswell!
-        // (parameterOperation.attributes.placeholder! as any).fillin = fillins[insert].value;
-
         deltaOps.push(parameterOperation);
       } else {
         const insert = rawtext.substring(op.start, op.end);
@@ -245,14 +239,6 @@ export class UILocalizedLabel implements LocalizedLabel {
   }
 
   static toTextOpsAndFillinsToPlaceholder(html: string, messageParameterValues: MessageParameterValues) {
-    // TODO #12 quill from html -> text + ops
-
-    // TODO #14 variables - check if we can use parameters for this function instead and return the fillins
-
-    // const wholeMatch = paramMatch[0];
-    // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
-    // const name = paramMatch[2];
-    
     // helper to be able to create unique identifierts by fillins
     const fillinsCounts = { } as { [fillinValue: string] : number };
     const fillinsToPlaceholder = {} as {
@@ -264,7 +250,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     let htmlWithFilledPlaceholders = html.replace(placeholderPattern, (match, attributesStrings, placeholderName) => {
       const placeholder = PlaceholderBlot.extractFromRawHtml(placeholderName, attributesStrings);
       const parameterValue = messageParameterValues[placeholder.name].value;
-      // TODO #14 variables take formatting function into account
+      // TODO #19 variables take formatting function into account
       // - create all values based on formatting function
       const formatedValue = parameterValue;
       if (fillinsCounts[formatedValue] === undefined) {
@@ -324,48 +310,10 @@ export class UILocalizedLabel implements LocalizedLabel {
     });
     // remove the /n at the end?
     return {
-      text,
+      characters: text,
       ops,
       fillinsToPlaceholder,
     };
-  }
-
-  // used when updating a message on a label by its message id - we should update both - parameters and fillins to placeholders 
-  // used to feed in parameter on a localizedLabelListItem
-  // getFillins(messageIdToUse?: string, fillins?: Fillins) {
-  //   const messageId = messageIdToUse ?? this.messageId;
-  //   const message = messageId ? this.manager.messageStore.getMessage(messageId) : undefined as Message | undefined;
-
-  //   const defaultFillIns = message ? { ...message.defaultFillins } : {} as Fillins;
-  //   const labelFillins = fillins ?? this.parameters;
-
-  //   for (const parameterName of Object.keys(defaultFillIns)) {
-  //     if (labelFillins[parameterName] && labelFillins[parameterName].default) {
-  //       labelFillins[parameterName] = { default: true, value: defaultFillIns[parameterName].value };
-  //     }
-  //   }
-
-  //   return labelFillins;
-  // }
-
-  getPlaceholders() {
-    const placeholders = {} as PlaceholdersByName;
-    return placeholders; // TODO #14 variables
-    /*
-    const labelTranslationPlaceholders = UITranslationKey.extractPlaceholdersInText(this.translation);
-
-    if (this.messageLinkState === KeyState.Linked) {
-      const key = this.manager.keyStore.getKey(this.key!)! as UITranslationKey;
-      placeholders = { ...key.placeholders };
-    }
-
-    for (const labelTranslationPlaceholder of labelTranslationPlaceholders) {
-      if (!placeholders[labelTranslationPlaceholder.name]) {
-        placeholders[labelTranslationPlaceholder.name] = labelTranslationPlaceholder;
-      }
-    }
-
-    return placeholders; */
   }
 
   /**
@@ -438,7 +386,7 @@ export class UILocalizedLabel implements LocalizedLabel {
       const updatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(missingTranslationProvider, unlinkedMessage, refLanguage, targetLanguage, { });
       await this.manager.updateLabelProperties(this.nodeId, {
         language: targetLanguage,
-        unlinkedMessage: updatedMessage,
+        messageState: { type: 'unlinked', unlinkedMessage: updatedMessage, parameterValues: this.parameterValues },
       });
     } catch {
       await this.manager.updateLabelProperties(this.nodeId, {
@@ -473,8 +421,8 @@ export class UILocalizedLabel implements LocalizedLabel {
 
     if (hasVariantInTargetLanguage) {
       await this.manager.updateLabelProperties(this.nodeId, {
+        messageState: { type: 'unlinked', unlinkedMessage: eventuallyUpdatedMessage, parameterValues: this.parameterValues },
         language: targetLanguage,
-        unlinkedMessage: eventuallyUpdatedMessage,
       });
     } else {
       await this.manager.updateLabelProperties(this.nodeId, { });
@@ -506,7 +454,9 @@ export class UILocalizedLabel implements LocalizedLabel {
       return;
     }
     await this.manager.updateLabelProperties(this.nodeId, {
-      messageId: this.messageId,
+      messageState: {
+        type: 'linked', messageId: this.messageId!, parameterValues: this.parameterValues,
+      },
       language: targetLanguage,
     });
   }
@@ -563,21 +513,25 @@ export class UILocalizedLabel implements LocalizedLabel {
       };
 
       await this.manager.updateLabelProperties(this.nodeId, {
+        messageState: { type: 'unlinked', parameterValues, unlinkedMessage },
         language: refLanguage,
-        parameterValues,
-        unlinkedMessage,
       });
     } else if (this.messageLinkState === MessageLinkState.Unlinked) {
       const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(this.unlinkedMessage, refLanguage, this.language, {}, patternHtml);
 
       await this.manager.updateLabelProperties(this.nodeId, {
-        parameterValues,
-        unlinkedMessage: updatedMessage,
+        messageState: { type: 'unlinked', parameterValues, unlinkedMessage: updatedMessage }
       });
     } else if (this.messageLinkState === MessageLinkState.Linked) {
+      // TODO #14 variables in case we have a linked message the parameters on the label could differ from the once provided by the label
+      // TODO #18 we need a way to extract parameters not only from messages but from messages and the pattern of a label
       await this.manager.updateLabelProperties(this.nodeId, {
-        parameterValues,
-        variantPatternHTML: patternHtml,
+        messageState: {
+          type: 'linked',
+          messageId: this.messageId!,
+          parameterValues,
+          variantPatternHTML: patternHtml,
+        }
       });
     }
   }

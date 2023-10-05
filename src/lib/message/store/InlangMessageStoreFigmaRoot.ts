@@ -7,7 +7,6 @@ import blake from 'blakejs';
 import { Message } from '@inlang/sdk';
 import { Locale } from '../variants/Locale';
 
-const encoder = new TextEncoding.TextEncoder();
 
 export interface Config {
   refLanguage?: Locale,
@@ -17,6 +16,8 @@ export interface Config {
 const defaultStringFillinValue = 'Loren Impsum';
 const defaultDecimalFillinValue = 7;
 const defaultFloatFillinValue = Math.PI;
+
+const encoder = new TextEncoding.TextEncoder();
 
 export class InlangMessageStore {
   public proxyClassName = 'InlangMessageStore';
@@ -64,7 +65,7 @@ export class InlangMessageStore {
         // eslint-disable-next-line no-continue
         continue;
       }
-      // TODO #14 TEST Multi user - check if a message update triggered by another user is propagated to parrot
+      // TODO #14 CACHING TEST Multi user - check if a message update triggered by another user is propagated to parrot
       // TODO #14 CACHING implement for multi user - keep tracK of changes in config as well
       // eslint-disable-next-line default-case
       const currentFileStorageKeys = figma.root.getPluginDataKeys().filter((value) => value.indexOf(this.messagePrefix) === 0);
@@ -138,10 +139,11 @@ export class InlangMessageStore {
 
   async load(): Promise<Message[]> {
     const messages = [] as Message[];
+    debugger;
     for (const messageStorageKey of figma.root.getPluginDataKeys()) {
       if (messageStorageKey.startsWith(this.messagePrefix)) {
         const messageRaw = figma.root.getPluginData(messageStorageKey);
-        const messageRawHash = blake.blake2sHex(messageRaw);
+        const messageRawHash = blake.blake2sHex(encoder.encode(messageRaw));
         const message = JSON.parse(figma.root.getPluginData(messageStorageKey));
         if (message !== undefined) {
           messages.push(message);

@@ -100,7 +100,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
           && cachedLabel.labelStyle.italic === label.labelStyle.italic
           && cachedLabel.labelStyle.textDecoration === label.labelStyle.textDecoration
           && JSON.stringify(cachedLabel.ops) === JSON.stringify(label.ops)
-          && JSON.stringify(cachedLabel.parameters) === JSON.stringify(label.parameters)
+          && JSON.stringify(cachedLabel.parameterValues) === JSON.stringify(label.parameterValues)
           && JSON.stringify(cachedLabel.matchingLabelLints) === JSON.stringify(label.matchingLabelLints)
           && cachedLabel.x === label.x
           && cachedLabel.y === label.y) {
@@ -330,7 +330,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     const updatePromises = [];
     for (const localizedLabel of localizedLabels) {
       const message = this.messageStore.getMessage(localizedLabel.messageId!)!;
-      
+
       // TODO #17 versioning implement when inlang history is in place
       // const historyEntryForVersion = message.getHistoryEntry(localizedLabel.rootFrameLanguage, localizedLabel.genderId, localizedLabel.pluralId, message.latestVersion);
 
@@ -348,31 +348,43 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
       // eslint-disable-next-line no-await-in-loop
       updatePromises.push(this.updateLabelProperties(localizedLabel.nodeId, {
+        messageState: {
+          type: 'linked',
+          messageId: localizedLabel.messageId!,
+          parameterValues: localizedLabel.parameterValues,
+        },
         // messageVersion: message.latestVersion,
-        messageId: localizedLabel.messageId!,
         language: localizedLabel.rootFrameLanguage,
       }));
     }
 
     console.log('started');
-    await Promise.all(updatePromises).then(() => console.log('finished') );
+    await Promise.all(updatePromises).then(() => console.log('finished'));
   }
 
   async deleteMessage(messageId: string) {
-    await this.unlinkLabelsWithKey(messageId);
+    await this.unlinkLabelsWithMessage(messageId);
     await this.messageStore.deleteMessage(messageId);
 
     await this.localizedLabelMangerSandbox.commitUndo();
   }
 
-  async unlinkLabelsWithKey(keyToUnlink: string) {
-    const labelsWithKey = await this.getWithMessage(keyToUnlink);
+  async unlinkLabelsWithMessage(messageId: string) {
+    const messageToUnlink = await this.messageStore.getMessage(messageId);
+    const labelsWithLinkToMessage = await this.getWithMessage(messageId);
 
-    for (const labelWithKey of labelsWithKey) {
-      // eslint-disable-next-line no-await-in-loop
-      await this.updateLabelProperties(labelWithKey.nodeId, {
-        messageId: null,
-      });
+    for (const labelWithLinkToMessage of labelsWithLinkToMessage) {
+      if (messageToUnlink !== undefined) {
+        // eslint-disable-next-line no-await-in-loop
+        await this.updateLabelProperties(labelWithLinkToMessage.nodeId, {
+          messageState: { type: 'unlinked', unlinkedMessage: messageToUnlink, parameterValues: labelWithLinkToMessage.parameterValues },
+        });
+      } else {
+        // eslint-disable-next-line no-await-in-loop
+        await this.updateLabelProperties(labelWithLinkToMessage.nodeId, {
+          messageState: { type: 'unset' },
+        });
+      }
     }
   }
 
@@ -382,7 +394,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     if (message !== undefined) {
       // message does exist - we only have to link it
       await this.updateLabelProperties(localizedLabel.nodeId, {
-        messageId: message.id,
+        messageState: { type: 'linked', messageId: message.id, parameterValues: localizedLabel.parameterValues },
         language: locale,
       });
 
@@ -392,7 +404,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         // TODO #13 check if we need to update the unlinked message
         // eslint-disable-next-line no-param-reassign
         localizedLabel.unlinkedMessage.id = messageNameToLinkTo;
-        message = await this.messageStore.upsertMessage(localizedLabel.unlinkedMessage, localizedLabel.parameters);
+        message = await this.messageStore.upsertMessage(localizedLabel.unlinkedMessage, localizedLabel.parameterValues);
       } else {
         message = await this.messageStore.upsertMessage({
           id: messageNameToLinkTo,
@@ -404,11 +416,11 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
               { type: 'Text', value: localizedLabel.currentPatternHTML },
             ],
           }],
-        }, localizedLabel.parameters);
+        }, localizedLabel.parameterValues);
       }
 
       await this.updateLabelProperties(localizedLabel.nodeId, {
-        messageId: message.id,
+        messageState: { type: 'linked', messageId: message.id, parameterValues: localizedLabel.parameterValues },
         // messageVersion: message.latestVersion, // its save to use latest version here since we created a whole new key here.
         language: locale,
       });
@@ -419,7 +431,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
   async unsetLabel(localizedLabel: LocalizedLabel) {
     await this.updateLabelProperties(localizedLabel.nodeId, {
-      messageId: null,
+      messageState: { type: 'unset' },
     });
 
     await this.localizedLabelMangerSandbox.commitUndo();
@@ -429,18 +441,19 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     await this.localizedLabelMangerSandbox.commitUndo();
   }
 
-  async updateLabelFillin(localizedLabel: LocalizedLabel, placeholderName: string, fillinValue: string) {
-    const newFillins = {
-      ...localizedLabel.parameters, // Copy the old fields
-    };
+  // TODO #18 add again to allow to change parameter values without touching the message it self
+  // async updateLabelFillin(localizedLabel: LocalizedLabel, placeholderName: string, fillinValue: string) {
+  //   const newFillins = {
+  //     ...localizedLabel.parameterValues, // Copy the old fields
+  //   };
 
-    newFillins[placeholderName] = { value: fillinValue, default: fillinValue === '' };
-    await this.updateLabelProperties(localizedLabel.nodeId, {
-      parameterValues: newFillins,
-    });
+  //   newFillins[placeholderName] = { value: fillinValue, default: fillinValue === '' };
+  //   await this.updateLabelProperties(localizedLabel.nodeId, {
+  //     parameterValues: newFillins,
+  //   });
 
-    await this.localizedLabelMangerSandbox.commitUndo();
-  }
+  //   await this.localizedLabelMangerSandbox.commitUndo();
+  // }
 
   async updateLabelName(localizedLabel: LocalizedLabel, labelName: string) {
     await this.updateLabelProperties(localizedLabel.nodeId, {
@@ -450,14 +463,15 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     await this.localizedLabelMangerSandbox.commitUndo();
   }
 
-  async updateLabelPatternHtml(localizedLabel: UILocalizedLabel, patternHtml: string, parameters: MessageParameterValues) {
+  // eslint-disable-next-line class-methods-use-this
+  async updateLabelPatternHtml(localizedLabel: UILocalizedLabel, patternHtml: string, parameterValues: MessageParameterValues) {
     if (localizedLabel.messageLinkState === MessageLinkState.Unmanaged
       || localizedLabel.messageLinkState === MessageLinkState.MissingMessage) {
       // ignore field should be disabled
       return;
     }
 
-    localizedLabel.setLabelPattern(patternHtml, parameters);
+    localizedLabel.setLabelPattern(patternHtml, parameterValues);
 
     if (localizedLabel.messageLinkState === MessageLinkState.Linked) {
       // update only the patternHTML on the label - updating the message is an explicit action
@@ -475,22 +489,18 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
    */
   async updateLabelProperties(nodeId: string, changedProperties: {
     labelName?: string,
-    // messageLinkState?: MessageLinkState,
-    messageId?: string | null,
-    unmanaged?: boolean,
-    unlinkedMessage?: Message,
-    language?: Locale | null,
-    variantPatternHTML?: string,
-    // TODO #14 add variables when we have variables other than strings
-    parameterValues?: ParameterValues,
-    variantPatternHTMLHash?: string
+    messageState?:
+    { type: 'linked', messageId: string, parameterValues: MessageParameterValues, variantPatternHTML?: string }
+    | { type: 'unlinked', unlinkedMessage: Message, parameterValues: MessageParameterValues }
+    | { type: 'unmanaged', unmanaged: boolean } | { type: 'unset' }
+    | undefined
+    language?: Locale,
   }) {
     const localizedLabelCached = this.cachedLocalisedLabels[nodeId]!;
 
-    const labelParameters = changedProperties.parameterValues ?? localizedLabelCached.parameters;
     const language = changedProperties.language ?? localizedLabelCached.language;
 
-    // TODO #14 parameters - add default parameters from the message to the parameters
+    // TODO #14 varaiables - parameters - add default parameters from the message to the parameters
     // if (message?.defaultFillins) {
     //   for (const [placeholderName, fillin] of Object.entries(message.defaultFillins)) {
     //     if (!labelFillins[placeholderName] || labelFillins[placeholderName].default === true) {
@@ -499,55 +509,50 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     //   }
     // }
 
-    const changedPropertiesToForwared = changedProperties as SandboxUpdateLabelProperties;
-
-
     // if (changedProperties.messageId) {
     //   // if we update the message we update the parameters - trying to use as much of the current parameters as posible
     //   changedPropertiesToForwared.fillins = localizedLabelCached.getFillins(changedProperties.messageId, labelParameters);
     // }
 
-    const updatedMessage = changedProperties.messageId ? this.messageStore.getMessage(changedProperties.messageId) : changedProperties.unlinkedMessage;
-    if (changedProperties.variantPatternHTML) {
+    let textOpsAndFillinsToPlaceholders: { ops: any[], characters: string, fillinsToPlaceholder: FillinToPlaceholder | null | undefined } | undefined;
+
+    let variantPatternHTMLHash: string | undefined;
+    if (changedProperties.messageState?.type === 'linked') {
+      if (changedProperties.messageState.variantPatternHTML !== undefined) {
+        textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(changedProperties.messageState.variantPatternHTML, changedProperties.messageState.parameterValues);
+        variantPatternHTMLHash = blake.blake2sHex(changedProperties.messageState.variantPatternHTML);
+      } else {
+        const updatedMessage = this.messageStore.getMessage(changedProperties.messageState.messageId);
+
+        const variantHTML = MessageStoreMemory.htmlForPattern(updatedMessage!, language, {});
+        textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(variantHTML, changedProperties.messageState.parameterValues);
+        variantPatternHTMLHash = blake.blake2sHex(variantHTML);
+      }
       // the variant pattern in the label have changed
-      const textAndOps = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(changedProperties.variantPatternHTML, labelParameters);
 
       // TODO handle placeholders
-      changedPropertiesToForwared.ops = textAndOps.ops;
-      changedPropertiesToForwared.characters = textAndOps.text;
-      changedPropertiesToForwared.fillinsToPlaceholder = textAndOps.fillinsToPlaceholder;
-      changedPropertiesToForwared.variantPatternHTMLHash = blake.blake2sHex(changedProperties.variantPatternHTML);
-    } else if (updatedMessage) {
+    } else if (changedProperties.messageState?.type === 'unlinked') {
+      const updatedMessage = changedProperties.messageState.unlinkedMessage;
       // TODO update label based on the passed message - calculate new text ops and hash
       const variantHTML = MessageStoreMemory.htmlForPattern(updatedMessage!, language, {});
-      const textAndOps = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(variantHTML, labelParameters);
+      textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(variantHTML, changedProperties.messageState.parameterValues);
 
-      // TODO handle placeholders
-      changedPropertiesToForwared.ops = textAndOps.ops;
-      changedPropertiesToForwared.characters = textAndOps.text;
-      changedPropertiesToForwared.fillinsToPlaceholder = textAndOps.fillinsToPlaceholder;
-      changedPropertiesToForwared.variantPatternHTMLHash = blake.blake2sHex(variantHTML);
-    } else if (changedProperties.messageId !== null) {
-      const message = localizedLabelCached.messageId ? this.messageStore.getMessage(localizedLabelCached.messageId) : localizedLabelCached.unlinkedMessage;
-      
-      // TODO also take into account changes in the labels variables...
-      if (message && changedProperties.language !== undefined) {
-        // TODO update label based on the passed message - calculate new text ops and hash
-        const variantHTML = MessageStoreMemory.htmlForPattern(updatedMessage!, language, {});
-        const textAndOps = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(variantHTML, labelParameters);
-
-        // TODO handle placeholders
-
-        changedPropertiesToForwared.ops = textAndOps.ops;
-        changedPropertiesToForwared.characters = textAndOps.text;
-        changedPropertiesToForwared.fillinsToPlaceholder = textAndOps.fillinsToPlaceholder;
-        changedPropertiesToForwared.variantPatternHTMLHash = blake.blake2sHex(variantHTML);
-      }
+      variantPatternHTMLHash = blake.blake2sHex(variantHTML);
     }
+    // unset will be passed automatically
 
     let localizedLabel: LocalizedLabel | undefined;
     try {
-      localizedLabel = await this.localizedLabelMangerSandbox.updateLabelProperties(nodeId, changedPropertiesToForwared);
+      localizedLabel = await this.localizedLabelMangerSandbox.updateLabelProperties(nodeId, {
+        messageState: changedProperties.messageState,
+        characters: textOpsAndFillinsToPlaceholders?.characters,
+        ops: textOpsAndFillinsToPlaceholders?.ops,
+        fillinsToPlaceholder: textOpsAndFillinsToPlaceholders?.fillinsToPlaceholder,
+        labelName: changedProperties.labelName,
+        language: changedProperties.language,
+        // messageVersion:
+        variantPatternHTMLHash,
+      });
     } finally {
       let forceCacheRefresh = false;
       if (localizedLabel === undefined) {

@@ -23,17 +23,17 @@ export interface NodeSelection {
 
 export interface SandboxUpdateLabelProperties {
   labelName?: string,
-  unlinkedMessage?: Message | null
-  messageId?: string | null,
+  messageState: { type: 'linked', messageId: string, parameterValues: MessageParameterValues }
+  | { type: 'unlinked', unlinkedMessage: Message, parameterValues: MessageParameterValues }
+  | { type: 'unmanaged', unmanaged: boolean } | { type: 'unset' } 
+  | undefined
   language?: Locale,
-  unmanaged?: boolean
   messageVersion?: number,
   variantPatternHTMLHash?: string,
   characters?: string,
   ops?: any
   // TODO #18 selectors replace with variables
-  fillinsToPlaceholder?: FillinsToPlaceholder,
-  parameterValues?: MessageParameterValues,
+  fillinsToPlaceholder?: FillinsToPlaceholder | null,
 }
 
 export interface DeltaOp {
@@ -60,8 +60,8 @@ export interface DeltaOp {
   ignoreForLabelStyle?: boolean
 }
 
-//export const MARKER_CHARACTER = '​';
- export const MARKER_CHARACTER = 'X​';
+// export const MARKER_CHARACTER = '​';
+export const MARKER_CHARACTER = 'X​';
 export default class LocalizedLabelManager {
   private containerSizeThreashold = 3000;
 
@@ -768,42 +768,34 @@ export default class LocalizedLabelManager {
         textNode.setPluginData(this.autoRenameHashKey, '');
       }
 
-      // TODO #14 variables - check cleanup of parameterValues
-      if (changedProperties.parameterValues !== undefined) {
-        textNode.setPluginData(this.parameterValuesKey, JSON.stringify(changedProperties.parameterValues));
-      }
-
-      if (changedProperties.messageId === null) {
+      if (changedProperties.messageState?.type === 'unset') {
         this.updateMessageReference(textNode, null);
-      } else if (changedProperties.messageId !== undefined) {
-        this.updateMessageReference(textNode, changedProperties.messageId);
-        textNode.setPluginData(this.messageUnmanagedKey, JSON.stringify(false));
-        textNode.setPluginData(this.messageIdDataKey, changedProperties.messageId);
+        textNode.setPluginData(this.parameterValuesKey, '');
         textNode.setPluginData(this.anonymMessageDataKey, '');
-        textNode.setPluginData(`${this.messageNamePrefixKey}_${changedProperties.messageId}`, changedProperties.messageId);
-      }
-
-      if (changedProperties.unmanaged !== undefined) {
+        textNode.setPluginData(this.parameterValuesKey, '');
+      } else if (changedProperties.messageState?.type === 'unmanaged') {
         this.updateMessageReference(textNode, null);
-        textNode.setPluginData(this.messageUnmanagedKey, JSON.stringify(changedProperties.unmanaged));
+        textNode.setPluginData(this.parameterValuesKey, '');
+        textNode.setPluginData(this.messageUnmanagedKey, JSON.stringify(true));
         textNode.setPluginData(this.messageIdDataKey, '');
         textNode.setPluginData(this.anonymMessageDataKey, '');
+      } else if (changedProperties.messageState?.type === 'unlinked') {
+        this.updateMessageReference(textNode, null);
+        textNode.setPluginData(this.parameterValuesKey, JSON.stringify(changedProperties.messageState.parameterValues));
+        textNode.setPluginData(this.anonymMessageDataKey, JSON.stringify(changedProperties.messageState.unlinkedMessage));
+        textNode.setPluginData(this.messageUnmanagedKey, JSON.stringify(false));
+        textNode.setPluginData(this.messageIdDataKey, '');
+      } else if (changedProperties.messageState?.type === 'linked') {
+        this.updateMessageReference(textNode, changedProperties.messageState.messageId);
+        textNode.setPluginData(this.parameterValuesKey, JSON.stringify(changedProperties.messageState.parameterValues));
+        textNode.setPluginData(this.messageUnmanagedKey, JSON.stringify(false));
+        textNode.setPluginData(this.messageIdDataKey, changedProperties.messageState.messageId);
+        textNode.setPluginData(this.anonymMessageDataKey, '');
+        textNode.setPluginData(`${this.messageNamePrefixKey}_${changedProperties.messageState.messageId}`, changedProperties.messageState.messageId);
       }
 
       if (changedProperties.messageVersion !== undefined) {
         textNode.setPluginData(this.messageVersionDataKey, `${changedProperties.messageVersion}`);
-      }
-
-      if (changedProperties.unlinkedMessage !== undefined) {
-        this.updateMessageReference(textNode, null);
-        if (changedProperties.unlinkedMessage === null) {
-        // clean up the unlinked translation
-          textNode.setPluginData(this.anonymMessageDataKey, '');
-        } else {
-          textNode.setPluginData(this.anonymMessageDataKey, JSON.stringify(changedProperties.unlinkedMessage));
-          textNode.setPluginData(this.messageUnmanagedKey, JSON.stringify(false));
-          textNode.setPluginData(this.messageIdDataKey, '');
-        }
       }
 
       // TODO #18 selectors set variables instead
@@ -1172,7 +1164,7 @@ export default class LocalizedLabelManager {
       y,
       messageId,
       unmanaged,
-      parameters: parameterValues,
+      parameterValues,
       fillinsToPlaceholder: fillins,
       derivedKey: derivable ? derivedName : undefined,
       characters: labelText,

@@ -510,7 +510,7 @@ export default class MessageStoreMemory extends EventTarget {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async upsertMessage(message: Message, _defaultParameters: MessageParameterValues) {
-    // TODO #14 store the default parameters for this message ( we no longer store them in the message it self )
+    // TODO #14 variables - store the default parameters for this message ( we no longer store them in the message it self )
     this.upsertedMessageIds.add(message.id);
     this.inlangProject?.query.messages.upsert({ where: { id: message.id }, data: message });
 
@@ -627,7 +627,7 @@ export default class MessageStoreMemory extends EventTarget {
 
     if (currentVariantClone) {
       // variantPatternHTMLHash = (blake.blake2sHex(sourceVariantPatternHTML));
-      // TODO #14 XXX find the variant using language an pattern to be able to mutate it in place
+      // XXX find the variant using language an pattern to be able to mutate it in place
       messageClone = updateVariantPattern(message, { where: { languageTag: language, selectors: match }, data: MessageStoreMemory.patternHtmlToPattern(patternHtml) }).data!;
     } else {
       const tranlatedVariant = {
@@ -641,7 +641,7 @@ export default class MessageStoreMemory extends EventTarget {
     }
 
     // const updatedVariantClone = getVariant(message, { where: { languageTag: language, selectors: match } });
-    // TODO #14 XXX this is uses json stringify on the variant to check if equal - sdk will change anyway and we change this
+    // XXX this is uses json stringify on the variant to check if equal - sdk will change anyway and we change this
     // const mutableVariant = message.variants.find((variant) => variant.languageTag === updatedVariantClone?.languageTag && JSON.stringify(variant.match) === JSON.stringify(updatedVariantClone.match));
     // (mutableVariant as any).translationSrcHash = variantPatternHTMLHash;
 

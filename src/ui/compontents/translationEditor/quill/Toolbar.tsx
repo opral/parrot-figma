@@ -147,10 +147,8 @@ export default class ParrotToolbar extends Toolbar {
           updatedAttributes.placeholder = { name: value, named: true } as Placeholder;
           this.setParameter?.(value, parameterValue);
 
-          // TODO #14 variables - we want to somehow update the parameters based on the input
           replacementDelta = (new Delta()).insert(value, updatedAttributes);
         }
-        // TODO weight the formats - for now use the first
 
         const updatedDelta = beforeSelectionContents.concat(replacementDelta as any).concat(afterSelectionContents);
 
@@ -197,7 +195,7 @@ export default class ParrotToolbar extends Toolbar {
 
       event.preventDefault();
     } else if (event.key === 'Escape') {
-      // TODO #14 variables - we need to store the parameter value before we udpated to be able to undo it for now
+      // we need to store the parameter value before we udpated to be able to undo it for now
       this.placholderFillinInput.value = this.placholderFillinInput.getAttribute('data-orginal-value')!;
       event.preventDefault();
     }
@@ -332,9 +330,9 @@ export default class ParrotToolbar extends Toolbar {
       } else if (!selectionChunkWithNoPlaceholder && this.selectedPlacholder.length === 1) {
         // show edit placeholder
         this.placholderFillinInput.classList.toggle('ql-hidden', false);
-        // TODO #14 variables replace this with the parameters from parameter of the current label
-        // what if we do not edit a label but a message? Default values should only be used for non selectors...
-        const paramValue = this.getParameters?.(this.selectedPlacholder[0].name) ?? 'getter not set!';
+        // variables replace this with the parameters from parameter of the current label
+        // TODO #14 what if we do not edit a label but a message? Default values should only be used for non selectors...
+        const paramValue = this.getParameters?.(this.selectedPlacholder[0].name)!;
         this.placholderFillinInput.value = paramValue;
         this.placholderFillinInput.setAttribute('data-orginal-value', paramValue);
         this.placholderEditButton.classList.toggle('ql-hidden', false);

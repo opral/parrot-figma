@@ -7,7 +7,6 @@ import blake from 'blakejs';
 import { Message } from '@inlang/sdk';
 import { Locale } from '../variants/Locale';
 
-
 export interface Config {
   refLanguage?: Locale,
   enabledLanguages?: Locale[]
@@ -83,7 +82,7 @@ export class InlangMessageStore {
         if (this.messageState[id] === undefined) {
           changedKeys.added.push(id);
         } else {
-          if (blake.blake2sHex(figma.root.getPluginData(currentFileStorageKey)) !== this.messageState[id]) {
+          if (blake.blake2sHex(encoder.encode(figma.root.getPluginData(currentFileStorageKey))) !== this.messageState[id]) {
             changedKeys.updated.push(id);
           }
 

@@ -347,7 +347,7 @@ export default function LocalizedLabelListItem({
                             localizedLabelManager.commitUndo();
                           }}
                           onChange={async (patternHtml: string | undefined, parameters: MessageParameterValues, reset: any) => {
-                            if (patternHtml !== undefined && patternHtml !== '') {
+                            if (patternHtml !== undefined) {
                               localizedLabelManager.updateLabelPatternHtml(
                                 localizedLabel,
                                 patternHtml,

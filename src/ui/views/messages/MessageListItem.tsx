@@ -318,21 +318,15 @@ export default function TranslationKeyListItem({
                     onSave={async (text: string | undefined, parameters: MessageParameterValues) => {
                       // let skip = message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.skip ?? false;
 
-                      if (text === undefined || text === '') {
-                        
-                      } else {
+                      Object.values(parameters).forEach((parameter) => {
+                        // eslint-disable-next-line no-param-reassign
+                        parameter.default = true;
+                      });
 
-                        Object.values(parameters).forEach((parameter) => {
-                          // eslint-disable-next-line no-param-reassign
-                          parameter.default = true;
-                        });
-  
-                        // TODO #18 variables how to deal with default values acutally - as soon as we have variants this can become tricky since the matcher does differ from the default value :( )
-                        // - one thought on this - variables used in selectors can not have a default value...
-                        const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(message, undefined, language, [ /** this should not be the parameters parsed but the selectors of the given item */ ], text);
-                        await localizedLabelManager.updateMessage(updatedMessage, parameters);
-                      }
-
+                      // TODO #18 variables how to deal with default values acutally - as soon as we have variants this can become tricky since the matcher does differ from the default value :( )
+                      // - one thought on this - variables used in selectors can not have a default value...
+                      const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(message, undefined, language, [], text ?? '');
+                      await localizedLabelManager.updateMessage(updatedMessage, parameters);
                     }}
                     variantHTML={variantHTML}
                     messageStore={messageStore}

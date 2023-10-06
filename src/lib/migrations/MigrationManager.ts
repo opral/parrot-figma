@@ -156,7 +156,7 @@ export default class MigrationManager {
           }
         }
 
-        // TODO #14 implement migration
+        // TODO #14 migration implement migration
 
         figma.root.setPluginData(this.lastMigrationKey, version);
       },

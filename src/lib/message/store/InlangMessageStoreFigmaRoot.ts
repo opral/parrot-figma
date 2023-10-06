@@ -139,7 +139,6 @@ export class InlangMessageStore {
 
   async load(): Promise<Message[]> {
     const messages = [] as Message[];
-    debugger;
     for (const messageStorageKey of figma.root.getPluginDataKeys()) {
       if (messageStorageKey.startsWith(this.messagePrefix)) {
         const messageRaw = figma.root.getPluginData(messageStorageKey);

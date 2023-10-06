@@ -26,6 +26,7 @@ export interface ILocalizedLabelManagerUI {
     | undefined
     language?: Locale,
   }): Promise<void>;
+ updateMessage(message: Message, defaultParameters: MessageParameterValues): Promise<void>
 }
 
 export class UILocalizedLabel implements LocalizedLabel {
@@ -229,7 +230,6 @@ export class UILocalizedLabel implements LocalizedLabel {
     (new Quill(tempCont)).setContents(delta);
     let htmlContent = tempCont.getElementsByClassName('ql-editor')[0].innerHTML;
     // remove all quill helper attributes
-debugger;
     htmlContent = htmlContent.replace(/ contenteditable="false">/g, '>');
     htmlContent = htmlContent.split('<p><br></p>').join('\n');
     htmlContent = htmlContent.split('</p>').join('\n');
@@ -446,7 +446,7 @@ debugger;
       if (!toRefLanguage) {
         try {
           const eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(missingTranslationProvider, message, refLanguage, targetLanguage, []);
-          this.manager.messageStore.upsetMessage(eventuallyUpdatedMessage);
+          await this.manager.updateMessage(eventuallyUpdatedMessage, {});
           return;
         } catch (e) { /* empty */ }
       }

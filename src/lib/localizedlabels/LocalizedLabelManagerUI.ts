@@ -226,8 +226,8 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     }
   }
 
-  async updateUnpinnedLabelsWithKey(key: string) {
-    const labelsLinkedToMessage = await this.getWithMessage(key);
+  async updateUnpinnedLabelsWithMessage(messageId: string) {
+    const labelsLinkedToMessage = await this.getWithMessage(messageId);
 
     await this.updateToMessageHead(labelsLinkedToMessage);
   }
@@ -297,7 +297,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   async updateMessage(message: Message, defaultParameters: MessageParameterValues) {
     await this.messageStore.upsertMessage(message, defaultParameters);
 
-    await this.updateUnpinnedLabelsWithKey(message.id);
+    await this.updateUnpinnedLabelsWithMessage(message.id);
   }
 
   async setLabelLanguage(
@@ -398,7 +398,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         language: locale,
       });
 
-      // TODO #14 check if design is sync with translation - if not offer update with prompt
     } else {
       if (localizedLabel.unlinkedMessage) {
         // eslint-disable-next-line no-param-reassign
@@ -503,6 +502,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
     let variantPatternHTMLHash: string | undefined;
     if (changedProperties.messageState?.type === 'linked') {
+      debugger;
       const message = this.messageStore.getMessage(changedProperties.messageState.messageId)!;
       let parameters: Parameter[] | undefined;
       let variantHTML = changedProperties.messageState.variantPatternHTML;

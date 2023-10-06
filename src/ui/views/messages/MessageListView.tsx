@@ -88,7 +88,6 @@ export default function MessageListView({
     };
   }, []);
 
-
   // rendering is done in chunks the first time to give the dom time to settle
   const renderChunkSize = 250;
   useEffect(() => {
@@ -141,8 +140,8 @@ export default function MessageListView({
   const onSearchChange = (searchString: string) => {
     setSearchQuery(MessageStoreMemory.toQueryObject(searchString));
   };
-
-  const longestKey = allMessages[0].id!; // TODO #14 find longest message Object.keys(messageStore.messages).reduce((acc, key) => (key.length > acc.length ? key : acc), '');
+  
+  const longestKey = allMessages.map((message) => message.id).reduce((acc, id) => (id.length > acc.length ? id : acc), '');
 
   let rendered = 0;
 

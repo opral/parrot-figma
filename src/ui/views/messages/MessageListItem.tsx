@@ -65,7 +65,7 @@ export default function TranslationKeyListItem({
 
   const rowRef = React.useRef<HTMLDivElement>(null);
 
-  const referencingLabels = [] as any[]; // TODO #14 source referencing nodes message.referencingTextNodes;
+  const referencingLabels = [] as any[]; // TODO #14 CACHING source referencing nodes message.referencingTextNodes;
 
   async function onNodeSelect(nodeId: string) {
     await figmaRemote.scrollIntoViewIfNeeded(nodeId, true);
@@ -276,7 +276,7 @@ export default function TranslationKeyListItem({
       </div>
       {languages.map((language, i, allLanguages) => {
         const languageSkipped = false;
-        // TODO #14 enable when language skip is active
+        // TODO #21 enable when language skip is active
         // if (message.variants[language as Locale] !== undefined) {
         //   for (const gender of Object.keys(message.variants[language as Locale]!)) {
         //     for (const plural of Object.keys(message.variants[language as Locale]![gender as Gender]!)) {
@@ -311,7 +311,7 @@ export default function TranslationKeyListItem({
                 <div className="column column-plural grid-item-plural grid-item-border"><span className="rowText">{ /* message.plural ? plural : '' */ }</span></div>
                 <div className="column  column-translation grid-item-translation grid-item-border translation-container translation">
                   <TranslationEditor
-                    parameterValues={{} /* TODO #14 support fillins message.defaultFillins */}
+                    parameterValues={{} /*  ODO #18 default values  support fillins message.defaultFillins */}
                     editable={select === undefined}
                     isDisabled={false}
                     match={searchMatch?.textMatches[language]?.['*']}

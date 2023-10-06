@@ -66,15 +66,14 @@ export default class MessageStoreMemory extends EventTarget {
     window.addEventListener('message', (event : MessageEvent) => {
       if (event.data.pluginMessage.target === 'TranslationKeyStore') {
         if (event.data.pluginMessage.type === 'cacheUpdate') {
-          // TODO #14 CACHING make this part of the FS
-          // this.processCacheUpdate(event.data.pluginMessage.changedKeys, event.data.pluginMessage.updatedHistoryTags);
+          this.processCacheUpdate(event.data.pluginMessage.changedKeys);
         }
       }
     });
   }
 
   public async updateMessageLinks(messageIds: string[]) {
-    // TODO #14 CACHING rething message links
+    // TODO #14 CACHING rethink message links
     /*
     const changes = {
       updated: [] as string[],
@@ -93,53 +92,44 @@ export default class MessageStoreMemory extends EventTarget {
     */
   }
 
-  /*
-  private async processCacheUpdate(changedMessages: { deleted: string[], added: string[], updated: string[] }, updatedHistoryTags: HistoryTag[] | undefined) {
-
+  private async processCacheUpdate(changedMessages: { deleted: string[], added: string[], updated: string[] }) {
     const changes = {
       deleted: [] as string[],
       updated: [] as string[],
       added: [] as string[],
       changedKeys: [] as string[],
-      historyTags: updatedHistoryTags,
     };
 
-    if (updatedHistoryTags) {
-      this.historyTags = updatedHistoryTags;
+    for (const deltedMessageId of changedMessages.deleted) {
+      this.inlangProject?.query.messages.delete({ where: { id: deltedMessageId } });
+      changes.deleted.push(deltedMessageId);
+      changes.changedKeys.push(deltedMessageId);
     }
 
-    for (const deltedKey of changedMessages.deleted) {
-      this.removeCache(deltedKey);
-      changes.deleted.push(deltedKey);
-      changes.changedKeys.push(deltedKey);
-    }
-
-    for (const updatedMessage of changedMessages.updated) {
-      const freshKey = await this.parentKeyStore.getMessageAsync(updatedMessage);
-      if (!freshKey) {
-        throw new Error(`fresh message does not exist... [${updatedMessage}]`);
+    for (const updatedMessageId of changedMessages.updated) {
+      const freshMessage = await this.parentKeyStore.getMessageAsync(updatedMessageId);
+      if (!freshMessage) {
+        throw new Error(`fresh message does not exist... [${updatedMessageId}]`);
       }
 
-      this.upsertCache(freshKey);
-      changes.updated.push(updatedMessage);
-      changes.changedKeys.push(updatedMessage);
+      this.inlangProject?.query.messages.upsert(freshMessage);
+      changes.updated.push(updatedMessageId);
+      changes.changedKeys.push(updatedMessageId);
     }
 
-    for (const addedKey of changedMessages.added) {
-      const freshKey = await this.parentKeyStore.getMessageAsync(addedKey);
-      if (!freshKey) {
-        throw new Error(`fresh message does not exist... [${addedKey}]`);
+    for (const addedMessageId of changedMessages.added) {
+      const freshMessage = await this.parentKeyStore.getMessageAsync(addedMessageId);
+      if (!freshMessage) {
+        throw new Error(`fresh message does not exist... [${addedMessageId}]`);
       }
-
-      this.upsertCache(freshKey);
-      changes.added.push(addedKey);
-      changes.changedKeys.push(addedKey);
+      this.inlangProject?.query.messages.upsert(freshMessage);
+      changes.added.push(addedMessageId);
+      changes.changedKeys.push(addedMessageId);
     }
 
     const event = new CustomEvent<any>('updated', { detail: changes });
     this.dispatchEvent(event);
-
-  } */
+  }
 
   getLanugages(): Locale[] | undefined {
     return this.config!.enabledLanguages;
@@ -527,8 +517,6 @@ export default class MessageStoreMemory extends EventTarget {
     // await this.parentKeyStore.deleteMessage(id);
     this.deletedMessageIds.add(id);
     this.inlangProject?.query.messages.delete({ where: { id } });
-    // TODO #14 CACHING listen on deletions to propagate changes
-    // this.removeCache(id);
   }
 
   upsertedMessageIds = new Set<string>();

@@ -333,19 +333,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
       // TODO #17 versioning implement when inlang history is in place
       // const historyEntryForVersion = message.getHistoryEntry(localizedLabel.rootFrameLanguage, localizedLabel.genderId, localizedLabel.pluralId, message.latestVersion);
-
-      // const fillins = { ...localizedLabel.fillins };
-      // for (const placeholderName of Object.keys(message.defaultFillins)) {
-      //   if ((!fillins[placeholderName] || fillins[placeholderName].default) && message.defaultFillins[placeholderName]) {
-      //     fillins[placeholderName] = {
-      //       default: true,
-      //       value: message.defaultFillins[placeholderName].value ?? 'Lorem ipsum',
-      //     };
-      //   }
-      // }
-
-      // console.log('updateToLatestKeyVersion: ' +  historyEntryForVersion!.variants?.[localizedLabel.rootFrameLanguage]?.[localizedLabel.pluralId]?.text);
-
       // eslint-disable-next-line no-await-in-loop
       updatePromises.push(this.updateLabelProperties(localizedLabel.nodeId, {
         messageState: {
@@ -521,7 +508,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
           // eslint-disable-next-line no-param-reassign
           changedProperties.messageState!.parameterValues[parameter.name] = {
             type: 'string',
-            value: parameter.name, // TODO #18 variables have better default values
+            value: parameter.name, // TODO #18 default values have better default values
             default: true,
           };
         }

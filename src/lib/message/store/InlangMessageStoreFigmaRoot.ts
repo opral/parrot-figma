@@ -137,17 +137,34 @@ export class InlangMessageStore {
     figma.root.setPluginData(this.messagePrefix + id, '');
   }
 
+  async getMessageAsync(messageId: string) {
+    return this.getMessage(messageId);
+  }
+
+  getMessage(messageId: string) {
+    const messageStorageKey = this.messagePrefix + messageId;
+
+    const messageRaw = figma.root.getPluginData(messageStorageKey);
+    if (messageRaw === '') {
+      return undefined;
+    }
+    const messageRawHash = blake.blake2sHex(encoder.encode(messageRaw));
+    const message = JSON.parse(messageRaw);
+    if (message !== undefined) {
+      this.messageState[message.id] = messageRawHash;
+    }
+    return message;
+  }
+
   async load(): Promise<Message[]> {
     const messages = [] as Message[];
     for (const messageStorageKey of figma.root.getPluginDataKeys()) {
       if (messageStorageKey.startsWith(this.messagePrefix)) {
-        const messageRaw = figma.root.getPluginData(messageStorageKey);
-        const messageRawHash = blake.blake2sHex(encoder.encode(messageRaw));
-        const message = JSON.parse(figma.root.getPluginData(messageStorageKey));
+        const messageName = messageStorageKey.substring(this.messagePrefix.length);
+        const message = this.getMessage(messageName);
         if (message !== undefined) {
           messages.push(message);
         }
-        this.messageState[message.id] = messageRawHash;
       }
     }
     return messages;

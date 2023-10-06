@@ -525,12 +525,15 @@ export default class MessageStoreMemory extends EventTarget {
 
   async deleteMessage(id: string) {
     // await this.parentKeyStore.deleteMessage(id);
+    this.deletedMessageIds.add(id);
     this.inlangProject?.query.messages.delete({ where: { id } });
     // TODO #14 CACHING listen on deletions to propagate changes
     // this.removeCache(id);
   }
 
   upsertedMessageIds = new Set<string>();
+
+  deletedMessageIds = new Set<string>();
 
   private async loadInlangProject() {
     // creating a project file
@@ -567,8 +570,12 @@ export default class MessageStoreMemory extends EventTarget {
             saveMessages: async ({ messages, settings, nodeishFs }: { messages: Message[], settings: any, nodeishFs: any }) => {
               for (const message of messages) {
                 if (this.upsertedMessageIds.has(message.id)) {
-                  this.parentKeyStore.saveMessage(message);
+                  await this.parentKeyStore.saveMessage(message);
                 }
+              }
+
+              for (const deletedMessageId of [...this.deletedMessageIds]) {
+                await this.parentKeyStore.deleteMessage(deletedMessageId);
               }
               this.upsertedMessageIds = new Set<string>();
             },

@@ -89,7 +89,6 @@ export default function TranslationEditor({
   const handleSave = () => {
     // console.log('#23 QuillEditor.handleSave  ');
     setEditingState(false);
-    //  TODO #14 variables define behaviour for text ref undefined (variant does not exist different from empty text?)
     onSave?.(textRef.current!, parameterValuesRef.current);
   };
 

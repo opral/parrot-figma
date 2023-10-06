@@ -498,7 +498,7 @@ export default class MessageStoreMemory extends EventTarget {
 
   async createTag() {
     /* TODO #17 versioning we skip this in inlang for now
-    // TODO #11 we update the messages here - shouldn't we wait for the messaage bus instead?
+    // TODO #18 we update the messages here - shouldn't we wait for the messaage bus instead?
     const tagId = this.historyTags.length;
     for (const messageId of Object.keys(this.messages)) {
       this.messages[messageId].historyTags[tagId] = this.messages[messageId].latestVersion;

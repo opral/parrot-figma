@@ -397,6 +397,7 @@ export default function LocalizedLabelListItem({
                 { (localizedLabel.messageLinkState === MessageLinkState.Linked && (labelState.modified || localizedLabel.language !== localizedLabel.rootFrameLanguage)) && ( // allow the user to catch up with the keys version
                 <span
                   className="layerIcon iconWrapper button"
+                  // TODO #14 resetting changes to an empty variant leads to an error
                   data-tooltip-content="Reset all changes"
                   onClick={updateToLatestKeyVersion}
                 >

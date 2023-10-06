@@ -99,7 +99,7 @@ export default class I18NextKeyValueImporter {
         const keyAndPlrual = I18NextKeyValueImporter.extractPlural(currentKeyName);
         keys.push({
           name: keyAndPlrual.key,
-          gender: Gender.NEUTRAL, // TODO #10 also add gender
+          gender: Gender.NEUTRAL, // TODO #18 also add gender
           plural: keyAndPlrual.plural,
           text: this.toParrotPlaceholders(subNode as string),
         });

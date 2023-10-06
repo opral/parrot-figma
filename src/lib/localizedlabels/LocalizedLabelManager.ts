@@ -60,8 +60,8 @@ export interface DeltaOp {
   ignoreForLabelStyle?: boolean
 }
 
-// export const MARKER_CHARACTER = '​';
-export const MARKER_CHARACTER = 'X​';
+export const MARKER_CHARACTER = '​';
+// export const MARKER_CHARACTER = 'X​';
 export default class LocalizedLabelManager {
   private containerSizeThreashold = 3000;
 
@@ -1179,7 +1179,6 @@ export default class LocalizedLabelManager {
   private getPlaceholderDeltaOps(characters: string, fillins: FillinsToPlaceholder) {
     const placeholderDeltaOps = [] as DeltaOp[];
 
-    // TODO #14 sort by fillin length - process longest first
     const fillinValues = Object.keys(fillins);
 
     // eslint-disable-next-line for-direction, no-plusplus

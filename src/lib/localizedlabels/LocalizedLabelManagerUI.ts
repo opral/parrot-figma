@@ -398,10 +398,9 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         language: locale,
       });
 
-      // TODO check if design is sync with translation - if not offer update with prompt
+      // TODO #14 check if design is sync with translation - if not offer update with prompt
     } else {
       if (localizedLabel.unlinkedMessage) {
-        // TODO #13 check if we need to update the unlinked message
         // eslint-disable-next-line no-param-reassign
         localizedLabel.unlinkedMessage.id = messageNameToLinkTo;
         message = await this.messageStore.upsertMessage(localizedLabel.unlinkedMessage, localizedLabel.parameterValues);

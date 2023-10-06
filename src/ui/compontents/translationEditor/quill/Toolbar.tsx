@@ -331,7 +331,7 @@ export default class ParrotToolbar extends Toolbar {
         // show edit placeholder
         this.placholderFillinInput.classList.toggle('ql-hidden', false);
         // variables replace this with the parameters from parameter of the current label
-        // TODO #14 what if we do not edit a label but a message? Default values should only be used for non selectors...
+        // TODO #18 what if we do not edit a label but a message? Default values should only be used for non selectors...
         const paramValue = this.getParameters?.(this.selectedPlacholder[0].name)!;
         this.placholderFillinInput.value = paramValue;
         this.placholderFillinInput.setAttribute('data-orginal-value', paramValue);

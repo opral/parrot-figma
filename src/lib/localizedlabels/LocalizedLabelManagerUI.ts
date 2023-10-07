@@ -12,7 +12,9 @@ import { ILocalizedLabelManagerUI, UILocalizedLabel } from './UILocalizedLabel';
 import LinksLoadedEvent from './LinksLoadedEvent';
 import { ImportMessage } from '../import/ImportMessage';
 import { Gender } from '../message/variants/Gender';
-import { FillinToPlaceholder, MessageExtension, MessageParameterValues, Parameter } from '../message/MessageExtnesions';
+import {
+  FillinToPlaceholder, MessageExtension, MessageParameterValues, Parameter,
+} from '../message/MessageExtnesions';
 
 export default class LocalizedLabelManagerUI extends EventTarget implements ILocalizedLabelManagerUI {
   // mapping from nodeId to localizied label instance
@@ -152,11 +154,11 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
       }
     });
 
-    this.messageStore.addEventListener('updated', (changesEvent: any) => {
+    this.messageStore.addEventListener(MessageStoreMemory.UPDATE_EVENT, (changesEvent: any) => {
       // TODO #14 CACHING reactiveness - how do i update label cache? do i subscribe per label? how do i unsubscribe - when is this needed?
-      // for (const changedKey of changesEvent.detail.changedKeys) {
-      //   this.handleMessageUpdate(changedKey);
-      // }
+      for (const changedKey of changesEvent.detail.changedKeys) {
+        this.handleMessageUpdate(changedKey);
+      }
     });
   }
 
@@ -384,7 +386,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         messageState: { type: 'linked', messageId: message.id, parameterValues: localizedLabel.parameterValues },
         language: locale,
       });
-
     } else {
       if (localizedLabel.unlinkedMessage) {
         // eslint-disable-next-line no-param-reassign

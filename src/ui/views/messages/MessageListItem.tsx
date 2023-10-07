@@ -59,7 +59,7 @@ export default function TranslationKeyListItem({
   const [messageIdToDelete, setMessageIdToDelete] = useState<undefined | string>(undefined);
   const [keyToDeleteReferences, setKeyToDeleteReferences] = useState<undefined | number>(undefined);
 
-  const [message, _setMessage] = useState(localizedLabelManager.messageStore.getMessage(messageId)!);
+  const [message, setMessage] = useState(localizedLabelManager.messageStore.getMessage(messageId)!);
 
   const [showHistory, setShowHistory] = useState<undefined | { language: Locale, gender: Gender, plural: Plural }>(undefined);
 
@@ -70,6 +70,12 @@ export default function TranslationKeyListItem({
   async function onNodeSelect(nodeId: string) {
     await figmaRemote.scrollIntoViewIfNeeded(nodeId, true);
   }
+
+  useEffect(() => {
+    messageStore.inlangProject?.query.messages.get.subscribe({ where: { id: messageId } }, (updatedMessage) => {
+      setMessage(updatedMessage);
+    });
+  }, []);
 
   useEffect(() => {
     const updateReferenceCount = async () => {

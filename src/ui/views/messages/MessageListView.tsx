@@ -140,7 +140,7 @@ export default function MessageListView({
   const onSearchChange = (searchString: string) => {
     setSearchQuery(MessageStoreMemory.toQueryObject(searchString));
   };
-  
+
   const longestKey = allMessages.map((message) => message.id).reduce((acc, id) => (id.length > acc.length ? id : acc), '');
 
   let rendered = 0;

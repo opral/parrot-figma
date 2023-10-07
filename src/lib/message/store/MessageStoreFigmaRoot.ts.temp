@@ -212,22 +212,6 @@ export class MessageStoreFigmaRoot {
     };
   }
 
-  static createMessageId(messageName: string, bucket: number) {
-    const messageNameHash = blake.blake2sHex(encoder.encode(messageName), undefined, 5);
-    // debugging: const messageNameHash = messageName;
-    return `${bucket}_${messageNameHash}`;
-  }
-
-  private findUnusedId(messageName: string) {
-    let currentBuket = 0;
-    let idToTest = MessageStoreFigmaRoot.createMessageId(messageName, currentBuket);
-    while (figma.root.getPluginData(`${this.messagePrefix}${idToTest}`) !== '') {
-      currentBuket += 1;
-      idToTest = MessageStoreFigmaRoot.createMessageId(messageName, currentBuket);
-    }
-    return idToTest;
-  }
-
   getMessageByName(name: string) {
     let currentBuket = 0;
     let id = MessageStoreFigmaRoot.createMessageId(name, currentBuket);

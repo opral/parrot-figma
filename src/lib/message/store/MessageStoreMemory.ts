@@ -87,10 +87,12 @@ export default class MessageStoreMemory extends EventTarget {
       }
     }
 
-    const event = new CustomEvent<any>('updated', { detail: changes });
+    const event = new CustomEvent<any>(MessageStoreMemory.updateEventName, { detail: changes });
     this.dispatchEvent(event);
     */
   }
+
+  static UPDATE_EVENT = 'updated';
 
   private async processCacheUpdate(changedMessages: { deleted: string[], added: string[], updated: string[] }) {
     const changes = {
@@ -99,7 +101,7 @@ export default class MessageStoreMemory extends EventTarget {
       added: [] as string[],
       changedKeys: [] as string[],
     };
-
+    
     for (const deltedMessageId of changedMessages.deleted) {
       this.inlangProject?.query.messages.delete({ where: { id: deltedMessageId } });
       changes.deleted.push(deltedMessageId);
@@ -112,7 +114,9 @@ export default class MessageStoreMemory extends EventTarget {
         throw new Error(`fresh message does not exist... [${updatedMessageId}]`);
       }
 
-      this.inlangProject?.query.messages.upsert(freshMessage);
+      this.inlangProject?.query.messages.upsert({ where: { id: freshMessage.id }, data: freshMessage});
+      const updatedMessage = this.inlangProject?.query.messages.get({ where: { id: freshMessage.id } });
+      console.log(JSON.stringify(updatedMessage, null, 4));
       changes.updated.push(updatedMessageId);
       changes.changedKeys.push(updatedMessageId);
     }
@@ -122,12 +126,12 @@ export default class MessageStoreMemory extends EventTarget {
       if (!freshMessage) {
         throw new Error(`fresh message does not exist... [${addedMessageId}]`);
       }
-      this.inlangProject?.query.messages.upsert(freshMessage);
+      this.inlangProject?.query.messages.upsert({ where: { id: freshMessage.id }, data: freshMessage });
       changes.added.push(addedMessageId);
       changes.changedKeys.push(addedMessageId);
     }
 
-    const event = new CustomEvent<any>('updated', { detail: changes });
+    const event = new CustomEvent<any>(MessageStoreMemory.UPDATE_EVENT, { detail: changes });
     this.dispatchEvent(event);
   }
 
@@ -505,8 +509,18 @@ export default class MessageStoreMemory extends EventTarget {
     this.upsertedMessageIds.add(message.id);
     this.inlangProject?.query.messages.upsert({ where: { id: message.id }, data: message });
 
+    const changes = {
+      deleted: [] as string[],
+      updated: [] as string[],
+      added: [] as string[],
+      changedKeys: [] as string[],
+    };
+
+    changes.changedKeys.push(message.id);
+
+    // make sure the event is fired after the messages returned the updated message
     setTimeout(() => {
-      const event = new CustomEvent<any>('updated', { });
+      const event = new CustomEvent<any>(MessageStoreMemory.UPDATE_EVENT, { detail: changes });
       this.dispatchEvent(event);
     }, 1);
 
@@ -573,13 +587,6 @@ export default class MessageStoreMemory extends EventTarget {
         // return import('./inlang/FigmaPlugin');
       },
     });
-
-    const onMessagesUpdated = () => {
-      console.log('MESSAGES UPDATED!!!! MESSAGES UPDATED!!!! MESSAGES UPDATED!!!!');
-      const event = new CustomEvent<any>('updated', { });
-      this.dispatchEvent(event);
-    };
-    this.inlangProject?.query.messages.getAll.subscribe(onMessagesUpdated);
   }
 
   async load(): Promise<Readonly<Message[]>> {

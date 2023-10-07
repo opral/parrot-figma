@@ -59,7 +59,7 @@ export class InlangMessageStore {
     for (const change of event.documentChanges) {
       if (change.origin === 'LOCAL'
       || change.type !== 'PROPERTY_CHANGE'
-      || change.node.parent === null
+      || change.node.id !== '0:0'
       || change.properties.indexOf('pluginData') === -1) {
         // eslint-disable-next-line no-continue
         continue;

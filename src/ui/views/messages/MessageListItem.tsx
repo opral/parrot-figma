@@ -65,7 +65,7 @@ export default function TranslationKeyListItem({
 
   const rowRef = React.useRef<HTMLDivElement>(null);
 
-  const referencingLabels = [] as any[]; // TODO #14 CACHING source referencing nodes message.referencingTextNodes;
+  const referencingLabels = [] as any[]; // TODO #22 CACHING source referencing nodes message.referencingTextNodes;
 
   async function onNodeSelect(nodeId: string) {
     await figmaRemote.scrollIntoViewIfNeeded(nodeId, true);

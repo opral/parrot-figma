@@ -15,6 +15,7 @@ import MessageImporter, { ImportResult, ImportType } from '../../../lib/import/M
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import { ImportMessage } from '../../../lib/import/ImportMessage';
 import Drawer from '../drawer/Drawer';
+import { Message, Variant } from '@inlang/sdk';
 
 function Option(props: any) {
   return (
@@ -91,9 +92,9 @@ export default function LanguageSetup({
 
   const [importKeysByState, setimportKeysByState] = useState<{
     language: Locale,
-    newMessages: ImportMessage[],
-    newVariants: ImportMessage[],
-    updatedVariants: ImportMessage[],
+    newMessages: Message[],
+    newVariants: { message: Message, variant: Variant }[],
+    updatedVariants: { message: Message, variant: Variant }[],
   } | undefined>(undefined);
 
   const [keySummary, setKeySummary] = useState(labelManager.messageStore.findMessages({}, undefined));
@@ -161,7 +162,7 @@ export default function LanguageSetup({
             key: 'enter',
             disabled: importResult && importResult!.type === ImportType.UNSUPPORTED,
             callback: () => {
-              labelManager.import(importResult!.messages!, importKeysByState!.language);
+              labelManager.import(importResult!.messages!, importResult!.language);
               setImportResult(undefined);
               setimportKeysByState(undefined);
             },
@@ -285,7 +286,7 @@ export default function LanguageSetup({
                   text="Import"
                   onFilesReceived={(files: any) => {
                     for (const filename of Object.keys(files)) {
-                      const importResultFromSelectedFile = MessageImporter.processFile(filename, files[filename]);
+                      const importResultFromSelectedFile = MessageImporter.processFile(filename, files[filename], selectedBaseLanguage!.value as Locale);
                       setImportResult(importResultFromSelectedFile);
                       const importStats = MessageImporter.getImportStatistics(labelManager.messageStore, importResultFromSelectedFile.messages!, selectedBaseLanguage!.value as Locale);
                       setimportKeysByState(importStats);
@@ -362,7 +363,7 @@ export default function LanguageSetup({
                       text="Import"
                       onFilesReceived={(files: any) => {
                         for (const filename of Object.keys(files)) {
-                          const importResultFromSelectedFile = MessageImporter.processFile(filename, files[filename]);
+                          const importResultFromSelectedFile = MessageImporter.processFile(filename, files[filename], languageOption.value as Locale);
                           setImportResult(importResultFromSelectedFile);
                           const importStats = MessageImporter.getImportStatistics(labelManager.messageStore, importResultFromSelectedFile.messages!, languageOption.value as Locale);
                           setimportKeysByState(importStats);

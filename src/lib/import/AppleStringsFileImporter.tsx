@@ -2,9 +2,9 @@
 /* eslint-disable no-continue */
 /* eslint-disable no-plusplus */
 
-import { Gender } from '../message/variants/Gender';
-import { Plural } from '../message/variants/Plural';
-import { ImportMessage } from './ImportMessage';
+import { Message } from '@inlang/sdk';
+import MessageStoreMemory from '../message/store/MessageStoreMemory';
+import { Locale } from '../message/variants/Locale';
 
 export default class AppleStringsFileImporter {
   static reformatPlaceholders(text: string) {
@@ -16,25 +16,31 @@ export default class AppleStringsFileImporter {
 
     let index = 1;
     const replacedString = inputString.replace(regex, (match, group1, group2, group3, group4) => {
-      const type = group4;
-      let format = '';
-      let arg = '';
-      const parameterName = `unnamed__${index++}`;
+      // const type = group4;
+      // let format = '';
+      // let arg = '';
+      const parameterName = `${index++}__unnamed`;
 
-      if (type === 'f' && group3) {
-        format = ` format="${group3}"`;
-      }
+      // TODO #14 catch information in sentry on import of unsupported parameter types - to quantify usage
 
-      if (group2) {
-        arg = ` arg="${group2}"`;
-      }
+      // TODO #19 add format function that allows to know its a float/decimal or keep empty for string
+      // if (type === 'f' && group3) {
+      //   format = ` format="${group3}"`;
+      // }
 
-      return `<ph type="${type}"${format}${arg} unnamed>${parameterName}</ph>`;
+      // TODO #20 we don't add the possition arg for now...
+      // if (group2) {
+      //   arg = ` arg="${group2}"`;
+      // }
+
+      // TODO #19 add attributes for formatting to the tag
+      // TODO #20 add attributes for argument indext here.
+      return `<ph>${parameterName}</ph>`;
     });
     return replacedString;
   }
 
-  static toImportObject(filename: string, stringsFileContent: string): ImportMessage[] | undefined {
+  static toImportObject(filename: string, stringsFileContent: string, language: Locale): Message[] | undefined {
     const fileNameParts = filename.split('.');
     const fileExtension = fileNameParts[fileNameParts.length - 1];
     if (fileExtension !== 'strings') {
@@ -45,7 +51,7 @@ export default class AppleStringsFileImporter {
     const lines = stringsFileContent.split('\n');
 
     // create an empty object to hold our key-value pairs
-    const importedKeys = [] as ImportMessage[];
+    const foundMessages = [] as Message[];
 
     // iterate over each line of the file
     // eslint-disable-next-line no-plusplus
@@ -80,7 +86,7 @@ export default class AppleStringsFileImporter {
       let value = parts[1].trim();
       let quoteWrapped = false;
 
-      // remove any surrounding quotes from the key and value
+      // remove any surrounding quotes from the messageName and value
       if (messageName.startsWith('"') && messageName.endsWith('"')) {
         messageName = messageName.slice(1, -1);
       }
@@ -99,17 +105,25 @@ export default class AppleStringsFileImporter {
       }
       value = value.replace(/\\n/g, '\n');
 
+      // enrich string with parrot arguments
       value = this.toParrotPlaceholders(value);
 
+      const pattern = MessageStoreMemory.patternHtmlToPattern(value);
+
       // add the key-value pair to our result object
-      importedKeys.push({
-        name: messageName,
-        plural: Plural.OTHER,
-        gender: Gender.NEUTRAL,
-        text: value,
+      foundMessages.push({
+        id: messageName,
+        selectors: [],
+        variants: [
+          {
+            languageTag: language, // TODO #14 import/export check that we override the languae on import and on check with the correct one
+            match: [],
+            pattern,
+          },
+        ],
       });
     }
 
-    return importedKeys;
+    return foundMessages;
   }
 }

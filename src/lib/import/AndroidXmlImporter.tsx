@@ -2,10 +2,10 @@
 /* eslint-disable no-continue */
 /* eslint-disable no-plusplus */
 
-import { Gender } from '../message/variants/Gender';
-import { Locale } from '../message/variants/Locale';
-import { Plural } from '../message/variants/Plural';
+import { Message } from '@inlang/sdk';
 import { ImportMessage } from './ImportMessage';
+import MessageStoreMemory from '../message/store/MessageStoreMemory';
+import { Locale } from '../message/variants/Locale';
 
 export default class AndroidXmlImporter {
   static reformatPlaceholders(text: string) {
@@ -13,20 +13,20 @@ export default class AndroidXmlImporter {
   }
 
   private static getPluralItems(pluralNode: Element) {
-    const items = pluralNode.getElementsByTagName('item');
-    const plurals = {} as {
-      [plural in Plural]? : {
-        text?: string,
-        // TODO #9 verified
-        skip?: boolean
-      }
-    };
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      const quantity = item.getAttribute('quantity') as string;
-      plurals[quantity as Plural] = { text: item.textContent! };
-    }
-    return plurals;
+    // const items = pluralNode.getElementsByTagName('item');
+    // const plurals = {} as {
+    //   [plural in Plural]? : {
+    //     text?: string,
+    //     // TODO #9 verified
+    //     skip?: boolean
+    //   }
+    // };
+    // for (let i = 0; i < items.length; i++) {
+    //   const item = items[i];
+    //   const quantity = item.getAttribute('quantity') as string;
+    //   plurals[quantity as Plural] = { text: item.textContent! };
+    // }
+    // return plurals;
   }
 
   private static unMask(value: string) {
@@ -79,25 +79,30 @@ export default class AndroidXmlImporter {
 
     let index = 1;
     const replacedString = inputString.replace(regex, (match, group1, group2, group3, group4) => {
-      const type = group4;
-      let format = '';
-      let arg = '';
-      const parameterName = `unnamed__${index++}`;
+      // const type = group4;
+      // let format = '';
+      // let arg = '';
+      const parameterName = `${index++}__unnamed`;
+      // TODO #14 catch information in sentry on import of unsupported parameter types - to quantify usage
 
-      if (type === 'f' && group3) {
-        format = ` format="${group3}"`;
-      }
+      // TODO #19 add format function that allows to know its a float/decimal or keep empty for string
+      // if (type === 'f' && group3) {
+      //   format = ` format="${group3}"`;
+      // }
 
-      if (group2) {
-        arg = ` arg="${group2}"`;
-      }
+      // TODO #20 we don't add the possition arg for now...
+      // if (group2) {
+      //   arg = ` arg="${group2}"`;
+      // }
 
-      return `<ph type="${type}"${format}${arg} unnamed>${parameterName}</ph>`;
+      // TODO #19 add attributes for formatting to the tag
+      // TODO #20 add attributes for argument indext here.
+      return `<ph>${parameterName}</ph>`;
     });
     return replacedString;
   }
 
-  static toImportObject(filename: string, stringsFileContent: string): ImportMessage[] | undefined {
+  static toImportObject(filename: string, stringsFileContent: string, language: Locale): Message[] | undefined {
     const fileNameParts = filename.split('.');
     const fileExtension = fileNameParts[fileNameParts.length - 1];
     if (fileExtension !== 'xml') {
@@ -121,7 +126,7 @@ export default class AndroidXmlImporter {
     }
 
     // create an empty object to hold our key-value pairs
-    const importedKeys = [] as ImportMessage[];
+    const foundMessages = [] as Message[];
 
     for (const childNode of resources.childNodes) {
       if (childNode.nodeType !== Node.ELEMENT_NODE) {
@@ -138,15 +143,28 @@ export default class AndroidXmlImporter {
         if (!childNode.textContent) {
           continue;
         }
+        const messageName = stringNode.getAttribute('name')!;
+        let value = this.unMask(childNode.textContent);
+        value = this.toParrotPlaceholders(value);
 
-        importedKeys.push({
-          name: stringNode.getAttribute('name') as string,
-          gender: Gender.NEUTRAL,
-          plural: Plural.OTHER,
-          text: this.toParrotPlaceholders(this.unMask(childNode.textContent)),
+        const pattern = MessageStoreMemory.patternHtmlToPattern(value);
+
+        // add the key-value pair to our result object
+        foundMessages.push({
+          id: messageName,
+          selectors: [], // TODO #18 check how we should handle selectors in case of an import
+          variants: [
+            {
+              languageTag: language, // TODO #14 import/export check that we override the languae on import and on check with the correct one
+              match: [],
+              pattern,
+            },
+          ],
         });
       } else if (childNode.nodeName === 'plurals') {
-        const pluralNode = childNode as Element;
+        // TODO #14 import/exportmake info about plurals not supported and reference issue https://github.com/parrot-global/parrot-figma/issues/18
+        throw new Error('Plurals are currently not supported');
+        /* const pluralNode = childNode as Element;
         if (!pluralNode.getAttribute('name')) {
           continue;
         }
@@ -159,10 +177,10 @@ export default class AndroidXmlImporter {
             plural: pluralType,
             text: this.toParrotPlaceholders(this.unMask(plurals[pluralType]!.text!)),
           });
-        }
+        } */
       }
     }
 
-    return importedKeys;
+    return foundMessages;
   }
 }

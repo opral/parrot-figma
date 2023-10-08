@@ -1,6 +1,6 @@
 import blake from 'blakejs';
 
-import { Message, getVariant } from '@inlang/sdk';
+import { Message, createVariant, getVariant, updateVariantPattern } from '@inlang/sdk';
 import { MessageLinkState, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../message/variants/Plural';
 import LocalizedLabelManager, { SandboxUpdateLabelProperties } from './LocalizedLabelManager';
@@ -15,6 +15,7 @@ import { Gender } from '../message/variants/Gender';
 import {
   FillinToPlaceholder, MessageExtension, MessageParameterValues, Parameter,
 } from '../message/MessageExtnesions';
+import MessageImporter from '../import/MessageImporter';
 
 export default class LocalizedLabelManagerUI extends EventTarget implements ILocalizedLabelManagerUI {
   // mapping from nodeId to localizied label instance
@@ -155,7 +156,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     });
 
     this.messageStore.addEventListener(MessageStoreMemory.UPDATE_EVENT, (changesEvent: any) => {
-      // TODO #14 CACHING reactiveness - how do i update label cache? do i subscribe per label? how do i unsubscribe - when is this needed?
       for (const changedKey of changesEvent.detail.changedKeys) {
         this.handleMessageUpdate(changedKey);
       }
@@ -565,32 +565,30 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     return selection;
   }
 
-  async import(keysToImport: ImportMessage[], locale: Locale) {
-    function toChangeArray(importKey: ImportMessage, languageToUse: Locale) {
-      return [{
-        locale: languageToUse,
-        gender: importKey.gender,
-        plural: importKey.plural,
-        text: importKey.text,
-        skip: false,
-      }] as { locale: Locale; gender: Gender, plural: Plural; text: string | undefined; skip: boolean }[];
+  async import(messagesToImport: Message[], language: Locale) {
+    debugger;
+    const importStats = MessageImporter.getImportStatistics(this.messageStore, messagesToImport, language);
+
+    for (const newMessage of importStats.newMessages) {
+      console.log(`creating Message: ${newMessage.id}`);
+      // eslint-disable-next-line no-await-in-loop
+      await this.messageStore.upsertMessage(newMessage, {});
     }
 
-    for (const keyToImport of keysToImport) {
-      const currentKey = this.messageStore.getMessageByName(keyToImport.name);
-      if (!currentKey) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        console.log(`creating key${keyToImport.name}`);
-        // TODO #8 implement import logic for placeholders and quantities
-        // eslint-disable-next-line no-await-in-loop
-        // TODO #14 import/export add importing via inlang
-        // await this.messageStore.createMessage(keyToImport.name, toChangeArray(keyToImport, locale), false, false);
-      } else {
-        console.log(`updateing key${keyToImport.name}`);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-await-in-loop
-        // TODO #14 import/export add importing via inlang
-        // await this.updateMessage(currentKey.id, { variants: toChangeArray(keyToImport, locale) });
-      }
+    for (const newVariant of importStats.newVariants) {
+      const existingMessage = this.messageStore.getMessage(newVariant.message.id)!;
+      const updatedMessage = createVariant(existingMessage, { data: newVariant.variant });
+      console.log(`creating Variant for Message: ${newVariant.message.id} match: ${newVariant.variant.match} `);
+      // eslint-disable-next-line no-await-in-loop
+      await this.messageStore.upsertMessage(updatedMessage.data!, {});
+    }
+
+    for (const updatedVariant of importStats.updatedVariants) {
+      const existingMessage = this.messageStore.getMessage(updatedVariant.message.id)!;
+      const updatedMessage = updateVariantPattern(existingMessage, { where: { languageTag: language, match: updatedVariant.variant.match }, data: updatedVariant.variant.pattern });
+      console.log(`updating Variant for Message: ${updatedVariant.message.id} match: ${updatedVariant.variant.match} `);
+      // eslint-disable-next-line no-await-in-loop
+      await this.messageStore.upsertMessage(updatedMessage.data!, {});
     }
   }
 }

@@ -1,8 +1,7 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-continue */
 /* eslint-disable no-plusplus */
-import { Locale } from '../message/variants/Locale';
-import { Plural } from '../message/variants/Plural';
+import { Message, Variant, getVariant } from '@inlang/sdk';
 import MessageStoreMemory from '../message/store/MessageStoreMemory';
 
 import AppleStringsFileImporter from './AppleStringsFileImporter';
@@ -12,16 +11,7 @@ import { ImportMessage } from './ImportMessage';
 import LocalizedLabelManagerUI from '../localizedlabels/LocalizedLabelManagerUI';
 import I18NextKeyValueImporter from './I18Next';
 import { Gender } from '../message/variants/Gender';
-
-function toChangeArray(importKey: ImportMessage, locale: Locale) {
-  return [{
-    locale,
-    gender: importKey.gender,
-    plural: importKey.plural,
-    text: importKey.text,
-    skip: false,
-  }] as { locale: Locale; gender: Gender; plural: Plural; text: string | undefined; skip: boolean }[];
-}
+import { Locale } from '../message/variants/Locale';
 
 export enum ImportType {
   UNSUPPORTED = 'not supported',
@@ -33,62 +23,115 @@ export enum ImportType {
 export type ImportResult = {
   fileName: string,
   type: ImportType,
-  messages: ImportMessage[] | undefined,
+  messages: Message[] | undefined,
+  language: Locale,
 };
 
 export default class MessageImporter {
-  static getImportStatistics(messageStore: MessageStoreMemory, importMessages: ImportMessage[], language: Locale) {
+  static getImportStatistics(messageStore: MessageStoreMemory, importMessages: Message[], language: Locale) {
+    
     const changedMessages = {
       language,
-      newMessages: [] as ImportMessage[],
-      newVariants: [] as ImportMessage[],
-      updatedVariants: [] as ImportMessage[],
+      newMessages: [] as Message[],
+      newVariants: [] as { message: Message, variant: Variant }[],
+      updatedVariants: [] as { message: Message, variant: Variant }[],
     };
 
-    // TODO #14 import/export use inlang for import
-    // for (const messageToImport of importMessages) {
-    //   const currentMessage = messageStore.getMessageByName(messageToImport.name);
-    //   if (!currentMessage) {
-    //     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    //     changedMessages.newMessages.push(messageToImport);
-    //   } else if (!currentMessage.variants[language]) {
-    //     changedMessages.newVariants.push(messageToImport);
-    //   } else if (!currentMessage.variants[language]![messageToImport.gender]) {
-    //     changedMessages.newVariants.push(messageToImport);
-    //   } else if (!currentMessage.variants[language]![messageToImport.gender]![messageToImport.plural]) {
-    //     changedMessages.newVariants.push(messageToImport);
-    //   } else if (currentMessage.variants[language]![messageToImport.gender]![messageToImport.plural]!.text !== messageToImport.text) {
-    //     changedMessages.updatedVariants.push(messageToImport);
-    //   }
-    // }
+    for (const messageToImport of importMessages) {
+      const diff = this.getDiff(messageStore, messageToImport, language);
+
+      switch (diff.type) {
+        case 'new':
+          changedMessages.newMessages.push(messageToImport);
+          break;
+        case 'updated':
+          changedMessages.newVariants = changedMessages.newVariants.concat(diff.addedVariants.map((variant) => ({
+            message: diff.message,
+            variant,
+          })));
+
+          changedMessages.updatedVariants = changedMessages.updatedVariants.concat(diff.updatedVariants.map((variant) => ({
+            message: diff.message,
+            variant,
+          })));
+          break;
+        default:
+          break;
+      }
+    }
 
     return changedMessages;
   }
 
-  static processFile(fileName: string, content: string): ImportResult {
+  static getDiff(messageStore: MessageStoreMemory, importMessage: Message, language: Locale):
+  { type: 'equal' }
+  | { type: 'new', message: Message }
+  | { type: 'updated', message: Message, addedVariants: Variant[], updatedVariants: Variant[] } {
+    const currentMessage = messageStore.getMessageByName(importMessage.id);
+    if (!currentMessage) {
+      return { type: 'new', message: importMessage };
+    }
+
+    const addedVariants = [] as Variant[];
+    const updatedVariants = [] as Variant[];
+
+    // TODO #18 when we support selectors we need to take those into account as well when importing (the matchers count and order might differ...)
+    for (const variantToImport of importMessage.variants) {
+      const currentVariant = getVariant(currentMessage, { where: { languageTag: language, match: variantToImport.match } });
+      if (currentVariant) {
+        // TODO #14 check if this is an exact match - we need an exact match for import! - can we use an sdk message? - add exact flag to query?
+        if (JSON.stringify(currentVariant.match) === JSON.stringify(variantToImport.match)) {
+          if (JSON.stringify(currentVariant.pattern) === JSON.stringify(variantToImport.pattern)) {
+            // all the same! nothing to do with this variant
+            continue;
+          }
+          // pattern differs -> updated variant
+          updatedVariants.push(variantToImport);
+          continue;
+        }
+        // if we are here ->  the found variants matcher didn't match - don't continue add the variat as missing as well
+      }
+
+      addedVariants.push(variantToImport);
+    }
+
+    if (addedVariants.length > 0 || updatedVariants.length > 0) {
+      return {
+        type: 'updated',
+        message: importMessage,
+        addedVariants,
+        updatedVariants,
+      };
+    }
+
+    return { type: 'equal' };
+  }
+
+  static processFile(fileName: string, content: string, language: Locale): ImportResult {
     console.log(`processing file${fileName} content: ${content}`);
 
     const results = {
       fileName,
       type: ImportType.UNSUPPORTED,
-      messages: undefined as ImportMessage[] | undefined,
+      messages: undefined as Message[] | undefined,
+      language
     };
 
-    let importObject = AppleStringsFileImporter.toImportObject(fileName, content);
+    let importObject = AppleStringsFileImporter.toImportObject(fileName, content, language);
     if (importObject) {
       results.type = ImportType.IOS_STRINGS;
       results.messages = importObject;
       return results;
     }
 
-    importObject = AndroidXMLImporter.toImportObject(fileName, content);
+    importObject = AndroidXMLImporter.toImportObject(fileName, content, language);
     if (importObject) {
       results.type = ImportType.ANDROID_XML;
       results.messages = importObject;
       return results;
     }
 
-    importObject = I18NextKeyValueImporter.toImportObject(fileName, content);
+    importObject = I18NextKeyValueImporter.toImportObject(fileName, content, language);
     if (importObject) {
       results.type = ImportType.L18N_JSON;
       results.messages = importObject;
@@ -97,26 +140,7 @@ export default class MessageImporter {
 
     return results;
   }
-
-  static async import(labelManager: LocalizedLabelManagerUI, messagesToImport: ImportMessage[], language: Locale) {
-    for (const messageToImport of messagesToImport) {
-      const currentKey = labelManager.messageStore.getMessageByName(messageToImport.name);
-      if (!currentKey) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        console.log(`creating key${messageToImport.name}`);
-        // TODO #8 implement import logic for placeholders and quantities
-        // TODO #14 import/export implemnt imported 
-        // const createdMessage = await labelManager.messageStore.createMessage(messageToImport.name, toChangeArray(messageToImport, language), false, false);
-      } else {
-        console.log(`updateing key${messageToImport.name}`);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        // TODO #14 import/export implemnt imported 
-        // const updatedMessage = await labelManager.updateMessage(currentKey.id, { variants: toChangeArray(messageToImport, language) });
-      }
-    }
-    // TODO keyStore.commit();
-  }
-}
+  
 /* const changedKeys = {
       added: [] as TranslationKey[],
       updated: [] as TranslationKey[],

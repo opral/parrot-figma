@@ -73,7 +73,7 @@ export default class MessageStoreMemory extends EventTarget {
   }
 
   public async updateMessageLinks(messageIds: string[]) {
-    // TODO #14 CACHING rethink message links
+    // TODO #22 CACHING rethink message links
     /*
     const changes = {
       updated: [] as string[],

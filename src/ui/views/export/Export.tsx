@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import Select, { SelectOption } from '../../compontents/select/select';
 import './Export.css';
 import { Locale } from '../../../lib/message/variants/Locale';
-import KeyExporter from '../../../lib/export/KeyExporter';
+import MessageExporter from '../../../lib/export/MessageExporter';
 import FEATURES_FLAGS from '../../featuretoggle';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 
@@ -131,11 +131,10 @@ export default function Export({
   };
 
   const doExport = async (exportLanguage: Locale, format: string) => {
-    // TODO #14 import/export inlang
-    // const exportedFile = KeyExporter.export(translationKeyStore, exportLanguage, format, selectedVersion);
-    // if (exportedFile) {
-    //   downloadFile(exportedFile.fileName, exportedFile.fileType, exportedFile.content);
-    // }
+    const exportedFile = MessageExporter.export(translationKeyStore, exportLanguage, format);
+    if (exportedFile) {
+      downloadFile(exportedFile.fileName, exportedFile.fileType, exportedFile.content);
+    }
   };
 
   const [keySummary, setKeySummary] = useState(labelManager.messageStore.findMessages({}, undefined));

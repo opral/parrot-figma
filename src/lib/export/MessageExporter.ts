@@ -1,0 +1,55 @@
+import ejs from 'ejs';
+import { getVariant } from '@inlang/sdk';
+import { Locale } from '../message/variants/Locale';
+import MessageStoreMemory from '../message/store/MessageStoreMemory';
+
+const androidXmlExporterTmpl = ejs.compile(require('./templates/AndroidXmlExporter.ejs').default); // include the EJS template as a string
+const appleStringsFileExporterTmpl = ejs.compile(require('./templates/AppleStringsFileExporter.ejs').default);
+// const appleDictFileExporterTmpl = ejs.compile(require('./templates/AppleDictFileExporter.ejs').default);
+const i18nextJsonExporter = ejs.compile(require('./templates/i18nextJsonExporter.ejs').default);
+
+export default class MessageExporter {
+  static export(messageStore: MessageStoreMemory, language: Locale, format: string) {
+    // prepare the data needed by the templates
+
+    const dataToPass = {
+      messages: messageStore.inlangProject!.query.messages.getAll(),
+      locale: language,
+      getVariant,
+      patternToHtml: MessageStoreMemory.patternToHtml,
+    };
+
+    if (format === 'apple-strings') {
+      return {
+        fileName: `${language}.strings`,
+        fileType: 'application/xml',
+        content: appleStringsFileExporterTmpl(dataToPass),
+      };
+    }
+    /* TODO #18 support export format for plurals
+    if (format === 'apple-dict') {
+      return {
+        fileName: `${language}.dict`,
+        fileType: 'application/xml',
+        content: appleDictFileExporterTmpl(dataToPass),
+      };
+    } */
+
+    if (format === 'android-xml') {
+      return {
+        fileName: 'strings.xml',
+        fileType: 'application/xml',
+        content: androidXmlExporterTmpl(dataToPass),
+      };
+    }
+
+    if (format === 'i18next') {
+      return {
+        fileName: `${language}.json`,
+        fileType: 'application/json',
+        content: i18nextJsonExporter(dataToPass),
+      };
+    }
+    return undefined;
+  }
+}

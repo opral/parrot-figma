@@ -29,7 +29,7 @@ export type ImportResult = {
 
 export default class MessageImporter {
   static getImportStatistics(messageStore: MessageStoreMemory, importMessages: Message[], language: Locale) {
-    
+    // TODO #14 import check if we need language as parmaeter here
     const changedMessages = {
       language,
       newMessages: [] as Message[],
@@ -140,6 +140,7 @@ export default class MessageImporter {
 
     return results;
   }
+}
   
 /* const changedKeys = {
       added: [] as TranslationKey[],

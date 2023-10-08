@@ -1,7 +1,24 @@
 <%
 
+const { messages, locale, getVariant, patternToHtml } = locals;
 languageStrings = [];
 plurals = [];
+debugger;
+
+function variantToValue(variant) {
+	let value = '';
+	for (const patternPart of variant.pattern) {
+		if (patternPart.type === 'Text') {
+			value += patternPart.value;
+		} else if (patternPart.type === 'VariableReference') {
+			const variableName = patternPart.name;
+			// TODO #19 check the type and use different placeholder
+			// TODO #20 support indexed placeholders instead of just %@ use %1$@ and derive the index if needed
+			value += '{{'+variableName+'}}';
+		}
+	}
+	return value;
+}
 
 // list of characters that need to be escaped when converting from ini to string format
 // '<' // (less than), escaped as &lt;
@@ -25,15 +42,23 @@ function mask(value, quoteWrapped) {
 
 const exportObject = {};
 
-// get only the data for the language we need
-for (const [messageName, message] of Object.entries(input)) { // iterate over dictionary/object properties
+for (const message of messages) { 
 
-	if (!message.plural && !message.gender) {
+	if (message.selectors.length === 0) {
 		// ==========================================
 		// Singular String found (e.g. Language = de)
 		// ==========================================
 		
-		let stringValue = mask(message.variants[language]['n']['other'].text, true);
+		const variant = getVariant(message, { where: { languageTag: locale, match: [] }});
+
+		if (variant === undefined) {
+			continue;
+		}
+		
+		let stringValue = variantToValue(variant);
+		const messageName = message.id;
+
+		stringValue = mask(stringValue, true);
 		
 		const messageGroups = messageName.split('__');
 		let currentSubgroup = exportObject;

@@ -116,7 +116,7 @@ export default class AppleStringsFileImporter {
         selectors: [],
         variants: [
           {
-            languageTag: language, // TODO #14 import/export check that we override the languae on import and on check with the correct one
+            languageTag: language,
             match: [],
             pattern,
           },

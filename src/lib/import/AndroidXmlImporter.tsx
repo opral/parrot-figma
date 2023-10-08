@@ -155,14 +155,14 @@ export default class AndroidXmlImporter {
           selectors: [], // TODO #18 check how we should handle selectors in case of an import
           variants: [
             {
-              languageTag: language, // TODO #14 import/export check that we override the languae on import and on check with the correct one
+              languageTag: language,
               match: [],
               pattern,
             },
           ],
         });
       } else if (childNode.nodeName === 'plurals') {
-        // TODO #14 import/exportmake info about plurals not supported and reference issue https://github.com/parrot-global/parrot-figma/issues/18
+        // TODO #14 import/export make info about plurals not supported and reference issue https://github.com/parrot-global/parrot-figma/issues/18
         throw new Error('Plurals are currently not supported');
         /* const pluralNode = childNode as Element;
         if (!pluralNode.getAttribute('name')) {

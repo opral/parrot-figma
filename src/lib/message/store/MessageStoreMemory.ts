@@ -172,29 +172,7 @@ export default class MessageStoreMemory extends EventTarget {
       modules: [],
     });
   }
-
-  getMessagesByMessageName(): { [messageName: string]: Message } {
-    const messages = {} as { [id: string]: Message };
-
-    // TODO #14 import/export used by exporter - rewrite exporter to use inlangs project directly
-    // const tagIndex = versionId ? this.getTagIndexByVersionId(versionId) : -1;
-
-    // for (const messageId of Object.keys(this.messages)) {
-    //   const currentMessage = this.messages[messageId];
-    //   if (tagIndex >= 0) {
-    //     const messageVersion = currentMessage.getMessageVersionByTagIndex(tagIndex);
-    //     if (messageVersion !== undefined) {
-    //       const messageInVersion = currentMessage.getInVersion(messageVersion);
-    //       messages[messageInVersion.name] = messageInVersion;
-    //     }
-    //   } else if (currentMessage.variants[language]) {
-    //     messages[currentMessage.name] = currentMessage;
-    //   }
-    // }
-
-    return messages;
-  }
-
+  
   getMessage(id: string) : Message | undefined {
     // TOOD #14 use inlang Message as return instead of UI
     return this.inlangProject!.query.messages.get({ where: { id } });

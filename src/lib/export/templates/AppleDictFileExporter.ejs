@@ -10,8 +10,7 @@
 // create data array
 languageStrings = [];
 
-// get only the data for the language we need
-for (const [messageNem, variants] of Object.entries(input)) { // iterate over dictionary/object properties
+for (const message of messages) { 
 
   	let pluralTranslations = {};
 	let isPlural = false;

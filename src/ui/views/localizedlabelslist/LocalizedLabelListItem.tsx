@@ -21,7 +21,8 @@ import FEATURES_FLAGS from '../../featuretoggle';
 import { track } from '../../utils/analytics';
 import Drawer from '../../compontents/drawer/Drawer';
 import { Gender } from '../../../lib/message/variants/Gender';
-import { FillinToPlaceholder, MessageParameterValues } from '../../../lib/message/MessageExtnesions';
+import { FillinToPlaceholder } from '../../../lib/message/MessageExtnesions';
+import { MessageParameterValues } from "../../../lib/message/MessageParameterValues";
 
 type LocalizedLabelListItemProps = {
   showMessage: Function,

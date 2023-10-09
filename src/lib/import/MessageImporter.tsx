@@ -29,7 +29,6 @@ export type ImportResult = {
 
 export default class MessageImporter {
   static getImportStatistics(messageStore: MessageStoreMemory, importMessages: Message[], language: Locale) {
-    // TODO #14 import check if we need language as parmaeter here
     const changedMessages = {
       language,
       newMessages: [] as Message[],
@@ -79,7 +78,7 @@ export default class MessageImporter {
     for (const variantToImport of importMessage.variants) {
       const currentVariant = getVariant(currentMessage, { where: { languageTag: language, match: variantToImport.match } });
       if (currentVariant) {
-        // TODO #14 check if this is an exact match - we need an exact match for import! - can we use an sdk message? - add exact flag to query?
+        // TODO #24 check if this is an exact match - we need an exact match for import! - can we use an sdk message? - add exact flag to query?
         if (JSON.stringify(currentVariant.match) === JSON.stringify(variantToImport.match)) {
           if (JSON.stringify(currentVariant.pattern) === JSON.stringify(variantToImport.pattern)) {
             // all the same! nothing to do with this variant
@@ -114,7 +113,7 @@ export default class MessageImporter {
       fileName,
       type: ImportType.UNSUPPORTED,
       messages: undefined as Message[] | undefined,
-      language
+      language,
     };
 
     let importObject = AppleStringsFileImporter.toImportObject(fileName, content, language);

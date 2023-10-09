@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { Placeholder } from '../../../lib/message/MessageExtnesions';
+import { Placeholder } from "../../../lib/message/Placeholder";
+
 
 
 // placeholder editor should be able to:

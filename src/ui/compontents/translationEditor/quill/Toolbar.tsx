@@ -3,7 +3,8 @@ import Quill, { Delta as DeltaType } from 'quill';
 import Toolbar from 'quill/modules/toolbar';
 import Emitter from 'quill/core/emitter';
 import { PlaceholderProps } from 'react-select';
-import { Placeholder } from '../../../../lib/message/MessageExtnesions';
+import { Placeholder } from "../../../../lib/message/Placeholder";
+
 
 const Delta = Quill.import('delta') as typeof DeltaType;
 

@@ -110,6 +110,20 @@ const asyncFunctionProxy = new AsyncFunctionProxy('UIAsyncFunctionProxy', (data:
 const figmaRemote = new FigmaUtil();
 asyncFunctionProxy.proxyAsyncMethods(figmaRemote);
 
+(async () => {
+  // reportUnreportedMigrationReports
+  const reports = await figmaRemote.getReportsAsync();
+  for (const report of Object.values(reports)) {
+    if (!report.reportedToSentry) {
+      console.log(`reporting: Migration version: ${report.version} - ${report.message}`);
+      Sentry.captureException(new Error(`Migration version: ${report.version} - ${report.message}`));
+      report.reportedToSentry = true;
+      // eslint-disable-next-line no-await-in-loop
+      await figmaRemote.updateReport(report);
+    }
+  }
+})();
+
 figmaRemote.getUserId().then((userId) => {
   identify(userId!);
   if (userId) {

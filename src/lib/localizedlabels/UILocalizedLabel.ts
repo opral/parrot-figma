@@ -9,10 +9,12 @@ import { Gender } from '../message/variants/Gender';
 import MessageStoreMemory from '../message/store/MessageStoreMemory';
 import {
   FillinToPlaceholder,
-  MessageExtension,
-  MessageParameterValues, Placeholder, PlaceholdersByName,
+  MessageExtension, PlaceholdersByName,
 } from '../message/MessageExtnesions';
 import PlaceholderBlot from '../../ui/compontents/translationEditor/blots/PlaceholderBlot';
+import { MessageParameterValues } from "../message/MessageParameterValues";
+import { Placeholder } from "../message/Placeholder";
+import PlaceholderUtil from '../message/PlaceholderUtil';
 
 const Delta = Quill.import('delta') as typeof DeltaType;
 
@@ -249,7 +251,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     // - extract all placeholders from the patternHtml providded
     const placeholderPattern = /<ph([^>])*>([^<]*)<\/ph>/g;
     let htmlWithFilledPlaceholders = html.replace(placeholderPattern, (match, attributesStrings, placeholderName) => {
-      const placeholder = PlaceholderBlot.extractFromRawHtml(placeholderName, attributesStrings);
+      const placeholder = PlaceholderUtil.extractFromRawHtml(placeholderName, attributesStrings);
       const parameterValue = messageParameterValues[placeholder.name].value;
       // TODO #19 variables take formatting function into account
       // - create all values based on formatting function

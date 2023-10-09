@@ -83,8 +83,7 @@ export default class AndroidXmlImporter {
       // let format = '';
       // let arg = '';
       const parameterName = `${index++}__unnamed`;
-      // TODO #14 catch information in sentry on import of unsupported parameter types - to quantify usage
-
+      
       // TODO #19 add format function that allows to know its a float/decimal or keep empty for string
       // if (type === 'f' && group3) {
       //   format = ` format="${group3}"`;
@@ -162,8 +161,7 @@ export default class AndroidXmlImporter {
           ],
         });
       } else if (childNode.nodeName === 'plurals') {
-        // TODO #14 import/export make info about plurals not supported and reference issue https://github.com/parrot-global/parrot-figma/issues/18
-        throw new Error('Plurals are currently not supported');
+        throw new Error('Plurals Messages are currently not supported.');
         /* const pluralNode = childNode as Element;
         if (!pluralNode.getAttribute('name')) {
           continue;

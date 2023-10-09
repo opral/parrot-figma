@@ -26,7 +26,8 @@ import FEATURES_FLAGS from '../../featuretoggle';
 import Drawer from '../../compontents/drawer/Drawer';
 import TextField from '../../compontents/textfield/TextField';
 import { Gender, genderList } from '../../../lib/message/variants/Gender';
-import { FillinToPlaceholder, MessageParameterValues } from '../../../lib/message/MessageExtnesions';
+import { FillinToPlaceholder } from '../../../lib/message/MessageExtnesions';
+import { MessageParameterValues } from "../../../lib/message/MessageParameterValues";
 // import ReactQuill from 'react-quill';
 
 type TranslationKeyListItemProps = {

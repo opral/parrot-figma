@@ -25,7 +25,7 @@ const introShownToUser = true;
 
 figma.root.setRelaunchData({ open: 'Let Your Design Speak all Languages' });
 
-const migrationManager = new MigrationManager();
+const migrationManager = new MigrationManager(figmaRemote);
 migrationManager.migrate();
 
 WindowManagerSandbox.init({

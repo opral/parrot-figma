@@ -21,7 +21,6 @@ const encoder = new TextEncoding.TextEncoder();
 export class InlangMessageStore {
   public proxyClassName = 'InlangMessageStore';
 
-  // TODO #14 migration - migrate old config
   public static configDataKey = 'prt_ic';
 
   /**
@@ -37,7 +36,7 @@ export class InlangMessageStore {
    * - the head version of a message is stored withing a pluginDataKey of the current document root node
    * - all messages are strored prefixed with the messagePrefix followed by a slot (for collisions) hashed orignal message name
    */
-  messagePrefix = 'prt_im__';
+  public static messagePrefix = 'prt_im__';
 
   // contains a map from messageId to message hash
   messageState = { } as {
@@ -64,10 +63,10 @@ export class InlangMessageStore {
         // eslint-disable-next-line no-continue
         continue;
       }
-      // TODO #14 CACHING TEST Multi user - check if a message update triggered by another user is propagated to parrot
-      // TODO #14 CACHING implement for multi user - keep tracK of changes in config as well
+      
+      // TODO #25 CACHING implement for multi user - keep tracK of changes in config as well
       // eslint-disable-next-line default-case
-      const currentFileStorageKeys = figma.root.getPluginDataKeys().filter((value) => value.indexOf(this.messagePrefix) === 0);
+      const currentFileStorageKeys = figma.root.getPluginDataKeys().filter((value) => value.indexOf(InlangMessageStore.messagePrefix) === 0);
       let currentCachedMessageIds = Object.keys(this.messageState);
 
       const changedKeys = {
@@ -77,7 +76,7 @@ export class InlangMessageStore {
       };
 
       for (const currentFileStorageKey of currentFileStorageKeys) {
-        const id = currentFileStorageKey.slice(this.messagePrefix.length);
+        const id = currentFileStorageKey.slice(InlangMessageStore.messagePrefix.length);
 
         if (this.messageState[id] === undefined) {
           changedKeys.added.push(id);
@@ -129,11 +128,11 @@ export class InlangMessageStore {
   }
 
   async saveMessage(message: Message): Promise<void> {
-    figma.root.setPluginData(this.messagePrefix + message.id, JSON.stringify(message));
+    figma.root.setPluginData(InlangMessageStore.messagePrefix + message.id, JSON.stringify(message));
   }
 
   async deleteMessage(id: string): Promise<void> {
-    figma.root.setPluginData(this.messagePrefix + id, '');
+    figma.root.setPluginData(InlangMessageStore.messagePrefix + id, '');
   }
 
   async getMessageAsync(messageId: string) {
@@ -141,7 +140,7 @@ export class InlangMessageStore {
   }
 
   getMessage(messageId: string) {
-    const messageStorageKey = this.messagePrefix + messageId;
+    const messageStorageKey = InlangMessageStore.messagePrefix + messageId;
 
     const messageRaw = figma.root.getPluginData(messageStorageKey);
     if (messageRaw === '') {
@@ -158,8 +157,8 @@ export class InlangMessageStore {
   async load(): Promise<Message[]> {
     const messages = [] as Message[];
     for (const messageStorageKey of figma.root.getPluginDataKeys()) {
-      if (messageStorageKey.startsWith(this.messagePrefix)) {
-        const messageName = messageStorageKey.substring(this.messagePrefix.length);
+      if (messageStorageKey.startsWith(InlangMessageStore.messagePrefix)) {
+        const messageName = messageStorageKey.substring(InlangMessageStore.messagePrefix.length);
         const message = this.getMessage(messageName);
         if (message !== undefined) {
           messages.push(message);

@@ -1,7 +1,10 @@
+// eslint-disable-next-line max-classes-per-file
 import { Message, Variant, getVariant } from '@inlang/sdk';
-import { Placeholder } from 'react-select/animated';
 import { Locale } from './variants/Locale';
+
 import MessageStoreMemory from './store/MessageStoreMemory';
+import { MessageParameterValues } from "./MessageParameterValues";
+import { Placeholder } from "./Placeholder";
 
 export enum ParameterType {
   string = 's',
@@ -26,33 +29,6 @@ export interface Parameter {
   derivedArgumentPosition: undefined | number, // the argument position derived by analyzing all message variants
 }
 
-export interface Placeholder {
-  // name of the placeholder - always preferred to have one but can also get derived as some imports do only provide position
-  name: string,
-
-  // false if no name provided - this allows to distinct names derived by postion from real names
-  named: boolean,
-
-  // if defined the position to provide the argument at when using printf for example
-  specifiedArgumentPosition: undefined | number,
-  // the argument position derived by analyzing all variants
-  //  derivedArgumentPosition: undefined | number,
-
-  // formatting function like :number :datetime or custom function
-  formatFunctionName?: string,
-  // options utilized by formatting function like Date formating pattern or number format
-  options?: Record<string, string>,
-
-  // TDOO #14 this is represented by options in message format - options passed as function arguments into the function like :datetime
-  // decimalPlaces: undefined | number, // in case of type float this gives the number of decimal places after the .
-
-  // the 0-based position the parameter apeared in the message variant. in a string like "Hello [[first_name]] [[last_name]]" first_name would get 0, last_name would get 1.
-  // parameterNumber: number,
-
-  // the start and the length of the parmaeter in the message variant
-  // positionInString: number,
-  // length: number,
-}
 
 export interface PlaceholdersByName {
   [placeholderName: string] : Placeholder
@@ -64,9 +40,6 @@ export interface FillinToPlaceholder {
   [fillin: string]: Placeholder
 }
 
-export interface MessageParameterValues {
-  [parameterName: string]: { type: 'string', value: string, default?: boolean } // TODO #19 variables - add other types | { type: 'number', value: number, default?: boolean }
-}
 
 export class MessageExtension {
   /**

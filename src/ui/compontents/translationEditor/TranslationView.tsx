@@ -2,6 +2,7 @@ import * as React from 'react';
 import { MessageExtension } from '../../../lib/message/MessageExtnesions';
 import { PlaceholderView } from './PlaceholderView';
 import PlaceholderBlot from './blots/PlaceholderBlot';
+import PlaceholderHelper from '../../../lib/message/PlaceholderUtil';
 
 type TranslationViewProps = {
   match: { start: number, length: number } | undefined
@@ -13,7 +14,7 @@ export default function TranslationView({
   text,
 }: TranslationViewProps) {
   const result = [];
-  const placeholderMatches = PlaceholderBlot.extractPlaceholdersFromPatterHTML(text);
+  const placeholderMatches = PlaceholderHelper.extractPlaceholdersFromPatterHTML(text);
   const fixedPosition = 3; // TODO #8 source this from the keys parameters instead
   let lastEnd = 0;
   let placeHolderIndex = 0;

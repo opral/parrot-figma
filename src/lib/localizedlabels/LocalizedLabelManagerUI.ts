@@ -13,8 +13,9 @@ import LinksLoadedEvent from './LinksLoadedEvent';
 import { ImportMessage } from '../import/ImportMessage';
 import { Gender } from '../message/variants/Gender';
 import {
-  FillinToPlaceholder, MessageExtension, MessageParameterValues, Parameter,
+  FillinToPlaceholder, MessageExtension, Parameter,
 } from '../message/MessageExtnesions';
+import { MessageParameterValues } from "../message/MessageParameterValues";
 import MessageImporter from '../import/MessageImporter';
 
 export default class LocalizedLabelManagerUI extends EventTarget implements ILocalizedLabelManagerUI {
@@ -490,7 +491,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
 
     let variantPatternHTMLHash: string | undefined;
     if (changedProperties.messageState?.type === 'linked') {
-      debugger;
       const message = this.messageStore.getMessage(changedProperties.messageState.messageId)!;
       let parameters: Parameter[] | undefined;
       let variantHTML = changedProperties.messageState.variantPatternHTML;
@@ -566,7 +566,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   }
 
   async import(messagesToImport: Message[], language: Locale) {
-    debugger;
     const importStats = MessageImporter.getImportStatistics(this.messageStore, messagesToImport, language);
 
     for (const newMessage of importStats.newMessages) {

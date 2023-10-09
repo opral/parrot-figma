@@ -1,167 +1,264 @@
 // import { MessageStoreFigmaRoot } from '../message/store/MessageStoreFigmaRoot';
+
 import { Gender } from '../message/variants/Gender';
+import { Plural } from '../message/variants/Plural';
+
+import { InlangMessageStore } from '../message/store/InlangMessageStoreFigmaRoot';
+import { MARKER_CHARACTER } from '../localizedlabels/LocalizedLabelManager';
+import PlaceholderHelper from '../message/PlaceholderUtil';
+import { MessageParameterValues } from '../message/MessageParameterValues';
+import FigmaUtil from '../../shared/FigmaUtil';
 
 export default class MigrationManager {
   private lastMigrationKey = 'parrot_migration_executed';
+
+  private figmaUtil: FigmaUtil;
+
+  constructor(figmaUtil: FigmaUtil) {
+    this.figmaUtil = figmaUtil;
+  }
 
   public migrate() {
     const lastMigration = figma.root.getPluginData(this.lastMigrationKey);
     for (const migration of this.migrations) {
       if (this.isMigrationNeeded(lastMigration, migration.version)) {
-        migration.migrate(migration.version);
+        if (migration.migrate(migration.version)) {
+          this.setPluginData(figma.root, this.lastMigrationKey, migration.version);
+        }
       }
     }
   }
 
   private migrations = [
     {
-      version: '0.9.55',
+      version: '0.10.71',
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       migrate: (version: string) => {
-        const configDataKeyOld = 'aar_c';
-        const keyPrefixOld = 'aar_k__';
-        const keyHistoryPrefixOld = 'aar_h__';
+        // CONFIG - migrate legacy config to new conifig
+        const legacyConfigDataKey = 'prt_c';
+        const configDataKey = 'prt_ic';
 
-        const configDataKey = 'prt_c';
-        const messagePrefix = 'prt_m__';
-        const messageHistoryPrefix = 'prt_mh__';
-        // go through all messages - add the message name
-        const oldDataKeys = figma.root.getPluginDataKeys();
-        for (const oldDataKey of oldDataKeys) {
-          if (oldDataKey.startsWith(keyPrefixOld)) {
-            const messageName = oldDataKey.substring(keyPrefixOld.length, oldDataKey.length);
-            const oldMessage = JSON.parse(figma.root.getPluginData(oldDataKey)) as any;
-            if (!oldMessage.translations) {
-              figma.root.setPluginData(oldDataKey, '');
+        const legacyConfigRaw = figma.root.getPluginData(legacyConfigDataKey);
+
+        if (legacyConfigRaw === '') {
+          // file is not yet configured for parrot - skip migration
+          return true;
+        }
+        const config = JSON.parse(legacyConfigRaw);
+
+        if (config.baseLanguage) {
+          config.refLanguage = config.baseLanguage;
+          delete config.baseLanguage;
+          this.setPluginData(figma.root, configDataKey, JSON.stringify(config));
+          this.setPluginData(figma.root, legacyConfigDataKey, '');
+        }
+
+        let migratedMessages = 0;
+        let migratedAnonymousLabels = 0;
+        let migratedLinkedLabels = 0;
+        let migratedPlaceholders = 0;
+
+        const patternHtmlToPattern = (patternHtml: string): any[] => {
+          const result = [] as any[];
+
+          const placeholders = PlaceholderHelper.extractPlaceholdersFromPatterHTML(patternHtml);
+
+          let lastExtractionEnd = 0;
+
+          for (const placeholder of placeholders) {
+            if (placeholder.start > lastExtractionEnd) {
+              result.push({
+                type: 'Text',
+                value: patternHtml.substring(lastExtractionEnd, placeholder.start),
+              });
+            }
+            result.push({
+              type: 'VariableReference',
+              name: placeholder.placeholder.name,
+            });
+            lastExtractionEnd = placeholder.start + placeholder.length;
+          }
+
+          if (patternHtml.length > lastExtractionEnd) {
+            result.push({
+              type: 'Text',
+              value: patternHtml.substring(lastExtractionEnd, patternHtml.length),
+            });
+          }
+
+          return result;
+        };
+
+        const migrateParrotMessageToInlangMessage = (legacyParrotMessage: any) => {
+          const migratedMessage = {
+            id: legacyParrotMessage.name,
+            selectors: [],
+            variants: [],
+          } as any;
+
+          // We didn't support gender nor plurals - its save to only migrate one variant
+          for (const [language, genders] of Object.entries(legacyParrotMessage.variants)) {
+            const neutralVariant = {
+              languageTag: language,
+              match: [],
+              pattern: [],
+            } as any;
+
+            const textPreviousMigration = (genders as any)[Gender.NEUTRAL]?.[Plural.OTHER]?.text;
+            if (textPreviousMigration) {
+              neutralVariant.pattern = patternHtmlToPattern(textPreviousMigration);
+              migratedMessage.variants.push(neutralVariant);
+            }
+          }
+
+          return migratedMessage.variants.length > 0 ? migratedMessage :  undefined;
+        };
+
+        // remove prt_t - tag data
+        this.setPluginData(figma.root, 'prt_t', '');
+
+        // prt_m__{msg_id} -> prt_im__[msg_name]
+        const messagePrefixOld = 'prt_m__';
+
+        // message history prefix
+        const messageHistoryPrefix = 'prt_mh_';
+
+        // MESSAGE migrations
+        const legacyIdToNameMap = {} as any;
+        const allRootDataKeys = figma.root.getPluginDataKeys();
+        for (const rootDataKey of allRootDataKeys) {
+          // remove prt_mh_*
+          if (rootDataKey.startsWith(messageHistoryPrefix)) {
+            this.setPluginData(figma.root, rootDataKey, '');
+          }
+
+          if (rootDataKey.startsWith(messagePrefixOld)) {
+            const messageId = rootDataKey.substring(messagePrefixOld.length);
+            const legacyMessage = JSON.parse(figma.root.getPluginData(rootDataKey)) as any;
+
+            if (legacyMessage.ref !== undefined) {
+              // skip referencing messages - edgecase can be fixed by the usere easyly
             } else {
-              oldMessage.variants = {};
-              for (const [language, plurals] of Object.entries(oldMessage.translations)) {
-                for (const [plural, variant] of Object.entries(plurals as Object)) {
-                  if (oldMessage.variants[language] === undefined) {
-                    oldMessage.variants[language] = {
-                      [Gender.NEUTRAL]: {},
-                    };
-                  }
-                  if (oldMessage.variants[language][Gender.NEUTRAL][plural] === undefined) {
-                    oldMessage.variants[language][Gender.NEUTRAL][plural] = {};
-                  }
-                  oldMessage.variants[language][Gender.NEUTRAL][plural] = variant;
-                }
+              migratedMessages += 1;
+              const inlangMessage = migrateParrotMessageToInlangMessage(legacyMessage);
+              if (inlangMessage) {
+                this.setPluginData(figma.root, InlangMessageStore.messagePrefix + inlangMessage.id, JSON.stringify(inlangMessage));
+                // remove prt_m__{msg_id}
+                this.setPluginData(figma.root, rootDataKey, '');
+                legacyIdToNameMap[messageId] = inlangMessage.id;
               }
             }
-            delete oldMessage.keyName;
-            oldMessage.name = messageName;
-            oldMessage.gender = false;
-            const messageId = 'TODO' // TODO #14 migration MessageStoreFigmaRoot.createMessageId(messageName, 0);
-            figma.root.setPluginData(messagePrefix + messageId, JSON.stringify(oldMessage));
-
-            console.log(`migrating ${keyHistoryPrefixOld}${messageName}`);
-            const oldMessageHistory = JSON.parse(figma.root.getPluginData(keyHistoryPrefixOld + messageName)) as any;
-            // add message name to first history entry
-            oldMessageHistory[0].name = messageName;
-            // process history to fix translation entries
-            for (const oldHistoryEntry of oldMessageHistory) {
-              if (!oldHistoryEntry.translations) {
-                console.log(`empty oldHistory found for ${messageName} + ${JSON.stringify(oldHistoryEntry)}`);
-              } else {
-                oldHistoryEntry.variants = {};
-                for (const [language, plurals] of Object.entries(oldHistoryEntry.translations)) {
-                  for (const [plural, variant] of Object.entries(plurals as Object)) {
-                    if (oldHistoryEntry.variants[language] === undefined) {
-                      oldHistoryEntry.variants[language] = {
-                        [Gender.NEUTRAL]: {},
-                      };
-                    }
-                    if (oldHistoryEntry.variants[language][Gender.NEUTRAL][plural] === undefined) {
-                      oldHistoryEntry.variants[language][Gender.NEUTRAL][plural] = {};
-                    }
-                    oldHistoryEntry.variants[language][Gender.NEUTRAL][plural] = variant;
-                  }
-                }
-                delete oldHistoryEntry.transalations;
-              }
-            }
-
-            delete oldMessage.keyName;
-            oldMessage.name = messageName;
-            oldMessage.gender = false;
-
-            // use new storage key
-            figma.root.setPluginData(messageHistoryPrefix + messageId, JSON.stringify(oldMessageHistory));
-
-            // remove old keys
-            figma.root.setPluginData(keyHistoryPrefixOld + messageName, '');
-            figma.root.setPluginData(oldDataKey, '');
           }
         }
 
-        const configOld = figma.root.getPluginData(configDataKeyOld);
-        if (figma.root.getPluginData(configDataKey) === '') {
-          console.log(`Migration of config;${configOld}`);
-          figma.root.setPluginData(configDataKey, configOld);
+        // LABEL migrations
+
+        // lets not overcomplicate the migration - just mapp it to value + signalCharacter
+        // {"what":{"value":"message"}} -> '{"message​":{"name":"what","named":false}}'
+        const migrateFillins = (legacyFillins: any) => {
+          const fillinsToPlaceholder = {} as { [fillinValue: string]: any };
+          const parameterValues = {} as MessageParameterValues;
+          for (const [fillinName, fillinObj] of Object.entries(legacyFillins)) {
+            const fillinValue = (fillinObj as any).value;
+            fillinsToPlaceholder[fillinValue + MARKER_CHARACTER] = { name: fillinName, named: true, specifiedArgumentPosition: undefined };
+            parameterValues[fillinName] = { type: 'string', value: fillinValue, default: false };
+          }
+          return { fillinsToPlaceholder, parameterValues };
+        };
+
+        const textNodesWitAnonymMessageToMigrate = (figma.root as any).findAllWithCriteria({
+          pluginData: {
+            keys: ['am'],
+          },
+        }) as TextNode[];
+
+        for (const textNodeWitAnonymMessageToMigrate of textNodesWitAnonymMessageToMigrate) {
+          if (textNodeWitAnonymMessageToMigrate.getPluginData('mi') !== '') {
+            // eslint-disable-next-line no-continue
+            continue; // skip labels that have a message reference
+          }
+
+          migratedAnonymousLabels += 1;
+
+          // drop plural and gender properties in favour of future parameter
+          this.setPluginData(textNodeWitAnonymMessageToMigrate, 'mp', '');
+          this.setPluginData(textNodeWitAnonymMessageToMigrate, 'mg', '');
+          // reset mv - former message version
+          this.setPluginData(textNodeWitAnonymMessageToMigrate, 'mt', '');
+
+          const anonymousMessage = JSON.parse(textNodeWitAnonymMessageToMigrate.getPluginData('am'));
+
+          // migrate old anonymouse message
+          const inlangMessage = migrateParrotMessageToInlangMessage(anonymousMessage);
+          this.setPluginData(textNodeWitAnonymMessageToMigrate, 'iam', JSON.stringify(inlangMessage));
+          this.setPluginData(textNodeWitAnonymMessageToMigrate, 'am', '');
+
+          const fillinRaw = textNodeWitAnonymMessageToMigrate.getPluginData('fi');
+          if (fillinRaw !== '') {
+            const legacyFillin = JSON.parse(fillinRaw);
+            const fillinToPlaceholder = migrateFillins(legacyFillin);
+            migratedPlaceholders += Object.keys(fillinToPlaceholder.parameterValues).length;
+            this.setPluginData(textNodeWitAnonymMessageToMigrate, 'fitp', JSON.stringify(fillinToPlaceholder.fillinsToPlaceholder));
+            this.setPluginData(textNodeWitAnonymMessageToMigrate, 'parameterValuesKey', JSON.stringify(fillinToPlaceholder.parameterValues));
+            this.setPluginData(textNodeWitAnonymMessageToMigrate, 'fi', '');
+          }
         }
 
         // go through all textnodes with references to messages and update to slot 0
-        const textNodesToMigrate = (figma.root as any).findAllWithCriteria({
+        const textNodesWithReferenceToMigrate = (figma.root as any).findAllWithCriteria({
           pluginData: {
-            keys: ['kt', 'ut'],
+            keys: ['mi'],
           },
         }) as TextNode[];
-        for (const textNodeToMigrate of textNodesToMigrate) {
-          // message link state - migrate kt to mt
-          textNodeToMigrate.setPluginData('mt', textNodeToMigrate.getPluginData('kt'));
-          textNodeToMigrate.setPluginData('kt', '');
 
-          // message version - migrate kv to mv
-          textNodeToMigrate.setPluginData('mv', textNodeToMigrate.getPluginData('kv'));
-          textNodeToMigrate.setPluginData('kv', '');
-
-          // message plural - migrate kp to mp
-          textNodeToMigrate.setPluginData('mp', textNodeToMigrate.getPluginData('kp'));
-          textNodeToMigrate.setPluginData('kp', '');
-
-          // message gender - add mg
-          textNodeToMigrate.setPluginData('mg', Gender.NEUTRAL);
-
-          // migrate unlinged message (ut -> am)
-          const unlinkedMessageRaw = textNodeToMigrate.getPluginData('ut');
-          if (unlinkedMessageRaw !== '') {
-            // process history to fix translation entries
-            const unlinkedMessage = JSON.parse(unlinkedMessageRaw) as any;
-            unlinkedMessage.variants = {};
-            for (const [language, plurals] of Object.entries(unlinkedMessage.translations)) {
-              for (const [plural, variant] of Object.entries(plurals as Object)) {
-                if (unlinkedMessage.variants[language] === undefined) {
-                  unlinkedMessage.variants[language] = {
-                    [Gender.NEUTRAL]: {},
-                  };
-                }
-                if (unlinkedMessage.variants[language][Gender.NEUTRAL][plural] === undefined) {
-                  unlinkedMessage.variants[language][Gender.NEUTRAL][plural] = {};
-                }
-                unlinkedMessage.variants[language][Gender.NEUTRAL][plural] = variant;
-              }
-            }
-            delete unlinkedMessage.translations;
-            unlinkedMessage.gender = false;
-            textNodeToMigrate.setPluginData('am', JSON.stringify(unlinkedMessage));
-            textNodeToMigrate.setPluginData('ut', '');
+        for (const textNodeWithReferenceToMigrate of textNodesWithReferenceToMigrate) {
+          const legacyMessageId = textNodeWithReferenceToMigrate.getPluginData('mi');
+          const messageName = legacyIdToNameMap[legacyMessageId];
+          if (messageName) {
+            this.setPluginData(textNodeWithReferenceToMigrate, 'mn', messageName);
+            this.setPluginData(textNodeWithReferenceToMigrate, `mn_${messageName}`, messageName);
           }
 
-          // migrate key (messageName) to message id
-          const messageName = textNodeToMigrate.getPluginData('key');
-          if (messageName !== '') {
-            // TODO #14 migration - we skip the old format for new versions
-            textNodeToMigrate.setPluginData('mi', 'i' /* MessageStoreFigmaRoot.createMessageId(messageName, 0) */);
-            textNodeToMigrate.setPluginData('key', '');
+          migratedLinkedLabels += 1;
+
+          // reset old mi - message id proerty
+          this.setPluginData(textNodeWithReferenceToMigrate, 'mi', '');
+          // reset mp - plural no longer used - parameters in the future
+          this.setPluginData(textNodeWithReferenceToMigrate, 'mp', '');
+          // reset mg - gender no longer used - parameters in the future
+          this.setPluginData(textNodeWithReferenceToMigrate, 'mg', '');
+          // reset mt - former key/message type - the type of a label is now derived by its properties
+          this.setPluginData(textNodeWithReferenceToMigrate, 'mt', '');
+          // reset mv - former message version
+          this.setPluginData(textNodeWithReferenceToMigrate, 'mt', '');
+
+          // migrate old anonymouse message
+          this.setPluginData(textNodeWithReferenceToMigrate, 'am', '');
+
+          const fillinRaw = textNodeWithReferenceToMigrate.getPluginData('fi');
+          if (fillinRaw !== '') {
+            const legacyFillin = JSON.parse(fillinRaw);
+            const fillinToPlaceholder = migrateFillins(legacyFillin);
+            migratedPlaceholders += Object.keys(fillinToPlaceholder.parameterValues).length;
+
+            this.setPluginData(textNodeWithReferenceToMigrate, 'fitp', JSON.stringify(fillinToPlaceholder.fillinsToPlaceholder));
+            this.setPluginData(textNodeWithReferenceToMigrate, 'parameterValuesKey', JSON.stringify(fillinToPlaceholder.parameterValues));
+            this.setPluginData(textNodeWithReferenceToMigrate, 'fi', '');
           }
         }
 
-        // TODO #14 migration implement migration
+        this.figmaUtil.addMigrationReport(version, `Migration successfull: Migrated Messages: ${migratedMessages} Migrated Linked labels ${migratedLinkedLabels} Migrated Labels with anonym Messages ${migratedAnonymousLabels} Parameters: ${migratedPlaceholders}`);
 
-        figma.root.setPluginData(this.lastMigrationKey, version);
+        return true;
       },
     },
   ];
+
+  // eslint-disable-next-line class-methods-use-this
+  private setPluginData(node: BaseNodeMixin, dataKey: string, data: string) {
+    console.log(`[${node.id}] setting ${dataKey} to ]${data}[`);
+    node.setPluginData(dataKey, data);
+  }
 
   // eslint-disable-next-line class-methods-use-this, consistent-return
   private isMigrationNeeded(lastMigrationVersion: string, migrationVersion: string) {

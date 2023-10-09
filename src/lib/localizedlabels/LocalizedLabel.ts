@@ -89,6 +89,5 @@ export interface LocalizedLabel {
 
   derivedKey?: string;
 
-  // TODO #14 migration - unlinekd message to Message format
   unlinkedMessage: Message;
 }

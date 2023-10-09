@@ -23,7 +23,7 @@ export default function SetupView({
       activeLanguages={labelManager.messageStore.getLanugages()!}
       onChange={async (baselanguage: Locale, activeLanguages: Locale[]) => {
         
-        await labelManager.messageStore.setBaseLanguage(baselanguage);
+        await labelManager.messageStore.setRefLanguage(baselanguage);
         await labelManager.messageStore.setLanguages(activeLanguages);
       }}
     />

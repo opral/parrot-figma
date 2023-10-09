@@ -24,7 +24,8 @@ import { MyListContainer, MyListItem } from './blots/MyList';
 import ItalicBlot from './blots/ItalicBlot';
 import LinkBlot from './blots/LinkBlot';
 import TextDecorationBlot from './blots/TextDecorationBlot';
-import { MessageParameterValues } from '../../../lib/message/MessageExtnesions';
+import { MessageParameterValues } from "../../../lib/message/MessageParameterValues";
+
 
 Quill.register(MyListItem, true);
 Quill.register(LinkBlot, true);

@@ -9,7 +9,8 @@ import LinksLoadedEvent from './LinksLoadedEvent';
 import TextNodeLinter from './lint/TextNodeLinter';
 import FontHelper from './FontUtil';
 import { InlangMessageStore } from '../message/store/InlangMessageStoreFigmaRoot';
-import { FillinToPlaceholder as FillinsToPlaceholder, MessageParameterValues } from '../message/MessageExtnesions';
+import { FillinToPlaceholder as FillinsToPlaceholder } from '../message/MessageExtnesions';
+import { MessageParameterValues } from "../message/MessageParameterValues";
 
 export interface NodeSelection {
   [nodeId: string]: {
@@ -77,26 +78,19 @@ export default class LocalizedLabelManager {
 
   public sampleValuesDataKey = 'sv';
 
-  public anonymMessageDataKey = 'am';
+  public anonymMessageDataKey = 'aim';
 
   public fillinsToPlaceholderKey = 'fitp';
-  // TODO #14 migration - old fillin format? public fillinsKey = 'fi';
 
   public parameterValuesKey = 'pv';
 
   public languageDataKey = 'l';
 
-  public messageLinkStateDataKey = 'mt';
-
   public messageUnmanagedKey = 'mum';
 
-  public messageVersionDataKey = 'mv';
+  //  public messageVersionDataKey = 'mv';
 
-  public messagePluralDataKey = 'mp';
-
-  public messageGenderDataKey = 'mg';
-
-  public messageIdDataKey = 'mi';
+  public messageNameDataKey = 'mn';
 
   public messageNamePrefixKey = 'mn_';
 
@@ -516,7 +510,7 @@ export default class LocalizedLabelManager {
       const textNodeId = textNode.id;
       this.virtualTree.addNode(textNode, textNodeId);
 
-      const messageId = textNode.getPluginData(this.messageIdDataKey);
+      const messageId = textNode.getPluginData(this.messageNameDataKey);
       if (messageId) {
         const previousMessage = this.refreshLabelMessageLinkCache(textNodeId, messageId);
         if (previousMessage) {
@@ -736,8 +730,8 @@ export default class LocalizedLabelManager {
         }
       }
     }
-    if (textNode.getPluginData(this.messageIdDataKey) !== messageId) {
-      textNode.setPluginData(this.messageIdDataKey, '');
+    if (textNode.getPluginData(this.messageNameDataKey) !== messageId) {
+      textNode.setPluginData(this.messageNameDataKey, '');
     }
   }
 
@@ -771,38 +765,38 @@ export default class LocalizedLabelManager {
       if (changedProperties.messageState?.type === 'unset') {
         this.updateMessageReference(textNode, null);
         textNode.setPluginData(this.parameterValuesKey, '');
+        textNode.setPluginData(this.messageUnmanagedKey, '');
         textNode.setPluginData(this.anonymMessageDataKey, '');
-        textNode.setPluginData(this.parameterValuesKey, '');
+        textNode.setPluginData(this.messageNameDataKey, '');
       } else if (changedProperties.messageState?.type === 'unmanaged') {
         this.updateMessageReference(textNode, null);
         textNode.setPluginData(this.parameterValuesKey, '');
         textNode.setPluginData(this.messageUnmanagedKey, JSON.stringify(true));
-        textNode.setPluginData(this.messageIdDataKey, '');
+        textNode.setPluginData(this.messageNameDataKey, '');
         textNode.setPluginData(this.anonymMessageDataKey, '');
       } else if (changedProperties.messageState?.type === 'unlinked') {
         this.updateMessageReference(textNode, null);
         textNode.setPluginData(this.parameterValuesKey, JSON.stringify(changedProperties.messageState.parameterValues));
         textNode.setPluginData(this.anonymMessageDataKey, JSON.stringify(changedProperties.messageState.unlinkedMessage));
         textNode.setPluginData(this.messageUnmanagedKey, JSON.stringify(false));
-        textNode.setPluginData(this.messageIdDataKey, '');
+        textNode.setPluginData(this.messageNameDataKey, '');
       } else if (changedProperties.messageState?.type === 'linked') {
         this.updateMessageReference(textNode, changedProperties.messageState.messageId);
         textNode.setPluginData(this.parameterValuesKey, JSON.stringify(changedProperties.messageState.parameterValues));
         textNode.setPluginData(this.messageUnmanagedKey, JSON.stringify(false));
-        textNode.setPluginData(this.messageIdDataKey, changedProperties.messageState.messageId);
+        textNode.setPluginData(this.messageNameDataKey, changedProperties.messageState.messageId);
         textNode.setPluginData(this.anonymMessageDataKey, '');
         textNode.setPluginData(`${this.messageNamePrefixKey}_${changedProperties.messageState.messageId}`, changedProperties.messageState.messageId);
       }
 
-      if (changedProperties.messageVersion !== undefined) {
-        textNode.setPluginData(this.messageVersionDataKey, `${changedProperties.messageVersion}`);
-      }
+      // if (changedProperties.messageVersion !== undefined) {
+      //   textNode.setPluginData(this.messageVersionDataKey, `${changedProperties.messageVersion}`);
+      // }
 
       // TODO #18 selectors set variables instead
       // if (changedProperties.gender !== undefined) {
       //   textNode.setPluginData(this.messageGenderDataKey, changedProperties.gender ? changedProperties.gender : '');
       // }
-
       // if (changedProperties.plural !== undefined) {
       //   textNode.setPluginData(this.messagePluralDataKey, changedProperties.plural ? changedProperties.plural : '');
       // }
@@ -1141,7 +1135,7 @@ export default class LocalizedLabelManager {
     // if no plural id is specified than we fall back to "other" - the default plural
     const language = node.getPluginData(this.languageDataKey) === '' ? this.messageStore?.getConfigSync()!.refLanguage! : node.getPluginData(this.languageDataKey) as Locale;
     const unmanaged = node.getPluginData(this.messageUnmanagedKey) === 'true';
-    const messageId = node.getPluginData(this.messageIdDataKey) === '' ? undefined : node.getPluginData(this.messageIdDataKey);
+    const messageId = node.getPluginData(this.messageNameDataKey) === '' ? undefined : node.getPluginData(this.messageNameDataKey);
     const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === '' ? this.messageStore?.getConfigSync()!.refLanguage! : rootFrame.getPluginData(this.languageDataKey) as Locale;
 
     const variantPatternHTMLHash = node.getPluginData(this.variantPatternHTMLHashDataKey) !== '' ? node.getPluginData(this.variantPatternHTMLHashDataKey) : undefined;

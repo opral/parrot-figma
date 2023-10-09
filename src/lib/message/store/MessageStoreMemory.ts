@@ -3,7 +3,6 @@
 import {
   ProjectSettings, loadProject, getVariant, InlangProject, LanguageTag, updateVariantPattern, createVariant,
 } from '@inlang/sdk';
-import { createMessage } from '@inlang/sdk/test-utilities';
 import { Message, Pattern } from '@inlang/message';
 import blake from 'blakejs';
 import { Locale } from '../variants/Locale';
@@ -13,8 +12,8 @@ import { NodeSelection } from '../../localizedlabels/LocalizedLabelManager';
 import { Gender, genderList } from '../variants/Gender';
 import { createNodeishMemoryFs } from './inlang/FigmaRootFs';
 import { Config, InlangMessageStore } from './InlangMessageStoreFigmaRoot';
-import { FillinToPlaceholder, MessageParameterValues } from '../MessageExtnesions';
-import PlaceholderBlot from '../../../ui/compontents/translationEditor/blots/PlaceholderBlot';
+import { MessageParameterValues } from "../MessageParameterValues";
+import PlaceholderHelper from '../PlaceholderUtil';
 
 export type SearchQuery = {
   selected?: 'FRAME' | 'LABEL' | undefined,
@@ -158,7 +157,7 @@ export default class MessageStoreMemory extends EventTarget {
     return this.config!.refLanguage;
   }
 
-  async setBaseLanguage(language: Locale) {
+  async setRefLanguage(language: Locale) {
     const parentConfig = await this.parentKeyStore.getConfig();
     this.config!.refLanguage = language;
     parentConfig.refLanguage = language;
@@ -646,7 +645,7 @@ export default class MessageStoreMemory extends EventTarget {
   static patternHtmlToPattern(patternHtml: string): Pattern {
     const result = [] as Pattern;
 
-    const placeholders = PlaceholderBlot.extractPlaceholdersFromPatterHTML(patternHtml);
+    const placeholders = PlaceholderHelper.extractPlaceholdersFromPatterHTML(patternHtml);
 
     let lastExtractionEnd = 0;
 

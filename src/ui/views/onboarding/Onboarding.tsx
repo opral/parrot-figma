@@ -66,7 +66,7 @@ export default function Onboarding({
             setSelectedBaseLanguage(baselanguage);
             setSelectedLanguages(activeLanguages);
             
-            await labelManager.messageStore.setBaseLanguage(baselanguage);
+            await labelManager.messageStore.setRefLanguage(baselanguage);
             await labelManager.messageStore.setLanguages(activeLanguages);
           }}
         />

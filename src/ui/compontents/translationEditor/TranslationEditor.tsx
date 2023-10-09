@@ -13,7 +13,7 @@ import './TranslationEditor.css';
 import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
 import TranslationView from './TranslationView';
 import QuillEditor from './QuillEditor';
-import { MessageParameterValues } from '../../../lib/message/MessageExtnesions';
+import { MessageParameterValues } from "../../../lib/message/MessageParameterValues";
 
 type TranslationEditorProps = {
   variantHTML?: string,

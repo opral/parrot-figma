@@ -5,10 +5,11 @@ import UnmatchingFontWeightNotSupported from './rules/FontStyleNotSupported';
 import IndentationNotSupported from './rules/IndentationNotSupported';
 import TextDecorationUnknown from './rules/TextDecorationUnknown';
 import FontStyleNotSuppoorted from './rules/FontStyleNotSupported';
+import MixedStyleNotSupportedOpenTypeFace from './rules/MixedStyleNotSupportedOpenTypeFace';
 
 export default class TextNodeLinter {
   defaultRules = [
-    MixedStyleNotSupported.createRuleForField('openTypeFeatures'),
+    new MixedStyleNotSupportedOpenTypeFace(),
     MixedStyleNotSupported.createRuleForField('textCase'),
     MixedStyleNotSupported.createRuleForField('fontSize'),
     MixedStyleNotSupported.createRuleForField('letterSpacing'),
@@ -36,7 +37,7 @@ export default class TextNodeLinter {
   lint(textNode: TextNode) {
     const matchingRules = [];
     for (const rule of Object.values(this.registeredRules)) {
-      const currentRuleMatches = rule.matches(textNode)
+      const currentRuleMatches = rule.matches(textNode);
       if (currentRuleMatches) {
         matchingRules.push(rule.ruleName);
       }

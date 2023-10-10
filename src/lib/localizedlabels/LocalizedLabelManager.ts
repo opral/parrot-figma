@@ -340,13 +340,16 @@ export default class LocalizedLabelManager {
                 }
               }
               changedLabels.push(localizedLabel);
+            } else {
+              deletedIds.add(changedNode.id);
+              this.refreshLabelMessageLinkCache(changedNode.id, undefined);
             }
           } else if ((changedNode as FrameNode).children) {
             let changedVirtualNodes = [] as VirtualTreeNode[];
             if (change.properties.includes('parent')) {
               changedVirtualNodes = this.virtualTree.moveNode(changedNode!.id, changedNode!.parent!);
               // console.log(`Node changed - parent ${change.id} moved in vt affacted: ${JSON.stringify(changedVirtualNodes.length)}`);
-            } else if (change.properties.includes('name') || change.properties.includes('pluginData')) {
+            } else if (change.properties.includes('name') || change.properties.includes('pluginData') || change.properties.includes('visible')) {
               // if the name changed we have to update all childs since naming changes the key abrivation
               changedVirtualNodes = this.virtualTree.getAllNodesInBranchByRootId(changedNode!.id);
               // console.log(`Node changed - ${change.id} name in vt affacted: ${JSON.stringify(changedVirtualNodes.length)}`);
@@ -374,6 +377,9 @@ export default class LocalizedLabelManager {
                     }
                     changedLabels.push(localizedLabel);
                     // lokalizedLabel.parentIds.forEach((parentId) => frameData.refreshTriggerIds.add(parentId));
+                  } else {
+                    deletedIds.add(movedFigmaNode.id);
+                    this.refreshLabelMessageLinkCache(movedFigmaNode.id, undefined);
                   }
                 }
               }

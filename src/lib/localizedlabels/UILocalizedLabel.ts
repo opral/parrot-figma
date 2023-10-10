@@ -1,29 +1,34 @@
 import Quill, { Delta as DeltaType, DeltaOperation } from 'quill';
 import blake from 'blakejs';
-import { Language } from '../base/Language';
-import { Plural } from '../base/Plural';
-import { KeyState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
-import { UITranslationKey } from '../keystore/UITranslationKey';
-import {
-  Fillins, Placeholder, PlaceholderType, PlaceholdersByName, TranslationEntry, TranslationKey,
-} from '../keystore/TranslationKey';
+import { Message } from '@inlang/message';
+import { Locale } from '../message/variants/Locale';
+import { MessageLinkState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
+
 import LocalizedLabelManager, { DeltaOp, MARKER_CHARACTER } from './LocalizedLabelManager';
+import { Gender } from '../message/variants/Gender';
+import MessageStoreMemory from '../message/store/MessageStoreMemory';
+import {
+  FillinToPlaceholder,
+  MessageExtension, PlaceholdersByName,
+} from '../message/MessageExtnesions';
+import PlaceholderBlot from '../../ui/compontents/translationEditor/blots/PlaceholderBlot';
+import { MessageParameterValues } from "../message/MessageParameterValues";
+import { Placeholder } from "../message/Placeholder";
+import PlaceholderUtil from '../message/PlaceholderUtil';
 
 const Delta = Quill.import('delta') as typeof DeltaType;
 
 export interface ILocalizedLabelManagerUI {
-  keyStore: any; // TODO make this UITranslationKeyStore and add all methods to the interface needed
+  messageStore: any; // TODO make this UITranslationKeyStore and add all methods to the interface needed
   updateLabelProperties(nodeId: string, changedProperties: {
     labelName?: string,
-    keyType?: KeyState,
-    key?: string,
-    keyVersion?: number,
-    language?: Language,
-    plural?: Plural,
-    translationHTML?: string,
-    filledTemplateHash?: string,
-    showSampleValues?: boolean,
+    messageState?: { type: 'linked', messageId: string, parameterValues: MessageParameterValues, variantPatternHTML?: string }
+    | { type: 'unlinked', unlinkedMessage: Message, parameterValues: MessageParameterValues }
+    | { type: 'unmanaged', unmanaged: boolean } | { type: 'unset' }
+    | undefined
+    language?: Locale,
   }): Promise<void>;
+ updateMessage(message: Message, defaultParameters: MessageParameterValues): Promise<void>
 }
 
 export class UILocalizedLabel implements LocalizedLabel {
@@ -47,42 +52,34 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   height: number;
 
-  rootFrameLanguage: Language;
+  rootFrameLanguage: Locale;
 
-  language: Language;
+  language: Locale;
 
-  rootFrameUseSampleValues: boolean;
+  messageLinkState: MessageLinkState;
 
-  useSampleValues: boolean;
-
-  keyType: KeyState;
-
-  key?: string | undefined;
-
-  keyVersion: number;
-
-  pluralId: Plural;
+  messageId?: string | undefined;
 
   characters: string;
 
-  state?: { behind: number; orginalTranslationHTML?: string | undefined; modified: boolean; } | undefined;
-
-  textChangedAfterGeneration: boolean;
+  state?: { modified: boolean; } | undefined;
 
   /**
    * contains the translation representation with placeholders and later formation tags
    */
   // translation: string;
 
-  fillins: Fillins;
+  parameterValues: ParameterValues;
+
+  fillinsToPlaceholder: FillinToPlaceholder;
 
   derivedKey?: string | undefined;
 
-  warnings: string[];
+  matchingLabelLints: string[];
 
   labelStyle: LabelStyle;
 
-  unlinkedTranslations: TranslationEntry; // | undefined;
+  unlinkedMessage: Message; // | undefined;
 
   // utils
   // to manage the label within the UI keep a reference of the Label manager
@@ -103,36 +100,73 @@ export class UILocalizedLabel implements LocalizedLabel {
     this.height = localizedLabel.height;
     this.rootFrameLanguage = localizedLabel.rootFrameLanguage;
     this.language = localizedLabel.language;
-    this.rootFrameUseSampleValues = localizedLabel.rootFrameUseSampleValues;
-    this.useSampleValues = localizedLabel.useSampleValues;
-    this.keyType = localizedLabel.keyType;
-    this.key = localizedLabel.key;
-    this.keyVersion = localizedLabel.keyVersion;
-    this.pluralId = localizedLabel.pluralId;
-    this.characters = localizedLabel.characters;
-    this.textChangedAfterGeneration = localizedLabel.textChangedAfterGeneration;
+    this.unlinkedMessage = localizedLabel.unlinkedMessage;
+    this.messageId = localizedLabel.messageId;
+    this.unmanaged = localizedLabel.unmanaged;
+
     this.derivedKey = localizedLabel.derivedKey;
-    this.fillins = localizedLabel.fillins;
+    this.parameterValues = localizedLabel.parameterValues;
+    this.fillinsToPlaceholder = localizedLabel.fillinsToPlaceholder;
+
+    this.characters = localizedLabel.characters;
     this.ops = localizedLabel.ops;
-    this.warnings = localizedLabel.warnings;
+
+    this.currentPatternHTML = UILocalizedLabel.toHtml(localizedLabel.characters, localizedLabel.ops);
+
+    if (localizedLabel.unmanaged) {
+      // localized label was marked as unmanaged - ignore message reference / unlinked messages
+      this.messageLinkState = MessageLinkState.Unmanaged;
+    } else if (localizedLabel.unlinkedMessage) {
+      this.messageLinkState = MessageLinkState.Unlinked;
+
+      const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
+      // override the currents label variant with state form label
+      this.unlinkedMessage = MessageStoreMemory.upsertVariantPatternHtml(localizedLabel.unlinkedMessage, refLanguage, this.rootFrameLanguage, [], this.currentPatternHTML);
+    } else if (localizedLabel.messageId) {
+      this.messageId = localizedLabel.messageId;
+      if (!this.manager.messageStore.getMessage(this.messageId)) {
+        this.messageLinkState = MessageLinkState.MissingMessage;
+      } else {
+        this.messageLinkState = MessageLinkState.Linked;
+      }
+    } else {
+      this.messageLinkState = MessageLinkState.Unset;
+    }
+
+    this.matchingLabelLints = localizedLabel.matchingLabelLints;
     this.labelStyle = localizedLabel.labelStyle;
-    this.translationHTML = UILocalizedLabel.toHtml(localizedLabel.characters, localizedLabel.ops, this.fillins, true);
-    this.unlinkedTranslations = localizedLabel.unlinkedTranslations;
     this.state = this.getState();
   }
 
-  translationHTML: string;
+  unmanaged: boolean;
+
+  currentPatternHTML: string;
 
   ops: DeltaOp[];
 
-  filledTemplateHash?: string | undefined;
+  variantPatternHTMLHash?: string | undefined;
 
-  static toHtml(text: string, ops: DeltaOp[], fillins: Fillins, trimLabelStyles: boolean) {
+  getMessageName(): string | undefined {
+    if (this.messageId === undefined) return undefined;
+    const message = this.manager.messageStore.getMessage(this.messageId);
+    if (message) {
+      return message.id;
+    }
+
+    return undefined;
+  }
+
+  static toHtml(text: string, ops: DeltaOp[]) {
+    if (text === '') {
+      return '';
+    }
+
     const deltaOps = [] as DeltaOperation[];
     const lastTwoCharsBreaks = text.length > 1 && text[text.length - 1] === '\n' && text[text.length - 2] === '\n';
 
     // allways add an additional line break at the end
     if (ops.length > 0) {
+      // eslint-disable-next-line no-param-reassign
       ops[ops.length - 1].end += 1;
     }
     const rawtext = `${text}\n`;
@@ -182,9 +216,6 @@ export class UILocalizedLabel implements LocalizedLabel {
             ...op.attributes,
           },
         };
-        // enrich fillin
-        (parameterOperation.attributes.placeholder! as any).fillin = fillins[insert].value;
-
         deltaOps.push(parameterOperation);
       } else {
         const insert = rawtext.substring(op.start, op.end);
@@ -201,8 +232,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     (new Quill(tempCont)).setContents(delta);
     let htmlContent = tempCont.getElementsByClassName('ql-editor')[0].innerHTML;
     // remove all quill helper attributes
-
-    htmlContent = htmlContent.replace(/fillin="([^"])*" contenteditable="false">/g, '>');
+    htmlContent = htmlContent.replace(/ contenteditable="false">/g, '>');
     htmlContent = htmlContent.split('<p><br></p>').join('\n');
     htmlContent = htmlContent.split('</p>').join('\n');
 
@@ -211,22 +241,32 @@ export class UILocalizedLabel implements LocalizedLabel {
     return htmlContent;
   }
 
-  static toTextAndOps(html: string, fillins: Fillins) {
-    const pattern = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;
+  static toTextOpsAndFillinsToPlaceholder(html: string, messageParameterValues: MessageParameterValues) {
+    // helper to be able to create unique identifierts by fillins
+    const fillinsCounts = { } as { [fillinValue: string] : number };
+    const fillinsToPlaceholder = {} as {
+      [fillinValue: string]: Placeholder
+    };
 
-    const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(fillins);
-    // const wholeMatch = paramMatch[0];
-    // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
-    // const name = paramMatch[2];
-
-    let htmlWithFilledPlaceholders = html.replace(pattern, (match, _helper1, type, _helper3, format, _helper5, argumentPosition, unnamed, _helper8, _helper9, name) => {
-      const placeholderName = name;
-      if (placeholderName && fillins[placeholderName]) {
-        const extensionLength = placeholderByFillin.indexOf(placeholderName) + 1;
-        return fillins[placeholderName].value + MARKER_CHARACTER.repeat(extensionLength);
+    // - extract all placeholders from the patternHtml providded
+    const placeholderPattern = /<ph([^>])*>([^<]*)<\/ph>/g;
+    let htmlWithFilledPlaceholders = html.replace(placeholderPattern, (match, attributesStrings, placeholderName) => {
+      const placeholder = PlaceholderUtil.extractFromRawHtml(placeholderName, attributesStrings);
+      const parameterValue = messageParameterValues[placeholder.name].value;
+      // TODO #19 variables take formatting function into account
+      // - create all values based on formatting function
+      const formatedValue = parameterValue;
+      if (fillinsCounts[formatedValue] === undefined) {
+        fillinsCounts[formatedValue] = 0;
       }
+      fillinsCounts[formatedValue] += 1;
 
-      return match;
+      // - create unique fillins with markers for unification - each fillin has at least one marker at the end but eventually multiple if it is not unique idenfifiably
+      const fillinValue = formatedValue + MARKER_CHARACTER.repeat(fillinsCounts[formatedValue]);
+      fillinsToPlaceholder[fillinValue] = placeholder;
+
+      // - replace html placeholders with injected values
+      return fillinValue;
     });
 
     const tempCont = document.createElement('pre');
@@ -240,14 +280,29 @@ export class UILocalizedLabel implements LocalizedLabel {
       const text = node.data;
       return delta.insert(text);
     };
+    let removeLastCR = false;
+
+    if (htmlWithFilledPlaceholders.endsWith('</ol>') || htmlWithFilledPlaceholders.endsWith('</ul>')) {
+      removeLastCR = true;
+    }
 
     htmlWithFilledPlaceholders += '<br>';
+
     const contents = (quill.clipboard as any).convert({ html: htmlWithFilledPlaceholders }) as any;
-    const text = contents.filter((op: any) => typeof op.insert === 'string').map((op: any) => op.insert).join(''); // quill.getText();// tempCont.getElementsByClassName('ql-editor')[0].textContent ?? '';
+    let text = contents.filter((op: any) => typeof op.insert === 'string').map((op: any) => op.insert).join(''); // quill.getText();// tempCont.getElementsByClassName('ql-editor')[0].textContent ?? '';
+
+    if (removeLastCR) {
+      text = text.slice(0, -1);
+    }
 
     const ops = [] as any[];
     let currentPositon = 0;
     contents.ops?.forEach((operation: any) => {
+      if (currentPositon + operation.insert.length > text.length) {
+        // eslint-disable-next-line no-param-reassign
+        operation.insert = operation.insert.slice(0, -1);
+      }
+
       ops.push({
         from: currentPositon,
         to: currentPositon + operation.insert.length,
@@ -258,128 +313,11 @@ export class UILocalizedLabel implements LocalizedLabel {
     });
     // remove the /n at the end?
     return {
-      text,
+      characters: text,
       ops,
+      fillinsToPlaceholder,
     };
   }
-
-  getFillins(keyToUse?: string, fillins?: Fillins) {
-    const key = keyToUse ?? this.key;
-    const translationKey = key ? this.manager.keyStore.getKey(key) : undefined;
-
-    const defaultFillIns = translationKey ? { ...translationKey.defaultFillins } : {} as Fillins;
-    const labelFillins = fillins ?? this.fillins;
-
-    for (const parameterName of Object.keys(defaultFillIns)) {
-      if (labelFillins[parameterName] && labelFillins[parameterName].default) {
-        labelFillins[parameterName] = { default: true, value: defaultFillIns[parameterName].value };
-      }
-    }
-
-    return labelFillins;
-  }
-
-  getPlaceholders() {
-    const placeholders = {} as PlaceholdersByName;
-    return placeholders; // TODO
-    /*
-    const labelTranslationPlaceholders = UITranslationKey.extractPlaceholdersInText(this.translation);
-
-    if (this.keyType === KeyState.Linked) {
-      const key = this.manager.keyStore.getKey(this.key!)! as UITranslationKey;
-      placeholders = { ...key.placeholders };
-    }
-
-    for (const labelTranslationPlaceholder of labelTranslationPlaceholders) {
-      if (!placeholders[labelTranslationPlaceholder.name]) {
-        placeholders[labelTranslationPlaceholder.name] = labelTranslationPlaceholder;
-      }
-    }
-
-    return placeholders; */
-  }
-
-  static toText(text: string, fillins: Fillins) {
-    const pattern = /\[\[([A-Za-z_]{2,})?(?:#(\d+))?(?::*([sdf])(?:\.(\d+))?)?\]\]/g;
-
-    const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(fillins);
-    // const wholeMatch = paramMatch[0];
-    // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
-    // const name = paramMatch[2];
-
-    return text.replace(pattern, (match, name, _argumentPosition) => {
-      const placeholderName = name;
-      if (placeholderName && fillins[placeholderName]) {
-        const extensionLength = placeholderByFillin.indexOf(placeholderName) + 1;
-        return fillins[placeholderName].value + MARKER_CHARACTER.repeat(extensionLength);
-      }
-      return match;
-    });
-  }
-
-  /*
-  private toTranslation() {
-    // if we have no linked key we fall back to name only for now
-    let orginalPlaceholders = [] as Placeholder[];
-
-    if (this.keyType === KeyState.Linked) {
-      const translatedKey = this.manager.keyStore.getKey(this.key!)!;
-      const currentKeyVersion = translatedKey.getHistoryEntry(this.language, this.pluralId, this.keyVersion);
-      const currentTranslation = currentKeyVersion?.translations?.[this.language]?.[this.pluralId]?.text;
-      // extract the placeholder from the current translation
-      orginalPlaceholders = UITranslationKey.extractPlaceholdersInText(currentTranslation);
-    }
-
-    // takes the text of the label and replaces all fillins with the placeholders
-    const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(this.fillins);
-
-    let translation = this.characters;
-    // eslint-disable-next-line for-direction, no-plusplus
-    for (let i = placeholderByFillin.length - 1; i >= 0; i--) {
-      const currentPlaceholderName = placeholderByFillin[i];
-      const filinValue = this.fillins[currentPlaceholderName].value;
-      const nonPlaceholderParts = translation.split(filinValue + MARKER_CHARACTER.repeat(i + 1));
-      const placeholdersInKey = orginalPlaceholders.filter((orgPlaceholder) => orgPlaceholder.name === currentPlaceholderName);
-
-      // eslint-disable-next-line prefer-destructuring
-      translation = nonPlaceholderParts[0];
-      // eslint-disable-next-line no-plusplus
-      for (let nonPlaceHolderPartIndex = 1; nonPlaceHolderPartIndex < nonPlaceholderParts.length; nonPlaceHolderPartIndex++) {
-        if (placeholdersInKey.length === 0) {
-          translation = `${translation}[[${currentPlaceholderName}]]`;
-        } else {
-          const nextPlacehoderIndex = Math.min(placeholdersInKey.length - 1, nonPlaceHolderPartIndex - 1);
-          const placeholder = placeholdersInKey[nextPlacehoderIndex];
-          let renderedPlaceholder = '';
-          if (placeholder.type === PlaceholderType.string) {
-            if (placeholder.specifiedArgumentPosition !== undefined) {
-              renderedPlaceholder = `[[${placeholder.name}#${placeholder.specifiedArgumentPosition}]]`;
-            } else {
-              renderedPlaceholder = `[[${placeholder.name}]]`;
-            }
-          } else if (placeholder.type === PlaceholderType.integer) {
-            if (placeholder.specifiedArgumentPosition !== undefined) {
-              renderedPlaceholder = `[[${placeholder.name}#${placeholder.specifiedArgumentPosition}:d]]`;
-            } else {
-              renderedPlaceholder = `[[${placeholder.name}:d]]`;
-            }
-          } else { // float
-            const decimalPlaces = placeholder.decimalPlaces ? `.${placeholder.decimalPlaces}` : '';
-            if (placeholder.specifiedArgumentPosition !== undefined) {
-              renderedPlaceholder = `[[${placeholder.name}#${placeholder.specifiedArgumentPosition}:f${decimalPlaces}]]`;
-            } else {
-              renderedPlaceholder = `[[${placeholder.name}:f${decimalPlaces}]]`;
-            }
-          }
-
-          translation = `${translation}${renderedPlaceholder}${nonPlaceholderParts[nonPlaceHolderPartIndex]}`;
-        }
-      }
-    }
-
-    return translation;
-  }
-  */
 
   /**
    * The state of a label is represented by two main properties:
@@ -388,157 +326,216 @@ export class UILocalizedLabel implements LocalizedLabel {
    *
    * Label state changes if:
    *  * the labels text changes and its text is different from the original text
-   *  * the keys language/plural the label references changed
+   *  * the message variant language/gender/plural the label references changed
    *  *
    * @param localizedLabel the label to provide the state for
    * @returns
    */
-  getState(): { behind: number, orginalTranslationHTML?: string, modified: boolean } {
+  getState(): { modified: boolean } {
     const state = {
       modified: false,
-      translationDeleted: false,
-      behind: 0,
-      orginalTranslationHTML: undefined as string | undefined,
+      // variantDeleted: false, // TODO #17 versioning - matches changed?
+      // behind: this.variantPatternHTMLHash ? blake.blake2sHex(this.currentPatternHTML) !== this.variantPatternHTMLHash : false,
+      // orginalVariantHTML: undefined as string | undefined,
     };
 
-    // debugger;
-    const translatedKey = this.keyType !== KeyState.Unset ? this.manager.keyStore.getKey(this.key!) : undefined;
+    if (this.messageLinkState === MessageLinkState.Linked) {
+      const message = this.manager.messageStore.getMessage(this.messageId!);
 
-    if (translatedKey) {
-      const currentVersion = translatedKey.getHistoryEntry(this.language, this.pluralId, this.keyVersion);
+      if (!message) {
+        // message has been deleted - has the label not been fixed on first cache load?
+        throw new Error('Message does not exist');
+      }
 
-      if (currentVersion === undefined) {
-        state.translationDeleted = true;
-      } else {
-        state.behind = translatedKey.getChangesSince(this.language, this.pluralId, this.keyVersion);
-
-        const translationHtml = currentVersion.translations[this.language]?.[this.pluralId]?.text!;
-
-        // eslint-disable-next-line no-param-reassign
-        if (translationHtml !== this.translationHTML) {
-          state.modified = true;
-          state.orginalTranslationHTML = translationHtml;
-        }
+      const variantPatternHtml = MessageStoreMemory.htmlForPattern(message, this.language, [
+        /** TODO #18 selectors build selectors based on variableValues */
+      ]);
+      state.modified = variantPatternHtml !== this.currentPatternHTML;
+      if (variantPatternHtml !== this.currentPatternHTML) {
+        //debugger;
       }
     }
 
+    console.log(`getState ${JSON.stringify(state)}`);
     return state;
   }
 
-  async setUseSampleValues(showSampleValues: boolean) {
-    if (this.keyType !== KeyState.Linked) {
-      return;
-    }
-
-    const translationKey = this.manager.keyStore.getKey(this.key!);
-
-    if (this.keyType !== KeyState.Linked
-      || this.state!.modified
-      || translationKey === undefined) {
-      // we don't change any property also not on the parent - no need to update the label at all
-      return;
-    }
-
-    const versionToApply = translationKey.getHistoryEntry(this.language, this.pluralId, this.keyVersion);
-
-    const text = versionToApply?.translations?.[this.language]?.[this.pluralId]?.text;
-    if (text) {
-      await this.manager.updateLabelProperties(this.nodeId, {
-        showSampleValues,
-        translationHTML: text,
-      });
-    }
-  }
-
-  async setLanguage(
-    targetLanguage: Language,
-    version: number | undefined,
+  async setLanguageOnUnsetLabel(
+    targetLanguage: Locale,
     missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | null>,
   ) {
-    if (this.keyType === KeyState.Unset) {
-      const baseLanguage = this.manager.keyStore.getBaseLanugage()! as Language;
-      // TODO check if the target language is avaialable and up to date
-      let translationUpToDate = false;
-      const baseLanguageHTML = this.language === baseLanguage ? this.translationHTML : this.unlinkedTranslations.translations?.[baseLanguage]?.[this.pluralId]?.text!;
+    const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
+    const toRefLanguage = targetLanguage === refLanguage;
 
-      if (this.unlinkedTranslations
-        && this.unlinkedTranslations.translations?.[targetLanguage]?.[this.pluralId]?.text) {
-        const currentTranslationBaseLangHash = this.unlinkedTranslations.translations?.[targetLanguage]?.[this.pluralId]?.baseLangHash;
-        if (baseLanguageHTML && blake.blake2sHex(baseLanguageHTML) === currentTranslationBaseLangHash) {
-          translationUpToDate = true;
-        }
-      }
-      let translationHTML = undefined as string | undefined;
-      if (!translationUpToDate) {
-        translationHTML = await missingTranslationProvider(baseLanguageHTML, baseLanguage as string, targetLanguage) ?? 'no translation';
-      }
-
-      await this.manager.updateLabelProperties(this.nodeId, {
-        language: targetLanguage,
-        plural: this.pluralId,
-        translationHTML,
-      });
-      return;
-    }
-
-    const translationKeyName = this.key ?? this.derivedKey;
-    const labelState = this.state!;
-    let labelVersion = this.keyVersion;
-
-    if (this.keyType === KeyState.NoKey // we don't update unlinked labels
-      || translationKeyName === undefined // or labels where we cant derive or get the key
-      || labelState.modified) { // or that are modified
-      // root language has changed - trigger cache update
+    if (toRefLanguage) {
+      // keep the label untouched if we just switch to the ref language
       await this.manager.updateLabelProperties(this.nodeId, {});
       return;
     }
 
-    let translationKey = this.manager.keyStore.getKey(translationKeyName);
-    // check if key exists
-    if (translationKey === undefined) {
-      throw new Error('Key linked to label does not exist - not removed when key was deleted?');
+    // eslint-disable-next-line no-case-declarations
+    const unlinkedMessage = {
+      id: '____unlinked',
+      // we start with no pattern - unlinked messages cannot have variants other than language - for more complex messages a linked message is required
+      selectors: [],
+      variants: [
+        {
+          languageTag: refLanguage,
+          match: [],
+          pattern: MessageStoreMemory.patternHtmlToPattern(this.currentPatternHTML),
+        },
+      ],
+    };
+
+    // eslint-disable-next-line no-case-declarations
+    try {
+      const updatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(missingTranslationProvider, unlinkedMessage, refLanguage, targetLanguage, []);
+      await this.manager.updateLabelProperties(this.nodeId, {
+        language: targetLanguage,
+        messageState: { type: 'unlinked', unlinkedMessage: updatedMessage, parameterValues: this.parameterValues },
+      });
+    } catch {
+      await this.manager.updateLabelProperties(this.nodeId, {
+      });
+    }
+  }
+
+  async setLanguageOnUnlinkedLabel(
+    targetLanguage: Locale,
+    missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | null>,
+  ) {
+    const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
+    const toRefLanguage = targetLanguage === refLanguage;
+    const { unlinkedMessage } = this;
+
+    let hasVariantInTargetLanguage = MessageStoreMemory.hasVariant(unlinkedMessage, targetLanguage, []);
+    // let isVariantsTranslationOutdated = await MessageStoreMemory.isVariantsTranslationOutdated(unlinkedMessage, refLanguage, targetLanguage, {});
+
+    let eventuallyUpdatedMessage = this.unlinkedMessage;
+
+    // if (isVariantsTranslationOutdated) {
+    try {
+      eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(missingTranslationProvider, unlinkedMessage, refLanguage, targetLanguage, []);
+      hasVariantInTargetLanguage = true;
+    } catch (e) {
+      // we handle the error using isVariantsTranslationOutdated flag
+    }
+    // if (!isVariantsTranslationOutdated) {
+    //   hasVariantInTargetLanguage = true;
+    // }
+    // }
+
+    if (hasVariantInTargetLanguage) {
+      await this.manager.updateLabelProperties(this.nodeId, {
+        messageState: { type: 'unlinked', unlinkedMessage: eventuallyUpdatedMessage, parameterValues: this.parameterValues },
+        language: targetLanguage,
+      });
     } else {
-      if (labelState.behind === 0) {
-        // updating key
-        if (translationKey.translations[targetLanguage]?.[this.pluralId]?.text === undefined) {
-          if (translationKey.translations[targetLanguage]?.[this.pluralId]?.skip === true) {
-            // TODO #3 think about fall back mechanism:
-            // in case the key for the given plural is skipped try to fall back to others
-            // if this is skipped as well fall back to base language
-            //  - for now we just don't change the label
-            await this.manager.updateLabelProperties(this.nodeId, {});
-            return;
-          }
+      await this.manager.updateLabelProperties(this.nodeId, { });
+    }
+  }
 
-          // translation missing - generate it and update the translation key
-          let originLanguage = this.manager.keyStore.getBaseLanugage();
-          let originText = translationKey.translations[this.manager.keyStore.getBaseLanugage()!]?.[this.pluralId]?.text;
-
-          if (originText === undefined) {
-            originLanguage = this.language;
-            originText = translationKey.translations[this.language]![this.pluralId]?.text!;
-          }
-
-          const translation = await missingTranslationProvider(originText, originLanguage as string, targetLanguage) ?? 'no translation';
-          translationKey = await this.manager.keyStore.updateKey(translationKeyName, [{
-            language: targetLanguage,
-            plural: this.pluralId,
-            text: translation,
-            skip: false,
-          }]);
-        }
-        labelVersion = translationKey.latestVersion;
+  async setLanguageOnLinkedLabel(
+    targetLanguage: Locale,
+    missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | null>,
+  ) {
+    const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
+    const toRefLanguage = targetLanguage === refLanguage;
+    const message = this.manager.messageStore.getMessage(this.messageId)!;
+    const hasVariantInTargetLanguage = MessageStoreMemory.hasVariant(message, targetLanguage, []);
+    // updating message
+    if (!hasVariantInTargetLanguage) {
+      if (!toRefLanguage) {
+        try {
+          const eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(missingTranslationProvider, message, refLanguage, targetLanguage, []);
+          await this.manager.updateMessage(eventuallyUpdatedMessage, {});
+          return;
+        } catch (e) { /* empty */ }
       }
+      // TODO #3 think about fall back mechanism:
+      // in case the variant for the given plural is skipped try to fall back to others
+      // if this is skipped as well fall back to base language
+      //  - for now we just don't change the label
+      await this.manager.updateLabelProperties(this.nodeId, {});
+      return;
+    }
+    await this.manager.updateLabelProperties(this.nodeId, {
+      messageState: {
+        type: 'linked', messageId: this.messageId!, parameterValues: this.parameterValues,
+      },
+      language: targetLanguage,
+    });
+  }
 
-      const versionToApply = translationKey.getHistoryEntry(targetLanguage, this.pluralId, labelVersion);
+  async setLanguage(
+    targetLanguage: Locale,
+    // NOTE we dont support versioning for now version: number | undefined,
+    missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | null>,
+  ) {
+    switch (this.messageLinkState) {
+      case MessageLinkState.MissingMessage:
+        // we don't change any label that is in this state - got to be manually fixed by the user
+        // just trigger cache update to propagate the changed root language
+        await this.manager.updateLabelProperties(this.nodeId, {});
+        return;
+
+      case MessageLinkState.Unmanaged:
+        // just trigger cache update to propagate the changed root language
+        await this.manager.updateLabelProperties(this.nodeId, {});
+        return;
+
+      case MessageLinkState.Unset:
+        await this.setLanguageOnUnsetLabel(targetLanguage, missingTranslationProvider);
+        break;
+
+      case MessageLinkState.Unlinked:
+        await this.setLanguageOnUnlinkedLabel(targetLanguage, missingTranslationProvider);
+        break;
+      case MessageLinkState.Linked:
+        await this.setLanguageOnLinkedLabel(targetLanguage, missingTranslationProvider);
+        break;
+      default:
+        throw new Error(`unhandled Linksstate ${this.messageLinkState}`);
+        break;
+    }
+  }
+
+  async setLabelPattern(patternHtml: string, parameterValues: MessageParameterValues) {
+    const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
+    if (this.messageLinkState === MessageLinkState.Unset) {
+      // TODO in unset - create message
+      // eslint-disable-next-line no-case-declarations
+      const unlinkedMessage = {
+        id: '____unlinked',
+        // we start with no pattern - unlinked messages cannot have variants other than language - for more complex messages a linked message is required
+        selectors: [],
+        variants: [
+          {
+            languageTag: refLanguage,
+            match: [],
+            pattern: MessageStoreMemory.patternHtmlToPattern(patternHtml),
+          },
+        ],
+      };
 
       await this.manager.updateLabelProperties(this.nodeId, {
-        key: translationKeyName,
-        keyType: KeyState.Linked,
-        language: targetLanguage,
-        plural: this.pluralId,
-        translationHTML: versionToApply?.translations?.[targetLanguage]?.[this.pluralId]?.text,
-        keyVersion: labelVersion,
+        messageState: { type: 'unlinked', parameterValues, unlinkedMessage },
+        language: refLanguage,
+      });
+    } else if (this.messageLinkState === MessageLinkState.Unlinked) {
+      const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(this.unlinkedMessage, refLanguage, this.language, [], patternHtml);
+
+      await this.manager.updateLabelProperties(this.nodeId, {
+        messageState: { type: 'unlinked', parameterValues, unlinkedMessage: updatedMessage },
+      });
+    } else if (this.messageLinkState === MessageLinkState.Linked) {
+      await this.manager.updateLabelProperties(this.nodeId, {
+        messageState: {
+          type: 'linked',
+          messageId: this.messageId!,
+          parameterValues,
+          variantPatternHTML: patternHtml,
+        },
       });
     }
   }

@@ -2,43 +2,68 @@
 /* eslint-disable no-continue */
 /* eslint-disable no-plusplus */
 
-import { Plural } from '../base/Plural';
-import { ImportTranslationKey } from './ImportTranslationKey';
+import { Message } from '@inlang/sdk';
+import { Gender } from '../message/variants/Gender';
+import { Plural } from '../message/variants/Plural';
+import { ImportMessage } from './ImportMessage';
+import MessageStoreMemory from '../message/store/MessageStoreMemory';
+import { Locale } from '../message/variants/Locale';
 
 const separator = '__';
 
 export default class I18NextKeyValueImporter {
   static toParrotPlaceholders(inputString: string) {
-    const regex = /{{([^}]*)}}/g;
+    const regexDoubleBrackets = /{{([^}]*)}}/g;
 
-    const replacedString = inputString.replace(regex, (match, group1) => {
-      const type = group1 === 'count' ? 'd' : 's';
-      const format = '';
-      const arg = '';
+    const replacedStringDoubleBrackets = inputString.replace(regexDoubleBrackets, (match, group1) => {
+      // const type = group1 === 'count' ? 'd' : 's';
+      // const format = '';
+      // const arg = '';
       const parameterName = group1;
-      return `<ph type="${type}"${format}${arg} unnamed>${parameterName}</ph>`;
+
+
+      // TODO #19 add attributes for formatting to the tag
+      // TODO #20 add attributes for argument indext here.
+      // return `<ph type="${type}"${format}${arg} unnamed>${parameterName}</ph>`;
+      return `<ph>${parameterName}</ph>`;
     });
-    return replacedString;
+
+    const regex = /{([^}]*)}/g;
+
+    const replacedStringSingleBrackets = replacedStringDoubleBrackets.replace(regex, (match, group1) => {
+      // const type = group1 === 'count' ? 'd' : 's';
+      // const format = '';
+      // const arg = '';
+      const parameterName = group1;
+
+
+      // TODO #19 add attributes for formatting to the tag
+      // TODO #20 add attributes for argument indext here.
+      // return `<ph type="${type}"${format}${arg} unnamed>${parameterName}</ph>`;
+      return `<ph>${parameterName}</ph>`;
+    });
+    return replacedStringSingleBrackets;
   }
 
-  static extractPlural(key: string) {
+  static extractPlural(id: string) {
     const pluralPostfixes = {
       _one: Plural.ONE,
       _other: Plural.OTHER,
     };
 
     for (const [pluralPostfix, pluralForm] of Object.entries(pluralPostfixes)) {
-      if (key.endsWith(pluralPostfix)) {
+      if (id.endsWith(pluralPostfix)) {
+        throw new Error('Plurals are currently not supported');
         return {
           plural: pluralForm,
-          key: key.substring(0, key.length - pluralPostfix.length),
+          id: id.substring(0, id.length - pluralPostfix.length),
         };
       }
     }
 
     return {
       plural: Plural.OTHER,
-      key,
+      id,
     };
   }
 
@@ -63,7 +88,7 @@ export default class I18NextKeyValueImporter {
     return value;
   }
 
-  static toImportObject(filename: string, stringsFileContent: string): ImportTranslationKey[] | undefined {
+  static toImportObject(filename: string, stringsFileContent: string, language: Locale): Message[] | undefined {
     const fileNameParts = filename.split('.');
     const fileExtension = fileNameParts[fileNameParts.length - 1];
     if (fileExtension !== 'json') {
@@ -84,25 +109,35 @@ export default class I18NextKeyValueImporter {
     }
 
     // create an empty object to hold our key-value pairs
-    const importedKeys = [] as ImportTranslationKey[];
+    const foundMessages = {} as { [messsageName: string]: Message };
 
-    this.nodeToImpotObjects('', json, importedKeys);
+    this.nodeToImpotObjects('', json, foundMessages, language);
 
-    return importedKeys;
+    return Object.values(foundMessages);
   }
 
-  static nodeToImpotObjects(keyName: string, node: any, keys: ImportTranslationKey[]) {
+  static nodeToImpotObjects(messageName: string, node: any, foundMessages: { [messsageName: string]: Message }, language: Locale) {
     for (const [key, subNode] of Object.entries(node)) {
-      const currentKeyName = `${keyName}${key}`;
+      const currentKeyName = `${messageName}${key}`;
       if (typeof subNode === 'string') {
-        const keyAndPlrual = I18NextKeyValueImporter.extractPlural(currentKeyName);
-        keys.push({
-          keyName: keyAndPlrual.key,
-          plural: keyAndPlrual.plural,
-          text: this.toParrotPlaceholders(subNode as string),
-        });
+        const idAndPlrual = I18NextKeyValueImporter.extractPlural(currentKeyName);
+        const html = this.toParrotPlaceholders(subNode as string);
+        const pattern = MessageStoreMemory.patternHtmlToPattern(html);
+
+        // eslint-disable-next-line no-param-reassign
+        foundMessages[idAndPlrual.id] = {
+          id: idAndPlrual.id,
+          selectors: [],
+          variants: [
+            {
+              languageTag: language,
+              match: [], // #18 use keyAndPlrual.plural instead in case the message is a plural
+              pattern,
+            },
+          ],
+        };
       } else if (typeof subNode === 'object') {
-        I18NextKeyValueImporter.nodeToImpotObjects((currentKeyName + separator), subNode, keys);
+        I18NextKeyValueImporter.nodeToImpotObjects((currentKeyName + separator), subNode, foundMessages, language);
       }
     }
   }

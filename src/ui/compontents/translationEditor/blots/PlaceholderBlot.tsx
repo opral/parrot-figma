@@ -1,61 +1,49 @@
 import Quill from 'quill';
-
-import { PlaceholderType } from '../../../../lib/keystore/TranslationKey';
-
-interface PlaceholderValue {
-  name: string,
-  type: PlaceholderType,
-  format?: string,
-  argumentPosition?: number,
-  unnamed: boolean,
-  fillin: string,
-}
+import { ParameterType } from '../../../../lib/message/MessageExtnesions';
+import { Placeholder } from "../../../../lib/message/Placeholder";
 
 const Inline = Quill.import('blots/inline');
 
 export default class PlaceholderBlot extends Inline {
-  static create(value: PlaceholderValue) {
+  static create(value: Placeholder) {
     const node = super.create() as HTMLElement;
-    node.setAttribute('type', value.type);
-    if (value.format) {
-      node.setAttribute('format', value.format);
+    if (value.formatFunctionName) {
+      node.setAttribute('formatFn', value.formatFunctionName);
     }
 
-    if (value.argumentPosition) {
-      node.setAttribute('arg', `${value.argumentPosition}`);
+    if (value.specifiedArgumentPosition) {
+      node.setAttribute('arg', `${value.specifiedArgumentPosition}`);
     }
 
-    if (value.unnamed) {
+    if (value.named === false) {
       node.setAttribute('unnamed', '');
     }
 
-    node.setAttribute('fillin', value.fillin);
+    // TODO #19 variables add formatOptions as namespaced attributes
+
     node.setAttribute('contenteditable', 'false');
     return node;
   }
 
-  static value(node: HTMLElement): PlaceholderValue {
+  static value(node: HTMLElement): Placeholder {
     return {
       name: node.innerText!,
-      type: node.getAttribute('type')! as PlaceholderType,
-      unnamed: node.getAttribute('unnamed') !== null,
-      format: node.getAttribute('format') ?? undefined,
-      fillin: node.getAttribute('fillin')!,
-      argumentPosition: node.getAttribute('arg') ? parseInt(node.getAttribute('arg')!, 10) : undefined,
+      named: node.getAttribute('unnamed') === null,
+      formatFunctionName: node.getAttribute('format') ?? undefined,
+      specifiedArgumentPosition: node.getAttribute('arg') ? parseInt(node.getAttribute('arg')!, 10) : undefined,
+      // TODO #19 variables handle options as attributes with option- prefix
     };
   }
 
-  static formats(domNode: HTMLElement) {
+  static formats(domNode: HTMLElement): Placeholder {
     return {
-      type: domNode.getAttribute('type')!,
-      unnamed: domNode.getAttribute('unnamed') !== null,
-      format: domNode.getAttribute('format') ?? undefined,
-      fillin: domNode.getAttribute('fillin')!,
       name: domNode.innerText!,
-      argumentPosition: domNode.getAttribute('arg') ? parseInt(domNode.getAttribute('arg')!, 10) : undefined,
+      named: domNode.getAttribute('unnamed') === null,
+      specifiedArgumentPosition: domNode.getAttribute('arg') ? parseInt(domNode.getAttribute('arg')!, 10) : undefined,
+      formatFunctionName: domNode.getAttribute('formatFn') ?? undefined,
+      // TODO #19 variables handle options as attributes with option- prefix
     };
   }
 }
 PlaceholderBlot.blotName = 'placeholder';
 PlaceholderBlot.tagName = 'ph';
-

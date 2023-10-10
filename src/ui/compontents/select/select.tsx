@@ -6,14 +6,14 @@ import React, {
 import OutsideClickHandler from 'react-outside-click-handler';
 import './select.css';
 import { createPortal } from 'react-dom';
-import { Plural } from '../../../lib/base/Plural';
-import { Language } from '../../../lib/base/Language';
+import { Plural } from '../../../lib/message/variants/Plural';
+import { Locale } from '../../../lib/message/variants/Locale';
 
 export interface SelectOption {
   divider?: string | boolean;
   value: string | number | boolean;
   plural?: Plural,
-  language?: Language,
+  language?: Locale,
   type?: string;
   label: string;
   icon?: string;

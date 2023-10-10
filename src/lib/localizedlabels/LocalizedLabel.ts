@@ -1,12 +1,14 @@
-import { Language } from '../base/Language';
-import { Plural } from '../base/Plural';
-import { Fillins, TranslationEntry } from '../keystore/TranslationKey';
+import { FillinToPlaceholder } from '../message/MessageExtnesions';
+import { Locale } from '../message/variants/Locale';
 import { DeltaOp } from './LocalizedLabelManager';
+import { Message } from '@inlang/sdk';
 
-export enum KeyState {
+export enum MessageLinkState {
   Unset = 'unset', // label has not yet modified by the plugin
-  NoKey = 'nokey', // state when the label has not been translated by the plugin yet
+  Unlinked = 'unlinked',
   Linked = 'linked', // key was set to a fixed key
+  MissingMessage = 'missingMessage', // key was set to a fixed key
+  Unmanaged = 'unmanaged',
 }
 
 export interface LabelStyle {
@@ -31,19 +33,14 @@ export interface LocalizedLabel {
   width: number;
   height: number;
 
-  rootFrameLanguage: Language;
+  rootFrameLanguage: Locale;
 
-  language: Language;
-  rootFrameUseSampleValues: boolean;
-
-  useSampleValues: boolean;
-  keyType: KeyState
-  key?: string;
-  keyVersion: number,
-  pluralId: Plural;
+  language: Locale;
+  unmanaged: boolean;
+  messageId?: string;
   characters: string;
   ops: DeltaOp[];
-  warnings: string[];
+  matchingLabelLints: string[];
   labelStyle: LabelStyle;
 
   // fillins needed to suppoert bidirectional template filling and extraction
@@ -86,11 +83,11 @@ export interface LocalizedLabel {
   //  The label needs to be updated when the parameterDefault has changed and the fillins is not overriden in the label
   //  The available parameters of a key have changed (one is removed)? shall we cleanup?
 
-  fillins: Fillins;
-  filledTemplateHash?: string;
-  textChangedAfterGeneration: boolean;
+  parameterValues: ParameterValues;
+  fillinsToPlaceholder: FillinToPlaceholder;
+  variantPatternHTMLHash?: string;
 
   derivedKey?: string;
 
-  unlinkedTranslations: TranslationEntry;
+  unlinkedMessage: Message;
 }

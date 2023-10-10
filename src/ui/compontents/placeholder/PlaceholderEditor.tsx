@@ -1,9 +1,11 @@
 import * as React from 'react';
-import { Placeholder } from '../../../lib/keystore/TranslationKey';
+import { Placeholder } from "../../../lib/message/Placeholder";
+
+
 
 // placeholder editor should be able to:
 // - change the name of a placeholder
-//   - how do we propagate this to 1. the translations 2. the labels
+//   - how do we propagate this to 1. the messages 2. the labels
 // - change the decimal places for floating points
 //     - this would be a translation wide config? in theory mixed precision could be on purpose
 // - change the argument position for the placeholder
@@ -41,9 +43,9 @@ export default function PlaceholderEditorListItem({
     <>
       <div></div>
       <div>
-        {false && placeholder.type === 's' && 'T'}
-        {false && placeholder.type === 'f' && '%'}
-        {false && placeholder.type === 'd' && '#'}
+        {/* { placeholder.type === 's' && 'T'}
+        { placeholder.type === 'f' && '%'}
+        { placeholder.type === 'd' && '#'} */}
       </div>
       <div>{placeholder.name}</div>
       <div>
@@ -61,7 +63,9 @@ export default function PlaceholderEditorListItem({
         />
 
       </div>
-      <div>{ placeholder.type === 'f' && placeholder.decimalPlaces}</div>
+      <div>
+        {/* { placeholder.type === 'f' && placeholder.decimalPlaces} */}
+      </div>
     </>
   );
 }

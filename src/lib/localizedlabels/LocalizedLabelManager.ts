@@ -1,16 +1,16 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable class-methods-use-this */
-import { t } from 'i18next';
-import { debug } from 'console';
-import { text } from 'stream/consumers';
-import { Language } from '../base/Language';
-import { KeyState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
-import { Plural } from '../base/Plural';
+import { Message } from '@inlang/sdk';
+import { Locale } from '../message/variants/Locale';
+import { LabelStyle, LocalizedLabel } from './LocalizedLabel';
 import ChangeEvent from './ChangeEvent';
-import { FigmaFileTranslationKeyStore } from '../keystore/FigmaFileTranslationKeyStore';
-import { Fillins, TranslationEntry } from '../keystore/TranslationKey';
 import VirtualTree, { VirtualTreeNode } from './VirtualTree';
 import LinksLoadedEvent from './LinksLoadedEvent';
+import TextNodeLinter from './lint/TextNodeLinter';
+import FontHelper from './FontUtil';
+import { InlangMessageStore } from '../message/store/InlangMessageStoreFigmaRoot';
+import { FillinToPlaceholder as FillinsToPlaceholder } from '../message/MessageExtnesions';
+import { MessageParameterValues } from "../message/MessageParameterValues";
 
 export interface NodeSelection {
   [nodeId: string]: {
@@ -18,23 +18,23 @@ export interface NodeSelection {
     selectedNodeId: string;
     directSelection: boolean;
     isLabel: boolean;
-    key: string | undefined;
+    messageId: string | undefined;
   };
 }
 
 export interface SandboxUpdateLabelProperties {
   labelName?: string,
-  keyType?: KeyState,
-  key?: string,
-  language?: Language,
-  plural?: Plural,
-  keyVersion?: number,
-  filledTemplateHash?: string,
+  messageState: { type: 'linked', messageId: string, parameterValues: MessageParameterValues }
+  | { type: 'unlinked', unlinkedMessage: Message, parameterValues: MessageParameterValues }
+  | { type: 'unmanaged', unmanaged: boolean } | { type: 'unset' } 
+  | undefined
+  language?: Locale,
+  messageVersion?: number,
+  variantPatternHTMLHash?: string,
   characters?: string,
   ops?: any
-  fillins?: Fillins,
-  showSampleValues?: boolean,
-  unlinkedTranslations?: TranslationEntry | null
+  // TODO #18 selectors replace with variables
+  fillinsToPlaceholder?: FillinsToPlaceholder | null,
 }
 
 export interface DeltaOp {
@@ -43,13 +43,19 @@ export interface DeltaOp {
   attributes: {
     placeholder?: {
       name: string,
-      invisibleMarkers: number
+      unnamed: boolean,
+      argumentPosition?: number,
+      formatFn?: string,
+      options?: any,
+      invisibleMarkers: number,
     },
     link?: string,
     textDecoration?: TextDecoration,
     bold?: boolean,
     italic?: boolean,
     fontFamily?: string,
+    indentation?: number,
+    list?: string,
   }
   processed?: boolean,
   ignoreForLabelStyle?: boolean
@@ -58,8 +64,6 @@ export interface DeltaOp {
 export const MARKER_CHARACTER = '​';
 // export const MARKER_CHARACTER = 'X​';
 export default class LocalizedLabelManager {
-  translationKeyStore?: FigmaFileTranslationKeyStore;
-
   private containerSizeThreashold = 3000;
 
   public proxyClassName = 'LocalizedLabelManager';
@@ -70,72 +74,151 @@ export default class LocalizedLabelManager {
 
   public separator = '__';
 
-  public filledTemplateHashDataKey = 'fth';
+  public variantPatternHTMLHashDataKey = 'fth';
 
   public sampleValuesDataKey = 'sv';
 
-  public unlinkedTranslationsDataKey = 'ut';
+  public anonymMessageDataKey = 'aim';
 
-  public fillinsKey = 'fi';
+  public fillinsToPlaceholderKey = 'fitp';
+
+  public parameterValuesKey = 'pv';
 
   public languageDataKey = 'l';
 
-  public keyTypeDataKey = 'kt';
+  public messageUnmanagedKey = 'mum';
 
-  public keyVersionDataKey = 'kv';
+  //  public messageVersionDataKey = 'mv';
 
-  public keyPluralDataKey = 'kp';
+  public messageNameDataKey = 'mn';
 
+  public messageNamePrefixKey = 'mn_';
+
+  // hash that allows detection of autorename
   public autoRenameHashKey = 'arh';
-
-  public keyDataKey = 'key';
 
   public labelIdDataKey = 'olid'; // we store the orginal label id (the id of the node when the plugin changed properties the first time) to detect a copy
 
   private virtualTree = new VirtualTree();
 
-  private labelToKey = {} as {
+  private labelToMessage = {} as {
     [nodeId: string]: string
   };
 
   firstTextnodeInViewport: undefined | string;
 
-  private refreshLabelKeyLinkCache(textNodeId: string, key: string | undefined) {
-    const currentKey = this.labelToKey[textNodeId];
-    if (key === undefined || key === '') {
+  private refreshLabelMessageLinkCache(textNodeId: string, messageId: string | undefined) {
+    const currentKey = this.labelToMessage[textNodeId];
+    if (messageId === undefined || messageId === '') {
       if (currentKey) {
-        this.translationKeyStore!.keyToLabels[currentKey]!.delete(textNodeId);
+        this.messageStore!.messageIdToLabels[currentKey]!.delete(textNodeId);
         return currentKey;
       }
       return undefined;
     }
 
-    if (!this.translationKeyStore!.keyToLabels[key]) {
-      this.translationKeyStore!.keyToLabels[key] = new Set<string>();
+    if (!this.messageStore!.messageIdToLabels[messageId]) {
+      this.messageStore!.messageIdToLabels[messageId] = new Set<string>();
     }
-    if (this.translationKeyStore!.keyToLabels[key].has(textNodeId)) {
+    if (this.messageStore!.messageIdToLabels[messageId].has(textNodeId)) {
       return undefined;
     }
-    this.translationKeyStore!.keyToLabels[key].add(textNodeId);
-    this.labelToKey[textNodeId] = key;
+    this.messageStore!.messageIdToLabels[messageId].add(textNodeId);
+    this.labelToMessage[textNodeId] = messageId;
 
     if (currentKey) {
-      if (currentKey !== key) {
-        this.translationKeyStore!.keyToLabels[currentKey]!.delete(textNodeId);
+      if (currentKey !== messageId) {
+        this.messageStore!.messageIdToLabels[currentKey]!.delete(textNodeId);
       }
       return currentKey;
     }
     return undefined;
   }
 
-  constructor(translationKeyStore: FigmaFileTranslationKeyStore | undefined) {
-    this.translationKeyStore = translationKeyStore;
+  messageStore: InlangMessageStore | undefined;
 
-    if (translationKeyStore === undefined) {
+  constructor(messageStore?: InlangMessageStore) {
+    if (!messageStore) {
       return;
     }
 
+    this.messageStore = messageStore;
+
     figma.on('documentchange', this.forwardDocumentChanges.bind(this));
+
+    const selectedNodeStateByUser = {} as any;
+    const that = this;
+    setInterval(() => {
+      const changeEvent = {
+        documentChanges: [] as any[],
+      };
+      // for (const user of [figma.currentUser]) { // NOTE: activeUsers is only available in figJam :/
+        // if (user?.id && user?.selection.length === 1) {
+      if (figma.currentPage.selection.length === 1) {
+        const activeNode = figma.currentPage.selection[0]; // figma.getNodeById(user.selection[0]);
+        const user = { id: 'singleUser' };
+        const currentState = {
+          nodeId: '',
+          textSegments: [] as any[],
+        };
+        if (activeNode !== undefined && activeNode?.type === 'TEXT') {
+          currentState.nodeId = activeNode?.id;
+          const unpropagatedTextSegments = activeNode.getStyledTextSegments(['indentation', 'listOptions']);
+          for (const textSegment of unpropagatedTextSegments) {
+            currentState.textSegments.push({
+              indentation: textSegment.indentation,
+              listOptions: textSegment.listOptions,
+            });
+          }
+
+          if (!selectedNodeStateByUser[user.id] || selectedNodeStateByUser[user.id].nodeId !== currentState.nodeId) {
+            selectedNodeStateByUser[user.id] = currentState;
+            console.log('no change');
+          } else if (selectedNodeStateByUser[user.id].textSegments.length !== currentState.textSegments.length) {
+            // TODO change detected
+            selectedNodeStateByUser[user.id] = currentState;
+            changeEvent.documentChanges.push({
+              id: activeNode.id,
+              origin: figma.currentUser?.id === user.id ? 'LOCAL' : 'REMOTE',
+              type: 'PROPERTY_CHANGE',
+              properties: ['listOptions'],
+
+              node: activeNode,
+            });
+          } else {
+            // eslint-disable-next-line no-restricted-syntax, no-labels
+            checkStateLoop:
+            // eslint-disable-next-line no-plusplus
+            for (let i = 0; i < currentState.textSegments.length; i++) {
+              if (selectedNodeStateByUser[user.id].textSegments[i].indentation !== currentState.textSegments[i].indentation
+                  || selectedNodeStateByUser[user.id].textSegments[i].listOptions.type !== currentState.textSegments[i].listOptions.type) {
+                // TODO indentation change detected
+                selectedNodeStateByUser[user.id] = currentState;
+                changeEvent.documentChanges.push({
+                  id: activeNode.id,
+                  origin: figma.currentUser?.id === user.id ? 'LOCAL' : 'REMOTE',
+                  type: 'PROPERTY_CHANGE',
+                  properties: ['listOptions'],
+
+                  node: activeNode,
+                });
+                // eslint-disable-next-line no-labels, no-extra-label
+                break checkStateLoop;
+              }
+            }
+          }
+        } else {
+          // node has changed no need to keep the old ones state in memory
+          delete selectedNodeStateByUser[user.id];
+        }
+      }
+      // }
+
+      if (changeEvent.documentChanges.length > 0) {
+        console.log('emulating event');
+        that.forwardDocumentChanges(changeEvent);
+      }
+    }, 100);
   }
 
   forwardDocumentChanges(event: any) {
@@ -156,16 +239,16 @@ export default class LocalizedLabelManager {
             const localizedLabel = this.toLocalizedLabelOrUndefined(createdNode as TextNode);
             if (localizedLabel) {
               this.virtualTree.addNode(createdNode, createdNode.id);
-              if (localizedLabel.keyType === KeyState.Linked) {
-                const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, localizedLabel.key!);
-                if (previousKey !== localizedLabel.key!) {
+              if (localizedLabel.messageId) {
+                const previousKey = this.refreshLabelMessageLinkCache(localizedLabel.nodeId, localizedLabel.messageId);
+                if (previousKey !== localizedLabel.messageId) {
                   if (previousKey) {
                     keysChanged.add(previousKey);
                   }
-                  keysChanged.add(localizedLabel.key!);
+                  keysChanged.add(localizedLabel.messageId);
                 }
               } else {
-                const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, undefined);
+                const previousKey = this.refreshLabelMessageLinkCache(localizedLabel.nodeId, undefined);
                 if (previousKey) {
                   keysChanged.add(previousKey);
                 }
@@ -181,16 +264,16 @@ export default class LocalizedLabelManager {
               const localizedLabel = this.toLocalizedLabelOrUndefined(createdTextNode);
               if (localizedLabel) {
                 this.virtualTree.addNode(createdNode, createdNode.id);
-                if (localizedLabel.keyType === KeyState.Linked) {
-                  const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, localizedLabel.key!);
-                  if (previousKey !== localizedLabel.key!) {
+                if (localizedLabel.messageId) {
+                  const previousKey = this.refreshLabelMessageLinkCache(localizedLabel.nodeId, localizedLabel.messageId);
+                  if (previousKey !== localizedLabel.messageId) {
                     if (previousKey) {
                       keysChanged.add(previousKey);
                     }
-                    keysChanged.add(localizedLabel.key!);
+                    keysChanged.add(localizedLabel.messageId);
                   }
                 } else {
-                  const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, undefined);
+                  const previousKey = this.refreshLabelMessageLinkCache(localizedLabel.nodeId, undefined);
                   if (previousKey) {
                     keysChanged.add(previousKey);
                   }
@@ -208,7 +291,7 @@ export default class LocalizedLabelManager {
           // about this node from figma :-/ The ui layer will know what this change affects
           const deletedLeafs = this.virtualTree.removeBranch(change.id).filter((node) => node.cacheRelevant);
           deletedLeafs.forEach((node) => {
-            this.refreshLabelKeyLinkCache(node.id, undefined);
+            this.refreshLabelMessageLinkCache(node.id, undefined);
             deletedIds.add(node.id);
           });
           // console.log(`Node deleted ${change.id} leafs: ${JSON.stringify(deletedIds)}`);
@@ -242,16 +325,16 @@ export default class LocalizedLabelManager {
 
             const localizedLabel = this.toLocalizedLabelOrUndefined(changedNode as TextNode);
             if (localizedLabel) {
-              if (localizedLabel.keyType === KeyState.Linked) {
-                const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, localizedLabel.key!);
-                if (previousKey !== localizedLabel.key!) {
+              if (localizedLabel.messageId) {
+                const previousKey = this.refreshLabelMessageLinkCache(localizedLabel.nodeId, localizedLabel.messageId);
+                if (previousKey !== localizedLabel.messageId!) {
                   if (previousKey) {
                     keysChanged.add(previousKey);
                   }
-                  keysChanged.add(localizedLabel.key!);
+                  keysChanged.add(localizedLabel.messageId!);
                 }
               } else {
-                const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, undefined);
+                const previousKey = this.refreshLabelMessageLinkCache(localizedLabel.nodeId, undefined);
                 if (previousKey) {
                   keysChanged.add(previousKey);
                 }
@@ -275,16 +358,16 @@ export default class LocalizedLabelManager {
                 if (movedFigmaNode && movedFigmaNode.type === 'TEXT') {
                   const localizedLabel = this.toLocalizedLabelOrUndefined(movedFigmaNode as TextNode);
                   if (localizedLabel) {
-                    if (localizedLabel.keyType === KeyState.Linked) {
-                      const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, localizedLabel.key!);
-                      if (previousKey !== localizedLabel.key!) {
+                    if (localizedLabel.messageId) {
+                      const previousKey = this.refreshLabelMessageLinkCache(localizedLabel.nodeId, localizedLabel.messageId);
+                      if (previousKey !== localizedLabel.messageId) {
                         if (previousKey) {
                           keysChanged.add(previousKey);
                         }
-                        keysChanged.add(localizedLabel.key!);
+                        keysChanged.add(localizedLabel.messageId);
                       }
                     } else {
-                      const previousKey = this.refreshLabelKeyLinkCache(localizedLabel.nodeId, undefined);
+                      const previousKey = this.refreshLabelMessageLinkCache(localizedLabel.nodeId, undefined);
                       if (previousKey) {
                         keysChanged.add(previousKey);
                       }
@@ -318,6 +401,10 @@ export default class LocalizedLabelManager {
     // console.log('keys changed');
     // console.log(keysChanged);
     figma.ui.postMessage(message);
+  }
+
+  async prepare() {
+    await FontHelper.initialize();
   }
 
   async startFillupCache() {
@@ -423,17 +510,14 @@ export default class LocalizedLabelManager {
       const textNodeId = textNode.id;
       this.virtualTree.addNode(textNode, textNodeId);
 
-      const keyType = textNode.getPluginData(this.keyTypeDataKey);
-      if (keyType !== '' && (keyType as KeyState) === KeyState.Linked) {
-        const key = textNode.getPluginData(this.keyDataKey);
-        if (key !== '') {
-          const previousKey = this.refreshLabelKeyLinkCache(textNodeId, key);
-          if (previousKey) {
-            keysLoaded.add(previousKey);
-            this.virtualTree.addNode(textNode, textNodeId);
-          }
-          keysLoaded.add(key);
+      const messageId = textNode.getPluginData(this.messageNameDataKey);
+      if (messageId) {
+        const previousMessage = this.refreshLabelMessageLinkCache(textNodeId, messageId);
+        if (previousMessage) {
+          keysLoaded.add(previousMessage);
+          this.virtualTree.addNode(textNode, textNodeId);
         }
+        keysLoaded.add(messageId);
       }
     }
 
@@ -464,7 +548,7 @@ export default class LocalizedLabelManager {
           directSelection: true,
           isLabel: selectedNode.type === 'TEXT',
           selectedNodeId: selectedNode.id,
-          key: textNode?.keyType === KeyState.Linked ? textNode?.key : undefined,
+          messageId: textNode?.messageId,
         };
       } else {
         selectionEnhanced[selectedNode.id] = {
@@ -472,7 +556,7 @@ export default class LocalizedLabelManager {
           isLabel: false,
           rootFrameId: rootFrame?.id,
           selectedNodeId: selectedNode.id,
-          key: undefined,
+          messageId: undefined,
         };
 
         const virtualSelectedNode = this.virtualTree.getVirtualNode(selectedNode.id);
@@ -486,7 +570,7 @@ export default class LocalizedLabelManager {
                 isLabel: true,
                 rootFrameId: rootFrame?.id,
                 selectedNodeId: virtualNode.id,
-                key: textNode?.keyType === KeyState.Linked ? textNode?.key : undefined,
+                messageId: textNode?.messageId,
               };
             }
           });
@@ -538,18 +622,21 @@ export default class LocalizedLabelManager {
     return lokalizedLabel;
   }
 
-  async getWithKey(key: string) {
+  async getWithMessage(messageId: string) {
     const labels = [] as LocalizedLabel[];
-    if (this.translationKeyStore!.keyToLabels[key]) {
-      for (const textNodeId of this.translationKeyStore!.keyToLabels[key]) {
-        const textNode = figma.getNodeById(textNodeId) as TextNode;
-        const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode);
-        if (lokalizedLabel) {
-          if (!this.virtualTree.hasNode(textNode.id)) {
-            this.virtualTree.addNode(textNode, textNode.id);
-          }
-          labels.push(lokalizedLabel);
+    const linkedNodes = figma.root.findAllWithCriteria({
+      pluginData: {
+        keys: [`${this.messageNamePrefixKey}_${messageId}`],
+      },
+    });
+
+    for (const textNode of linkedNodes) {
+      const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode as TextNode);
+      if (lokalizedLabel) {
+        if (!this.virtualTree.hasNode(textNode.id)) {
+          this.virtualTree.addNode(textNode, textNode.id);
         }
+        labels.push(lokalizedLabel);
       }
     }
     return labels;
@@ -610,7 +697,7 @@ export default class LocalizedLabelManager {
     }
   }
 
-  async updateFrameProperties(frameNodeId: string, properties: { language?: Language, sampleValues?: boolean }) {
+  async updateFrameProperties(frameNodeId: string, properties: { language?: Locale, sampleValues?: boolean }) {
     const frame = figma.getNodeById(frameNodeId) as FrameNode;
     if (!frame) {
       return;
@@ -635,12 +722,30 @@ export default class LocalizedLabelManager {
 
   } as any;
 
+  private updateMessageReference(textNode: TextNode, messageId: string | null) {
+    for (const dataKey of textNode.getPluginDataKeys()) {
+      if (dataKey.startsWith(`${this.messageNamePrefixKey}_`)) {
+        if (messageId === null || dataKey !== `${this.messageNamePrefixKey}_${messageId}`) {
+          textNode.setPluginData(dataKey, '');
+        }
+      }
+    }
+    if (textNode.getPluginData(this.messageNameDataKey) !== messageId) {
+      textNode.setPluginData(this.messageNameDataKey, '');
+    }
+  }
+
   async updateLabelProperties(nodeId: string, changedProperties: SandboxUpdateLabelProperties) {
     // setup queue for atomic label update processing
+    // - if no execution is ongoing hop right in and create a queue
+    // - if an execution is ongoing await the previous call
     if (this.labelUpdateQueue[nodeId]) {
       // eslint-disable-next-line no-promise-executor-return
       // console.log('queing update');
-      await (new Promise((resolver) => this.labelUpdateQueue[nodeId].push(resolver)));
+      await (new Promise((resolver: any) => {
+        // we don't resolve this promise - this is done by the excution of the current function
+        this.labelUpdateQueue[nodeId].push(resolver);
+      }));
       // console.log('dequied');
     } else {
       // console.log('queing not needed - prepare queue for next call');
@@ -649,185 +754,268 @@ export default class LocalizedLabelManager {
     }
 
     const textNode = figma.getNodeById(nodeId)! as TextNode;
-
-    if (changedProperties.labelName !== undefined) {
+    try {
+      if (changedProperties.labelName !== undefined) {
       // console.log('setting name');
-      textNode.name = changedProperties.labelName;
-      textNode.autoRename = false;
-      textNode.setPluginData(this.autoRenameHashKey, '');
-    }
-
-    if (changedProperties.key !== undefined) {
-      textNode.setPluginData(this.keyDataKey, changedProperties.key);
-    }
-
-    if (changedProperties.keyType !== undefined) {
-      textNode.setPluginData(this.keyTypeDataKey, changedProperties.keyType);
-    }
-
-    if (changedProperties.keyVersion !== undefined) {
-      textNode.setPluginData(this.keyVersionDataKey, `${changedProperties.keyVersion}`);
-    }
-
-    if (changedProperties.showSampleValues !== undefined) {
-      textNode.setPluginData(this.sampleValuesDataKey, changedProperties.showSampleValues ? `${true}` : '');
-    }
-
-    if (changedProperties.fillins !== undefined) {
-      textNode.setPluginData(this.fillinsKey, JSON.stringify(changedProperties.fillins));
-    }
-
-    if (changedProperties.unlinkedTranslations !== undefined) {
-      if (changedProperties.unlinkedTranslations === null) {
-        // clean up the unlinked translation
-        textNode.setPluginData(this.unlinkedTranslationsDataKey, '');
-      } else {
-        textNode.setPluginData(this.unlinkedTranslationsDataKey, JSON.stringify(changedProperties.unlinkedTranslations));
-      }
-    }
-
-    if (changedProperties.plural !== undefined) {
-      textNode.setPluginData(this.keyPluralDataKey, changedProperties.plural ? changedProperties.plural : '');
-    }
-
-    if (changedProperties.language !== undefined) {
-      if (changedProperties.language !== (await this.translationKeyStore!.getConfig()).baseLanguage) {
-        if (textNode.autoRename) {
-          textNode.setPluginData(this.autoRenameHashKey, textNode.characters);
-          textNode.autoRename = false;
-        }
-      } else if (textNode.getPluginData(this.autoRenameHashKey) === textNode.name) {
-        textNode.autoRename = true;
-      }
-      textNode.setPluginData(this.languageDataKey, changedProperties.language ? changedProperties.language : '');
-    }
-
-    if (changedProperties.characters !== undefined) {
-      await this.loadFontsForTextNodes([textNode]);
-
-      // const textWithDecorators = this.toTextRangeObject(changedProperties.translation);
-
-      textNode.setPluginData(this.filledTemplateHashDataKey, changedProperties.filledTemplateHash ? changedProperties.filledTemplateHash : '');
-      // console.log(`setting characters from ${textNode.characters} to ${changedProperties.characters}`);
-
-      textNode.characters = changedProperties.characters;
-
-      // NOTE: when we are here and we have mixed font family we have warned the user already - we go for the first one
-      const textNodeFontFamily = (textNode.fontName as FontName).family ?? (textNode.getRangeFontName(0, 1) as FontName).family;
-      const fonts = await figma.listAvailableFontsAsync();
-      const fontFamily = fonts.filter((font: Font) => font.fontName.family === textNodeFontFamily).map((font) => font.fontName);
-
-      let regularFontName: FontName | undefined;
-      let boldFontName: FontName | undefined;
-      let italicFontName: FontName | undefined;
-      let boldItalicFontName: FontName | undefined;
-
-      fontFamily.forEach((fontFamilyVariant) => {
-        const styleLowerCase = fontFamilyVariant.style.toLowerCase();
-        if (styleLowerCase === 'regular') {
-          regularFontName = fontFamilyVariant;
-        }
-        if (!regularFontName && styleLowerCase === 'medium') {
-          regularFontName = fontFamilyVariant;
-        }
-
-        if (styleLowerCase === 'bold') {
-          boldFontName = fontFamilyVariant;
-        }
-
-        if (styleLowerCase === 'italic') {
-          italicFontName = fontFamilyVariant;
-        }
-
-        if (styleLowerCase.includes('bold italic')) {
-          boldItalicFontName = fontFamilyVariant;
-        }
-        if (!boldItalicFontName && styleLowerCase.includes('italic') && styleLowerCase.includes('bild')) {
-          boldItalicFontName = fontFamilyVariant;
-        }
-      });
-
-      if (regularFontName) {
-        await figma.loadFontAsync(regularFontName);
+        textNode.name = changedProperties.labelName;
+        textNode.autoRename = false;
+        textNode.setPluginData(this.autoRenameHashKey, '');
       }
 
-      if (boldFontName) {
-        await figma.loadFontAsync(boldFontName);
+      if (changedProperties.messageState?.type === 'unset') {
+        this.updateMessageReference(textNode, null);
+        textNode.setPluginData(this.parameterValuesKey, '');
+        textNode.setPluginData(this.messageUnmanagedKey, '');
+        textNode.setPluginData(this.anonymMessageDataKey, '');
+        textNode.setPluginData(this.messageNameDataKey, '');
+      } else if (changedProperties.messageState?.type === 'unmanaged') {
+        this.updateMessageReference(textNode, null);
+        textNode.setPluginData(this.parameterValuesKey, '');
+        textNode.setPluginData(this.messageUnmanagedKey, JSON.stringify(true));
+        textNode.setPluginData(this.messageNameDataKey, '');
+        textNode.setPluginData(this.anonymMessageDataKey, '');
+      } else if (changedProperties.messageState?.type === 'unlinked') {
+        this.updateMessageReference(textNode, null);
+        textNode.setPluginData(this.parameterValuesKey, JSON.stringify(changedProperties.messageState.parameterValues));
+        textNode.setPluginData(this.anonymMessageDataKey, JSON.stringify(changedProperties.messageState.unlinkedMessage));
+        textNode.setPluginData(this.messageUnmanagedKey, JSON.stringify(false));
+        textNode.setPluginData(this.messageNameDataKey, '');
+      } else if (changedProperties.messageState?.type === 'linked') {
+        this.updateMessageReference(textNode, changedProperties.messageState.messageId);
+        textNode.setPluginData(this.parameterValuesKey, JSON.stringify(changedProperties.messageState.parameterValues));
+        textNode.setPluginData(this.messageUnmanagedKey, JSON.stringify(false));
+        textNode.setPluginData(this.messageNameDataKey, changedProperties.messageState.messageId);
+        textNode.setPluginData(this.anonymMessageDataKey, '');
+        textNode.setPluginData(`${this.messageNamePrefixKey}_${changedProperties.messageState.messageId}`, changedProperties.messageState.messageId);
       }
 
-      if (italicFontName) {
-        await figma.loadFontAsync(italicFontName);
+      // if (changedProperties.messageVersion !== undefined) {
+      //   textNode.setPluginData(this.messageVersionDataKey, `${changedProperties.messageVersion}`);
+      // }
+
+      // TODO #18 selectors set variables instead
+      // if (changedProperties.gender !== undefined) {
+      //   textNode.setPluginData(this.messageGenderDataKey, changedProperties.gender ? changedProperties.gender : '');
+      // }
+      // if (changedProperties.plural !== undefined) {
+      //   textNode.setPluginData(this.messagePluralDataKey, changedProperties.plural ? changedProperties.plural : '');
+      // }
+
+      if (changedProperties.language !== undefined) {
+        if (changedProperties.language !== this.messageStore?.getConfigSync().refLanguage!) {
+          if (textNode.autoRename) {
+            textNode.setPluginData(this.autoRenameHashKey, textNode.characters);
+            textNode.autoRename = false;
+          }
+        } else if (textNode.getPluginData(this.autoRenameHashKey) === textNode.name) {
+          textNode.autoRename = true;
+        }
+        textNode.setPluginData(this.languageDataKey, changedProperties.language ? changedProperties.language : '');
       }
 
-      if (boldItalicFontName) {
-        await figma.loadFontAsync(boldItalicFontName);
+      if (changedProperties.fillinsToPlaceholder !== undefined) {
+        textNode.setPluginData(this.fillinsToPlaceholderKey, JSON.stringify(changedProperties.fillinsToPlaceholder));
       }
 
-      for (const rangeStyle of changedProperties.ops!) {
-        // debugger;
-
-        let linkUrl = rangeStyle.attributes?.link;
-        if (linkUrl && linkUrl.startsWith('/')) {
-          linkUrl = this.helperDomain + linkUrl;
+      // TODO think about the order - at the moment a lables characters might not get updated after fillins got set
+      // NOTE: we also send the characters even if only styling has changed
+      if (changedProperties.characters !== undefined) {
+        try {
+          await this.loadFontsForTextNodes([textNode]);
+        } catch (e: any) {
+          // rethrow with better error message
+          e.message = `Can't update label - not all Fonts could get loaded: ${e.message}`;
+          throw e;
         }
 
-        textNode.setRangeHyperlink(rangeStyle.from, rangeStyle.to, linkUrl ? { type: 'URL', value: linkUrl } : null);
+        // const textWithDecorators = this.toTextRangeObject(changedProperties.translation);
 
-        let decoration = 'NONE' as TextDecoration;
-        if (rangeStyle.attributes?.textDecoration === 'UNDERLINE') {
-          decoration = 'UNDERLINE';
-        } else if (rangeStyle.attributes?.textDecoration === 'STRIKETHROUGH') {
-          decoration = 'STRIKETHROUGH';
-        }
+        // console.log(`setting characters from ${textNode.characters} to ${changedProperties.characters}`);
 
-        textNode.setRangeTextDecoration(rangeStyle.from, rangeStyle.to, decoration);
+        // NOTE: when we are here and we have mixed font family we **should** have warned the user already - we go for the first one
+        // TODO warn user about problematic labels
+        const textNodeFontFamily = (textNode.fontName as FontName).family ?? (textNode.getRangeFontName(0, 1) as FontName).family;
+        const fonts = await figma.listAvailableFontsAsync();
+        const fontFamilyVariants = fonts.filter((font: Font) => font.fontName.family === textNodeFontFamily).map((font) => font.fontName);
 
-        // console.log(`Processing: ${textNode.characters.length} ${rangeStyle.to} ${textNode.characters} ${changedProperties.characters}`);
-
-        // check if we should apply styles at all... is bold/italic/regular swiched once? otherwise keep the orginal label
-        if (regularFontName
-          && !rangeStyle.attributes?.bold && !rangeStyle.attributes?.italic) {
-          if (rangeStyle.from === 0
-            && rangeStyle.to === textNode.characters.length) {
-            if (textNode.fontName === boldItalicFontName || textNode.fontName === boldFontName || (italicFontName && textNode.fontName === italicFontName)) {
-              textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, regularFontName);
-            }
+        // check what inline style variants we find (bold, italic, bold&italic, regular)
+        const fontStyleVariants = new Set<'bold' | 'italic' | 'bold italic' | 'regular'>();
+        for (const rangeStyle of changedProperties.ops!) {
+          if (rangeStyle.attributes?.italic && rangeStyle.attributes?.bold) {
+            fontStyleVariants.add('bold italic');
+          } else if (rangeStyle.attributes?.italic) {
+            fontStyleVariants.add('italic');
+          } else if (rangeStyle.attributes?.bold) {
+            fontStyleVariants.add('bold');
           } else {
-            textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, regularFontName);
+            fontStyleVariants.add('regular');
           }
         }
 
-        if (italicFontName
-          && !rangeStyle.attributes?.bold && rangeStyle.attributes?.italic) {
-          textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, italicFontName);
+        // TODO check style segments when creating localized labels and warn for incompatibility
+        // TODO also check for available fonts when creating the labels to disable bold/italic options for those labels that don't support it
+        // TODO only load thos font variants that are needed and fail if one tries to apply them
+
+        // find font names for style variants
+        let regularFontName: FontName | undefined;
+        let boldFontName: FontName | undefined;
+        let italicFontName: FontName | undefined;
+        let boldItalicFontName: FontName | undefined;
+
+        if (fontStyleVariants.size > 0) {
+          fontFamilyVariants.forEach((fontFamilyVariant) => {
+            const styleLowerCase = fontFamilyVariant.style.toLowerCase();
+            if (styleLowerCase === 'regular') {
+              regularFontName = fontFamilyVariant;
+            }
+            if (!regularFontName && styleLowerCase === 'medium') {
+              regularFontName = fontFamilyVariant;
+            }
+
+            if (styleLowerCase === 'bold') {
+              boldFontName = fontFamilyVariant;
+            }
+
+            if (styleLowerCase === 'italic') {
+              italicFontName = fontFamilyVariant;
+            }
+
+            if (styleLowerCase.includes('bold italic')) {
+              boldItalicFontName = fontFamilyVariant;
+            }
+            if (!boldItalicFontName && styleLowerCase.includes('italic') && styleLowerCase.includes('bold')) {
+              boldItalicFontName = fontFamilyVariant;
+            }
+          });
+
+          if (fontStyleVariants.has('regular')) {
+            if (!regularFontName) {
+              throw new Error(`No regular font variant for ${textNodeFontFamily}  found `);
+            }
+            try {
+              await figma.loadFontAsync(regularFontName);
+            } catch (e: any) {
+              e.message = `Could not load regular font for ${textNodeFontFamily}: ${e.message}`;
+              throw e;
+            }
+          }
+
+          if (fontStyleVariants.has('bold')) {
+            if (!boldFontName) {
+              throw new Error(`No bold font variant for ${textNodeFontFamily}  found `);
+            }
+            try {
+              await figma.loadFontAsync(boldFontName);
+            } catch (e: any) {
+              e.message = `Could not load bold font for ${textNodeFontFamily}: ${e.message}`;
+              throw e;
+            }
+          }
+
+          if (fontStyleVariants.has('italic')) {
+            if (!italicFontName) {
+              throw new Error(`No italic font variant for ${textNodeFontFamily}  found `);
+            }
+            try {
+              await figma.loadFontAsync(italicFontName);
+            } catch (e: any) {
+              e.message = `Could not load italic font for ${textNodeFontFamily}: ${e.message}`;
+              throw e;
+            }
+          }
+
+          if (fontStyleVariants.has('bold italic')) {
+            if (!boldItalicFontName) {
+              throw new Error(`No italic font variant for ${textNodeFontFamily}  found `);
+            }
+            try {
+              await figma.loadFontAsync(boldItalicFontName);
+            } catch (e: any) {
+              e.message = `Could not load italic+bold font for ${textNodeFontFamily}: ${e.message}`;
+              throw e;
+            }
+          }
         }
 
-        if (boldFontName
-          && rangeStyle.attributes?.bold && !rangeStyle.attributes?.italic) {
-          textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, boldFontName);
+        textNode.characters = changedProperties.characters;
+
+        for (const rangeStyle of changedProperties.ops!) {
+        // debugger;
+
+          const list = rangeStyle.attributes?.list;
+          if (list === 'ordered') {
+            textNode.setRangeListOptions(rangeStyle.from, rangeStyle.to, { type: 'ORDERED' });
+          } else if (list === 'bullet') {
+            textNode.setRangeListOptions(rangeStyle.from, rangeStyle.to, { type: 'UNORDERED' });
+          } else {
+            textNode.setRangeListOptions(rangeStyle.from, rangeStyle.to, { type: 'NONE' });
+          }
+
+          let linkUrl = rangeStyle.attributes?.link;
+          if (linkUrl && linkUrl.startsWith('/')) {
+            linkUrl = this.helperDomain + linkUrl;
+          }
+
+          textNode.setRangeHyperlink(rangeStyle.from, rangeStyle.to, linkUrl ? { type: 'URL', value: linkUrl } : null);
+
+          let decoration = 'NONE' as TextDecoration;
+          if (rangeStyle.attributes?.textDecoration === 'UNDERLINE') {
+            decoration = 'UNDERLINE';
+          } else if (rangeStyle.attributes?.textDecoration === 'STRIKETHROUGH') {
+            decoration = 'STRIKETHROUGH';
+          }
+
+          textNode.setRangeTextDecoration(rangeStyle.from, rangeStyle.to, decoration);
+
+          // console.log(`Processing: ${textNode.characters.length} ${rangeStyle.to} ${textNode.characters} ${changedProperties.characters}`);
+
+          // check if we should apply styles at all... is bold/italic/regular swiched once? otherwise keep the orginal label
+          if (!rangeStyle.attributes?.bold && !rangeStyle.attributes?.italic) {
+            if (rangeStyle.from === 0
+              && rangeStyle.to === textNode.characters.length) {
+              if (textNode.fontName === boldItalicFontName
+                || textNode.fontName === boldFontName
+                || textNode.fontName === italicFontName) {
+                textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, regularFontName!);
+              }
+            } else {
+              textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, regularFontName!);
+            }
+          } else if (!rangeStyle.attributes?.bold && rangeStyle.attributes?.italic) {
+            textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, italicFontName!);
+          } else if (rangeStyle.attributes?.bold && !rangeStyle.attributes?.italic) {
+            textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, boldFontName!);
+          } else if (rangeStyle.attributes?.bold && rangeStyle.attributes?.italic) {
+            textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, boldItalicFontName!);
+          }
         }
 
-        if (boldItalicFontName
-          && rangeStyle.attributes?.bold && rangeStyle.attributes?.italic) {
-          textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, boldItalicFontName);
-        }
+        textNode.setPluginData(this.variantPatternHTMLHashDataKey, changedProperties.variantPatternHTMLHash ? changedProperties.variantPatternHTMLHash : '');
       }
+    } finally {
+      // allow this function to return sucessfully before we start the next update in the queue
+      setTimeout(() => {
+        const nextUpdateResolver = this.labelUpdateQueue[nodeId].shift();
+        if (nextUpdateResolver) {
+          nextUpdateResolver();
+        } else {
+          delete this.labelUpdateQueue[nodeId];
+        }
+      }, 1);
     }
 
-    // allow this function to return sucessfully before we start the next update in the queue
-    setTimeout(() => {
-      const nextUpdateResolver = this.labelUpdateQueue[nodeId].shift();
-      if (nextUpdateResolver) {
-        nextUpdateResolver();
-      } else {
-        delete this.labelUpdateQueue[nodeId];
-      }
-    }, 1);
     return this.toLocalizedLabelOrUndefined(textNode)!;
   }
 
   async commitUndo() {
     return figma.commitUndo();
+  }
+
+  async fixLabelLints(textNodeId: string, lintsToFix: string[]) {
+    const textNode = figma.getNodeById(textNodeId)! as TextNode;
+    await this.loadFontsForTextNodes([textNode]);
+    const linter = new TextNodeLinter();
+    linter.fix(textNode, lintsToFix);
   }
 
   private async loadFontsForTextNodes(textNodes: TextNode[]) {
@@ -867,20 +1055,6 @@ export default class LocalizedLabelManager {
   }
 
   helperDomain = 'https://relativeUrl';
-
-  /**
-   * Provides the placholders sorted for the fillin and text extractions
-   */
-  static getPlaceholdersByFillins(fillins: Fillins) {
-    const placeholderByFillin = Object.keys(fillins).sort((placeholderA, placeholderB) => {
-      if (fillins[placeholderA].value !== fillins[placeholderB].value) {
-        // TODO #8 we just convert the fillin values to a string. The value is a number or a string do we need to take formating into account?
-        return (`${fillins[placeholderA].value}`).localeCompare(`${fillins[placeholderB].value}`);
-      }
-      return placeholderA.localeCompare(placeholderB);
-    });
-    return placeholderByFillin;
-  }
 
   private toLocalizedLabelOrUndefined(node: TextNode): LocalizedLabel | undefined {
     let derivable = true;
@@ -948,7 +1122,8 @@ export default class LocalizedLabelManager {
     // 1562ms -> 1071ms ~ 1/4
     const labelText = node.characters;
 
-    const fillins = node.getPluginData(this.fillinsKey) === '' ? {} : JSON.parse(node.getPluginData(this.fillinsKey));
+    const fillins = node.getPluginData(this.fillinsToPlaceholderKey) === '' ? {} : JSON.parse(node.getPluginData(this.fillinsToPlaceholderKey));
+    const parameterValues = node.getPluginData(this.parameterValuesKey) === '' ? {} : JSON.parse(node.getPluginData(this.parameterValuesKey));
     const tokenizedTextResult = this.extractDeltaOpsAndLabelStyles(node, fillins);
 
     if (labelText.length === 1 && !/[0-9a-zA-Z\n\s]/.test(labelText)) {
@@ -958,18 +1133,13 @@ export default class LocalizedLabelManager {
     // get plugin 1192ms -> 938ms
 
     // if no plural id is specified than we fall back to "other" - the default plural
-    const pluralId = node.getPluginData(this.keyPluralDataKey) === '' ? Plural.OTHER : node.getPluginData(this.keyPluralDataKey);
-    const language = node.getPluginData(this.languageDataKey) === '' ? this.translationKeyStore!.getConfigSync().baseLanguage! : node.getPluginData(this.languageDataKey) as Language;
-    const keyVersion = node.getPluginData(this.keyVersionDataKey) === '' ? -1 : parseInt(node.getPluginData(this.keyVersionDataKey), 10);
+    const language = node.getPluginData(this.languageDataKey) === '' ? this.messageStore?.getConfigSync()!.refLanguage! : node.getPluginData(this.languageDataKey) as Locale;
+    const unmanaged = node.getPluginData(this.messageUnmanagedKey) === 'true';
+    const messageId = node.getPluginData(this.messageNameDataKey) === '' ? undefined : node.getPluginData(this.messageNameDataKey);
+    const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === '' ? this.messageStore?.getConfigSync()!.refLanguage! : rootFrame.getPluginData(this.languageDataKey) as Locale;
 
-    const keyType = node.getPluginData(this.keyTypeDataKey) === '' || node.getPluginData(this.keyTypeDataKey) === undefined ? KeyState.Unset : node.getPluginData(this.keyTypeDataKey) as KeyState;
-    const key = node.getPluginData(this.keyDataKey) === '' ? undefined : node.getPluginData(this.keyDataKey);
-    const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === '' ? this.translationKeyStore!.getConfigSync().baseLanguage! : rootFrame.getPluginData(this.languageDataKey) as Language;
-    const rootFrameUseSampleValues = rootFrame.getPluginData(this.sampleValuesDataKey) !== '';
-    const useSampleValues = node.getPluginData(this.sampleValuesDataKey) !== '';
-
-    const filledTemplateHash = node.getPluginData(this.filledTemplateHashDataKey) !== '' ? node.getPluginData(this.filledTemplateHashDataKey) : undefined;
-    const unlinkedTranslations = node.getPluginData(this.unlinkedTranslationsDataKey) !== '' ? JSON.parse(node.getPluginData(this.unlinkedTranslationsDataKey)) : undefined;
+    const variantPatternHTMLHash = node.getPluginData(this.variantPatternHTMLHashDataKey) !== '' ? node.getPluginData(this.variantPatternHTMLHashDataKey) : undefined;
+    const unlinkedMessage = node.getPluginData(this.anonymMessageDataKey) !== '' ? JSON.parse(node.getPluginData(this.anonymMessageDataKey)) : undefined;
 
     // eslint-disable-next-line consistent-return
     return {
@@ -979,48 +1149,44 @@ export default class LocalizedLabelManager {
       rootFrameName: rootFrame.name,
       rootFrameLanguage,
       language,
-      rootFrameUseSampleValues,
-      textChangedAfterGeneration: false,
-      filledTemplateHash,
-      useSampleValues,
+      variantPatternHTMLHash,
       nodeId: node.id,
       name: node.name,
       height: node.height,
       width: node.width,
       x,
       y,
-      keyType,
-      key,
-      keyVersion,
-      fillins,
+      messageId,
+      unmanaged,
+      parameterValues,
+      fillinsToPlaceholder: fillins,
       derivedKey: derivable ? derivedName : undefined,
-      pluralId: pluralId as Plural,
       characters: labelText,
       ops: tokenizedTextResult.deltaOps,
-      warnings: tokenizedTextResult.warnings,
+      matchingLabelLints: tokenizedTextResult.matchingLabelLints,
       labelStyle: tokenizedTextResult.labelStyle,
-      unlinkedTranslations,
+      unlinkedMessage,
     };
   }
 
-  private getPlaceholderDeltaOps(characters: string, fillins: Fillins) {
+  // tries to find the fillins in the characters set to map them to placeholders
+  private getPlaceholderDeltaOps(characters: string, fillins: FillinsToPlaceholder) {
     const placeholderDeltaOps = [] as DeltaOp[];
-    const placeholderByFillin = LocalizedLabelManager.getPlaceholdersByFillins(fillins);
+
+    const fillinValues = Object.keys(fillins);
 
     // eslint-disable-next-line for-direction, no-plusplus
-    for (let i = placeholderByFillin.length - 1; i >= 0; i--) {
-      const currentPlaceholderName = placeholderByFillin[i];
-      const fillinValue = fillins[currentPlaceholderName].value;
+    for (let i = fillinValues.length - 1; i >= 0; i--) {
+      const fillinValue = fillinValues[i];
+      const placeholder = fillins[fillinValue]!;
 
       let matchIndex = 0;
-      const markerLength = i + 1;
-
       while (matchIndex !== -1) {
-        matchIndex = characters.indexOf(fillinValue + MARKER_CHARACTER.repeat(markerLength), matchIndex);
+        matchIndex = characters.indexOf(fillinValue, matchIndex);
 
         if (matchIndex !== -1) {
           const start = matchIndex;
-          const end = matchIndex + markerLength + (`${fillinValue}`).length;
+          const end = matchIndex + (`${fillinValue}`).length;
 
           // ensure no conflict with previous match
           if (placeholderDeltaOps.find((op) => op.start < end && start < op.end) === undefined) {
@@ -1029,8 +1195,12 @@ export default class LocalizedLabelManager {
               end,
               attributes: {
                 placeholder: {
-                  invisibleMarkers: markerLength,
-                  name: currentPlaceholderName,
+                  name: placeholder.name,
+                  unnamed: !placeholder.named,
+                  argumentPosition: placeholder.specifiedArgumentPosition,
+                  formatFn: placeholder.formatFunctionName,
+                  options: placeholder.options,
+                  invisibleMarkers: fillinValue.split(MARKER_CHARACTER).length,
                 },
               },
             });
@@ -1042,9 +1212,40 @@ export default class LocalizedLabelManager {
     return placeholderDeltaOps.sort((op1, op2) => op1.start - op2.start);
   }
 
+  private textSegmentFields = [
+    'fontSize',
+    'fontName',
+    'fontWeight',
+    'textDecoration',
+    'textCase',
+    'lineHeight',
+    'letterSpacing',
+    'fills',
+    'textStyleId',
+    'fillStyleId',
+    'listOptions',
+    'indentation',
+    'hyperlink',
+  ];
+
+  private supportedInlineFields = [
+    'textDecoration', 'hyperlink', 'fontName', // 'listOptions', 'indentation',
+  ];
+
   private getTextStyleDeltaOps(node: TextNode) {
+    // if (matchingRules.length > 0) {
+    //   console.log(`MATCHING RULES: ${matchingRules.join(', ')}`);
+    //   console.log('auto fixing...');
+
+    //   this.loadFontsForTextNodes([node]).then(() => {
+    //     linter.fix(node, matchingRules);
+    //   })
+    // } else {
+    //   console.log('MATCHIGN RULES: NONE');
+    // }
+
     const textStyleDeltaOps = [] as DeltaOp[];
-    const textSegments = node.getStyledTextSegments(['fontName', 'textDecoration', 'hyperlink']);
+    const textSegments = node.getStyledTextSegments(['indentation', 'listOptions', 'fontName', 'textDecoration', 'hyperlink']);
 
     textSegments.forEach((textSegment) => {
       // if the node has one stile (non mixed) its not inline styling - ignore it
@@ -1058,23 +1259,34 @@ export default class LocalizedLabelManager {
         linkUrl = textSegment.hyperlink.value.substring(this.helperDomain.length);
       }
 
+      const attributes = {
+        textDecoration,
+        bold: bold ? true : undefined,
+        italic: italic ? true : undefined,
+        link: linkUrl,
+        indentation: textSegment.indentation,
+      } as any;
+
+      // let listType = undefined as undefined | 'bullet' | 'ordered';
+      if (textSegment.listOptions.type === 'ORDERED') {
+        attributes.list = 'ordered';
+      }
+
+      if (textSegment.listOptions.type === 'UNORDERED') {
+        attributes.list = 'bullet';
+      }
+
       textStyleDeltaOps.push({
         start: textSegment.start,
         end: textSegment.end,
-        attributes: {
-          textDecoration,
-          bold: bold ? true : undefined,
-          italic: italic ? true : undefined,
-          link: linkUrl,
-        },
-
+        attributes,
       });
     });
 
     return textStyleDeltaOps;
   }
 
-  private getDeltaOps(node: TextNode, fillins: Fillins) {
+  private getDeltaOps(node: TextNode, fillins: FillinsToPlaceholder) {
     const deltaOps = [] as DeltaOp[];
     const textStyleDeltaOps = this.getTextStyleDeltaOps(node);
     const placehodlderDeltaOps = this.getPlaceholderDeltaOps(node.characters, fillins);
@@ -1098,7 +1310,7 @@ export default class LocalizedLabelManager {
           } else if (textStyleDeltaOp.start === placehodlderDeltaOp.start
             && textStyleDeltaOp.end > (placehodlderDeltaOp.end - placehodlderDeltaOp.attributes.placeholder!.invisibleMarkers)
             && textStyleDeltaOp.end < placehodlderDeltaOp.end) {
-            // style delta only formats the placeholder - but its end sits within the markers
+            // style delta only formats the placeholder - but its end sits within the invisible markers
             // - no split needed but set end to the end of the text marker
             textStyleDeltaOp.attributes.placeholder = placehodlderDeltaOp.attributes.placeholder;
             textStyleDeltaOp.end = placehodlderDeltaOp.end;
@@ -1194,7 +1406,7 @@ export default class LocalizedLabelManager {
     return deltaOps.sort((op1, op2) => op1.start - op2.start);
   }
 
-  private extractDeltaOpsAndLabelStyles(node: TextNode, fillins: Fillins): { warnings: string[], deltaOps: any[], labelStyle: LabelStyle } {
+  private extractDeltaOpsAndLabelStyles(node: TextNode, fillins: FillinsToPlaceholder): { matchingLabelLints: string[], deltaOps: any[], labelStyle: LabelStyle/* , allowedFormats: string[] */ } {
     const fontFamilies = new Set<string>();
 
     const labelStyle = {
@@ -1205,7 +1417,9 @@ export default class LocalizedLabelManager {
     } as LabelStyle;
 
     const deltaOps = this.getDeltaOps(node, fillins);
-    
+
+    const linter = new TextNodeLinter();
+    const matchingLabelLints = linter.lint(node);
 
     // get label styles
     for (const deltaOp of deltaOps) {
@@ -1216,6 +1430,7 @@ export default class LocalizedLabelManager {
       }
       if (deltaOp.attributes.fontFamily) {
         fontFamilies.add(deltaOp.attributes.fontFamily);
+        // console.log('adding font fimily: ' + deltaOp.attributes.fontFamily);
       }
 
       labelStyle.bold = labelStyle.bold !== null && labelStyle.bold !== deltaOp.attributes.bold ? 'MIXED' : deltaOp.attributes.bold;
@@ -1232,10 +1447,8 @@ export default class LocalizedLabelManager {
       deltaOp.attributes.fontFamily = labelStyle.fontFamily !== 'MIXED' ? undefined : deltaOp.attributes.fontFamily;
     }
 
-    const warnings = [] as string[];
-
     return {
-      warnings,
+      matchingLabelLints,
       // if we have no style changes within the label we don't handle styling
       deltaOps, // : deltaOps.length > 1 ? deltaOps : [],
       labelStyle,

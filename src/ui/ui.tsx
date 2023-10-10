@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import * as ReactDOM from 'react-dom';
 import TimeAgo from 'javascript-time-ago';
 import en from 'javascript-time-ago/locale/en.json';
+import * as Sentry from '@sentry/react';
 import { initializeSentry } from './utils/sentry';
 import { initializeAnalytics, track, identify } from './utils/analytics';
 
@@ -17,11 +18,9 @@ import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
 import './ui.css';
 import WindowManagerUi from '../lib/windowManager/WindowManagerUI';
 import { WindowMode } from '../lib/windowManager/WindowManagerSandbox';
+import MessageListView from './views/messages/MessageListView';
 
-import TranslationKeyListView from './views/translationkeys/TranslationKeyListView';
-
-import MemoryTranslationKeyStore from '../lib/keystore/MemoryTranslationKeyStore';
-import { FigmaFileTranslationKeyStore } from '../lib/keystore/FigmaFileTranslationKeyStore';
+import MessageStoreMemory from '../lib/message/store/MessageStoreMemory';
 
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
 import LocalizedLabelManagerUI from '../lib/localizedlabels/LocalizedLabelManagerUI';
@@ -30,6 +29,7 @@ import './tabbar.css';
 import './assets/icons.css';
 import SegmentedControl from './compontents/segmentedControl/SegmentedControl';
 import Onboarding from './views/onboarding/Onboarding';
+import { Locale } from '../lib/message/variants/Locale';
 import Tooltip from './compontents/tooltip/Tooltip';
 
 import Export from './views/export/Export';
@@ -42,6 +42,7 @@ import UserManagement from './views/usermanagement/Usermanagement';
 import Drawer from './compontents/drawer/Drawer';
 import ConsumptionPaywall from './compontents/plans/ConsumptionPaywall';
 import ComparisonChart from './compontents/plans/ComparisonChart';
+import { InlangMessageStore } from '../lib/message/store/InlangMessageStoreFigmaRoot';
 
 console.log(`Starting Figma UI - Version ${pjs.version}`);
 
@@ -115,12 +116,29 @@ const asyncFunctionProxy = new AsyncFunctionProxy('UIAsyncFunctionProxy', (data:
 const figmaRemote = new FigmaUtil();
 asyncFunctionProxy.proxyAsyncMethods(figmaRemote);
 
+(async () => {
+  // reportUnreportedMigrationReports
+  const reports = await figmaRemote.getReportsAsync();
+  for (const report of Object.values(reports)) {
+    if (!report.reportedToSentry) {
+      console.log(`reporting: Migration version: ${report.version} - ${report.message}`);
+      Sentry.captureException(new Error(`Migration version: ${report.version} - ${report.message}`));
+      report.reportedToSentry = true;
+      // eslint-disable-next-line no-await-in-loop
+      await figmaRemote.updateReport(report);
+    }
+  }
+})();
+
 figmaRemote.getUserId().then((userId) => {
   identify(userId!);
+  if (userId) {
+    Sentry.setUser({ id: userId! });
+  }
 });
 
 const checkVersion = async () => {
-  const minVersionRequest = await fetch('https://parrots-design.github.io/parrot/min-version.json', {
+  const minVersionRequest = await fetch('https://parrot-global.github.io/parrot/min-version.json', {
     cache: 'no-cache',
   });
   const { minVersion } = await minVersionRequest.json();
@@ -141,15 +159,16 @@ setInterval(() => {
   checkVersion().catch(console.log);
 }, versionCheckInterval);
 
+
 const userStateManagerSandbox = new UserManager(true);
 asyncFunctionProxy.proxyAsyncMethods(userStateManagerSandbox);
 const userStateManagerUi = new UserManagerUI(userStateManagerSandbox);
+const figmaFileTranslationKeyStore = new InlangMessageStore(true);
 
-const figmaFileTranslationKeyStore = new FigmaFileTranslationKeyStore(true);
 asyncFunctionProxy.proxyAsyncMethods(figmaFileTranslationKeyStore);
-const memoryTranslationKeyStore = new MemoryTranslationKeyStore(figmaFileTranslationKeyStore);
+const memoryTranslationKeyStore = new MessageStoreMemory(figmaFileTranslationKeyStore);
 
-const remoteLocalizedLabelManager = new LocalizedLabelManager(undefined);
+const remoteLocalizedLabelManager = new LocalizedLabelManager();
 asyncFunctionProxy.proxyAsyncMethods(remoteLocalizedLabelManager);
 const localizedLabelManager = new LocalizedLabelManagerUI(remoteLocalizedLabelManager, memoryTranslationKeyStore);
 
@@ -162,7 +181,7 @@ function App() {
   const [user, setUser] = useState(undefined as PluginUser | undefined);
 
   const [windowMode, setWindowMode] = useState(WindowManagerUi.instance!.windowMode);
-  const [keyQuery, setKeyQuery] = useState(MemoryTranslationKeyStore.toQueryObject(''));
+  const [keyQuery, setKeyQuery] = useState(MessageStoreMemory.toQueryObject(''));
 
   useEffect(() => {
     // asynchronous fetch the state from figma helper
@@ -205,9 +224,12 @@ function App() {
     // asynchronous fetch the state from figma helper
     (async () => {
       console.log('load - keys');
+
+      const fileSetupCompleted = await figmaRemote.getRootPluginData('fileSetupCompleted');
+
+      await localizedLabelManager.prepare();
       await memoryTranslationKeyStore.load();
       localizedLabelManager.startFillupCache();
-      const fileSetupCompleted = await figmaRemote.getRootPluginData('fileSetupCompleted');
 
       let initialScreen = (await figmaRemote.getLocalFileConfig('lastView')) ?? 'design';
       if (fileSetupCompleted === undefined || fileSetupCompleted === '') {
@@ -320,17 +342,18 @@ function App() {
             onFinishSetup={async () => {
               await figmaRemote.setRootPluginData('fileSetupCompleted', 'true');
               WindowManagerUi.instance?.requestWindowMode(WindowMode.BottomSheet, false);
+              await memoryTranslationKeyStore.load();
               setAppScreen('design');
             }}
           />
         </>
       );
-    case 'keys':
+    case 'messages':
       view = (
-        <TranslationKeyListView
+        <MessageListView
           showSearchBar={false}
           initialSearchQuery={keyQuery}
-          translationKeyStore={memoryTranslationKeyStore}
+          messageStore={memoryTranslationKeyStore}
           localizedLabelManager={localizedLabelManager}
           figmaRemote={figmaRemote}
           highlightSelectedNodes
@@ -354,9 +377,9 @@ function App() {
     case 'design':
       view = (
         <LocalizedLabelsListView
-          showKey={(key: string) => {
-            setKeyQuery(MemoryTranslationKeyStore.toQueryObject(`key:${key}`));
-            setAppScreen('keys');
+          showMessage={(messageName: string) => {
+            setKeyQuery(MessageStoreMemory.toQueryObject(`name:${messageName}`));
+            setAppScreen('messages');
           }}
           localizedLabelManager={localizedLabelManager}
           figmaRemote={figmaRemote}
@@ -386,14 +409,13 @@ function App() {
         <div className="tabHeader">
           <div className={`tab ${appScreen === 'design' ? 'active' : ''}`} onClick={() => setAppScreen('design')}>Design</div>
           <div
-            className={`tab ${appScreen === 'keys' ? 'active' : ''}`}
+            className={`tab ${appScreen === 'messages' ? 'active' : ''}`}
             onClick={() => {
-              setKeyQuery(MemoryTranslationKeyStore.toQueryObject(''));
-              setAppScreen('keys');
+              setKeyQuery(MessageStoreMemory.toQueryObject(''));
+              setAppScreen('messages');
             }}
           >
-            Keys
-
+            Messages
           </div>
           { FEATURES_FLAGS.export && (<div className={`tab ${appScreen === 'export' ? 'active' : ''}`} onClick={() => setAppScreen('export')}>{ FEATURES_FLAGS.versioning ? 'Versions & Export' : 'Export'}</div>)}
           <div className={`tab ${appScreen === 'settings' ? 'active' : ''}`} onClick={() => setAppScreen('settings')}>Setup</div>

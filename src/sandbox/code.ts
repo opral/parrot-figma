@@ -8,22 +8,26 @@
 
 // This shows the HTML page in "ui.html".
 
+
 import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
-import { FigmaFileTranslationKeyStore } from '../lib/keystore/FigmaFileTranslationKeyStore';
+import MigrationManager from '../lib/migrations/MigrationManager'
+
 import FigmaUtil from '../shared/FigmaUtil';
 import FigmaHelper from '../shared/FigmaHelper';
 import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowManagerSandbox';
-import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
+import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager'; // TODO change this to a config when implemented
+import { InlangMessageStore } from '../lib/message/store/InlangMessageStoreFigmaRoot';
 import UserManager from '../lib/usage/UsageManager';
 
 const figmaRemote = new FigmaUtil();
 
 const fileConfigured = figmaRemote.getRootPluginDataSync('fileSetupCompleted') !== '';
-const introShownToUser = true; // TODO change this to a config when implemented
+const introShownToUser = true;
 
 figma.root.setRelaunchData({ open: 'Let Your Design Speak all Languages' });
 
-
+const migrationManager = new MigrationManager(figmaRemote);
+migrationManager.migrate();
 
 WindowManagerSandbox.init({
   bottomSheet: {
@@ -50,13 +54,13 @@ asyncFunctionProxy.registerInstance(figmaRemote);
 const usageManager = new UserManager(false);
 asyncFunctionProxy.registerInstance(usageManager);
 
-const localizationState = new FigmaFileTranslationKeyStore(false);
-asyncFunctionProxy.registerInstance(localizationState);
+const inlangMessageStore = new InlangMessageStore(false);
+asyncFunctionProxy.registerInstance(inlangMessageStore);
 
-const remoteLocalizedLabelManager = new LocalizedLabelManager(localizationState);
+const remoteLocalizedLabelManager = new LocalizedLabelManager(inlangMessageStore);
 asyncFunctionProxy.registerInstance(remoteLocalizedLabelManager);
 
-const figmaHelper = new FigmaHelper(figma, localizationState);
+const figmaHelper = new FigmaHelper(figma);
 asyncFunctionProxy.registerInstance(figmaHelper);
 
 figma.on('selectionchange', () => {

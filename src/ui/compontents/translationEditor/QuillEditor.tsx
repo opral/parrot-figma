@@ -6,7 +6,6 @@
 import * as React from 'react';
 import { useEffect, useRef } from 'react';
 import useState from 'react-usestateref';
-import OutsideClickHandler from 'react-outside-click-handler';
 import './quill.bubble.css';
 
 import Quill, {
@@ -16,19 +15,24 @@ import Quill, {
 } from 'quill';
 
 import Emitter from 'quill/core/emitter';
-import { Fillins } from '../../../lib/keystore/TranslationKey';
+
 import ParrotTheme from './quill/QuillTheme';
 import ParrotToolbar from './quill/Toolbar';
 import PlaceholderBlot from './blots/PlaceholderBlot';
 import BoldBlot from './blots/BoldBlot';
+import { MyListContainer, MyListItem } from './blots/MyList';
 import ItalicBlot from './blots/ItalicBlot';
 import LinkBlot from './blots/LinkBlot';
 import TextDecorationBlot from './blots/TextDecorationBlot';
+import { MessageParameterValues } from "../../../lib/message/MessageParameterValues";
 
+
+Quill.register(MyListItem, true);
 Quill.register(LinkBlot, true);
 Quill.register(ItalicBlot, true);
 Quill.register(BoldBlot, true);
 Quill.register(PlaceholderBlot, true);
+Quill.register(MyListContainer, true);
 
 Quill.register(TextDecorationBlot);
 const icons = Quill.import('ui/icons');
@@ -42,11 +46,9 @@ const Delta = Quill.import('delta') as typeof DeltaType;
 Quill.register('themes/parrot', ParrotTheme, true);
 Quill.register('modules/toolbar', ParrotToolbar, false);
 
-const toolbarContainer = ['bold', 'italic', { textDecoration: 'UNDERLINE' }, { textDecoration: 'STRIKETHROUGH' }];
-
 type QuillEditorProps = {
   value?: string,
-  fillins: Fillins,
+  parameterValues: MessageParameterValues,
   onChange: Function,
   onSave: Function,
   onCancel: Function,
@@ -55,7 +57,7 @@ type QuillEditorProps = {
 
 export default function QuillEditor({
   value,
-  fillins,
+  parameterValues,
   onChange,
   onCancel,
   onSave,
@@ -63,6 +65,7 @@ export default function QuillEditor({
 }: QuillEditorProps) {
   const editorPreRef = useRef<HTMLPreElement>(null);
   const [isEditing, setEditingState] = useState(false);
+  const parameters = useRef(parameterValues);
 
   const [quillEditor, setQuillEditor] = useState<Quill | undefined>(undefined);
 
@@ -73,20 +76,9 @@ export default function QuillEditor({
     source: Sources,
   ) => {
     if (eventName === 'text-change' && source !== 'silent') {
-      const contents = quillEditor?.getContents();
-
-      const updatedFillins = { ...fillins };
-      for (const op of contents!.ops!) {
-        const placeholder = op.attributes?.placeholder;
-        if (placeholder) {
-          if (fillins[placeholder.name.trim()]?.value !== placeholder.fillin.trim()) {
-            updatedFillins[placeholder.name.trim()] = { value: placeholder.fillin.trim() };
-          }
-        }
-      }
+      const updatedParameters = { ...parameters.current };
       let htmlContent = quillEditor!.root.innerHTML;
-      console.log('QuillEditor.onEditorChange change! ----------------------------------------');
-      console.log(`QuillEditor.onEditorChange innerHTML:\n[${htmlContent}]`);
+
       // start with real carrage returns
       htmlContent = htmlContent.split('<p><br></p>').join('\n');
       const paragraphs = htmlContent.split('</p>');
@@ -94,22 +86,16 @@ export default function QuillEditor({
         paragraphs.pop();
       }
       htmlContent = paragraphs.join('\n').split('<p>').join('');
-      // cleanValue = cleanValue.split('</p>').join('\n').split('<p>').join('')
-      //   .split('<br>')
-      //   .join('');
-
       const regex = /.<span contenteditable="false">([^<]*)<\/span>./g;
-      htmlContent = htmlContent.replace(/fillin="([^"])*" contenteditable="false">/g, '>');
+      htmlContent = htmlContent.replace(/contenteditable="false">/g, '>');
       htmlContent = htmlContent.replace(regex, (match, group1) => group1);
 
       if (htmlContent[htmlContent.length - 1] === '\n') {
-        // TODO #23 fix last return - change init
+        // fix last return - change init
         htmlContent = htmlContent.substring(0, htmlContent.length - 1);
       }
 
-      console.log(`QuillEditor.onEditorChange htmlContent:\n[${htmlContent}]`);
-
-      onChange(htmlContent, updatedFillins);
+      onChange(htmlContent, updatedParameters);
     } else if (eventName === 'selection-change') {
       // nothing for now
     }
@@ -147,6 +133,7 @@ export default function QuillEditor({
     };
 
     const onClick = (e: any) => {
+      // change selection in case we click on a placeholder (making it atomic)
       if (e.target.nodeName === 'PH') {
         const range = document.createRange();
         range.selectNodeContents(e.target);
@@ -178,7 +165,14 @@ export default function QuillEditor({
       theme: 'parrot',
       modules: {
         toolbar: {
-          container: toolbarContainer,
+          container: [
+            { list: 'ordered' },
+            { list: 'bullet' },
+            'bold',
+            'italic',
+            { textDecoration: 'UNDERLINE' },
+            { textDecoration: 'STRIKETHROUGH' },
+          ],
           handlers: {
             placeholder() {
               // eslint-disable-next-line react/no-this-in-sfc
@@ -217,9 +211,9 @@ export default function QuillEditor({
         clipboard: {
           matchers: [
             ['PH', (node: HTMLElement, delta: any) => {
-              const fillin = node.getAttribute('fillin');
+              const parameterValue = node.getAttribute('parameterValue');
               const name = node.innerHTML;
-              return delta.compose(new Delta().retain(delta.length(), { placeholder: { fillin, name } }));
+              return delta.compose(new Delta().retain(delta.length(), { placeholder: { parameterValue, name } }));
             }],
             ['S', (node: HTMLElement, delta: any) => delta.compose(new Delta().retain(delta.length(), { textDecoration: 'STRIKETHROUGH' }))],
             ['U', (node: HTMLElement, delta: any) => delta.compose(new Delta().retain(delta.length(), { textDecoration: 'UNDERLINE' }))],
@@ -232,23 +226,24 @@ export default function QuillEditor({
     return editor;
   }
 
-  function updateQuill(currentQuillEditor: Quill, updatedValue: string, updatedFillins: Fillins) {
+  function updateQuill(currentQuillEditor: Quill, updatedHtml: string, updatedParameters: MessageParameterValues) {
     // eslint-disable-next-line no-param-reassign
     (currentQuillEditor.clipboard as any).matchers[0][1] = function matchText(node: any, delta: any) {
       const text = node.data;
       return delta.insert(text);
     };
     // add extra cr
-    updatedValue += '\n';
+    // eslint-disable-next-line no-param-reassign
+    updatedHtml += '\n';
 
-    const cleanedValue = updatedValue.split('\n').join('<br>');
+    const cleanedValue = updatedHtml.split('\n').join('<br>');
     const contents = (currentQuillEditor.clipboard as any).convertHTML(cleanedValue) as any;
 
     for (const ops of contents.ops!) {
       const placeholderName = ops.attributes?.placeholder?.name;
       if (placeholderName) {
         // TODO #23 fix last return - update quill text
-        ops.attributes.placeholder!.fillin = updatedFillins[placeholderName]?.value ?? 'oh oh';
+        ops.attributes.placeholder!.value = updatedParameters[placeholderName]?.value ?? 'oh oh';
       }
     }
     currentQuillEditor.setContents(contents, 'silent');
@@ -258,7 +253,22 @@ export default function QuillEditor({
     if (editorPreRef.current) {
       const editor = initQuill(editorPreRef.current);
       setQuillEditor(editor);
-      updateQuill(editor, value ?? '', fillins);
+      const anyEditor = (editor as any);
+      const parrotToolbar = anyEditor.theme.modules.toolbar as ParrotToolbar;
+      parrotToolbar.setParameterHandler(
+        (name: string) =>
+          // return the parameters
+          // eslint-disable-next-line implicit-arrow-linebreak
+          parameters.current[name]?.value,
+        (name, parameterValue) => {
+          if (parameters.current[name] === undefined) {
+            parameters.current[name] = { type: 'string', value: parameterValue };
+          } else {
+            parameters.current[name].value = parameterValue;
+          }
+        },
+      );
+      updateQuill(editor, value ?? '', parameters.current);
       editor.enable();
     }
   }, [editorPreRef]);
@@ -272,11 +282,10 @@ export default function QuillEditor({
 
   useEffect(() => {
     if (!quillEditor || isEditing) {
-      // console.log('skiping update because of focus');
       return;
     }
-    updateQuill(quillEditor!, value ?? '', fillins);
-  }, [value, fillins]);
+    updateQuill(quillEditor!, value ?? '', parameters.current);
+  }, [value, parameters]);
 
   return (
     <pre ref={editorPreRef} />

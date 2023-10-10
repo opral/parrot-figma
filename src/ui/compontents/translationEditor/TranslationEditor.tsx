@@ -10,20 +10,18 @@ import OutsideClickHandler from 'react-outside-click-handler';
 
 import './TranslationEditor.css';
 
-import Quill from 'quill';
-import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
+import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
 import TranslationView from './TranslationView';
 import QuillEditor from './QuillEditor';
-import { Fillins } from '../../../lib/keystore/TranslationKey';
+import { MessageParameterValues } from "../../../lib/message/MessageParameterValues";
 
 type TranslationEditorProps = {
-  keyName?: string,
-  translationHTML?: string,
-  fillins: Fillins,
+  variantHTML?: string,
+  parameterValues: MessageParameterValues,
   /**
    * Triggered when a save is requested - like enter press or click out of the controll
    */
-  onSave?: Function,
+  onSave?: (patternHtml: string | undefined, parameters: MessageParameterValues) => void,
   /**
    * Triggered when the user presses esc
    */
@@ -31,36 +29,32 @@ type TranslationEditorProps = {
   /**
    * Triggered when the user changed the fillins or the text
    */
-  onChange?: Function,
+  onChange?: (patternHtml: string | undefined, parameters: MessageParameterValues, reset?: ()=>void) => void,
   onBlur?: Function,
   match: { start: number, length: number } | undefined
+  isDisabled: false | true
   editable: boolean,
-  translationKeyStore: MemoryTranslationKeyStore,
+  messageStore: MessageStoreMemory,
 };
 
 // We use this view in two ocations:
 //  - key editor placeholders no fillins
 //  - label editor - text should contain the placeholders but the editor needs to know the fillins?
-
 export default function TranslationEditor({
-  translationHTML,
-  keyName,
-  fillins,
+  variantHTML,
+  isDisabled,
+  parameterValues,
   onSave,
   onCancel,
   onBlur,
   match,
   editable = true,
-  translationKeyStore,
+  messageStore,
   onChange,
 }: TranslationEditorProps) {
-  const [textState, setTextState] = useState(translationHTML);
-  const [fillinsState, setFillinsState] = useState(fillins);
-
-  //console.log('#23 QuillEditor() \n [' + translationHTML + ']');
-
-  const textRef = useRef(translationHTML);
-  const fillinsRef = useRef(fillins);
+  const [textState, setTextState] = useState(variantHTML);
+  const textRef = useRef(variantHTML);
+  const parameterValuesRef = useRef(parameterValues);
 
   const [editingState, setEditingState] = useState(false);
   const [isMouseOver, setMouseOver] = useState(false);
@@ -69,54 +63,55 @@ export default function TranslationEditor({
 
   // useAutosizeTextArea(textAreaRef.current, translationText ? translationText : '')
 
-  const handleChange = (value: string, updatedFillins: Fillins) => {
+  const reset = () => {
+    ((document.activeElement) as any)?.blur?.();
+    setEditingState(false);
+    setTextState(variantHTML);
+
+    textRef.current = variantHTML;
+    parameterValuesRef.current = parameterValues;
+  };
+
+  const handleChange = (value: string, updatedParameters: MessageParameterValues) => {
     // console.log('propagating change' + value);
     if (onChange !== undefined) {
-      onChange(value, updatedFillins);
+      onChange(value, updatedParameters, reset);
     }
-    //console.log('#23 QuillEditor.handleChange  [' + value + ']');
+    // console.log('#23 QuillEditor.handleChange  [' + value + ']');
     setTextState(value);
-    setFillinsState(updatedFillins);
 
     textRef.current = value;
-    fillinsRef.current = updatedFillins;
+    parameterValuesRef.current = updatedParameters;
 
     // console.log('propagating change' + value);
   };
 
   const handleSave = () => {
-    //console.log('#23 QuillEditor.handleSave  ');
+    // console.log('#23 QuillEditor.handleSave  ');
     setEditingState(false);
-    onSave?.(textRef.current, fillinsRef.current);
+    onSave?.(textRef.current!, parameterValuesRef.current);
   };
 
   const handleCancel = () => {
-    //console.log('#23 QuillEditor.handleCancel');
+    // console.log('#23 QuillEditor.handleCancel');
 
-    setTextState(translationHTML);
-    setFillinsState(fillins);
-
-    textRef.current = translationHTML;
-    fillinsRef.current = fillins;
+    reset();
 
     if (onChange !== undefined) {
-      onChange(translationHTML, fillins);
+      onChange(variantHTML, parameterValues);
     }
 
-    setEditingState(false);
     onCancel?.();
   };
 
   useEffect(() => {
-    //console.log('#23 QuillEditor.useEffect(translationHTML)  [' + translationHTML + ']');
-    setTextState(translationHTML);
-    textRef.current = translationHTML;
-  }, [translationHTML]);
+    setTextState(variantHTML);
+    textRef.current = variantHTML;
+  }, [variantHTML]);
 
   useEffect(() => {
-    setFillinsState(fillins);
-    fillinsRef.current = fillins;
-  }, [fillins]);
+    parameterValuesRef.current = parameterValues;
+  }, [parameterValues]);
 
   let textToUse;
 
@@ -134,7 +129,7 @@ export default function TranslationEditor({
       disabled={!editingState}
       display="contents"
     >
-      <div className={`translation-editor${editingState ? ' editing' : ''}`}>
+      <div className={`translation-editor${editingState ? ' editing' : ''} ${isDisabled ? ' translation-editor-disabled' : ''}`}>
         <div ref={textDivRef} onMouseOver={() => setMouseOver(true)} onMouseLeave={() => setMouseOver(false)} className={`translation-editor-text${editingState ? ' editing' : ''}`}>
 
           <div
@@ -150,11 +145,11 @@ export default function TranslationEditor({
               text={textToUse}
             />
           </div>
-          { (isMouseOver || editingState) && (
+          { (!isDisabled && (isMouseOver || editingState)) && (
 
           <QuillEditor
             value={textState}
-            fillins={fillins}
+            parameterValues={parameterValues}
             onFocus={() => { setEditingState(true); }}
             onCancel={handleCancel}
             onChange={handleChange}

@@ -5,38 +5,38 @@ import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
-import { Language } from '../../../lib/base/Language';
+import { Locale } from '../../../lib/message/variants/Locale';
 
-import MemoryTranslationKeyStore, { SearchQuery, UITranslationKeys } from '../../../lib/keystore/MemoryTranslationKeyStore';
+import MessageStoreMemory, { SearchQuery } from '../../../lib/message/store/MessageStoreMemory';
 import FigmaUtil from '../../../shared/FigmaUtil';
-import TranslationKeyListItem from './TranslationKeyListItem';
-import { Plural } from '../../../lib/base/Plural';
+import TranslationKeyListItem from './MessageListItem';
+import { Plural } from '../../../lib/message/variants/Plural';
 
-import './TranslationKeyView.css';
+import './MessageView.css';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import { NodeSelection } from '../../../lib/localizedlabels/LocalizedLabelManager';
 
-type TranslationKeyListViewProps = {
+type MessageListViewProps = {
   initialSearchQuery: SearchQuery,
   showSearchBar: boolean,
-  translationKeyStore: MemoryTranslationKeyStore
+  messageStore: MessageStoreMemory
   localizedLabelManager: LocalizedLabelManagerUI
   figmaRemote: FigmaUtil
-  select?: (key: string, language: Language, plural: Plural) => void
-  selectedKey?: string,
+  select?: (key: string, language: Locale, plural: Plural) => void
+  selectedMessageId?: string,
   highlightSelectedNodes: boolean
 };
 
-export default function TranslationKeyListView({
+export default function MessageListView({
   initialSearchQuery,
   showSearchBar,
-  translationKeyStore,
+  messageStore,
   localizedLabelManager,
   figmaRemote,
   select,
-  selectedKey,
+  selectedMessageId,
   highlightSelectedNodes,
-}: TranslationKeyListViewProps) {
+}: MessageListViewProps) {
   const { t } = useTranslation();
   const [, setTrigger] = useState(0);
   const [renderEntries, setRenderEntries] = useState(200);
@@ -47,13 +47,13 @@ export default function TranslationKeyListView({
 
   // const [keys, setKeys] = useState: UITranslationKeys,
   const [searchQuery, setSearchQuery] = useState<SearchQuery>(initialSearchQuery);
-  const filteredKeys = translationKeyStore.findKeys(searchQuery, selectedNodes);
+  const filteredKeys = messageStore.findMessages(searchQuery, selectedNodes);
   const tableRef = useRef<HTMLDivElement>(null);
 
   async function refreshSelection(triggerHighlight: boolean) {
     if (highlightSelectedNodes) {
       const freshSelectedNodes = await localizedLabelManager.getSelection();
-  
+
       setSelectedNodes(freshSelectedNodes);
       setHighlightSelection(triggerHighlight);
     }
@@ -78,12 +78,12 @@ export default function TranslationKeyListView({
     };
 
     localizedLabelManager.addEventListener('updated', onUpdated);
-    translationKeyStore.addEventListener('updated', onUpdated);
+    messageStore.addEventListener('updated', onUpdated);
     window.addEventListener('message', messageHandler);
 
     return () => {
       localizedLabelManager.removeEventListener('updated', onUpdated);
-      translationKeyStore.removeEventListener('updated', onUpdated);
+      messageStore.removeEventListener('updated', onUpdated);
       window.removeEventListener('message', messageHandler);
     };
   }, []);
@@ -115,14 +115,16 @@ export default function TranslationKeyListView({
     }
   }, [highlightSelection]);
 
-  const fileHasKeys = Object.keys(translationKeyStore.translationKeys).length > 0;
-  if (!fileHasKeys) {
+  const allMessages = messageStore.inlangProject?.query.messages.getAll() ?? [];
+
+  const fileHasMessages = allMessages.length > 0;
+  if (!fileHasMessages) {
     return (
       <div className="emptyState">
-        <div className="emptyStateTitle">No Translation keys yet</div>
+        <div className="emptyStateTitle">No Messages yet</div>
         <div className="emptyStateSubtitle">
           <div>
-            Localized Keys
+            Messages
             <br />
             will show up here. - Create one by Linking a Translation Key on a Text in the Design Tab or Import your existing Keys in the Setup Tab.
           </div>
@@ -136,10 +138,10 @@ export default function TranslationKeyListView({
   };
 
   const onSearchChange = (searchString: string) => {
-    setSearchQuery(MemoryTranslationKeyStore.toQueryObject(searchString));
+    setSearchQuery(MessageStoreMemory.toQueryObject(searchString));
   };
 
-  const longestKey = Object.keys(translationKeyStore.translationKeys).reduce((acc, key) => (key.length > acc.length ? key : acc), '');
+  const longestKey = allMessages.map((message) => message.id).reduce((acc, id) => (id.length > acc.length ? id : acc), '');
 
   let rendered = 0;
 
@@ -154,7 +156,7 @@ export default function TranslationKeyListView({
           className="search--searchInput"
           spellCheck="false"
           dir="auto"
-          value={MemoryTranslationKeyStore.toSearchString(searchQuery)}
+          value={MessageStoreMemory.toSearchString(searchQuery)}
           onChange={(e) => {
             onSearchChange(e.target.value);
             setRenderEntries(100);
@@ -164,26 +166,26 @@ export default function TranslationKeyListView({
       )}
 
       <div className="searchResults">
-        { searchQuery.key !== undefined && (
+        { searchQuery.name !== undefined && (
           <div className="searchResults-suggestion">
-            <div className="text">{`Key: ${searchQuery.key}`}</div>
+            <div className="text">{`Name: ${searchQuery.name}`}</div>
             <div
               className="close svg-container cross-svg"
               onClick={() => {
                 const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-                newQuery.key = undefined;
+                newQuery.name = undefined;
                 updateQuery(newQuery);
               }}
             />
           </div>
         )}
 
-        { searchQuery.key === undefined && (
+        { searchQuery.name === undefined && (
           <div style={{ paddingRight: '5px' }}>
             <span>
-              {filteredKeys.matchingKeys.size}
+              {filteredKeys.matchingNames.size}
               {' '}
-              Translation Keys
+              Messages
               {' '}
             </span>
             {searchQuery.missingTranslation === undefined && (
@@ -193,9 +195,9 @@ export default function TranslationKeyListView({
                 {' '}
                 -
                 {' '}
-                {filteredKeys.withMissingTranslations.size}
+                {filteredKeys.withMissingVariants.size}
                 {' '}
-                Missing Translations
+                Missing Variants
               </span>
               <span
                 style={{ color: '#1DA1F2', cursor: 'pointer' }}
@@ -214,7 +216,7 @@ export default function TranslationKeyListView({
 
           </div>
         )}
-        { searchQuery.key === undefined && searchQuery.missingTranslation !== undefined && (
+        { searchQuery.name === undefined && searchQuery.missingTranslation !== undefined && (
           <div className="searchResults-suggestion">
             <div className="text">Missing Translation</div>
             <div
@@ -239,7 +241,7 @@ export default function TranslationKeyListView({
               updateQuery(newQuery);
             }}
           >
-            {`Full Translation (${filteredKeys.withMissingTranslations.size})`}
+            {`Full Translation (${filteredKeys.withMissingVariants.size})`}
           </div>
           <div
             className={`searchResults-suggestion ${searchQuery.selected === 'FRAME' ? ' active' : ''}`}
@@ -266,32 +268,32 @@ export default function TranslationKeyListView({
           <div className="searchResults-suggestion">
             results:
             {' '}
-            {filteredKeys.matchingKeys.size}
+            {filteredKeys.matchingNames.size}
             {' '}
           </div>
         </>
         )}
-        {false && !searchQuery.key && filteredKeys.inKeys.size > 0 && (
+        {false && !searchQuery.name && filteredKeys.inNames.size > 0 && (
         <div
           className="searchResults-suggestion"
           onClick={() => {
             const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-            newQuery.key = searchQuery.text;
-            newQuery.keyAtEnd = false;
+            newQuery.name = searchQuery.text;
+            newQuery.nameAtEnd = false;
             newQuery.text = '';
 
             updateQuery(newQuery);
           }}
         >
-          {`key:${searchQuery.text} ${filteredKeys.inKeys.size}`}
+          {`key:${searchQuery.text} ${filteredKeys.inNames.size}`}
         </div>
         )}
-        {false && !searchQuery.key && filteredKeys.inText.size > 0 && (
+        {false && !searchQuery.name && filteredKeys.inText.size > 0 && (
         <div
           className="searchResults-suggestion"
           onClick={() => {
             const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-            newQuery.key = '*';
+            newQuery.name = '*';
             updateQuery(newQuery);
           }}
         >
@@ -319,7 +321,7 @@ export default function TranslationKeyListView({
             updateQuery(newQuery);
           }}
         >
-          {`missing_translation:true ${filteredKeys.withMissingTranslations.size}`}
+          {`missing_translation:true ${filteredKeys.withMissingVariants.size}`}
         </div>
         )}
       </div>
@@ -330,15 +332,15 @@ export default function TranslationKeyListView({
         <TranslationKeyListItem
           key="max-width-helper-row"
           rowClassNames="hidden-helper-row"
-          translationKeyStore={translationKeyStore}
+          messageStore={messageStore}
           localizedLabelManager={localizedLabelManager}
           searchMatch={undefined}
-          translationKey={translationKeyStore.translationKeys[longestKey]}
+          messageId={longestKey}
           figmaRemote={figmaRemote}
           select={select}
           keySelected={false}
         />
-        {[...filteredKeys.matchingKeys].map((keyName) => {
+        {[...filteredKeys.matchingNames].map((messageId) => {
           if (rendered > renderEntries) {
             return;
           }
@@ -347,14 +349,14 @@ export default function TranslationKeyListView({
           // eslint-disable-next-line consistent-return
           return (
             <TranslationKeyListItem
-              key={keyName}
-              translationKeyStore={translationKeyStore}
+              key={messageId}
+              messageStore={messageStore}
               localizedLabelManager={localizedLabelManager}
-              searchMatch={filteredKeys.matches[keyName]}
-              translationKey={translationKeyStore.translationKeys[keyName]}
+              searchMatch={filteredKeys.matches[messageId]}
+              messageId={messageId}
               figmaRemote={figmaRemote}
               select={select}
-              keySelected={Object.values(selectedNodes).map((selectedNode) => selectedNode.key).includes(keyName) || selectedKey === keyName}
+              keySelected={Object.values(selectedNodes).map((selectedNode) => selectedNode.messageId).includes(messageId) || selectedMessageId === messageId}
             />
           );
         })}

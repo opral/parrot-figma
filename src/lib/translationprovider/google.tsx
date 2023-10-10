@@ -1,7 +1,17 @@
 import * as Sentry from '@sentry/browser';
+import * as mixpanel from 'mixpanel-figma';
 
 export default class GoogleTranslator {
   static async translate(text: string, sourceLanguage: string, targetLanguage: string) {
+    // if the text only contains whitespaces - uses the orignal one
+    if (/^\s*$/.test(text) || text === '') {
+      return text;
+    }
+
+    mixpanel.people.increment(`characters_translated_from_${sourceLanguage}`, text.length);
+    mixpanel.people.increment(`characters_translated_to_${targetLanguage}`, text.length);
+    mixpanel.people.increment('characters_translated_total', text.length);
+
     // replace placeholder with numbers to not translate them
 
     const pattern = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;
@@ -25,15 +35,22 @@ export default class GoogleTranslator {
     const sentences = textWithMaskedPlaceholders.split('. ');
     const translatedSentences = [] as string[];
     for (const sentence of sentences) {
+      const patchedQuery = sentence.split('.').join('{{dot}}').split('#').join('{{route}}')
+        .split('\n')
+        .join('{{newline}}');
+
+      if (/^\s*$/.test(patchedQuery) || patchedQuery === '') {
+        translatedSentences.push(patchedQuery);
+        continue;
+      }
+
       // eslint-disable-next-line no-await-in-loop
       const result = await fetch(`https://translate.googleapis.com/translate_a/single?${new URLSearchParams({
         client: 'gtx',
         dt: 't',
         sl: sourceLanguage === 'se' ? 'SV' : sourceLanguage,
         tl: targetLanguage === 'se' ? 'SV' : targetLanguage,
-        q: sentence.split('.').join('{{dot}}').split('#').join('{{route}}')
-          .split('\n')
-          .join('{{newline}}'),
+        q: patchedQuery,
       })}`, {
         method: 'GET',
         /* headers: {
@@ -47,9 +64,23 @@ export default class GoogleTranslator {
       }
       // eslint-disable-next-line no-await-in-loop
       const translationResults = await result.json();
-      translatedSentences.push(translationResults[0][0][0].split('{{dot}}').join('.').split('{{route}}').join('#')
-        .split('{{newline}}')
-        .join('\n'));
+
+      if (!translationResults[0] || !translationResults[0][0] || !translationResults[0][0][0]) {
+        const error = new Error('Expected a translation within [0][0][0] not found');
+        Sentry.captureException(error, {
+          extra: {
+            sourceLanguage,
+            targetLanguage,
+            patchedQuery,
+            translationResults,
+          },
+        });
+      } else {
+        const resultMessage = translationResults[0][0][0];
+        translatedSentences.push(resultMessage.split('{{dot}}').join('.').split('{{route}}').join('#')
+          .split('{{newline}}')
+          .join('\n'));
+      }
     }
 
     const translationWithMaskedPlaceholders = translatedSentences.join('. ');
@@ -85,6 +116,6 @@ export default class GoogleTranslator {
           });
           const translationResults = await result.json();
 
-          return translationResults.translations[0].text; */
+          return translationResults.messages[0].text; */
   }
 }

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
-import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
+import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import FigmaUtil from '../../../shared/FigmaUtil';
 import LocalizedFrameGroup from './LocalizedFrameGroup';
@@ -68,13 +68,13 @@ if (!Element.prototype.scrollIntoViewIfNeeded) {
 }
 
 type LocalizedLabelsListViewProps = {
-  showKey: Function,
+  showMessage: Function,
   figmaRemote: FigmaUtil
   localizedLabelManager: LocalizedLabelManagerUI,
 };
 
 export default function LocalizedLabelsListView({
-  showKey,
+  showMessage,
   figmaRemote,
   localizedLabelManager,
 }: LocalizedLabelsListViewProps) {
@@ -83,7 +83,6 @@ export default function LocalizedLabelsListView({
   const tableRef = useRef<HTMLDivElement>(null);
 
   const [selection, setSelection] = useState({} as NodeSelection);
-  
 
   const [parentIds, setParentIds] = useState(new Set<string>());
 
@@ -133,13 +132,13 @@ export default function LocalizedLabelsListView({
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
     localizedLabelManager.addEventListener('updated', refreshSelection);
-    localizedLabelManager.keyStore.addEventListener('updated', refreshSelection);
+    localizedLabelManager.messageStore.addEventListener('updated', refreshSelection);
     window.addEventListener('message', messageHandler);
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
     return () => {
       localizedLabelManager.removeEventListener('updated', refreshSelection);
-      localizedLabelManager.keyStore.removeEventListener('updated', refreshSelection);
+      localizedLabelManager.messageStore.removeEventListener('updated', refreshSelection);
       window.removeEventListener('message', messageHandler);
     };
   }, []);
@@ -178,7 +177,7 @@ export default function LocalizedLabelsListView({
         <div className="table" ref={tableRef}>
           {[...parentIds].map((parentId) => (
             <LocalizedFrameGroup
-              showKey={showKey}
+              showMessage={showMessage}
               localizedLabels={localizedLabels.filter((l) => l.rootFrameId === parentId).sort((a, b) => Math.hypot(a.x, a.y * (2) - Math.hypot(b.x, b.y * 2)))}
               selectedNodes={selection}
               figmaRemote={figmaRemote}

@@ -614,6 +614,18 @@ Pricing
     Arthur Wetzel
 
 
+# inlang integration: 
+
+ - how to store metadata in parrot - what metadata do i need to store?
+
+ - translation source (ref lang variant) hash 
+    - if i don't want to update the source language with every change in the design - which i could for now
+ - translation source auto translate 
+    - if i don't want to provide the auto translate button next to each (empty message)
+    
+ - marked as reviewed? 
+
+
 # Test multyplayer
 
 ## Test how the plugindata behaves in offline scenario
@@ -640,3 +652,159 @@ setTimeout(10000, () => console.log('modify_test_online: with delay:' + figma.ge
 figma.setPluginData('create_test_online', 'Created by user1');
 console.log('create_test_online: ' + figma.getPluginData('create_test_online'));
 setTimeout(10000, () => console.log('create_test_online: with delay:' + figma.getPluginData('create_test_online')))
+<<<<<<< HEAD
+=======
+
+
+#### User2: 
+figma.setPluginData('create_test_online', 'Created by user2');
+console.log('create_test_online: ' + figma.getPluginData('create_test_online'));
+setTimeout(10000, () => console.log('create_test_online: with delay:' + figma.getPluginData('create_test_online')))
+
+function runTest(currentUser, testRunPrefix) {
+
+    function schedule(user, taskName, minutes, seconds, millis, func) {
+        if (user === currentUser) {
+            if (typeof minutes !== 'number') {
+                throw new Error('Minutes should be a number.');
+            }
+
+            if (minutes <= 0) {
+                throw new Error('Minutes should be a positive number.');
+            }
+
+            const currentTime = new Date();
+            const currentMinutes = currentTime.getMinutes();
+            const remainingMinutes = minutes - (currentMinutes % minutes);
+
+            const targetMinutes = currentMinutes + remainingMinutes;
+            const targetTime = new Date(
+                currentTime.getFullYear(),
+                currentTime.getMonth(),
+                currentTime.getDate(),
+                currentTime.getHours(),
+                targetMinutes,
+                seconds,
+                millis,
+            );
+
+            console.log(taskname + ' scheduled for ' + targetTime);
+
+            const timeDifference = targetTime - currentTime;
+            setTimeout(func, timeDifference);
+        }
+        
+    }
+
+/*** ---- update at the same time ---- ****/    
+    schedule('user1', 'Online Update at same time test:', 1, 0, 0, () => {
+        figma.setPluginData(testRunPrefix + 'modify_test_online', 'Created by user1');
+        figma.setPluginData(testRunPrefix + 'modify_test_online', 'Updated by user1');
+
+        return 'modify_test_online: ' + figma.getPluginData(testRunPrefix + 'modify_test_online');
+    });
+
+    schedule('user2', 'Online Update test at same time:', 1, 0, () => {
+        figma.setPluginData(testRunPrefix + 'modify_test_online', 'Updated by user2');
+        return 'modify_test_online: ' + figma.getPluginData(testRunPrefix + 'modify_test_online');
+    });
+
+    schedule('user2', Online Update test - check:', 1, 20, 0, () => {
+        return 'modify_test_online: with delay:' + figma.getPluginData(testRunPrefix + 'modify_test_online'));
+    });
+
+    schedule('user1', 'Online Update test - check:', 1, 20, 0, () => {
+        return 'modify_test_online: with delay:' + figma.getPluginData(testRunPrefix + 'modify_test_online'));
+    });
+
+/*** ---- update by User 1 Earlier ---- ****/
+    schedule('user1', 'Online Update User 1 earlier:', 2, 0, 0, () => {
+        figma.setPluginData(testRunPrefix + 'modify_user1_first_test_online', 'Updated by user 1');
+
+        return 'modify_user1_first_test_online: ' + figma.getPluginData(testRunPrefix + 'modify_user1_first_test_online');
+    });
+
+    schedule('user2', 'Online Update User 1 earlier:', 2, 0, 30, () => {
+        figma.setPluginData(testRunPrefix + 'modify_user1_first_test_online', 'Updated by user 2');
+
+        return 'modify_user1_first_test_online: ' + figma.getPluginData(testRunPrefix + 'modify_user1_first_test_online');
+    });
+
+    schedule('user1', Online Update test - user 1 earlier check:', 2, 20,0 () 0, => {
+        return 'modify_user1_first_test_online: with delay:' + figma.getPluginData(testRunPrefix + 'modify_user1_first_test_online'));
+    });
+
+    schedule('user2', Online Update test - user 1 earlier check:', 2, 20,0 () 0, => {
+        return 'modify_user1_first_test_online: with delay:' + figma.getPluginData(testRunPrefix + 'modify_user1_first_test_online'));
+    });
+
+/***  -------- offline sync check simultanous ------- ****/ 
+    schedule('user1', 'Ask user to go offline:', 3, 0, 0 () 0, => {
+        return alert('please go offline withinin the next 30 seconds');
+    });
+     
+    schedule('user2', 'Ask user to go offline:', 3, 0, 0 () 0, => {
+        return alert('please go offline withinin the next 30 seconds');
+    });
+
+    schedule('user1' +' Modifing property offline at the same client time:', 3, 30, 0, () => {
+        figma.setPluginData(testRunPrefix + 'modify_user1_first_test_offline', 'Updated by user1');
+        return 'modify_test_simultanious_offline: ' + figma.getPluginData(testRunPrefix + 'modify_test_simultanious_offline');
+    });
+
+    schedule('user2' +' Modifing property offline at the same client time:', 3, 30, 0, () => {
+        figma.setPluginData(testRunPrefix + 'modify_user1_first_test_offline', 'Updated by user2');
+        return 'modify_test_simultanious_offline: ' + figma.getPluginData(testRunPrefix + 'modify_test_simultanious_offline');
+    });
+
+    schedule('user1', 'Ask user to go online again:', 4, 0, 0 () 0, => {
+        return alert('please go online');
+    });
+
+
+    schedule('user2', 'Ask user to go online again:', 4, 30, 0 () 0, => {
+        return alert('please go online');
+    });
+
+
+    schedule('user1', 'Offline Update test - simultanious:', 4, 0, 0 () 0, => {
+        return 'modify_test_simultanious_offline: with delay:' + figma.getPluginData(testRunPrefix + 'modify_test_simultanious_offline'));
+    });
+
+
+    schedule('user2', 'Offline Update test - simultanious:', 4, 0, 0 () 0, => {
+        return 'modify_test_simultanious_offline: with delay:' + figma.getPluginData(testRunPrefix + 'modify_test_simultanious_offline'));
+    });
+
+    /***  -------- offline sync checks ------- ****/ 
+    schedule('user1', 'Ask user to go online again:', 4, 0, 0 () 0, => {
+        return alert('please go online');
+    });
+
+
+    schedule('user2', 'Ask user to go online again:', 4, 30, 0 () 0, => {
+        return alert('please go online');
+    });
+
+} else {
+    schedule('Online Update test at same time:', 1, 0, () => {
+        figma.setPluginData('modify_test_online', 'Updated by user2');
+
+        return 'modify_test_online: ' + figma.getPluginData('modify_test_online');
+    });
+    schedule('Online Update test - check:', 1, 20, () => {
+        return 'modify_test_online: with delay:' + figma.getPluginData('modify_test_online'));
+    });
+
+    schedule('Online Update User 1 earlier:', 2, 0, 25, () => {
+        figma.setPluginData('modify_user1_first_test_online', 'Updated by user2');
+
+        return 'modify_user1_first_test_online: ' + figma.getPluginData('modify_user1_first_test_online');
+    });
+    schedule('Online Update test - user 1 earlier :', 2, 20, 0() 0, => {
+        return 'modify_user1_first_test_online: with delay:' + figma.getPluginData('modify_user1_first_test_online'));
+    });
+}
+
+}
+>>>>>>> production

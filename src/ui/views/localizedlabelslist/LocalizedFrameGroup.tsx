@@ -5,15 +5,15 @@ import { LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
 import LocalizedLabelListItem from './LocalizedLabelListItem';
 import Select, { SelectOption } from '../../compontents/select/select';
 import FigmaUtil from '../../../shared/FigmaUtil';
-import MemoryTranslationKeyStore from '../../../lib/keystore/MemoryTranslationKeyStore';
+import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
-import { Language } from '../../../lib/base/Language';
+import { Locale } from '../../../lib/message/variants/Locale';
 import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
 import { NodeSelection } from '../../../lib/localizedlabels/LocalizedLabelManager';
 import GoogleTranslator from '../../../lib/translationprovider/google';
 
 type LocalizedFrameGroupProps = {
-  showKey: Function,
+  showMessage: Function,
   localizedLabels: UILocalizedLabel[],
   selectedNodes: NodeSelection,
   figmaRemote: FigmaUtil
@@ -44,7 +44,7 @@ function toLanguageOption(language: string, baseLanguage?: string) {
 }
 
 export default function LocalizedFrameGroup({
-  showKey,
+  showMessage,
   localizedLabels,
   selectedNodes,
   figmaRemote,
@@ -58,21 +58,21 @@ export default function LocalizedFrameGroup({
   let rootFrameLanguage: SelectOption | undefined;
   const languageOptiones = [] as SelectOption[];
 
-  const languages = localizedLabelManager.keyStore.getLanugages()!.sort();
+  const languages = localizedLabelManager.messageStore.getLanugages()!.sort();
 
-  languageOptiones.push(toLanguageOption(localizedLabelManager.keyStore.getBaseLanugage()!));
+  languageOptiones.push(toLanguageOption(localizedLabelManager.messageStore.getRefLanugage()!));
 
   for (const language of languages) {
     const currentLanguageOption = toLanguageOption(language);
     if (language === firstTranslationState.rootFrameLanguage) {
       rootFrameLanguage = currentLanguageOption;
     }
-    if (localizedLabelManager.keyStore.getBaseLanugage()! !== language) {
+    if (localizedLabelManager.messageStore.getRefLanugage()! !== language) {
       languageOptiones.push(currentLanguageOption);
     }
   }
 
-  async function onLanguageSelectionClick(firstLocalizedLabelInFrame: LocalizedLabel, language: Language) {
+  async function onLanguageSelectionClick(firstLocalizedLabelInFrame: LocalizedLabel, language: Locale) {
     const translationProvider = GoogleTranslator.translate;
 
     localizedLabelManager.setFrameLanguage(firstLocalizedLabelInFrame.rootFrameId, language, translationProvider);
@@ -101,7 +101,7 @@ export default function LocalizedFrameGroup({
             <Select
               tooltip="Container Frame Langueage"
               placeholder="Select item"
-              onChange={(value) => { onLanguageSelectionClick(firstTranslationState, value.value as Language); }}
+              onChange={(value) => { onLanguageSelectionClick(firstTranslationState, value.value as Locale); }}
               defaultValue={languageOptiones.find((opt) => opt.value === rootFrameLanguage?.value)}
               getOptions={() => languageOptiones}
             />
@@ -122,7 +122,7 @@ export default function LocalizedFrameGroup({
 
         return (
           <LocalizedLabelListItem
-            showKey={showKey}
+            showMessage={showMessage}
             key={translationState.nodeId}
             figmaRemote={figmaRemote}
             localizedLabelManager={localizedLabelManager}

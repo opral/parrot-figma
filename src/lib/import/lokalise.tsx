@@ -14,13 +14,13 @@
 
     // const start = Date.now();
 
-    const translationKeys = [] as TranslationKey[];
+    const messages = [] as TranslationKey[];
 
     for (const key of lokaliseKeys.keys) {
       const keyName = key.key_name.other;
       const keyPlurals = [Plural.OTHER];
 
-      const translations = {} as {
+      const messages = {} as {
         [language in Language]? : {
           [plural in Plural]? : {
             version: number,
@@ -29,7 +29,7 @@
           }
         }
       };
-      for (const transalation of key.translations) {
+      for (const transalation of key.messages) {
         const lokaliseLanguage = transalation.language_iso as Language;
 
         const plurals = {} as {
@@ -64,14 +64,14 @@
           };
         }
 
-        translations[lokaliseLanguage] = plurals;
+        messages[lokaliseLanguage] = plurals;
       }
 
-      translationKeys.push({
+      messages.push({
         keyName,
         latestVersion: 0,
         plural: keyPlurals.length > 1,
-        translations,
+        messages,
         history: [],
         tags: [], // TODO add tags
       });
@@ -79,9 +79,9 @@
 
     // console.log(`Execution time: Response processing: ${Date.now() - start} ms`);
 
-    // console.log(`${translationKeys.length} keys found `);
+    // console.log(`${messages.length} keys found `);
 
-    for (const tanslationKey of translationKeys) {
+    for (const tanslationKey of messages) {
       this.persistKey(tanslationKey);
     }
 

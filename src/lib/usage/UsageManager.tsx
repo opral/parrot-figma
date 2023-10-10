@@ -1,7 +1,9 @@
 /* eslint-disable max-classes-per-file */
 // TODO use the local storage for now - information will be sourced by the backend later
 
-import { Language } from '../base/Language';
+import { Locale } from "../message/variants/Locale";
+
+
 
 // TODO translated characters:
 // this thing is tricky because it will need to calculate based on different files
@@ -119,8 +121,8 @@ interface UserInFile {
   translations: {
     [time: number]: {
       chars: number,
-      sourceLang: Language,
-      targetLang: Language,
+      sourceLang: Locale,
+      targetLang: Locale,
     }
   }
 /*

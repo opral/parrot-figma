@@ -10,19 +10,18 @@
 // create data array
 languageStrings = [];
 
-// get only the data for the language we need
-for (const [key, translations] of Object.entries(input)) { // iterate over dictionary/object properties
+for (const message of messages) { 
 
-  let pluralTranslations = {};
+  	let pluralTranslations = {};
 	let isPlural = false;
-	for (const [translationKey, translation] of Object.entries(translations)) {
-		let translationKeyParts = translationKey.split(':');
-		if (translationKeyParts.length != 2 || translationKeyParts[0] != language) {
+	for (const [message, translation] of Object.entries(translations)) {
+		let messageParts = message.split(':');
+		if (messageParts.length != 2 || messageParts[0] != language) {
 			continue;
 		}
 
 		isPlural = true;
-		pluralTranslations[translationKeyParts[1]] = translation;
+		pluralTranslations[messageParts[1]] = translation;
 
 	}
 
@@ -34,7 +33,7 @@ for (const [key, translations] of Object.entries(input)) { // iterate over dicti
 
 	// creates an item with only the essential data to be serialized/printed
 	languageElement = {}
-	languageElement.key = key
+	languageElement.messageName = messageName
 	languageElement.translations = pluralTranslations;
 	languageElement.comment = translations.comment
 	languageStrings.push(languageElement)
@@ -50,7 +49,7 @@ languageStrings.sort((a, b) => a.key.localeCompare(b.key));
 <plist version="1.0">
 <dict>
 	<%_ for (let i = 0; i < languageStrings.length; i++) { _%>
-	<key><%-languageStrings[i].key%></key>
+	<key><%-languageStrings[i].messageName%></key>
 	<dict>
 		<key>NSStringLocalizedFormatKey</key>
 		<string>%#@value@</string>

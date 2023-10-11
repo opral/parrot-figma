@@ -1,55 +1,10 @@
 /* eslint-disable max-classes-per-file */
 // TODO use the local storage for now - information will be sourced by the backend later
 
-import { Locale } from "../message/variants/Locale";
-
-
-
-// TODO translated characters:
-// this thing is tricky because it will need to calculate based on different files
-// if a user a uses file a and user b uses file b i cant know the amount of characters translated
-
-/**
- * Performs a deep merge of `source` into `target`.
- * Mutates `target` only but not its objects and arrays.
- *
- * @author inspired by [jhildenbiddle](https://stackoverflow.com/a/48218209).
- */
-function mergeDeep(target: any, source: any) {
-  const isObject = (obj: any) => obj && typeof obj === 'object';
-
-  if (!isObject(target) || !isObject(source)) {
-    return source;
-  }
-
-  Object.keys(source).forEach((key) => {
-    const targetValue = target[key];
-    const sourceValue = source[key];
-
-    if (Array.isArray(targetValue) && Array.isArray(sourceValue)) {
-      // eslint-disable-next-line no-param-reassign
-      target[key] = targetValue.concat(sourceValue);
-    } else if (isObject(targetValue) && isObject(sourceValue)) {
-      // eslint-disable-next-line no-param-reassign
-      target[key] = mergeDeep({ ...targetValue }, sourceValue);
-    } else {
-      // eslint-disable-next-line no-param-reassign
-      target[key] = sourceValue;
-    }
-  });
-
-  return target;
-}
-
-function generateGUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    // eslint-disable-next-line no-bitwise
-    const r = (Math.random() * 16) | 0;
-    // eslint-disable-next-line no-bitwise
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
+import { FileUsage } from "./FileUsage";
+import { UserRoleRequest } from "./UserRoleRequest";
+import generateGUID from "./generateGUID";
+import mergeDeep from "./mergeDeep";
 
 export interface PluginUser {
   userId: string,
@@ -107,54 +62,8 @@ const UserRoleUtils = {
   },
 };
 
-interface UserInFile {
-  userId: string,
-  userName: string,
-  photoUrl: string | null,
-  userStates: {
-    [time: number]: {
-      type: UserRole,
-      actorId: string,
-      entryType: 'request' | 'set' | 'reject'
-    }
-  },
-  translations: {
-    [time: number]: {
-      chars: number,
-      sourceLang: Locale,
-      targetLang: Locale,
-    }
-  }
-/*
-    public async getCurrentState() {
-
-    }
-
-    public async getRequestedState() {
-
-    } */
-}
-
-interface FileUsage {
-  fileId: string,
-  usersInFile: {
-    [userID: string]: UserInFile
-  }
-}
-
-interface UserStorage {
-  [fileId: string]: FileUsage
-}
-
 const clientStorageKeyPrefix = 'userStorage_';
 const fileStorageKey = 'fileStorage';
-
-interface UserRoleRequest {
-  time: number;
-  type: UserRole;
-  actorId: string;
-  entryType: 'request' | 'set' | 'reject';
-}
 
 export default class UserManager {
   public proxyClassName = 'UserManager';
@@ -180,9 +89,12 @@ export default class UserManager {
     this.currentUserId = figma.currentUser!.id!;
     const fileState = UserManager.loadFileStateFromRoot();
     this.state = fileState;
+
+    // load the state from local storage as well to merge it in
     this.localStorageStateIntegrated = (async () => {
       const localStorageState = await UserManager.loadFileStateFromLocalStorage(fileState.fileId);
       this.state = UserManager.mergeStates(localStorageState, fileState);
+      // we don't have to await the local storage state to be integrated - becaus we are currently integrating it ;-)
       await this.propagateState(false);
     })();
 
@@ -201,7 +113,6 @@ export default class UserManager {
         }
       }
     });
-    // TODO listen on changes to integrate them into memory and update client state evntually
   }
 
   static loadFileStateFromRoot(): FileUsage {
@@ -256,7 +167,7 @@ export default class UserManager {
       figma.root.setPluginData(fileStorageKey, newFileStateRaw);
 
       const message = {
-        target: 'UserManager',
+        target: 'UsageManager',
         type: 'change',
       } as any;
 
@@ -421,6 +332,20 @@ export default class UserManager {
       });
     }
     return users;
+  }
+
+  async getUsageStatistics() {
+    const usageStatistcs = [] as FileUsage[];
+    const localStorageKeys = await figma.clientStorage.keysAsync();
+    for (const localStorageKey of localStorageKeys) {
+      if (localStorageKey.startsWith(clientStorageKeyPrefix)) {
+        const userLocalState = await figma.clientStorage.getAsync(localStorageKey) as FileUsage;
+        if (userLocalState) {
+          usageStatistcs.push(userLocalState)
+        }
+      }
+    }
+    return usageStatistcs;
   }
 /*
   async checkFeature(feature: string) {

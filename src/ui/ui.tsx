@@ -186,8 +186,8 @@ function App() {
   useEffect(() => {
     // asynchronous fetch the state from figma helper
     (async () => {
-      console.log('load - userState');
       await userStateManagerUi.loadUserState();
+      userStateManagerUi.trackFileUsageStatistics();
 
       if (windowMode === WindowMode.DevPanel) {
         const updatedUser = await userStateManagerUi.requestUserRole(UserRole.developer);
@@ -419,7 +419,7 @@ function App() {
           </div>
           { FEATURES_FLAGS.export && (<div className={`tab ${appScreen === 'export' ? 'active' : ''}`} onClick={() => setAppScreen('export')}>{ FEATURES_FLAGS.versioning ? 'Versions & Export' : 'Export'}</div>)}
           <div className={`tab ${appScreen === 'settings' ? 'active' : ''}`} onClick={() => setAppScreen('settings')}>Setup</div>
-          <div className={`tab ${appScreen === 'users' ? 'active' : ''}`} onClick={() => setAppScreen('users')}>Users</div>
+          {/* <div className={`tab ${appScreen === 'users' ? 'active' : ''}`} onClick={() => setAppScreen('users')}>Users</div> */}
         </div>
         { windowMode === WindowMode.BottomSheet && (
           <div

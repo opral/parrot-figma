@@ -1,3 +1,4 @@
+import { setUserData } from '../../ui/utils/analytics';
 import UserManager, { PluginUser, UserRole } from './UsageManager';
 
 export default class UserManagerUI extends EventTarget {
@@ -10,11 +11,13 @@ export default class UserManagerUI extends EventTarget {
     this.userManagerSandbox = userManagerSandbox;
 
     window.addEventListener('message', (event : MessageEvent) => {
-      if (event.data.pluginMessage.target === 'UserManager') {
-        this.loadUserState();
-        const usersUpdatedEvent = new CustomEvent('usersUpdated', { });
-        this.dispatchEvent(usersUpdatedEvent);
-        // TODO emmit update event
+      if (event.data.pluginMessage.target === 'UsageManager') {
+        (async () => {
+          await this.loadUserState();
+          const usersUpdatedEvent = new CustomEvent('usersUpdated', { });
+          this.dispatchEvent(usersUpdatedEvent);
+        })();
+        this.trackFileUsageStatistics();
       }
     });
   }
@@ -31,6 +34,34 @@ export default class UserManagerUI extends EventTarget {
       }
     }
     this.currentUser = freshUserState;
+  }
+
+  async trackFileUsageStatistics() {
+    const usage = await this.userManagerSandbox.getUsageStatistics();
+    let userUsedHowToFile = false;
+    const numberOfFilesParrotWasUsedIn = usage.length;
+    let collaboratesInParrot = false; // check if at least one file contains multiple users...
+    let maximumNumbersOfUsersPerFile = 1;
+
+    // update users per file property
+    for (const usageEntry of usage) {
+      if (usageEntry.fileId === 'how_to_file') {
+        userUsedHowToFile = true;
+      }
+
+      maximumNumbersOfUsersPerFile = Math.max(Object.keys(usageEntry.usersInFile).length, maximumNumbersOfUsersPerFile);
+    }
+
+    if (maximumNumbersOfUsersPerFile > 1) {
+      collaboratesInParrot = true;
+    }
+
+    setUserData({
+      userUsedHowToFile,
+      numberOfFilesParrotWasUsedIn,
+      collaboratesInParrot,
+      maximumNumbersOfUsersPerFile,
+    });
   }
 
   getCurrentUser() {
@@ -52,10 +83,10 @@ export default class UserManagerUI extends EventTarget {
 
   async requestFeature(feature: string) {
     console.log(`requestFeature: ${feature}`);
-    /*const atLeastOneUserHasLike = await this.userManagerSandbox.didAtLeastOneLike();
+    /* const atLeastOneUserHasLike = await this.userManagerSandbox.didAtLeastOneLike();
     if (atLeastOneUserHasLike) {
       return true;
-    }*/
+    } */
 
     setTimeout(() => {
       // eslint-disable-next-line object-shorthand

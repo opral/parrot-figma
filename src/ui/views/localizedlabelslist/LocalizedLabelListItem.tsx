@@ -248,9 +248,11 @@ export default function LocalizedLabelListItem({
 
                     const keySearch = enteredValue === '' ? '*' : enteredValue;
                     const textMatchQuery = MessageStoreMemory.toQueryObject(`exact_text:true name:${keySearch} ${localizedLabel.characters}`);
-                    const { matchingNames: suggestedKeys } = messageStore.findMessages(textMatchQuery);
-                    const keyMatchQuery = MessageStoreMemory.toQueryObject(`name:${keySearch}`);
-                    const { matchingNames: matchingKeysByName } = messageStore.findMessages(keyMatchQuery);
+                    const {
+                      inText: suggestedKeys,
+                      matchingNames: matchingKeysByName,
+                    } = messageStore.findMessages(textMatchQuery);
+
 
                     const isValidKey = enteredValue.length >= 0 && /^[a-zA-Z0-9]$/.test(enteredValue[enteredValue.length - 1]);
 
@@ -274,6 +276,7 @@ export default function LocalizedLabelListItem({
                       matchingKeysByName.delete(key);
                       return {
                         type: InputSelectionOptionType.SUGGESTION,
+                        icon: 'with-message-svg',
                         value: messageStore.getMessage(key)!.id,
                         label: messageStore.getMessage(key)!.id,
                       };
@@ -286,7 +289,7 @@ export default function LocalizedLabelListItem({
                         label: 'Messages',
                       });
 
-                      options = options.concat([...matchingKeysByName].map((key) => ({
+                      options = options.concat([...matchingKeysByName].filter((matchingKey) => !suggestedKeys.has(matchingKey)).map((key) => ({
                         type: InputSelectionOptionType.SUGGESTION,
                         icon: 'with-message-svg',
                         value: messageStore.getMessage(key)!.id,

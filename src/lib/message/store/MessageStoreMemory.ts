@@ -404,6 +404,8 @@ export default class MessageStoreMemory extends EventTarget {
             }
 
             if (!results.matches[message.id].textMatches![messageVariant.languageTag]!['*']) {
+              results.inText.add(message.id);
+              results.matchingNames.add(message.id);
               results.matches[message.id].textMatches![messageVariant.languageTag]!['*'] = { start: matchStartText, length: query.text.length };
             }
           }

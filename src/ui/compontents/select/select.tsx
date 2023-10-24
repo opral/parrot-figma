@@ -23,6 +23,7 @@ export interface SelectProps {
   className?: string;
   iconClass?: string,
   tooltip?: string,
+  checkmark: boolean,
   getOptions: () => SelectOption[];
   placeholder: string;
   isDisabled?: boolean;
@@ -35,6 +36,7 @@ export default function Select({
   className = '',
   iconClass,
   tooltip,
+  checkmark,
   getOptions,
   placeholder,
   isDisabled,
@@ -132,16 +134,26 @@ export default function Select({
       // on expand calculate starting position
       const rect = buttonRef.current!.getBoundingClientRect();
 
-      menuContainerRef.current!.style.left = `${rect.left - 24}px`;
+      let moveToLeft = 0;
+      if (iconClass !== '' && checkmark === true) {
+        // button may has an icon but and checkmark - no corection to be done
+      } else if (iconClass === '' && checkmark === true) {
+        // button may has no icon but a checkmark - move menu to the right - to align text?
+        moveToLeft = 24;
+      }
+
+      menuContainerRef.current!.style.left = `${rect.left - moveToLeft}px`;
 
       const controllHeight = rect.height;
       const menuPadding = 8;
       const menuEntryHeight = 24;
-      const controlMenuHeightDif = controllHeight - menuEntryHeight
+      const controlMenuHeightDif = controllHeight - menuEntryHeight;
       const maxSpaceAbove = rect.top + (controlMenuHeightDif / 2);
       const maxSpaceBelow = viewPortHeight - rect.top - (controlMenuHeightDif / 2) - menuEntryHeight;
 
-      const menuPositionIndex = options.findIndex((selectOption) => selectedOption !== undefined && selectOption.value === selectedOption?.value);
+      let menuPositionIndex = options.findIndex((selectOption) => selectedOption !== undefined && selectOption.value === selectedOption?.value);
+      // if nothing is selected - make it the first element in the list;
+      menuPositionIndex = menuPositionIndex >= 0 ? menuPositionIndex : 0;
 
       const selectedDiv = menuWrapperRef.current!.childNodes[0].childNodes[menuPositionIndex] as HTMLDivElement;
 
@@ -422,6 +434,9 @@ export default function Select({
           {iconClass !== undefined && (
             <div className={`svg-container ${iconClass}`} />
           )}
+          {iconClass === undefined && (
+            <div className="select-menu__label-spacer" />
+          )}
           <span className="select-menu__label select-menu__label-part1">
             {labelPart1}
           </span>
@@ -489,11 +504,14 @@ export default function Select({
                     title={title}
                     onMouseUp={() => handleSelectClick(value)}
                   >
+                    { true && (
                     <div className="select-menu__item-check">
                       { selectedOption && selectedOption.value === value && (
-                        <div className="svg-container menu-checkmark-svg" />
+                      <div className="svg-container menu-checkmark-svg" />
                       )}
                     </div>
+                    )}
+
                     { icon && (
                     <div className="select-menu__item-icon">
                       <div className={`svg-container ${icon}`} />

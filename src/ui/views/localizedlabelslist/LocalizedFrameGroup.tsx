@@ -102,6 +102,7 @@ export default function LocalizedFrameGroup({
             <Select
               tooltip="Container Frame Langueage"
               placeholder="Select item"
+              checkmark
               iconClass="switch-language-svg"
               onChange={(value) => { onLanguageSelectionClick(firstTranslationState, value.value as Locale); }}
               defaultValue={languageOptiones.find((opt) => opt.value === rootFrameLanguage?.value)}

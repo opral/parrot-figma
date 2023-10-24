@@ -177,6 +177,7 @@ export default function Export({
         </div>
         <div style={{ marginLeft: 'auto', marginRight: '8px' }}>
           <Select
+            checkmark={false}
             placeholder="Export Target"
             onChange={(value) => { setExportTarget(value.value as string); }}
             getOptions={() => exportPlatformOptions}

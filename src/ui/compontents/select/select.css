@@ -169,6 +169,12 @@ select.select-menu {
 }
 
 
+.select-menu__label-spacer {
+  padding-left: 8px;
+}
+
+
+
 .select-menu__label.select-menu__label-part1 {
   margin-right: 4px;
 }
@@ -279,7 +285,6 @@ select.select-menu {
 .select-menu__item-check {
     width: 18px;
     padding-left: 8px;
-    padding-right: 8px;
     flex-shrink: 0;
 }
 
@@ -299,6 +304,7 @@ select.select-menu {
   text-overflow: ellipsis;
   pointer-events: none;
   padding-right: 8px;
+  padding-left: 8px;
 }
 
 .select-menu__item-icon .svg-container {

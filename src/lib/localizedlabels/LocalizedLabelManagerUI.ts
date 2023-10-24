@@ -424,6 +424,14 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
     await this.localizedLabelMangerSandbox.commitUndo();
   }
 
+  async setLabelToUnmanaged(localizedLabel: LocalizedLabel) {
+    await this.updateLabelProperties(localizedLabel.nodeId, {
+      messageState: { type: 'unmanaged', unmanaged: true },
+    });
+
+    await this.localizedLabelMangerSandbox.commitUndo();
+  }
+
   async commitUndo() {
     await this.localizedLabelMangerSandbox.commitUndo();
   }
@@ -519,19 +527,39 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(variantHTML, changedProperties.messageState.parameterValues);
         variantPatternHTMLHash = blake.blake2sHex(variantHTML);
       } else {
+        // TODO #26 try to fall back to base language - what shall we do if this doesn't work eather?
         const updatedMessage = this.messageStore.getMessage(changedProperties.messageState.messageId);
 
-        variantHTML = MessageStoreMemory.htmlForPattern(updatedMessage!, language, []);
+        const bestMatchingVariant = MessageStoreMemory.getBestExistingVariant(updatedMessage!, language, this.messageStore.getLanugages()!, []);
+
+        if (bestMatchingVariant === undefined) {
+          throw new Error('The given message has no variant at all');
+        }
+
+        variantHTML = MessageStoreMemory.patternToHtml(bestMatchingVariant.pattern);
         textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(variantHTML, changedProperties.messageState.parameterValues);
         variantPatternHTMLHash = blake.blake2sHex(variantHTML);
+
+        // eslint-disable-next-line no-param-reassign
+        changedProperties.language = bestMatchingVariant.languageTag as Locale;
       }
       // the variant pattern in the label have changed
     } else if (changedProperties.messageState?.type === 'unlinked') {
       const updatedMessage = changedProperties.messageState.unlinkedMessage;
-      const variantHTML = MessageStoreMemory.htmlForPattern(updatedMessage!, language, []);
+
+      const bestMatchingVariant = MessageStoreMemory.getBestExistingVariant(updatedMessage!, language, this.messageStore.getLanugages()!, []);
+
+      if (bestMatchingVariant === undefined) {
+        throw new Error('The given message has no variant at all');
+      }
+
+      // TODO #26 we expect the message to be translated earlier right? - what to do if we don't find a corresponding variant
+      const variantHTML = MessageStoreMemory.patternToHtml(bestMatchingVariant.pattern);
       textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(variantHTML, changedProperties.messageState.parameterValues);
 
       variantPatternHTMLHash = blake.blake2sHex(variantHTML);
+      // eslint-disable-next-line no-param-reassign
+      changedProperties.language = bestMatchingVariant.languageTag as Locale;
     }
     // unset will be passed automatically
 

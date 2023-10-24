@@ -22,7 +22,7 @@ import { track } from '../../utils/analytics';
 import Drawer from '../../compontents/drawer/Drawer';
 import { Gender } from '../../../lib/message/variants/Gender';
 import { FillinToPlaceholder } from '../../../lib/message/MessageExtnesions';
-import { MessageParameterValues } from "../../../lib/message/MessageParameterValues";
+import { MessageParameterValues } from '../../../lib/message/MessageParameterValues';
 
 type LocalizedLabelListItemProps = {
   showMessage: Function,
@@ -101,6 +101,17 @@ export default function LocalizedLabelListItem({
     messageName = localizedLabel.getMessageName()!;
   }
 
+  let iconClass = 'no-message-svg';
+  if (localizedLabel.messageLinkState === MessageLinkState.Linked) {
+    iconClass = 'with-message-svg';
+  } else if (localizedLabel.messageLinkState === MessageLinkState.Unmanaged) {
+    iconClass = 'not-localized-svg';
+  } else if (localizedLabel.messageLinkState === MessageLinkState.MissingMessage) {
+    iconClass = 'no-message-svg';
+  } else if (localizedLabel.messageLinkState === MessageLinkState.Unlinked) {
+    iconClass = 'no-message-svg';
+  }
+
   useEffect(() => {
     setDummyState({});
   }, [localizedLabel]);
@@ -158,7 +169,7 @@ export default function LocalizedLabelListItem({
 
       </Drawer>
 
-      <div className={`row ${selected}${localizedLabel.messageLinkState === MessageLinkState.Linked && message !== undefined ? ' key-set ' : ' key-unset '}`} onClick={() => { onNodeSelect(localizedLabel.nodeId); }}>
+      <div className={`row ${selected} ${localizedLabel.messageLinkState} ${localizedLabel.messageLinkState === MessageLinkState.Linked && message !== undefined ? ' key-set ' : ' key-unset '}`} onClick={() => { onNodeSelect(localizedLabel.nodeId); }}>
         <div className="column-1">
           <div className="localized-label">
             <div className="spacer" />
@@ -186,14 +197,15 @@ export default function LocalizedLabelListItem({
               <div className="key-panel">
                 <InputSelect
                   className="key-select"
-                  placeholder="Link Message..."
+                  placeholder={localizedLabel.messageLinkState === MessageLinkState.Unmanaged ? 'Not Localized' : 'Link a Message...'}
                   isDisabled={localizedLabel.matchingLabelLints.length > 0}
+                  iconClass={iconClass}
                   inputPlaceholder="e.g. home__tagline"
                   tooltip="Link a Message to this Text to reuse messages and for a straight forwaredd Developer handover."
                   onCancel={() => {
                     setDummyState({});
                   }}
-                  onChange={async (selectedOption) => {
+                  onChange={async (selectedOption, reset) => {
                     if (selectedOption.type === InputSelectionOptionType.ACTION) {
                       if (selectedOption.value === 'select-message') {
                         setMessageSearch({
@@ -202,7 +214,11 @@ export default function LocalizedLabelListItem({
                       } else if (selectedOption.value === 'show-message') {
                         showMessage(localizedLabel.getMessageName());
                       } else if (selectedOption.value === 'reset') { // triggered by empty field - option added by the select field it self
+                        reset();
                         await localizedLabelManager.unsetLabel(localizedLabel);
+                      } else if (selectedOption.value === 'text-layer-not-localized') { // triggered by empty field - option added by the select field it self
+                        reset();
+                        await localizedLabelManager.setLabelToUnmanaged(localizedLabel);
                       }
                     } else if (selectedOption.type === InputSelectionOptionType.ADD) {
                       await localizedLabelManager.linkMessage(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!);
@@ -272,6 +288,7 @@ export default function LocalizedLabelListItem({
 
                       options = options.concat([...matchingKeysByName].map((key) => ({
                         type: InputSelectionOptionType.SUGGESTION,
+                        icon: 'with-message-svg',
                         value: messageStore.getMessage(key)!.id,
                         label: messageStore.getMessage(key)!.id,
                       })));
@@ -287,18 +304,37 @@ export default function LocalizedLabelListItem({
 
                     options.push({
                       label: 'Full Search...',
+                      icon: 'search-svg',
                       value: 'select-message',
                       type: InputSelectionOptionType.ACTION,
                     });
 
-                    if (messageName && messageName !== '') {
+                    if (localizedLabel.messageLinkState === MessageLinkState.Linked && messageName === enteredValue) {
                       options.push({
                         label: 'Show linked Message...',
+                        icon: 'goto-message-svg',
                         value: 'show-message',
                         type: InputSelectionOptionType.ACTION,
                       });
                     }
 
+                    if (localizedLabel.messageLinkState === MessageLinkState.Unmanaged) {
+                      options.push({
+                        label: 'Enable Translation...',
+                        icon: 'with-message-svg',
+                        value: 'reset',
+                        type: InputSelectionOptionType.ACTION,
+                      });
+                    } else {
+                      options.push({
+                        label: 'Do not translate this text layer...',
+                        icon: 'not-localized-svg',
+                        value: 'text-layer-not-localized',
+                        type: InputSelectionOptionType.ACTION,
+                      });
+                    }
+
+                    // Unlink?
                     return options;
                   }}
                 />
@@ -311,7 +347,9 @@ export default function LocalizedLabelListItem({
                       data-tooltip-content="Current Language of this Label"
                     >
                       <span className="rowText">{localizedLabel.language}</span>
-
+                      { localizedLabel.language === localizedLabelManager.messageStore.getRefLanugage() && (
+                        <span className="language-tag">ref</span>
+                      )}
                     </div>
                     {/* <div key={localizedLabel.pluralId} className={`keyPluralWrapper ${translatedKey?.plural ? 'onePlural' : ' multiplePlurals'}`}> */}
                     <div className="keyPluralWrapper onePlural">
@@ -401,7 +439,7 @@ export default function LocalizedLabelListItem({
                   data-tooltip-content="Reset all changes"
                   onClick={updateToLatestKeyVersion}
                 >
-                  <span className="svg-container reset-instance-svg" />
+                  <span className="svg-container update-text-layer-svg" />
                 </span>
                 )}
 
@@ -411,7 +449,7 @@ export default function LocalizedLabelListItem({
                   data-tooltip-content="Push changes to Message"
                   onClick={createNewVersionFromDesign}
                 >
-                  <span className="svg-container use-label-svg" />
+                  <span className="svg-container update-message-svg" />
                 </span>
                 )}
 

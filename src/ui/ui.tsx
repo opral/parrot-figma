@@ -283,7 +283,6 @@ function App() {
       </>
     );
   }
-  console.log(user.userRole);
 
   if (user.userRole !== UserRole.designer && user.userRole !== UserRole.owner) {
     return (

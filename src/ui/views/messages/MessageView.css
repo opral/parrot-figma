@@ -280,7 +280,7 @@
 .grid-item-language {
   flex-shrink: 0;
   color: var(--figma-color-text-disabled);
-  width: 30px;
+  width: 60px;
 }
 
 .grid-item-gender {

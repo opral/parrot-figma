@@ -220,7 +220,7 @@ export default function Export({
         </div>
         <div style={{ height: '8px' }} />
         <div className="setup-header needs-base-language">
-          <div className="setup-header-title">Target locales</div>
+          <div className="setup-header-title">Target languages</div>
         </div>
         <div className="choosen-language-control">
           <div className="change-control">

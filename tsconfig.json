@@ -8,11 +8,6 @@
 		// strict ES module
 		"moduleResolution": "Bundler",
 
-		// strict ES module
-		"module": "es2020",
-		// strict ES module
-		"moduleResolution": "Bundler",
-
     "resolveJsonModule": true,
     "jsx": "react",
     "noImplicitThis": false,

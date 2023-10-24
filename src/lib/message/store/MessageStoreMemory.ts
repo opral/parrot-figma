@@ -583,21 +583,22 @@ export default class MessageStoreMemory extends EventTarget {
     return getVariant(message, { where: { languageTag: targetLanguage, match } }) !== undefined;
   }
 
-  static isVariantsTranslationOutdated(
-    message: Message,
-    sourceLanguage: Locale,
-    targetLanguage: Locale,
-    match?: string[],
-  ) {
-    const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, match);
-    const currentVariant = getVariant(message, { where: { languageTag: targetLanguage, match } });
+  // static isVariantsTranslationOutdated(
+  //   message: Message,
+  //   sourceLanguage: Locale,
+  //   targetLanguage: Locale,
+  //   match?: string[],
+  // ) {
+  //   // TODO #26 what to do if the pattern in the source language does not exisit?
+  //   const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, match);
+  //   const currentVariant = getVariant(message, { where: { languageTag: targetLanguage, match } });
 
-    if (!currentVariant || blake.blake2sHex(sourceVariantPatternHTML) !== (currentVariant as any).translationSrcHash) {
-      return true;
-    }
+  //   if (!currentVariant || blake.blake2sHex(sourceVariantPatternHTML) !== (currentVariant as any).translationSrcHash) {
+  //     return true;
+  //   }
 
-    return false;
-  }
+  //   return false;
+  // }
 
   static upsertVariantPatternHtml(message: Message, sourceLanguage: Locale | undefined, language: Locale, match: string[], patternHtml: string) {
     // const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, match);
@@ -635,7 +636,11 @@ export default class MessageStoreMemory extends EventTarget {
     targetLanguage: Locale,
     match: string[],
   ) {
+    // 
     const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, match);
+    if (sourceVariantPatternHTML === undefined) {
+      throw new Error(`Pattern did not exist for source language: ${sourceLanguage}`);
+    }
 
     const translatedPattern = await translationProvider(sourceVariantPatternHTML, sourceLanguage as string, targetLanguage);
 
@@ -708,7 +713,23 @@ export default class MessageStoreMemory extends EventTarget {
 
   static htmlForPattern(message: Message, languageTag: string, match?: string[]) {
     const variant = getVariant(message, { where: { languageTag, match } });
+    if (!variant) {
+      return undefined;
+    }
     return this.patternToHtml(variant!.pattern);
+  }
+
+  static getBestExistingVariant(message: Message, languageTag: string, fallbackLanguageTags: string[], match?: string[]) {
+    const variant = getVariant(message, { where: { languageTag, match } });
+    if (!variant) {
+      for (const fallbackLanguageTag of fallbackLanguageTags) {
+        const fallbackVariant = getVariant(message, { where: { languageTag: fallbackLanguageTag, match } });
+        if (fallbackVariant !== undefined) {
+          return fallbackVariant;
+        }
+      }
+    }
+    return variant;
   }
 
   static refLanguageHash(message: Message, language: string, match?: string[]) {

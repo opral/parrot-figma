@@ -21,7 +21,7 @@ function Option(props: any) {
   return (
     <div>
       <components.Option {...props}>
-        <div className="svg-container checkmark-svg" />
+        <div className="svg-container menu-checkmark-svg" />
         <label>{props.data.menuLabel}</label>
       </components.Option>
     </div>
@@ -231,7 +231,7 @@ export default function LanguageSetup({
       </Drawer>
       <div className={selectedBaseLanguage === undefined ? 'no-base-language' : undefined}>
         <div className="setup-header">
-          <div className="setup-header-title">Main file language</div>
+          <div className="setup-header-title">Reference Language</div>
           { !changeBaseLanguage && (
           // eslint-disable-next-line jsx-a11y/no-static-element-interactions
           <div className="choosen-language-change" onClick={() => { setChangeBaseLanguage(true); }}>Change</div>
@@ -302,7 +302,7 @@ export default function LanguageSetup({
         )}
         <div style={{ height: '8px' }} />
         <div className="setup-header needs-base-language">
-          <div className="setup-header-title">Target locales</div>
+          <div className="setup-header-title">Target languages</div>
           { !changeLanguages && (
           <div className="choosen-language-change" onClick={() => { setChangeLanguages(true); }}>Change</div>
           )}

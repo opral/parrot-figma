@@ -177,7 +177,11 @@ export class WindowManagerSandbox {
       const patchedHtml = __html__.split('__%%InitialWindowMode%%__').join(this.currentWindowMode);
 
       figma.showUI(patchedHtml, {
-        themeColors: true, width: windowRect.width, height: windowRect.height, visible: false,
+        themeColors: true,
+        width: windowRect.width,
+        height: windowRect.height,
+        visible: false,
+        title: 'Parrot (Free Beta)',
       });
 
       // @ts-ignore -- figmas ui type does not expose the reposition atm

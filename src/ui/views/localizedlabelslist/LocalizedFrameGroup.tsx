@@ -35,6 +35,7 @@ function toLanguageOption(language: string, baseLanguage?: string) {
     return {
       value: language,
       label: `${languageNameInCurrentLanguage} - ${language}`,
+      tag: 'ref',
     };
   }
   return {
@@ -60,7 +61,7 @@ export default function LocalizedFrameGroup({
 
   const languages = localizedLabelManager.messageStore.getLanugages()!.sort();
 
-  languageOptiones.push(toLanguageOption(localizedLabelManager.messageStore.getRefLanugage()!));
+  languageOptiones.push(toLanguageOption(localizedLabelManager.messageStore.getRefLanugage()!, localizedLabelManager.messageStore.getRefLanugage()!));
 
   for (const language of languages) {
     const currentLanguageOption = toLanguageOption(language);
@@ -101,6 +102,7 @@ export default function LocalizedFrameGroup({
             <Select
               tooltip="Container Frame Langueage"
               placeholder="Select item"
+              iconClass="switch-language-svg"
               onChange={(value) => { onLanguageSelectionClick(firstTranslationState, value.value as Locale); }}
               defaultValue={languageOptiones.find((opt) => opt.value === rootFrameLanguage?.value)}
               getOptions={() => languageOptiones}

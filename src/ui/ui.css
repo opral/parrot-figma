@@ -49,12 +49,10 @@ body {
   background-color: var(--figma-color-bg-hover);
 }
 
-
 .window-control .segmented-control-segment.selected {
   box-shadow: inset 0 0 0 1px transparent;
   background-color: transparent;
 }
-
 
 .window-control .segmented-control-segment.selected .svg-container {
   background-color: var(--figma-color-icon);

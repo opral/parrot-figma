@@ -6,7 +6,6 @@ import React, {
 } from 'react';
 import OutsideClickHandler from 'react-outside-click-handler';
 import './inputselect.css';
-import { debug } from 'console';
 import { Plural } from '../../../lib/message/variants/Plural';
 import { Locale } from '../../../lib/message/variants/Locale';
 
@@ -38,7 +37,7 @@ export interface InputSelectProps {
   isDisabled?: boolean;
   defaultValue?: string;
   onExpand?: (state: boolean) => void;
-  onChange?: (option: InputSelectOption) => void;
+  onChange?: (option: InputSelectOption, reset: () => void) => void;
   onCancel?: () => void;
   valueReplaceFn?: (value: string) => string,
 }
@@ -68,13 +67,14 @@ export default function InputSelect({
   const inputFieldRef = useRef<HTMLInputElement>(null);
   const scrollUpRef = useRef<HTMLDivElement>(null);
   const scrollDownRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const buttonRef = useRef<HTMLDivElement>(null);
 
   const [canScrollUp, setCanScrollUp] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [isExpanded, onExpandedStateChange] = useState(false);
+
   const [value, setValue] = useState(defaultValue);
-  const [suggestion, setSuggestion] = useState<string | undefined>(undefined);
+  const [suggestion, setSuggestion] = useState<string | undefined>(undefined);
   const currentHighlightIndex = useRef<number | undefined>(undefined);
   const currentMouseOverHighlightIndex = useRef<number | undefined>(undefined);
   // Dummy state variable to trigger re-render when currentHighlightIndex.current changes
@@ -176,16 +176,15 @@ export default function InputSelect({
           type: InputSelectionOptionType.ACTION,
           value: 'reset',
           label: '',
-        });
+        }, reset);
       }
       return;
     }
 
     const newOption = options[i];
     onExpandedStateChange(false);
-    if (onChange) {
-      onChange(newOption!);
-    }
+    onChange?.(newOption!, reset);
+    
   };
 
   const highlightMouseOverIndex = (i: number | undefined) => {
@@ -306,21 +305,19 @@ export default function InputSelect({
       const rect = buttonRef.current!.getBoundingClientRect();
       const bodyHeight = (document as any).body.clientHeight;
       // menuWrapperRef.current!.style.left = `${rect.left}px`;
-      const menuPadding = 8;
       const menuMargin = 8;
       const menuEntryHeight = 24;
-      const maxSpaceToTop = rect.top;
-      const maxSpaceToBottom = viewPortHeight - rect.bottom - menuMargin;
+      const maxSpaceAbove = rect.top;
+      const maxSpaceBelow = viewPortHeight - rect.bottom - menuMargin;
 
       const minimumItemsVisible = 3;
 
-      const showBelow = maxSpaceToBottom > (menuEntryHeight + menuPadding) * minimumItemsVisible;
+      const showBelow = maxSpaceBelow > (menuEntryHeight) * minimumItemsVisible;
 
       const spaceNeeded = menuRef.current!.scrollHeight;
 
-      const height = showBelow ? Math.min(maxSpaceToBottom, spaceNeeded) : Math.min(maxSpaceToTop, spaceNeeded);
+      const height = showBelow ? Math.min(maxSpaceBelow, spaceNeeded) : Math.min(maxSpaceAbove, spaceNeeded);
 
-      const top = showBelow ? maxSpaceToTop + menuEntryHeight : 0;
       /*
       if (top < 0) {
         height = maxSpaceToTop + menuEntryHeight + Math.min(maxSpaceToBottom, spaceNeededOnBottom);
@@ -332,7 +329,7 @@ export default function InputSelect({
       menuScrollContainerRef.current!.style.height = `${height}px`;
       if (showBelow) {
         menuOverlayRef.current!.style.flexDirection = 'column';
-        menuOverlayRef.current!.style.top = `${rect.top}px`;
+        menuOverlayRef.current!.style.top = `${rect.top - 1}px`;
         menuOverlayRef.current!.style.bottom = 'unset';
       } else {
         menuOverlayRef.current!.style.top = 'unset';
@@ -348,9 +345,9 @@ export default function InputSelect({
 
       //
 
-      wrapperMaxHeight.current = maxSpaceToTop + menuEntryHeight + maxSpaceToBottom;
-      wrapperMaxHeightBottom.current = maxSpaceToBottom;
-      wrapperMaxHeightTop.current = maxSpaceToTop;
+      wrapperMaxHeight.current = maxSpaceAbove + menuEntryHeight + maxSpaceBelow;
+      wrapperMaxHeightBottom.current = maxSpaceBelow;
+      wrapperMaxHeightTop.current = maxSpaceAbove;
       wrapperMenuEntryHeight.current = menuEntryHeight;
       menuWrapperRef.current!.scrollTop = scrollTop;
 
@@ -448,17 +445,6 @@ export default function InputSelect({
   const expanListClass = isExpanded ? 'input-select-menu__menu--active' : '';
   const disabledColorClass = isDisabled ? 'icon--black-3' : '';
 
-  const label = value || placeholder;
-  const labelParts = label.split('_');
-
-  let labelPart1 = labelParts[0];
-  let labelPart2 = '';
-
-  if (labelParts.length > 1) {
-    labelPart2 = `_${labelParts.pop()}`;
-    labelPart1 = labelParts.join('_');
-  }
-
   const addOptionIndex = options.findIndex((option) => option.type === InputSelectionOptionType.ADD);
 
   const addActive = ((currentMouseOverHighlightIndex.current === undefined && currentHighlightIndex.current === addOptionIndex) || (currentMouseOverHighlightIndex.current !== undefined && currentMouseOverHighlightIndex.current === addOptionIndex));
@@ -470,6 +456,10 @@ export default function InputSelect({
     suggestionFieldValue = value;
   }
 
+  const reset = () => {
+    setValue(undefined);
+  };
+
   return (
     <OutsideClickHandler
       display="contents"
@@ -477,11 +467,11 @@ export default function InputSelect({
       disabled={!isExpanded}
     >
       <div
+        ref={buttonRef}
         className={`input-select-menu ${className}`}
         data-tooltip-content={!isExpanded ? tooltip : undefined}
       >
         <button
-          ref={buttonRef}
           className={`input-select-menu__button ${expandButtonClass} ${disabledColorClass} ${value ? '' : 'placeholder'}`}
           onClick={handleExpandClick}
           disabled={isDisabled}
@@ -489,97 +479,109 @@ export default function InputSelect({
           type="button"
         >
           {iconClass !== undefined && (
-            <div className={`svg-container ${iconClass}`} style={{ marginRight: '8px' }} />
+            <div className="input-select-menu__item-icon">
+              <div className={`svg-container ${iconClass}`} />
+            </div>
           )}
           <span className="input-select-menu__label input-select-menu__label-part1">
-            {labelPart1}
+            {value || placeholder}
           </span>
-          <span className="input-select-menu__label input-select-menu__label-part2">
+          {/* <span className="input-select-menu__label input-select-menu__label-part2">
             {labelPart2}
-          </span>
+          </span> */}
           <span className="input-select-menu__caret svg-container caret-svg" />
         </button>
         <div ref={menuOverlayRef} className={`input-select-editoverlay ${expanListClass} ${disabledColorClass}`}>
 
+          {/* INPUT Controll */}
           <div className={`input-select-menu__input ${expanListClass} `}>
-            <p
-              className="suggestion"
-            >
-              { suggestionFieldValue }
-            </p>
-            { addOptionIndex !== -1 && (
-            // eslint-disable-next-line jsx-a11y/mouse-events-have-key-events
-            <div
-              tabIndex={addOptionIndex}
-              className={`input-select-menu-add  ${addActive ? 'on-primary' : ''}`}
-              onMouseOver={() => highlightMouseOverIndex(addOptionIndex)}
-              onMouseLeave={() => highlightMouseOverIndex(undefined)}
-              onMouseUp={() => selectHighlight()}
-
-            >
-              <div
-                className="svg-container plus-svg"
-              />
+            {/* TODO #26 add icon for input box reactive to selection? */}
+            <div className="input-select-menu__item-icon">
+              <div className={`svg-container ${'with-message-svg'}`} />
             </div>
-            )}
-            <input
-              ref={inputFieldRef}
-              className={` ${addOptionIndex !== -1 ? 'addVisible' : ''}`}
-              value={value}
-              onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
-                const val = valueReplaceFn ? valueReplaceFn(evt.target?.value) : evt.target?.value;
-                setValue(val);
-              }}
-              onBlur={(evt) => {
-                if (!evt.relatedTarget?.classList.contains('input-select-menu__item') && !evt.relatedTarget?.classList.contains('input-select-menu-add')) {
-                  onExpandedStateChange(false);
-                  setValue(defaultValue);
-                  onCancel?.();
-                }
-              }}
-              onKeyDown={(evt: React.KeyboardEvent<HTMLInputElement>) => {
-              // Get the name of the pressed key
-                const keyName = evt.key;
-
-                switch (keyName) {
-                  case 'ArrowDown':
-                    hightlightNext();
-                    evt.preventDefault();
-                    break;
-                  case 'ArrowUp':
-                    hightlightPrevious();
-                    evt.preventDefault();
-                    break;
-                  case 'ArrowRight':
-                    if (continueWithHighlight()) {
-                      evt.preventDefault();
-                    }
-                    break;
-                  case 'Tab':
-                    selectHighlight();
-                    break;
-                  case 'Enter':
-                    selectHighlight();
-                    break;
-                  case 'Escape':
+            <div className="input-select-menu__input__wrapper">
+              <p
+                className={` ${addOptionIndex !== -1 ? 'suggestion addVisible' : 'suggestion'}`}
+              >
+                { suggestionFieldValue }
+              </p>
+              <input
+                ref={inputFieldRef}
+                className={` ${addOptionIndex !== -1 ? 'addVisible' : ''}`}
+                value={value}
+                onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
+                  const val = valueReplaceFn ? valueReplaceFn(evt.target?.value) : evt.target?.value;
+                  setValue(val);
+                }}
+                onBlur={(evt) => {
+                  if (!evt.relatedTarget?.classList.contains('input-select-menu__item') && !evt.relatedTarget?.classList.contains('input-select-menu-add')) {
                     onExpandedStateChange(false);
                     setValue(defaultValue);
                     onCancel?.();
-                    break;
+                  }
+                }}
+                onKeyDown={(evt: React.KeyboardEvent<HTMLInputElement>) => {
+                  // Get the name of the pressed key
+                  const keyName = evt.key;
 
-                  default:
-                    console.log(keyName);
-                    resetHighlight();
-                    // TODO check in on change illigal characters in keys and remove them
-                    break;
-                }
-              }}
-            />
+                  switch (keyName) {
+                    case 'ArrowDown':
+                      hightlightNext();
+                      evt.preventDefault();
+                      break;
+                    case 'ArrowUp':
+                      hightlightPrevious();
+                      evt.preventDefault();
+                      break;
+                    case 'ArrowRight':
+                      if (continueWithHighlight()) {
+                        evt.preventDefault();
+                      }
+                      break;
+                    case 'Tab':
+                      selectHighlight();
+                      break;
+                    case 'Enter':
+                      selectHighlight();
+                      break;
+                    case 'Escape':
+                      onExpandedStateChange(false);
+                      setValue(defaultValue);
+                      onCancel?.();
+                      break;
+
+                    default:
+                      console.log(keyName);
+                      resetHighlight();
+                      // TODO check in on change illigal characters in keys and remove them
+                      break;
+                  }
+                }}
+              />
+              { addOptionIndex !== -1 && (
+              // eslint-disable-next-line jsx-a11y/mouse-events-have-key-events
+              <div
+                tabIndex={addOptionIndex}
+                className={`input-select-menu-add  ${addActive ? 'on-primary' : ''}`}
+                onMouseOver={() => highlightMouseOverIndex(addOptionIndex)}
+                onMouseLeave={() => highlightMouseOverIndex(undefined)}
+                onMouseUp={() => selectHighlight()}
+              >
+                <div
+                  className="svg-container plus-svg"
+                  style={{ pointerEvents: 'none' }}
+                />
+              </div>
+              )}
+            </div>
+
           </div>
+          {/* MENU OPTIONS */}
           <div
             ref={menuScrollContainerRef}
             className="input-select-menu__menu_container"
           >
+            {/* SCROLLERS */}
             <div
               ref={scrollUpRef}
               className="input-select-menu__menu-scroll-up"
@@ -598,7 +600,7 @@ export default function InputSelect({
             >
               <div className="svg-container arrow-down-svg" />
             </div>
-
+            {/* OPTIONS LIST */}
             <div
               ref={menuWrapperRef}
               className="input-select-menu__menu_wrapper"
@@ -618,9 +620,9 @@ export default function InputSelect({
                 }, i) => {
                   if (optionType === InputSelectionOptionType.DIVIDER) {
                     return (
-                    // eslint-disable-next-line react/no-array-index-key -- does not change
+                      // eslint-disable-next-line react/no-array-index-key -- does not change
                       <React.Fragment key={`input-select-option-divider--${i}`}>
-
+                        {/* We only add diveder after the first icon and we ignore add entries? */}
                         {i > 0 && options[i - 1].type !== InputSelectionOptionType.ADD && (
                         <div
                           className="input-select-menu__divider"

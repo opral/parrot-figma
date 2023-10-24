@@ -305,7 +305,12 @@ export default function TranslationKeyListItem({
 
         return (
           <div className={`group language-group ${languageSkipped ? ' skipped ' : ''}${language === baseLang ? ' baselanguage grid-item-border grid-item-border-top' : ''}${i === (allLanguages.length - 1) ? ' grid-item-border grid-item-border-bottom ' : ''}`} key={language}>
-            <div className="column column-language grid-item-language"><span className="rowText">{language}</span></div>
+            <div className="column column-language grid-item-language">
+              <span className="rowText">{language}</span>
+              { language === localizedLabelManager.messageStore.getRefLanugage() && (
+                <span className="language-tag">ref</span>
+              )}
+            </div>
             {/* {genderList.filter(((gender) => message.gender || gender === Gender.NEUTRAL)).map((gender, genderIndex, allGenders) => ( */}
             {/* <div key={gender} className={`group gender-group ${genderIndex === (allGenders.length - 1) ? 'lastGender  grid-item-border grid-item-border-bottom' : ''} ${genderIndex === 0 ? 'firstGender  grid-item-border grid-item-border-top' : ''} ${message.gender ? 'oneGender' : ' multipleGenders'}`}> */}
             <div className="group gender-group lastGender  grid-item-border grid-item-border-bottom firstGender  grid-item-border grid-item-border-top oneGender">

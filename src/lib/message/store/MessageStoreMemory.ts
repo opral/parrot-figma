@@ -171,14 +171,12 @@ export default class MessageStoreMemory extends EventTarget {
       modules: [],
     });
   }
-  
+
   getMessage(id: string) : Message | undefined {
-    // TOOD #14 use inlang Message as return instead of UI
     return this.inlangProject!.query.messages.get({ where: { id } });
   }
 
   getMessageByName(messageName: string) : Message | undefined {
-    // TOOD #14 use inlang Message as return instead of UI
     return this.inlangProject!.query.messages.get({ where: { id: messageName } });
   }
 
@@ -591,7 +589,6 @@ export default class MessageStoreMemory extends EventTarget {
   //   targetLanguage: Locale,
   //   match?: string[],
   // ) {
-  //   // TODO #26 what to do if the pattern in the source language does not exisit?
   //   const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, match);
   //   const currentVariant = getVariant(message, { where: { languageTag: targetLanguage, match } });
 

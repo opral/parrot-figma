@@ -527,7 +527,6 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
         textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(variantHTML, changedProperties.messageState.parameterValues);
         variantPatternHTMLHash = blake.blake2sHex(variantHTML);
       } else {
-        // TODO #26 try to fall back to base language - what shall we do if this doesn't work eather?
         const updatedMessage = this.messageStore.getMessage(changedProperties.messageState.messageId);
 
         const bestMatchingVariant = MessageStoreMemory.getBestExistingVariant(updatedMessage!, language, this.messageStore.getLanugages()!, []);
@@ -552,8 +551,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
       if (bestMatchingVariant === undefined) {
         throw new Error('The given message has no variant at all');
       }
-
-      // TODO #26 we expect the message to be translated earlier right? - what to do if we don't find a corresponding variant
+      
       const variantHTML = MessageStoreMemory.patternToHtml(bestMatchingVariant.pattern);
       textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(variantHTML, changedProperties.messageState.parameterValues);
 

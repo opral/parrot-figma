@@ -495,7 +495,7 @@ export default function InputSelect({
 
           {/* INPUT Controll */}
           <div className={`input-select-menu__input ${expanListClass} `}>
-            {/* TODO #26 add icon for input box reactive to selection? */}
+            {/* NOTE we could add icon for input box reactive to selection? */}
             <div className="input-select-menu__item-icon">
               <div className={`svg-container ${'with-message-svg'}`} />
             </div>

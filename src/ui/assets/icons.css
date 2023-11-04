@@ -209,9 +209,27 @@
 
     mask-image: url(./undo.svg);
   }
+
   .variable-svg {
     -webkit-mask-image: url(./variable.svg);
     mask-image: url(./variable.svg);
+  }
+
+
+  .three-dots-svg {
+    -webkit-mask-image: url(./32/three-dots.svg);
+    mask-image: url(./32/three-dots.svg);
+  }
+
+
+  .copy-svg {
+    -webkit-mask-image: url(./32/copy.svg);
+    mask-image: url(./32/copy.svg);
+  }
+
+  .notice-svg {
+    -webkit-mask-image: url(./32/notice.svg);
+    mask-image: url(./32/notice.svg);
   }
 
   .expand-svg {

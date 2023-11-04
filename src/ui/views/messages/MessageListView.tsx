@@ -47,6 +47,8 @@ export default function MessageListView({
 
   // const [keys, setKeys] = useState: UITranslationKeys,
   const [searchQuery, setSearchQuery] = useState<SearchQuery>(initialSearchQuery);
+
+  console.log('filtering');
   const filteredKeys = messageStore.findMessages(searchQuery, selectedNodes);
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -338,7 +340,7 @@ export default function MessageListView({
           messageId={longestKey}
           figmaRemote={figmaRemote}
           select={select}
-          keySelected={false}
+          messageSelected={false}
         />
         {[...filteredKeys.matchingNames].map((messageId) => {
           if (rendered > renderEntries) {
@@ -356,7 +358,7 @@ export default function MessageListView({
               messageId={messageId}
               figmaRemote={figmaRemote}
               select={select}
-              keySelected={Object.values(selectedNodes).map((selectedNode) => selectedNode.messageId).includes(messageId) || selectedMessageId === messageId}
+              messageSelected={Object.values(selectedNodes).map((selectedNode) => selectedNode.messageId).includes(messageId) || selectedMessageId === messageId}
             />
           );
         })}

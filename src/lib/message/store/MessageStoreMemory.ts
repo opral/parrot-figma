@@ -376,6 +376,7 @@ export default class MessageStoreMemory extends EventTarget {
     }
 
     for (const message of Object.values(this.inlangProject!.query.messages.getAll())) {
+      console.log('checking message ' + message.id);
       if (query.text === undefined || query.text === '') {
         results.matchingNames.add(message.id);
       } else {

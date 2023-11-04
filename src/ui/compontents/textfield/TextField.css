@@ -1,9 +1,5 @@
 
-.text-field {
-  
-  margin-top: 4px;
-  margin-bottom: 4px;
-}
+
 
 .text-field-text {
   flex-grow: 1;
@@ -25,7 +21,6 @@
 .skipped .translation-editor-text p {
   color: var(--figma-color-text-warning);
 }
-
 .translation-editor-text a {
   text-decoration: inherit !important;
 }

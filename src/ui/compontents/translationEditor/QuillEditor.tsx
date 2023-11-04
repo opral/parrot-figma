@@ -53,6 +53,7 @@ type QuillEditorProps = {
   onSave: Function,
   onCancel: Function,
   onFocus: Function,
+  onBlur?: Function,
 };
 
 export default function QuillEditor({
@@ -62,6 +63,7 @@ export default function QuillEditor({
   onCancel,
   onSave,
   onFocus,
+  onBlur,
 }: QuillEditorProps) {
   const editorPreRef = useRef<HTMLPreElement>(null);
   const [isEditing, setEditingState] = useState(false);
@@ -104,14 +106,13 @@ export default function QuillEditor({
   useEffect(() => {
     const focusInFunction = (e: any) => {
       setEditingState(true);
-      if (onFocus) {
-        onFocus();
-      }
+      onFocus?.();
     };
 
     const focusOutFunction = (e: any) => {
       // console.log('onfocusout... save.... but not triggered by quill...');
       setEditingState(false);
+      onBlur?.();
       // we use the outside clickhandler to handle focus out other than enter / esc
       // onSave?.();
     };

@@ -353,8 +353,12 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   }
 
   async deleteMessage(messageId: string) {
-    await this.unlinkLabelsWithMessage(messageId);
+
+    console.log('DELETING ' + messageId);
     await this.messageStore.deleteMessage(messageId);
+    console.log('unlinking message ' + messageId);
+    await this.unlinkLabelsWithMessage(messageId);
+    console.log('DELETING done ' + messageId);
 
     await this.localizedLabelMangerSandbox.commitUndo();
   }
@@ -551,7 +555,7 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
       if (bestMatchingVariant === undefined) {
         throw new Error('The given message has no variant at all');
       }
-      
+
       const variantHTML = MessageStoreMemory.patternToHtml(bestMatchingVariant.pattern);
       textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(variantHTML, changedProperties.messageState.parameterValues);
 

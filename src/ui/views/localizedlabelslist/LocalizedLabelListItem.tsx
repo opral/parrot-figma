@@ -169,7 +169,7 @@ export default function LocalizedLabelListItem({
 
       </Drawer>
 
-      <div className={`row ${selected} ${localizedLabel.messageLinkState} ${localizedLabel.messageLinkState === MessageLinkState.Linked && message !== undefined ? ' key-set ' : ' key-unset '}`} onClick={() => { onNodeSelect(localizedLabel.nodeId); }}>
+      <div className={`row ${selected} layer-message-state__${localizedLabel.messageLinkState} `} onClick={() => { onNodeSelect(localizedLabel.nodeId); }}>
         <div className="column-1">
           <div className="localized-label">
             <div className="spacer" />
@@ -194,9 +194,9 @@ export default function LocalizedLabelListItem({
         <div className="column localized-text column-2">
           <div className="translation-container" ref={rowRef}>
             <div className="localized-label-details">
-              <div className="key-panel">
+              <div className="message-panel">
                 <InputSelect
-                  className="key-select"
+                  className="message-select"
                   placeholder={localizedLabel.messageLinkState === MessageLinkState.Unmanaged ? 'Not Localized' : 'Link a Message...'}
                   isDisabled={localizedLabel.matchingLabelLints.length > 0}
                   iconClass={iconClass}
@@ -252,7 +252,6 @@ export default function LocalizedLabelListItem({
                       inText: suggestedKeys,
                       matchingNames: matchingKeysByName,
                     } = messageStore.findMessages(textMatchQuery);
-
 
                     const isValidKey = enteredValue.length >= 0 && /^[a-zA-Z0-9]$/.test(enteredValue[enteredValue.length - 1]);
 
@@ -342,97 +341,70 @@ export default function LocalizedLabelListItem({
                   }}
                 />
 
-                <div className="grid">
+                <div className="message-variant">
 
-                  <div className="languageWrapper" key={localizedLabel.language}>
-                    <div
-                      className="grid-item-language"
-                      data-tooltip-content="Current Language of this Label"
-                    >
-                      <span className="rowText">{localizedLabel.language}</span>
-                      { localizedLabel.language === localizedLabelManager.messageStore.getRefLanugage() && (
-                        <span className="language-tag">ref</span>
-                      )}
-                    </div>
-                    {/* <div key={localizedLabel.pluralId} className={`keyPluralWrapper ${translatedKey?.plural ? 'onePlural' : ' multiplePlurals'}`}> */}
-                    <div className="keyPluralWrapper onePlural">
-                      { FEATURES_FLAGS.plurals
-                      && (
-                      <div className="grid-item-plural">
-                        {localizedLabel.messageLinkState === MessageLinkState.Linked && (
-                        <>
-                          {/* {translatedKey?.plural && (
-                          <Select
-                            onChange={(value) => {
-                              localizedLabelManager.updateLabelPlural(localizedLabel, value.value! as Plural);
-                            }}
-                            defaultValue={pluralsAvailable.find((opt) => opt.value === localizedLabel.pluralId)}
-                            getOptions={() => pluralsAvailable}
-                            placeholder=""
-                          />
-                          )}
-                          {!translatedKey?.plural && ( */}
-                          {/* TODO #18  selectors - check pluralid */}
-                          <span className="rowText">{/* localizedLabel.pluralId */}</span>
-                          {/* )} */}
-                        </>
-                        )}
+                  <div
+                    className="message-variant-language"
+                    data-tooltip-content="Current Language of this Label"
+                  >
+                    <span className="language">{localizedLabel.language}</span>
+                    { localizedLabel.language === localizedLabelManager.messageStore.getRefLanugage() && (
+                    <span className="language-tag">ref</span>
+                    )}
+                  </div>
+                  {/* <div key={localizedLabel.pluralId} className={`keyPluralWrapper ${translatedKey?.plural ? 'onePlural' : ' multiplePlurals'}`}> */}
 
-                      </div>
-                      )}
-                      <div className="grid-item-translation translation-container translation">
-                        <TranslationEditor
-                          editable
-                          isDisabled={localizedLabel.matchingLabelLints.length > 0}
-                          match={undefined}
-                          onCancel={async () => {
-                            localizedLabelManager.commitUndo();
-                          }}
-                          onChange={async (patternHtml: string | undefined, parameters: MessageParameterValues, reset: any) => {
-                            if (patternHtml !== undefined) {
-                              localizedLabelManager.updateLabelPatternHtml(
-                                localizedLabel,
-                                patternHtml,
-                                parameters,
-                              ).catch((e: Error) => {
-                                Sentry.captureException(e);
-                                figmaRemote.notifyError(e.message);
-                                reset();
-                              });
-                            }
-                          }}
-                          parameterValues={localizedLabel.parameterValues}
-                          variantHTML={localizedLabel.currentPatternHTML}
-                          messageStore={messageStore}
-                        />
-                        {/* TODO #18 make paramter editable again when we have selectors in place - variables only used as selectors can't be accesed otherwise
-                        { selected !== 'unselected' && (
-                          <div className="placeholder-view-grid" style={{ display: Object.keys(localizedLabel.parameterValues).length > 0 ? undefined : 'none' }}>
+                  <div className="grid-item-translation translation-container translation">
+                    <TranslationEditor
+                      editable
+                      isDisabled={localizedLabel.matchingLabelLints.length > 0}
+                      match={undefined}
+                      onCancel={async () => {
+                        localizedLabelManager.commitUndo();
+                      }}
+                      onChange={async (patternHtml: string | undefined, parameters: MessageParameterValues, reset: any) => {
+                        if (patternHtml !== undefined) {
+                          localizedLabelManager.updateLabelPatternHtml(
+                            localizedLabel,
+                            patternHtml,
+                            parameters,
+                          ).catch((e: Error) => {
+                            Sentry.captureException(e);
+                            figmaRemote.notifyError(e.message);
+                            reset();
+                          });
+                        }
+                      }}
+                      parameterValues={localizedLabel.parameterValues}
+                      variantHTML={localizedLabel.currentPatternHTML}
+                      messageStore={messageStore}
+                    />
+                    {/* TODO #18 make paramter editable again when we have selectors in place - variables only used as selectors can't be accesed otherwise
+                      { selected !== 'unselected' && (
+                        <div className="placeholder-view-grid" style={{ display: Object.keys(localizedLabel.parameterValues).length > 0 ? undefined : 'none' }}>
 
-                            <div />
-                            <div />
-                            <div>Placeholder</div>
-                            <div />
-                            <div />
-                            {Object.entries(localizedLabel.parameterValues).map((entry, i, array) => (
-                              <PlaceholderEditorListItem
-                                key={entry[0]}
-                                placeholder={entry[1]}
-                                fillin={localizedLabel.parameterValues?.[entry[0]]?.value ? localizedLabel.parameterValues?.[entry[0]]?.value : 'unset'}
-                                onValueChange={(placeholderName, fillinValue) => {
-                                  // TODO #18 variables - this is not used at the moment but bases on fillins instead of parameters
-                                  localizedLabelManager.updateLabelFillin(localizedLabel, placeholderName, fillinValue).catch((e: Error) => {
-                                    Sentry.captureException(e);
-                                    figmaRemote.notifyError(e.message);
-                                  });
-                                }}
-                              />
+                          <div />
+                          <div />
+                          <div>Placeholder</div>
+                          <div />
+                          <div />
+                          {Object.entries(localizedLabel.parameterValues).map((entry, i, array) => (
+                            <PlaceholderEditorListItem
+                              key={entry[0]}
+                              placeholder={entry[1]}
+                              fillin={localizedLabel.parameterValues?.[entry[0]]?.value ? localizedLabel.parameterValues?.[entry[0]]?.value : 'unset'}
+                              onValueChange={(placeholderName, fillinValue) => {
+                                // TODO #18 variables - this is not used at the moment but bases on fillins instead of parameters
+                                localizedLabelManager.updateLabelFillin(localizedLabel, placeholderName, fillinValue).catch((e: Error) => {
+                                  Sentry.captureException(e);
+                                  figmaRemote.notifyError(e.message);
+                                });
+                              }}
+                            />
 
-                            ))}
-                          </div>
-                        )} */}
-                      </div>
-                    </div>
+                          ))}
+                        </div>
+                      )} */}
                   </div>
                 </div>
 

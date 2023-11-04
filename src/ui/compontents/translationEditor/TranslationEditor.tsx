@@ -13,7 +13,7 @@ import './TranslationEditor.css';
 import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
 import TranslationView from './TranslationView';
 import QuillEditor from './QuillEditor';
-import { MessageParameterValues } from "../../../lib/message/MessageParameterValues";
+import { MessageParameterValues } from '../../../lib/message/MessageParameterValues';
 
 type TranslationEditorProps = {
   variantHTML?: string,
@@ -31,6 +31,7 @@ type TranslationEditorProps = {
    */
   onChange?: (patternHtml: string | undefined, parameters: MessageParameterValues, reset?: ()=>void) => void,
   onBlur?: Function,
+  onFocus?: Function,
   match: { start: number, length: number } | undefined
   isDisabled: false | true
   editable: boolean,
@@ -47,6 +48,7 @@ export default function TranslationEditor({
   onSave,
   onCancel,
   onBlur,
+  onFocus,
   match,
   editable = true,
   messageStore,
@@ -150,7 +152,14 @@ export default function TranslationEditor({
           <QuillEditor
             value={textState}
             parameterValues={parameterValues}
-            onFocus={() => { setEditingState(true); }}
+            onFocus={() => {
+              setEditingState(true);
+              onFocus?.();
+            }}
+            onBlur={() => {
+              handleSave();
+              onBlur?.();
+            }}
             onCancel={handleCancel}
             onChange={handleChange}
             onSave={handleSave}

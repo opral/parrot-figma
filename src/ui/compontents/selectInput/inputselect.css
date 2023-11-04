@@ -170,6 +170,10 @@ select.input-select-menu {
   margin-left: unset;
 }
 
+.input-select-menu__caret {
+  margin-right: 8px;
+}
+
 .input-select-menu__button:disabled .input-select-menu__caret {
   background-color: var(--figma-color-text-disabled);
 }

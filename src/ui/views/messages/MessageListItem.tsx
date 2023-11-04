@@ -70,7 +70,10 @@ export default function TranslationKeyListItem({
 
   useEffect(() => {
     messageStore.inlangProject?.query.messages.get.subscribe({ where: { id: messageId } }, (updatedMessage) => {
-      setMessage(updatedMessage);
+      if (updatedMessage !== undefined) {
+        // skip deleted
+        setMessage(updatedMessage);
+      }
     });
   }, []);
 

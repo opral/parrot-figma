@@ -159,7 +159,6 @@ setInterval(() => {
   checkVersion().catch(console.log);
 }, versionCheckInterval);
 
-
 const userStateManagerSandbox = new UserManager(true);
 asyncFunctionProxy.proxyAsyncMethods(userStateManagerSandbox);
 const userStateManagerUi = new UserManagerUI(userStateManagerSandbox);
@@ -406,7 +405,9 @@ function App() {
       <Tooltip contentAttribute="data-tooltip-content" />
       <div className="toolbar">
         <div className="tabHeader">
-          <div className={`tab ${appScreen === 'design' ? 'active' : ''}`} onClick={() => setAppScreen('design')}>Design</div>
+          <div className={`tab ${appScreen === 'design' ? 'active' : ''}`} onClick={() => setAppScreen('design')}>
+            Layers
+          </div>
           <div
             className={`tab ${appScreen === 'messages' ? 'active' : ''}`}
             onClick={() => {

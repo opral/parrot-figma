@@ -100,6 +100,7 @@
   outline-offset: 0.39px;
   border: 1px solid var(--figma-color-border-selected);
   outline: 1px solid var(--figma-color-border-selected);
+  margin-right: 2px;
 }
 
 

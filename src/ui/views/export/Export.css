@@ -68,6 +68,7 @@
     flex-direction: row;
     bottom: 16px;
     margin: 16px;
+    z-index: 15;
 }
 
 .buttonGroup-reversed {

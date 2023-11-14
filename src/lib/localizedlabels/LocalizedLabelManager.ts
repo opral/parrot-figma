@@ -570,14 +570,17 @@ export default class LocalizedLabelManager {
           // eslint-disable-next-line @typescript-eslint/no-loop-func
           this.virtualTree.getAllNodesInBranchByRootId(virtualSelectedNode.id).forEach((virtualNode) => {
             if (virtualNode.type === 'TEXT' && selectionEnhanced[virtualNode.id] === undefined) {
-              const textNode = this.toLocalizedLabelOrUndefined(figma.getNodeById(virtualNode.id) as TextNode);
-              selectionEnhanced[virtualNode.id] = {
-                directSelection: false,
-                isLabel: true,
-                rootFrameId: rootFrame?.id,
-                selectedNodeId: virtualNode.id,
-                messageId: textNode?.messageId,
-              };
+              const node = figma.getNodeById(virtualNode.id) as TextNode
+              if (node) {
+                const textNode = this.toLocalizedLabelOrUndefined(figma.getNodeById(virtualNode.id) as TextNode);
+                selectionEnhanced[virtualNode.id] = {
+                  directSelection: false,
+                  isLabel: true,
+                  rootFrameId: rootFrame?.id,
+                  selectedNodeId: virtualNode.id,
+                  messageId: textNode?.messageId,
+                };
+              }
             }
           });
         }

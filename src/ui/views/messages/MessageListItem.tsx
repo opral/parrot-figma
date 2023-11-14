@@ -39,10 +39,19 @@ type TranslationKeyListItemProps = {
 
 // TODO #27 select message on click - message / message variant
 // TODO #27 highlight first screen that matches the given combination
-// TODO #27 disable message rename
-// TODO #27 add search again (no filtering in v1)
-// TODO #27 fix layers layout
-// TODO #27 creating a new key shows key twice in key tab - this is the optimazion key used in table previously
+// TODO #27 make show message a drawer - no need for the list
+// TODO #27 fix search drawer layout for to long messages
+// TODO #27 style scrollbars https://stackblitz.com/edit/react-ts-frji5h?file=components%2Fscrollbar%2Findex.tsx
+// TODO #27 add x to seach field to reset filter
+// TODO #27 deactivate the full seach if no message is available
+// TODO #27 add little info label to message tab to indicate how many messages are managed
+
+// DONE #27 fix sync message buttons
+// DONE #27 fix message that are to long / scrolling
+// DONE #27 check all z-indexes
+// DONE #27 style delete drawer
+// DONE #27 add no messages found with filter
+
 
 export default function TranslationKeyListItem({
   rowClassNames,
@@ -102,33 +111,34 @@ export default function TranslationKeyListItem({
           select(message.id);
         }
       }}
-    > 
-        <div
-          className={'message-group-header ' + (messageSelected ? ' selected' : '')}
-          onMouseOver={() => { setMessageNameHoverd(true); }}
-          onMouseOut={() => { setMessageNameHoverd(false); }}
-        >
-          <div className="spacer" />
-          <div className="message-group-header-element-symbol">
-            <div className="svg-container with-message-svg" />
-          </div>
-          <div className="message-group-header-name">
-            <div className="rowText">
-              <TextField
-                singleClick={false}
-                onSave={async (messageName: string) => {
+    >
+      <div
+        className={'message-group-header ' + (messageSelected ? ' selected' : '')}
+        onMouseOver={() => { setMessageNameHoverd(true); }}
+        onMouseOut={() => { setMessageNameHoverd(false); }}
+      >
+        <div className="spacer" />
+        <div className="message-group-header-element-symbol">
+          <div className="svg-container with-message-svg" />
+        </div>
+        <div className="message-group-header-name">
+          <div className="rowText">
+            {messageId}
+            {/* <TextField
+              singleClick={false}
+              onSave={async (messageName: string) => {
                 // TODO #17 versioning - support message renaming. We will allow to rename not before we have the history that can keep track of name changes
                 // localizedLabelManager.updateMessage(message.id, {
                 //   variants: [],
                 //   name: messageName,
                 // });
-                }}
-                text={messageId}
-              />
-            </div>
+              }}
+              text={messageId}
+            /> */}
           </div>
-          <div className="message-group-header-actions">
-            { select === undefined && (
+        </div>
+        <div className="message-group-header-actions">
+          { select === undefined && (
             <>
               {/* <div
               className="layerIcon iconWrapper button"
@@ -141,7 +151,7 @@ export default function TranslationKeyListItem({
             </div> */}
               <div
                 className="layerIcon iconWrapper button"
-                data-tooltip-content="Delete this translation key"
+                data-tooltip-content="Delete this Message"
                 onClick={() => {
                   setMessageIdToDelete(message.id);
                 }}
@@ -150,11 +160,11 @@ export default function TranslationKeyListItem({
               </div>
 
             </>
-            )}
-          </div>
+          )}
         </div>
-        <div className="message-group-header-sticky-border">test</div>
-      
+      </div>
+      <div className="message-group-header-sticky-border">test</div>
+
       {languages.map((language, i, allLanguages) => {
         const variant = message.variants.find((currentVariant) => currentVariant.languageTag === language);
         let variantHTML = '';
@@ -263,12 +273,12 @@ export default function TranslationKeyListItem({
         ]}
         shown={messageIdToDelete !== undefined}
       >
-        <div className="history_view--topHeader">
+        <div className="modal-drawer-header">
           Delete
           {' '}
           {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id}
         </div>
-        <div>
+        <div className="modal-drawer-body">
           {keyToDeleteReferences !== undefined && keyToDeleteReferences > 0 && (
             <>
               Deletion of the Message
@@ -279,7 +289,7 @@ export default function TranslationKeyListItem({
               {' '}
               {keyToDeleteReferences}
               {' '}
-              referencing labels.
+              referencing text layers.
 
             </>
           )}

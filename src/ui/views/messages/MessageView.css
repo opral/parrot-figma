@@ -1,3 +1,65 @@
+.message-view {
+  height: 100%;
+  flex-direction: column;
+  height: 100%;
+}
+
+.message-filter {
+  display: flex;
+}
+
+.message-list {
+  flex-grow: 1;
+}
+
+.message-filter-search-input {
+  outline: none;
+  border: none;
+  height: 100%;
+  width: 100%;
+  height: 22px;
+  box-sizing: border-box;
+  flex: 1;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  padding: 0 0px 0 24px;
+  border: 1px solid var(--figma-color-border, rgba(0, 0, 0, .1));
+  border-radius: 2px;
+  margin-top: 1px;
+  margin-bottom: 2px;
+  margin-right: 2px;
+  margin-left: 2px;
+}
+
+.message-filter-search-input:focus {
+  outline-offset: 0.39px;
+  border: 1px solid var(--figma-color-border-selected);
+  outline: 1px solid var(--figma-color-border-selected);
+}
+
+.message-filter-search {
+  position: sticky;
+  z-index: 10;
+  top: 0;
+  box-sizing: border-box;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background-color: var(--figma-color-bg);
+  color: var(--figma-color-text);
+  fill: var(--figma-color-text);
+  
+}
+
+
+.message-filter-search .svg-container {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+}
+
+
 .message-group {
   position: relative;
   color: var(--figma-color-icon-component);
@@ -9,6 +71,10 @@
 }
 
 .message-group-focused .message-group-header {
+  background-color: var(--figma-color-bg-selected);
+}
+
+.message-group-selected .message-group-header {
   background-color: var(--figma-color-bg-selected);
 }
 
@@ -81,7 +147,9 @@
 }
 
 .message-group-header-name {
+  user-select: all;
   font-weight: 600;
+  padding-left: 8px;
 }
 
 .message-group-variant {
@@ -99,6 +167,11 @@
   padding-left: 5px;
   padding-right: 5px;
   margin-left: 6px;
+}
+
+
+.message-group-selected .message-group-variant {
+  background-color: var(--figma-color-bg-selected-secondary);
 }
 
 .message-group-focused .message-group-variant {
@@ -134,7 +207,7 @@
 } 
 
 .message-group-variant-column-language {
-  width: 70px;
+  min-width: 70px;
   flex-grow: 0;
   padding-left: 8px;
   padding-right: 8px;
@@ -148,6 +221,7 @@
 .message-group-variant-column-translation {
   flex-grow: 1;
   padding-top: 1px;
+  
 }
 
 
@@ -187,6 +261,7 @@
 
 .message-group-variant-wrapper .message-group-variant-column-translation .translation-editor-text.editing div * {
   color: var(--figma-color-text);
+  white-space: nowrap;
 }
 
 .message-group-header-actions {

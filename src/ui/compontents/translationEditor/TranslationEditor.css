@@ -1,25 +1,31 @@
 
 .translation-editor {
-  margin-top: 1px;
-  margin-bottom: 1px;
-  width: 100%;
+  
 }
-
-
 
 .translation-editor-text {
   display: grid;
   grid-template-columns: 1fr;
   position: relative;
   border: 1px solid transparent;
+  margin-top: 1px;
+  margin-left: 2px;
+  margin-bottom: 1px;
+  margin-right: 2px;
 }
 
+.translation-editor-text .ql-container p,
+.translation-editor-text .ql-container ol,
+.translation-editor-text .ql-container ul {
+  white-space: nowrap;
+}
 
 .translation-editor-text p, 
 .translation-editor-text ul, 
 .translation-editor-text ol {
   margin: 0;
   padding: 0;
+  white-space: nowrap;
 }
 
 .translation-editor-text .translation {
@@ -29,7 +35,8 @@
 
 
 .translation-editor-text .ql-container {
-  position: absolute;
+  position: relative;
+
   left: 0px;
   right: 0px;
   top: 0px;
@@ -88,6 +95,8 @@
   padding-top: 5px;
   padding-bottom: 3px;
   padding-right: 5px;
+  margin-right: 2px;
+  margin-top: 2px;
 }
 
 .translation-editor-text:hover {
@@ -101,6 +110,7 @@
   border: 1px solid var(--figma-color-border-selected);
   outline: 1px solid var(--figma-color-border-selected);
   margin-right: 2px;
+  margin-top: 2px;
 }
 
 
@@ -216,7 +226,7 @@
 div.ql-tooltip {
   position: absolute !important;
   
-  z-index: 1 !important;
+  z-index: 3 !important;
   background-color: #222 !important;
   border: 1px solid #2c2c2c !important;
   

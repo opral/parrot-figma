@@ -149,6 +149,7 @@ body {
 
   #react-page {
     height: 100%;
+    user-select: none;
   }
 
   .view.filesetup {
@@ -236,6 +237,12 @@ body {
   
   .translation {
     white-space: pre-wrap;
+    overflow: hidden;
+  }
+  
+  .ql-container {
+    white-space: pre-wrap;
+    /* overflow: hidden; */
   }
   
   
@@ -380,4 +387,15 @@ button:focus:not(:disabled), .basic_form--btn--t7Y67:active:not(:disabled) {
 }
 #version-outdated.gone {
   display: none;
+}
+
+.modal-drawer-header {
+  margin: 16;
+  color: var(--figma-color-text);
+  font-weight: 600;
+}
+
+.modal-drawer-body {
+  margin: 16;
+  color: var(--figma-color-text);
 }

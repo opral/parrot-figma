@@ -29,7 +29,11 @@
 }
 .ql-editor {
   box-sizing: border-box;
-  height: 100%;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  bottom: 0px;
+  right: 0px;
   outline: none;
   overflow-y: auto;
   tab-size: 4;

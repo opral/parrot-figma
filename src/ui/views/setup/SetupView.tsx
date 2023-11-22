@@ -27,9 +27,16 @@ export default function SetupView({
           await labelManager.messageStore.setLanguages(activeLanguages);
         }}
       />
-      <div className="start-staging-ui" onClick={() => {
-        window.startDevMode();
-      }}>stagin-ui</div>
+      <div
+        className="start-staging-ui"
+        onClick={() => {
+          // @ts-expect-error
+          window.startDevMode();
+        }}
+      >
+        stagin-ui
+
+      </div>
     </>
   );
 }

@@ -17,15 +17,26 @@ export default function SetupView({
   labelManager,
 }: SetupViewProps) {
   return (
-    <LanguageSetup
-      labelManager={labelManager}
-      baseLanguage={labelManager.messageStore.getRefLanugage()}
-      activeLanguages={labelManager.messageStore.getLanugages()!}
-      onChange={async (baselanguage: Locale, activeLanguages: Locale[]) => {
-        
-        await labelManager.messageStore.setRefLanguage(baselanguage);
-        await labelManager.messageStore.setLanguages(activeLanguages);
-      }}
-    />
+    <>
+      <LanguageSetup
+        labelManager={labelManager}
+        baseLanguage={labelManager.messageStore.getRefLanugage()}
+        activeLanguages={labelManager.messageStore.getLanugages()!}
+        onChange={async (baselanguage: Locale, activeLanguages: Locale[]) => {
+          await labelManager.messageStore.setRefLanguage(baselanguage);
+          await labelManager.messageStore.setLanguages(activeLanguages);
+        }}
+      />
+      <div
+        className="start-staging-ui"
+        onClick={() => {
+          // @ts-expect-error
+          window.startDevMode();
+        }}
+      >
+        stagin-ui
+
+      </div>
+    </>
   );
 }

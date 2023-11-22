@@ -351,7 +351,7 @@ function normalPath(path: string): string {
   const dots = /(\/|^)(\.\/)+/g;
   const slashes = /\/+/g;
 
-  const upreference = /(?<!\.\.)[^/]+\/\.\.\//;
+  const upreference = /([^\/]|^)\/\.\.\//;
 
   // Append '/' to the beginning and end
   path = `/${path}/`;

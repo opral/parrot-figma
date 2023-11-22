@@ -381,3 +381,12 @@ button:focus:not(:disabled), .basic_form--btn--t7Y67:active:not(:disabled) {
 #version-outdated.gone {
   display: none;
 }
+
+.start-staging-ui {
+  position: absolute;
+  bottom: 0px;
+  opacity: 0;
+}
+.start-staging-ui:hover {
+  opacity: 1;
+}

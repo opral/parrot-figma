@@ -107,7 +107,6 @@ WindowManagerUi.init(
   document.getElementById('react-page')!,
   resizeHandle,
 );
-debugger;
 // @ts-expect-error
 window['startDevMode'] = WindowManagerUi.instance!.startDevMode;
 

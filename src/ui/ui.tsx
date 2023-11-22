@@ -87,7 +87,7 @@ window.addEventListener('keydown', (e) => {
     const isCmd = isMac && e.metaKey && !e.ctrlKey;
     const isCtrl = !isMac && !e.metaKey && e.ctrlKey;
     if (isCmd || isCtrl) {
-      window.parent.postMessage({ pluginMessage: { type: 'undo' } }, '*');
+      window.parent.postMessage({ pluginMessage: { type: 'undo' }, pluginId: '*' }, '*');
     }
   }
 });
@@ -99,11 +99,16 @@ WindowManagerUi.init(
   document.getElementById('react-page')!,
   resizeHandle,
 );
+debugger;
+// @ts-expect-error
+window['startDevMode'] = WindowManagerUi.instance!.startDevMode;
+
 
 const asyncFunctionProxy = new AsyncFunctionProxy('UIAsyncFunctionProxy', (data: any) => {
   // eslint-disable-next-line no-restricted-globals
   parent.postMessage({
     pluginMessage: data,
+    pluginId: '*',
   }, '*');
 }, window);
 

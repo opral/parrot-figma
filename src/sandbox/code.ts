@@ -44,6 +44,8 @@ WindowManagerSandbox.init({
   windowMode: WindowMode.IntroWindow,
 }, (!fileConfigured || !introShownToUser) ? WindowMode.IntroWindow : undefined);
 
+
+
 const asyncFunctionProxy = new AsyncFunctionProxy('SandboxAsyncFunctionProxy', (data: any) => {
   figma.ui.postMessage(data);
 }, figma.ui);

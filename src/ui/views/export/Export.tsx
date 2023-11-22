@@ -13,6 +13,7 @@ import { Locale } from '../../../lib/message/variants/Locale';
 import MessageExporter from '../../../lib/export/MessageExporter';
 import FEATURES_FLAGS from '../../featuretoggle';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
+import UserManagerUI from '../../../lib/usage/UsageManagerUI';
 
 function toLanguageOption(language: string, baseLanguage?: string) {
   let languageNameInCurrentLanguage = 'no name found';
@@ -46,6 +47,7 @@ function toLanguageOptions(languages: string[], baseLanguage?: string) {
 
 type ExportProps = {
   labelManager: LocalizedLabelManagerUI,
+  userManager: UserManagerUI,
 };
 /**
  * Select versionTag (allow to tag current Version)
@@ -54,6 +56,7 @@ type ExportProps = {
  */
 export default function Export({
   labelManager,
+  userManager,
 }: ExportProps) {
   const { t } = useTranslation();
   const translationKeyStore = labelManager.messageStore;
@@ -84,7 +87,7 @@ export default function Export({
   const [selectedVersion, setSelectedVersion] = useState<string>('head');
   const [title, setTitle] = useState('test');
   const [description, setDescription] = useState('');
-  // const [tagOptions, setTagOptions] = useState(initTagOptions);
+  const [featureEnabled, setFeatureEnabled] = useState(false);
 
   const [exportTarget, setExportTarget] = useState<string | undefined>(undefined);
 
@@ -131,6 +134,11 @@ export default function Export({
   };
 
   const doExport = async (exportLanguage: Locale, format: string) => {
+    // const precondition = await userManager.requestFeature('export');
+    // if (!precondition) {
+    //   console.log('nope');
+    //   return
+    // }
     const exportedFile = MessageExporter.export(translationKeyStore, exportLanguage, format);
     if (exportedFile) {
       downloadFile(exportedFile.fileName, exportedFile.fileType, exportedFile.content);
@@ -169,6 +177,7 @@ export default function Export({
         </div>
         <div style={{ marginLeft: 'auto', marginRight: '8px' }}>
           <Select
+            checkmark={false}
             placeholder="Export Target"
             onChange={(value) => { setExportTarget(value.value as string); }}
             getOptions={() => exportPlatformOptions}
@@ -212,7 +221,7 @@ export default function Export({
         </div>
         <div style={{ height: '8px' }} />
         <div className="setup-header needs-base-language">
-          <div className="setup-header-title">Target locales</div>
+          <div className="setup-header-title">Target languages</div>
         </div>
         <div className="choosen-language-control">
           <div className="change-control">

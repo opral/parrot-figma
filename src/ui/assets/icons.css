@@ -8,14 +8,11 @@
     -webkit-mask-repeat-y: no-repeat;
     -webkit-mask-size: cover;
 }
-
-
+ 
 .svg-container {
-    width: 16px;
-    height: 16px;
+    width: 32px;
+    height: 32px;
 }
-
-
 
 .flag-cs {
     width: 16px;
@@ -68,9 +65,9 @@
     
 }
 
-.checkmark-svg {
-    -webkit-mask-image: url(./checkmark.svg);
-    mask-image: url(./checkmark.svg);
+.menu-checkmark-svg {
+    -webkit-mask-image: url(./menu-checkmark.svg);
+    mask-image: url(./menu-checkmark.svg);
 }
 
 .settings-svg {
@@ -115,10 +112,23 @@
     mask-image: url(./plus.svg);
   }
 
+  .update-text-layer-svg {
+    -webkit-mask-image: url(./32/update_text_layer.svg);
+    mask-image: url(./32/update_text_layer.svg);
+  }
+
+  .update-message-svg {
+    -webkit-mask-image: url(./32/update_message.svg);
+    mask-image: url(./32/update_message.svg);
+  }
+
+
   .reset-instance-svg {
     -webkit-mask-image: url(./reset-instance.svg);
     mask-image: url(./reset-instance.svg);
   }
+  
+
 
   .upload-svg {
     -webkit-mask-image: url(./upload.svg);
@@ -178,8 +188,8 @@
   }
 
   .search-svg {
-    -webkit-mask-image: url(./search.svg);
-    mask-image: url(./search.svg);
+    -webkit-mask-image: url(./32/search.svg);
+    mask-image: url(./32/search.svg);
   }
 
   .eye-svg {
@@ -199,9 +209,27 @@
 
     mask-image: url(./undo.svg);
   }
+
   .variable-svg {
     -webkit-mask-image: url(./variable.svg);
     mask-image: url(./variable.svg);
+  }
+
+
+  .three-dots-svg {
+    -webkit-mask-image: url(./32/three-dots.svg);
+    mask-image: url(./32/three-dots.svg);
+  }
+
+
+  .copy-svg {
+    -webkit-mask-image: url(./32/copy.svg);
+    mask-image: url(./32/copy.svg);
+  }
+
+  .notice-svg {
+    -webkit-mask-image: url(./32/notice.svg);
+    mask-image: url(./32/notice.svg);
   }
 
   .expand-svg {
@@ -227,6 +255,98 @@
   .arrow-down-svg {
     -webkit-mask-image: url(./arrow_down.svg);
     mask-image: url(./arrow_down.svg);
+  }
+
+  .goto-message-small-svg {
+    -webkit-mask-image: url(./32/goto_message_small.svg);
+    mask-image: url(./32/goto_message_small.svg);
+  }
+
+  .no-message-small-svg {
+    -webkit-mask-image: url(./32/no_message_small.svg);
+    mask-image: url(./32/no_message_small.svg);
+  }
+
+
+  .switch-language-svg {
+    -webkit-mask-image: url(./32/switch_language.svg);
+    mask-image: url(./32/switch_language.svg);
+  }
+
+
+  .not-localized-small-svg {
+    -webkit-mask-image: url(./32/not_localized_small.svg);
+    mask-image: url(./32/not_localized_small.svg);
+  }
+
+  .with-message-small-svg {
+    -webkit-mask-image: url(./32/with_message_small.svg);
+    mask-image: url(./32/with_message_small.svg);
+  }
+
+  .goto-message-svg {
+    -webkit-mask-image: url(./32/goto_message.svg);
+    mask-image: url(./32/goto_message.svg);
+  }
+
+  .no-message-svg {
+    -webkit-mask-image: url(./32/no_message.svg);
+    mask-image: url(./32/no_message.svg);
+  }
+
+  .not-localized-svg {
+    -webkit-mask-image: url(./32/not_localized.svg);
+    mask-image: url(./32/not_localized.svg);
+  }
+
+  .with-message-svg {
+    -webkit-mask-image: url(./32/with_message.svg);
+    mask-image: url(./32/with_message.svg);
+  }
+
+  .text-decoration-underline-svg {
+    -webkit-mask-image: url(./16/text-decoration-underline.svg);
+    mask-image: url(./16/text-decoration-underline.svg);
+  }
+
+
+  .text-decoration-strikethrough-svg {
+    -webkit-mask-image: url(./16/text-decoration-strikethrough.svg);
+    mask-image: url(./16/text-decoration-strikethrough.svg);
+  }
+
+
+  .text-decoration-italic-svg {
+    -webkit-mask-image: url(./16/text-decoration-italic.svg);
+    mask-image: url(./16/text-decoration-italic.svg);
+  }
+
+
+  .text-decoration-bold-svg {
+    -webkit-mask-image: url(./16/text-decoration-bold.svg);
+    mask-image: url(./16/text-decoration-bold.svg);
+  }
+
+  .list-bullet-svg {
+    -webkit-mask-image: url(./16/list-detailed.svg);
+    mask-image: url(./16/list-detailed.svg);
+  }
+
+
+  .hyperlink-svg {
+    -webkit-mask-image: url(./16/hyperlink.svg);
+    mask-image: url(./16/hyperlink.svg);
+  }
+
+  .list-ordered-svg {
+    -webkit-mask-image: url(./16/list-numbered.svg);
+    mask-image: url(./16/list-numbered.svg);
+  }
+
+
+  .variable-svg {
+    -webkit-mask-image: url(./16/variable.svg);
+    mask-image: url(./16/variable.svg);
   }
 
 

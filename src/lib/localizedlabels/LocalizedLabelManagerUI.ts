@@ -353,8 +353,12 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   }
 
   async deleteMessage(messageId: string) {
-    await this.unlinkLabelsWithMessage(messageId);
+
+    console.log('DELETING ' + messageId);
     await this.messageStore.deleteMessage(messageId);
+    console.log('unlinking message ' + messageId);
+    await this.unlinkLabelsWithMessage(messageId);
+    console.log('DELETING done ' + messageId);
 
     await this.localizedLabelMangerSandbox.commitUndo();
   }
@@ -419,6 +423,14 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
   async unsetLabel(localizedLabel: LocalizedLabel) {
     await this.updateLabelProperties(localizedLabel.nodeId, {
       messageState: { type: 'unset' },
+    });
+
+    await this.localizedLabelMangerSandbox.commitUndo();
+  }
+
+  async setLabelToUnmanaged(localizedLabel: LocalizedLabel) {
+    await this.updateLabelProperties(localizedLabel.nodeId, {
+      messageState: { type: 'unmanaged', unmanaged: true },
     });
 
     await this.localizedLabelMangerSandbox.commitUndo();
@@ -521,17 +533,35 @@ export default class LocalizedLabelManagerUI extends EventTarget implements ILoc
       } else {
         const updatedMessage = this.messageStore.getMessage(changedProperties.messageState.messageId);
 
-        variantHTML = MessageStoreMemory.htmlForPattern(updatedMessage!, language, []);
+        const bestMatchingVariant = MessageStoreMemory.getBestExistingVariant(updatedMessage!, language, this.messageStore.getLanugages()!, []);
+
+        if (bestMatchingVariant === undefined) {
+          throw new Error('The given message has no variant at all');
+        }
+
+        variantHTML = MessageStoreMemory.patternToHtml(bestMatchingVariant.pattern);
         textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(variantHTML, changedProperties.messageState.parameterValues);
         variantPatternHTMLHash = blake.blake2sHex(variantHTML);
+
+        // eslint-disable-next-line no-param-reassign
+        changedProperties.language = bestMatchingVariant.languageTag as Locale;
       }
       // the variant pattern in the label have changed
     } else if (changedProperties.messageState?.type === 'unlinked') {
       const updatedMessage = changedProperties.messageState.unlinkedMessage;
-      const variantHTML = MessageStoreMemory.htmlForPattern(updatedMessage!, language, []);
+
+      const bestMatchingVariant = MessageStoreMemory.getBestExistingVariant(updatedMessage!, language, this.messageStore.getLanugages()!, []);
+
+      if (bestMatchingVariant === undefined) {
+        throw new Error('The given message has no variant at all');
+      }
+
+      const variantHTML = MessageStoreMemory.patternToHtml(bestMatchingVariant.pattern);
       textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(variantHTML, changedProperties.messageState.parameterValues);
 
       variantPatternHTMLHash = blake.blake2sHex(variantHTML);
+      // eslint-disable-next-line no-param-reassign
+      changedProperties.language = bestMatchingVariant.languageTag as Locale;
     }
     // unset will be passed automatically
 

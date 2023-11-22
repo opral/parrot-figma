@@ -5,7 +5,7 @@ export function track(name: string, opts = {}) {
   if (process.env.MIXPANEL_ACCESS_TOKEN) {
     mixpanel.track(name, opts);
   } else {
-    console.log('tracking: ' + name + ' ' + JSON.stringify(opts));
+    console.log(`tracking: ${name} ${JSON.stringify(opts)}`);
   }
 }
 
@@ -22,9 +22,11 @@ export function identify(figmaUserId: string) {
   }
 }
 
-export function setUserData(data: { [key: string]: string }) {
+export function setUserData(data: { [key: string]: any }) {
   if (process.env.MIXPANEL_ACCESS_TOKEN && 'people' in mixpanel) {
     mixpanel.people.set(data);
+  } else {
+    console.log(`would set user property to ${JSON.stringify(data)}`);
   }
 }
 

@@ -356,7 +356,6 @@ export class UILocalizedLabel implements LocalizedLabel {
       }
     }
 
-    console.log(`getState ${JSON.stringify(state)}`);
     return state;
   }
 
@@ -364,6 +363,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     targetLanguage: Locale,
     missingTranslationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | null>,
   ) {
+    
     const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
     const toRefLanguage = targetLanguage === refLanguage;
 

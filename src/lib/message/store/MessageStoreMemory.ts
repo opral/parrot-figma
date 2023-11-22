@@ -114,8 +114,6 @@ export default class MessageStoreMemory extends EventTarget {
       }
 
       this.inlangProject?.query.messages.upsert({ where: { id: freshMessage.id }, data: freshMessage});
-      const updatedMessage = this.inlangProject?.query.messages.get({ where: { id: freshMessage.id } });
-      console.log(JSON.stringify(updatedMessage, null, 4));
       changes.updated.push(updatedMessageId);
       changes.changedKeys.push(updatedMessageId);
     }
@@ -171,14 +169,12 @@ export default class MessageStoreMemory extends EventTarget {
       modules: [],
     });
   }
-  
+
   getMessage(id: string) : Message | undefined {
-    // TOOD #14 use inlang Message as return instead of UI
     return this.inlangProject!.query.messages.get({ where: { id } });
   }
 
   getMessageByName(messageName: string) : Message | undefined {
-    // TOOD #14 use inlang Message as return instead of UI
     return this.inlangProject!.query.messages.get({ where: { id: messageName } });
   }
 
@@ -404,6 +400,8 @@ export default class MessageStoreMemory extends EventTarget {
             }
 
             if (!results.matches[message.id].textMatches![messageVariant.languageTag]!['*']) {
+              results.inText.add(message.id);
+              results.matchingNames.add(message.id);
               results.matches[message.id].textMatches![messageVariant.languageTag]!['*'] = { start: matchStartText, length: query.text.length };
             }
           }
@@ -583,21 +581,21 @@ export default class MessageStoreMemory extends EventTarget {
     return getVariant(message, { where: { languageTag: targetLanguage, match } }) !== undefined;
   }
 
-  static isVariantsTranslationOutdated(
-    message: Message,
-    sourceLanguage: Locale,
-    targetLanguage: Locale,
-    match?: string[],
-  ) {
-    const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, match);
-    const currentVariant = getVariant(message, { where: { languageTag: targetLanguage, match } });
+  // static isVariantsTranslationOutdated(
+  //   message: Message,
+  //   sourceLanguage: Locale,
+  //   targetLanguage: Locale,
+  //   match?: string[],
+  // ) {
+  //   const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, match);
+  //   const currentVariant = getVariant(message, { where: { languageTag: targetLanguage, match } });
 
-    if (!currentVariant || blake.blake2sHex(sourceVariantPatternHTML) !== (currentVariant as any).translationSrcHash) {
-      return true;
-    }
+  //   if (!currentVariant || blake.blake2sHex(sourceVariantPatternHTML) !== (currentVariant as any).translationSrcHash) {
+  //     return true;
+  //   }
 
-    return false;
-  }
+  //   return false;
+  // }
 
   static upsertVariantPatternHtml(message: Message, sourceLanguage: Locale | undefined, language: Locale, match: string[], patternHtml: string) {
     // const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, match);
@@ -635,7 +633,11 @@ export default class MessageStoreMemory extends EventTarget {
     targetLanguage: Locale,
     match: string[],
   ) {
+    // 
     const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, match);
+    if (sourceVariantPatternHTML === undefined) {
+      throw new Error(`Pattern did not exist for source language: ${sourceLanguage}`);
+    }
 
     const translatedPattern = await translationProvider(sourceVariantPatternHTML, sourceLanguage as string, targetLanguage);
 
@@ -708,7 +710,23 @@ export default class MessageStoreMemory extends EventTarget {
 
   static htmlForPattern(message: Message, languageTag: string, match?: string[]) {
     const variant = getVariant(message, { where: { languageTag, match } });
+    if (!variant) {
+      return undefined;
+    }
     return this.patternToHtml(variant!.pattern);
+  }
+
+  static getBestExistingVariant(message: Message, languageTag: string, fallbackLanguageTags: string[], match?: string[]) {
+    const variant = getVariant(message, { where: { languageTag, match } });
+    if (!variant) {
+      for (const fallbackLanguageTag of fallbackLanguageTags) {
+        const fallbackVariant = getVariant(message, { where: { languageTag: fallbackLanguageTag, match } });
+        if (fallbackVariant !== undefined) {
+          return fallbackVariant;
+        }
+      }
+    }
+    return variant;
   }
 
   static refLanguageHash(message: Message, language: string, match?: string[]) {

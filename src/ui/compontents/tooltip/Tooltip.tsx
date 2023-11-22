@@ -73,15 +73,15 @@ export default function Tooltip({ contentAttribute }: TooltipProps) {
     const parent = document.getElementById('react-page')!;
     const parentRect = parent.getBoundingClientRect();
 
-    console.log('rects: parent, tooltip');
-    console.log(JSON.stringify(parentRect));
-    console.log(JSON.stringify(elementRect));
+    // console.log('rects: parent, tooltip');
+    // console.log(JSON.stringify(parentRect));
+    // console.log(JSON.stringify(elementRect));
 
-    console.log('right:');
-    console.log(parentRect.right - (tooltipSourceRect.left! + (elementRect.width / 2)));
+    // console.log('right:');
+    // console.log(parentRect.right - (tooltipSourceRect.left! + (elementRect.width / 2)));
 
-    console.log('left:');
-    console.log(parentRect.left - (tooltipSourceRect.left! + (elementRect.width / 2)));
+    // console.log('left:');
+    // console.log(parentRect.left - (tooltipSourceRect.left! + (elementRect.width / 2)));
 
     if (parentRect.bottom - tooltipSourceRect.bottom > height) {
       // great if fits below

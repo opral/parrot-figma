@@ -652,6 +652,8 @@ setTimeout(10000, () => console.log('modify_test_online: with delay:' + figma.ge
 figma.setPluginData('create_test_online', 'Created by user1');
 console.log('create_test_online: ' + figma.getPluginData('create_test_online'));
 setTimeout(10000, () => console.log('create_test_online: with delay:' + figma.getPluginData('create_test_online')))
+<<<<<<< HEAD
+=======
 
 
 #### User2: 
@@ -805,3 +807,4 @@ function runTest(currentUser, testRunPrefix) {
 }
 
 }
+>>>>>>> production

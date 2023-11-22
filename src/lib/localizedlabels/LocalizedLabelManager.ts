@@ -173,7 +173,7 @@ export default class LocalizedLabelManager {
 
           if (!selectedNodeStateByUser[user.id] || selectedNodeStateByUser[user.id].nodeId !== currentState.nodeId) {
             selectedNodeStateByUser[user.id] = currentState;
-            console.log('no change');
+            // console.log('no change');
           } else if (selectedNodeStateByUser[user.id].textSegments.length !== currentState.textSegments.length) {
             // TODO change detected
             selectedNodeStateByUser[user.id] = currentState;
@@ -215,7 +215,7 @@ export default class LocalizedLabelManager {
       // }
 
       if (changeEvent.documentChanges.length > 0) {
-        console.log('emulating event');
+        // console.log('emulating event');
         that.forwardDocumentChanges(changeEvent);
       }
     }, 100);
@@ -340,13 +340,16 @@ export default class LocalizedLabelManager {
                 }
               }
               changedLabels.push(localizedLabel);
+            } else {
+              deletedIds.add(changedNode.id);
+              this.refreshLabelMessageLinkCache(changedNode.id, undefined);
             }
           } else if ((changedNode as FrameNode).children) {
             let changedVirtualNodes = [] as VirtualTreeNode[];
             if (change.properties.includes('parent')) {
               changedVirtualNodes = this.virtualTree.moveNode(changedNode!.id, changedNode!.parent!);
               // console.log(`Node changed - parent ${change.id} moved in vt affacted: ${JSON.stringify(changedVirtualNodes.length)}`);
-            } else if (change.properties.includes('name') || change.properties.includes('pluginData')) {
+            } else if (change.properties.includes('name') || change.properties.includes('pluginData') || change.properties.includes('visible')) {
               // if the name changed we have to update all childs since naming changes the key abrivation
               changedVirtualNodes = this.virtualTree.getAllNodesInBranchByRootId(changedNode!.id);
               // console.log(`Node changed - ${change.id} name in vt affacted: ${JSON.stringify(changedVirtualNodes.length)}`);
@@ -374,6 +377,9 @@ export default class LocalizedLabelManager {
                     }
                     changedLabels.push(localizedLabel);
                     // lokalizedLabel.parentIds.forEach((parentId) => frameData.refreshTriggerIds.add(parentId));
+                  } else {
+                    deletedIds.add(movedFigmaNode.id);
+                    this.refreshLabelMessageLinkCache(movedFigmaNode.id, undefined);
                   }
                 }
               }
@@ -564,14 +570,17 @@ export default class LocalizedLabelManager {
           // eslint-disable-next-line @typescript-eslint/no-loop-func
           this.virtualTree.getAllNodesInBranchByRootId(virtualSelectedNode.id).forEach((virtualNode) => {
             if (virtualNode.type === 'TEXT' && selectionEnhanced[virtualNode.id] === undefined) {
-              const textNode = this.toLocalizedLabelOrUndefined(figma.getNodeById(virtualNode.id) as TextNode);
-              selectionEnhanced[virtualNode.id] = {
-                directSelection: false,
-                isLabel: true,
-                rootFrameId: rootFrame?.id,
-                selectedNodeId: virtualNode.id,
-                messageId: textNode?.messageId,
-              };
+              const node = figma.getNodeById(virtualNode.id) as TextNode
+              if (node) {
+                const textNode = this.toLocalizedLabelOrUndefined(figma.getNodeById(virtualNode.id) as TextNode);
+                selectionEnhanced[virtualNode.id] = {
+                  directSelection: false,
+                  isLabel: true,
+                  rootFrameId: rootFrame?.id,
+                  selectedNodeId: virtualNode.id,
+                  messageId: textNode?.messageId,
+                };
+              }
             }
           });
         }

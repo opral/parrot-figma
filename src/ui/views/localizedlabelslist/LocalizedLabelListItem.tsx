@@ -22,7 +22,8 @@ import { track } from '../../utils/analytics';
 import Drawer from '../../compontents/drawer/Drawer';
 import { Gender } from '../../../lib/message/variants/Gender';
 import { FillinToPlaceholder } from '../../../lib/message/MessageExtnesions';
-import { MessageParameterValues } from "../../../lib/message/MessageParameterValues";
+import { MessageParameterValues } from '../../../lib/message/MessageParameterValues';
+
 
 type LocalizedLabelListItemProps = {
   showMessage: Function,
@@ -47,6 +48,9 @@ export default function LocalizedLabelListItem({
   const labelState = localizedLabel.state!;
 
   const [messageSearch, setMessageSearch] = useState(undefined as any);
+
+  const [showMessageInDrawer, setShowMessageInDrawer] = useState(undefined as any);
+
   const drawerSelectedKey = useRef<string | undefined>(undefined);
   // Dummy state variable to trigger re-render when currentHighlightIndex.current changes
   const [, setDummyState] = useState<any>();
@@ -101,6 +105,17 @@ export default function LocalizedLabelListItem({
     messageName = localizedLabel.getMessageName()!;
   }
 
+  let iconClass = 'no-message-svg';
+  if (localizedLabel.messageLinkState === MessageLinkState.Linked) {
+    iconClass = 'with-message-svg';
+  } else if (localizedLabel.messageLinkState === MessageLinkState.Unmanaged) {
+    iconClass = 'not-localized-svg';
+  } else if (localizedLabel.messageLinkState === MessageLinkState.MissingMessage) {
+    iconClass = 'no-message-svg';
+  } else if (localizedLabel.messageLinkState === MessageLinkState.Unlinked) {
+    iconClass = 'no-message-svg';
+  }
+
   useEffect(() => {
     setDummyState({});
   }, [localizedLabel]);
@@ -108,6 +123,7 @@ export default function LocalizedLabelListItem({
   return (
     <>
       <Drawer
+        
         position="top"
         buttons={[
           {
@@ -137,79 +153,118 @@ export default function LocalizedLabelListItem({
         ]}
         shown={messageSearch !== undefined}
       >
-        <div className="history_view--topHeader" style={{ width: '3000px' }}>
-          Select Key
+        <div className="modal-title" style={{ width: '1000px' }}>
+          Select a Message
         </div>
         { messageSearch !== undefined && (
-        <MessageListView
-          showSearchBar
-          messageStore={messageStore}
-          localizedLabelManager={localizedLabelManager}
-          figmaRemote={figmaRemote}
-          selectedMessageId={drawerSelectedKey.current}
-          initialSearchQuery={MessageStoreMemory.toQueryObject(`name:* ${messageSearch.search}`)}
-          select={(key: string, language: Locale, plural: Plural) => {
-            drawerSelectedKey.current = key;
-            setDummyState({});
-          }}
-          highlightSelectedNodes={false}
-        />
+
+          <MessageListView
+            showSearchBar
+            messageStore={messageStore}
+            localizedLabelManager={localizedLabelManager}
+            figmaRemote={figmaRemote}
+            selectedMessageId={drawerSelectedKey.current}
+            initialSearchQuery={MessageStoreMemory.toQueryObject(`name:* ${messageSearch.search}`)}
+            select={(key: string, language: Locale, plural: Plural) => {
+              drawerSelectedKey.current = key;
+              setDummyState({});
+            }}
+            highlightSelectedNodes={false}
+          />
         )}
 
       </Drawer>
 
-      <div className={`row ${selected}${localizedLabel.messageLinkState === MessageLinkState.Linked && message !== undefined ? ' key-set ' : ' key-unset '}`} onClick={() => { onNodeSelect(localizedLabel.nodeId); }}>
-        <div className="column-1">
-          <div className="localized-label">
-            <div className="spacer" />
-            <div className="spacer" />
-            <div className="element-symbol">
-              <div className="svg-container text-sign-svg" />
-            </div>
-            <TextField
-              singleClick={false}
-              onSave={async (labelName: string) => {
-                await localizedLabelManager.updateLabelName(localizedLabel, labelName).catch((e) => {
-                  figmaRemote.notifyError(`could not set message${e.message}`);
-                  Sentry.captureException(e);
-                });
-              }}
-              text={localizedLabel.name}
-            />
-
-          </div>
-
+      <Drawer
+        className="message-editor-drawer"
+        position="top"
+        buttons={[
+          {
+            type: 'secondary',
+            text: 'Close',
+            key: 'escape',
+            callback: () => {
+              setShowMessageInDrawer(undefined);
+            },
+          },
+          
+        ]}
+        shown={showMessageInDrawer !== undefined}
+      >
+        <div className="modal-title" style={{ width: '1000px' }}>
+          Edit Message
         </div>
-        <div className="column localized-text column-2">
-          <div className="translation-container" ref={rowRef}>
-            <div className="localized-label-details">
-              <div className="key-panel">
-                <InputSelect
-                  className="key-select"
-                  placeholder="Link Message..."
-                  isDisabled={localizedLabel.matchingLabelLints.length > 0}
-                  inputPlaceholder="e.g. home__tagline"
-                  tooltip="Link a Message to this Text to reuse messages and for a straight forwaredd Developer handover."
-                  onCancel={() => {
-                    setDummyState({});
-                  }}
-                  onChange={async (selectedOption) => {
-                    if (selectedOption.type === InputSelectionOptionType.ACTION) {
-                      if (selectedOption.value === 'select-message') {
-                        setMessageSearch({
-                          search: localizedLabel.characters,
-                        });
-                      } else if (selectedOption.value === 'show-message') {
-                        showMessage(localizedLabel.getMessageName());
-                      } else if (selectedOption.value === 'reset') { // triggered by empty field - option added by the select field it self
-                        await localizedLabelManager.unsetLabel(localizedLabel);
-                      }
-                    } else if (selectedOption.type === InputSelectionOptionType.ADD) {
-                      await localizedLabelManager.linkMessage(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!);
-                    } else if (selectedOption.type === InputSelectionOptionType.SUGGESTION) {
-                      await localizedLabelManager.linkMessage(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!);
-                    }
-                    /* if (selectedOption.type === 'action') {
+        { showMessageInDrawer !== undefined && (
+
+          <MessageListView
+            showSearchBar={false}
+            messageStore={messageStore}
+            localizedLabelManager={localizedLabelManager}
+            figmaRemote={figmaRemote}
+            selectedMessageId={showMessageInDrawer}
+            initialSearchQuery={MessageStoreMemory.toQueryObject(`name:${showMessageInDrawer}`)}
+            select={(key: string, language: Locale, plural: Plural) => {
+             // drawerSelectedKey.current = showMessage;
+              setDummyState({});
+            }}
+            highlightSelectedNodes={false}
+          />
+        )}
+
+      </Drawer>
+
+      <div className={`layer ${selected} layer-message-state__${localizedLabel.messageLinkState} `} onClick={() => { onNodeSelect(localizedLabel.nodeId); }}>
+
+        <div className="layer-name">
+          <div className="spacer" />
+          <div className="spacer" />
+          <div className="element-symbol">
+            <div className="svg-container text-sign-svg" />
+          </div>
+          <TextField
+            singleClick={false}
+            onSave={async (labelName: string) => {
+              await localizedLabelManager.updateLabelName(localizedLabel, labelName).catch((e) => {
+                figmaRemote.notifyError(`could not set message${e.message}`);
+                Sentry.captureException(e);
+              });
+            }}
+            text={localizedLabel.name}
+          />
+        </div>
+
+        <div className="layer-details" ref={rowRef}>
+          <div className="message-panel">
+            <InputSelect
+              className="message-select"
+              placeholder={localizedLabel.messageLinkState === MessageLinkState.Unmanaged ? 'Not Localized' : 'Link a Message...'}
+              isDisabled={localizedLabel.matchingLabelLints.length > 0}
+              iconClass={iconClass}
+              inputPlaceholder="e.g. home__tagline"
+              onCancel={() => {
+                setDummyState({});
+              }}
+              onChange={async (selectedOption, reset) => {
+                if (selectedOption.type === InputSelectionOptionType.ACTION) {
+                  if (selectedOption.value === 'select-message') {
+                    setMessageSearch({
+                      search: localizedLabel.characters,
+                    });
+                  } else if (selectedOption.value === 'show-message') {
+                    setShowMessageInDrawer(localizedLabel.getMessageName());
+                  } else if (selectedOption.value === 'reset') { // triggered by empty field - option added by the select field it self
+                    reset();
+                    await localizedLabelManager.unsetLabel(localizedLabel);
+                  } else if (selectedOption.value === 'text-layer-not-localized') { // triggered by empty field - option added by the select field it self
+                    reset();
+                    await localizedLabelManager.setLabelToUnmanaged(localizedLabel);
+                  }
+                } else if (selectedOption.type === InputSelectionOptionType.ADD) {
+                  await localizedLabelManager.linkMessage(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!);
+                } else if (selectedOption.type === InputSelectionOptionType.SUGGESTION) {
+                  await localizedLabelManager.linkMessage(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!);
+                }
+                /* if (selectedOption.type === 'action') {
                       if (selectedOption.value === 'no-translation') {
                         localizedLabelManager.setNoKey(localizedLabel);
                       } else if (selectedOption.value === 'select-message') {
@@ -224,203 +279,198 @@ export default function LocalizedLabelListItem({
                     } else if (selectedOption.type === 'key') {
                       localizedLabelManager.linkKey(localizedLabel, selectedOption.value as string, selectedOption.language!, selectedOption.plural!);
                     } */
-                  }}
-                  valueReplaceFn={(value) => value.replace(/[ .]/g, (match) => (match === '.' ? '__' : '_'))}
-                  defaultValue={messageName}
-                  getOptions={(enteredValue: string) => {
-                    let options = [] as InputSelectOption[];
+              }}
+              valueReplaceFn={(value) => value.replace(/[ .]/g, (match) => (match === '.' ? '__' : '_'))}
+              defaultValue={messageName}
+              getOptions={(enteredValue: string) => {
+                let options = [] as InputSelectOption[];
 
-                    const keySearch = enteredValue === '' ? '*' : enteredValue;
-                    const textMatchQuery = MessageStoreMemory.toQueryObject(`exact_text:true name:${keySearch} ${localizedLabel.characters}`);
-                    const { matchingNames: suggestedKeys } = messageStore.findMessages(textMatchQuery);
-                    const keyMatchQuery = MessageStoreMemory.toQueryObject(`name:${keySearch}`);
-                    const { matchingNames: matchingKeysByName } = messageStore.findMessages(keyMatchQuery);
+                const keySearch = enteredValue === '' ? '*' : enteredValue;
+                const textMatchQuery = MessageStoreMemory.toQueryObject(`exact_text:true name:${keySearch} ${localizedLabel.characters}`);
+                const {
+                  inText: suggestedKeys,
+                  matchingNames: matchingKeysByName,
+                } = messageStore.findMessages(textMatchQuery);
 
-                    const isValidKey = enteredValue.length >= 0 && /^[a-zA-Z0-9]$/.test(enteredValue[enteredValue.length - 1]);
+                const isValidKey = enteredValue.length >= 0 && /^[a-zA-Z0-9]$/.test(enteredValue[enteredValue.length - 1]);
 
-                    if (isValidKey && !suggestedKeys.has(enteredValue) && !matchingKeysByName.has(enteredValue)) {
-                      options.push({
-                        type: InputSelectionOptionType.ADD,
-                        value: enteredValue,
-                        label: '',
-                      });
-                    }
+                if (isValidKey && !suggestedKeys.has(enteredValue) && !matchingKeysByName.has(enteredValue)) {
+                  options.push({
+                    type: InputSelectionOptionType.ADD,
+                    value: enteredValue,
+                    label: '',
+                  });
+                }
 
-                    if (suggestedKeys.size > 0) {
-                      options.push({
-                        type: InputSelectionOptionType.DIVIDER,
-                        value: '',
-                        label: 'Text matches',
-                      });
-                    }
+                if (suggestedKeys.size > 0) {
+                  options.push({
+                    type: InputSelectionOptionType.DIVIDER,
+                    value: '',
+                    label: 'Text matches',
+                  });
+                }
 
-                    options = options.concat([...suggestedKeys].map((key) => {
-                      matchingKeysByName.delete(key);
-                      return {
-                        type: InputSelectionOptionType.SUGGESTION,
-                        value: messageStore.getMessage(key)!.id,
-                        label: messageStore.getMessage(key)!.id,
-                      };
-                    }));
+                options = options.concat([...suggestedKeys].map((key) => {
+                  matchingKeysByName.delete(key);
+                  return {
+                    type: InputSelectionOptionType.SUGGESTION,
+                    icon: 'with-message-svg',
+                    value: messageStore.getMessage(key)!.id,
+                    label: messageStore.getMessage(key)!.id,
+                  };
+                }));
 
-                    if (keySearch.length > 2 && matchingKeysByName.size > 0) {
-                      options.push({
-                        type: InputSelectionOptionType.DIVIDER,
-                        value: '',
-                        label: 'Messages',
-                      });
+                if (keySearch.length > 2 && matchingKeysByName.size > 0) {
+                  options.push({
+                    type: InputSelectionOptionType.DIVIDER,
+                    value: '',
+                    label: 'Messages',
+                  });
 
-                      options = options.concat([...matchingKeysByName].map((key) => ({
-                        type: InputSelectionOptionType.SUGGESTION,
-                        value: messageStore.getMessage(key)!.id,
-                        label: messageStore.getMessage(key)!.id,
-                      })));
-                    }
+                  options = options.concat([...matchingKeysByName].filter((matchingKey) => !suggestedKeys.has(matchingKey)).map((key) => ({
+                    type: InputSelectionOptionType.SUGGESTION,
+                    icon: 'with-message-svg',
+                    value: messageStore.getMessage(key)!.id,
+                    label: messageStore.getMessage(key)!.id,
+                  })));
+                }
 
-                    if (options.length > 1) {
-                      options.push({
-                        type: InputSelectionOptionType.DIVIDER,
-                        value: '',
-                        label: '',
-                      });
-                    }
+                if (options.length > 1) {
+                  options.push({
+                    type: InputSelectionOptionType.DIVIDER,
+                    value: '',
+                    label: '',
+                  });
+                }
 
-                    options.push({
-                      label: 'Full Search...',
-                      value: 'select-message',
-                      type: InputSelectionOptionType.ACTION,
-                    });
+                options.push({
+                  label: 'Full Search...',
+                  icon: 'search-svg',
+                  value: 'select-message',
+                  type: InputSelectionOptionType.ACTION,
+                });
 
-                    if (messageName && messageName !== '') {
-                      options.push({
-                        label: 'Show linked Message...',
-                        value: 'show-message',
-                        type: InputSelectionOptionType.ACTION,
-                      });
-                    }
+                if (localizedLabel.messageLinkState === MessageLinkState.Linked && messageName === enteredValue) {
+                  options.push({
+                    label: 'Show linked Message...',
+                    icon: 'goto-message-svg',
+                    value: 'show-message',
+                    type: InputSelectionOptionType.ACTION,
+                  });
+                }
 
-                    return options;
-                  }}
-                />
+                if (localizedLabel.messageLinkState === MessageLinkState.Unmanaged) {
+                  options.push({
+                    label: 'Enable Translation...',
+                    icon: 'with-message-svg',
+                    value: 'reset',
+                    type: InputSelectionOptionType.ACTION,
+                  });
+                } else {
+                  options.push({
+                    label: 'Do not translate this text layer...',
+                    icon: 'not-localized-svg',
+                    value: 'text-layer-not-localized',
+                    type: InputSelectionOptionType.ACTION,
+                  });
+                }
 
-                <div className="grid">
+                // Unlink?
+                return options;
+              }}
+            />
 
-                  <div className="languageWrapper" key={localizedLabel.language}>
-                    <div
-                      className="grid-item-language"
-                      data-tooltip-content="Current Language of this Label"
-                    >
-                      <span className="rowText">{localizedLabel.language}</span>
+            <div className="message-variant">
 
-                    </div>
-                    {/* <div key={localizedLabel.pluralId} className={`keyPluralWrapper ${translatedKey?.plural ? 'onePlural' : ' multiplePlurals'}`}> */}
-                    <div className="keyPluralWrapper onePlural">
-                      { FEATURES_FLAGS.plurals
-                      && (
-                      <div className="grid-item-plural">
-                        {localizedLabel.messageLinkState === MessageLinkState.Linked && (
-                        <>
-                          {/* {translatedKey?.plural && (
-                          <Select
-                            onChange={(value) => {
-                              localizedLabelManager.updateLabelPlural(localizedLabel, value.value! as Plural);
-                            }}
-                            defaultValue={pluralsAvailable.find((opt) => opt.value === localizedLabel.pluralId)}
-                            getOptions={() => pluralsAvailable}
-                            placeholder=""
-                          />
-                          )}
-                          {!translatedKey?.plural && ( */}
-                          {/* TODO #18  selectors - check pluralid */}
-                          <span className="rowText">{/* localizedLabel.pluralId */}</span>
-                          {/* )} */}
-                        </>
-                        )}
-
-                      </div>
-                      )}
-                      <div className="grid-item-translation translation-container translation">
-                        <TranslationEditor
-                          editable
-                          isDisabled={localizedLabel.matchingLabelLints.length > 0}
-                          match={undefined}
-                          onCancel={async () => {
-                            localizedLabelManager.commitUndo();
-                          }}
-                          onChange={async (patternHtml: string | undefined, parameters: MessageParameterValues, reset: any) => {
-                            if (patternHtml !== undefined) {
-                              localizedLabelManager.updateLabelPatternHtml(
-                                localizedLabel,
-                                patternHtml,
-                                parameters,
-                              ).catch((e: Error) => {
-                                Sentry.captureException(e);
-                                figmaRemote.notifyError(e.message);
-                                reset();
-                              });
-                            }
-                          }}
-                          parameterValues={localizedLabel.parameterValues}
-                          variantHTML={localizedLabel.currentPatternHTML}
-                          messageStore={messageStore}
-                        />
-                        {/* TODO #18 make paramter editable again when we have selectors in place - variables only used as selectors can't be accesed otherwise
-                        { selected !== 'unselected' && (
-                          <div className="placeholder-view-grid" style={{ display: Object.keys(localizedLabel.parameterValues).length > 0 ? undefined : 'none' }}>
-
-                            <div />
-                            <div />
-                            <div>Placeholder</div>
-                            <div />
-                            <div />
-                            {Object.entries(localizedLabel.parameterValues).map((entry, i, array) => (
-                              <PlaceholderEditorListItem
-                                key={entry[0]}
-                                placeholder={entry[1]}
-                                fillin={localizedLabel.parameterValues?.[entry[0]]?.value ? localizedLabel.parameterValues?.[entry[0]]?.value : 'unset'}
-                                onValueChange={(placeholderName, fillinValue) => {
-                                  // TODO #18 variables - this is not used at the moment but bases on fillins instead of parameters
-                                  localizedLabelManager.updateLabelFillin(localizedLabel, placeholderName, fillinValue).catch((e: Error) => {
-                                    Sentry.captureException(e);
-                                    figmaRemote.notifyError(e.message);
-                                  });
-                                }}
-                              />
-
-                            ))}
-                          </div>
-                        )} */}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                { (localizedLabel.messageLinkState === MessageLinkState.Linked && (labelState.modified || localizedLabel.language !== localizedLabel.rootFrameLanguage)) && ( // allow the user to catch up with the keys version
-                <span
-                  className="layerIcon iconWrapper button"
-                  data-tooltip-content="Reset all changes"
-                  onClick={updateToLatestKeyVersion}
-                >
-                  <span className="svg-container reset-instance-svg" />
-                </span>
+              <div
+                className="message-variant-language"
+                data-tooltip-content="Current Language of this Label"
+              >
+                <span className="language">{localizedLabel.language}</span>
+                { localizedLabel.language === localizedLabelManager.messageStore.getRefLanugage() && (
+                <span className="language-tag">ref</span>
                 )}
-
-                { ((localizedLabel.messageLinkState === MessageLinkState.Linked && labelState.modified)) && (
-                <span
-                  className="layerIcon iconWrapper button"
-                  data-tooltip-content="Push changes to Message"
-                  onClick={createNewVersionFromDesign}
-                >
-                  <span className="svg-container use-label-svg" />
-                </span>
-                )}
-
               </div>
+              {/* <div key={localizedLabel.pluralId} className={`keyPluralWrapper ${translatedKey?.plural ? 'onePlural' : ' multiplePlurals'}`}> */}
+
+              <div className="grid-item-translation translation-container">
+                <TranslationEditor
+                  editable
+                  isDisabled={localizedLabel.matchingLabelLints.length > 0}
+                  match={undefined}
+                  onCancel={async () => {
+                    localizedLabelManager.commitUndo();
+                  }}
+                  onChange={async (patternHtml: string | undefined, parameters: MessageParameterValues, reset: any) => {
+                    if (patternHtml !== undefined) {
+                      localizedLabelManager.updateLabelPatternHtml(
+                        localizedLabel,
+                        patternHtml,
+                        parameters,
+                      ).catch((e: Error) => {
+                        Sentry.captureException(e);
+                        figmaRemote.notifyError(e.message);
+                        reset();
+                      });
+                    }
+                  }}
+                  parameterValues={localizedLabel.parameterValues}
+                  variantHTML={localizedLabel.currentPatternHTML}
+                  messageStore={messageStore}
+                />
+                {/* TODO #18 make paramter editable again when we have selectors in place - variables only used as selectors can't be accesed otherwise
+                      { selected !== 'unselected' && (
+                        <div className="placeholder-view-grid" style={{ display: Object.keys(localizedLabel.parameterValues).length > 0 ? undefined : 'none' }}>
+
+                          <div />
+                          <div />
+                          <div>Placeholder</div>
+                          <div />
+                          <div />
+                          {Object.entries(localizedLabel.parameterValues).map((entry, i, array) => (
+                            <PlaceholderEditorListItem
+                              key={entry[0]}
+                              placeholder={entry[1]}
+                              fillin={localizedLabel.parameterValues?.[entry[0]]?.value ? localizedLabel.parameterValues?.[entry[0]]?.value : 'unset'}
+                              onValueChange={(placeholderName, fillinValue) => {
+                                // TODO #18 variables - this is not used at the moment but bases on fillins instead of parameters
+                                localizedLabelManager.updateLabelFillin(localizedLabel, placeholderName, fillinValue).catch((e: Error) => {
+                                  Sentry.captureException(e);
+                                  figmaRemote.notifyError(e.message);
+                                });
+                              }}
+                            />
+
+                          ))}
+                        </div>
+                      )} */}
+              </div>
+              { (localizedLabel.messageLinkState === MessageLinkState.Linked && (labelState.modified || localizedLabel.language !== localizedLabel.rootFrameLanguage)) && ( // allow the user to catch up with the keys version
+              <div
+                className="layerIcon iconWrapper button"
+                data-tooltip-content="Reset all changes"
+                onClick={updateToLatestKeyVersion}
+              >
+                <div className="svg-container update-text-layer-svg" />
+              </div>
+              )}
+
+              { ((localizedLabel.messageLinkState === MessageLinkState.Linked && labelState.modified)) && (
+              <div
+                className="layerIcon iconWrapper button"
+                data-tooltip-content="Push changes to Message"
+                onClick={createNewVersionFromDesign}
+              >
+                <div className="svg-container update-message-svg" />
+              </div>
+              )}
             </div>
 
           </div>
-          <div className="row-actions">
-            { ((localizedLabel.matchingLabelLints.length > 0)) && (
+        </div>
+
+        <div className="layer-actions">
+          { ((localizedLabel.matchingLabelLints.length > 0)) && (
             <span
               className="row-action-icon"
               data-tooltip-content={`Label contains unsupported inline styles: ${localizedLabel.matchingLabelLints.join(', ')}`}
@@ -428,10 +478,9 @@ export default function LocalizedLabelListItem({
             >
               <span className="svg-container warning-svg" />
             </span>
-            )}
-          </div>
+          )}
         </div>
-
+        <div className="layer-spacer" />
       </div>
     </>
   );

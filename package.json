@@ -1,6 +1,6 @@
 {
   "name": "assets-and-resources",
-  "version": "0.9.69",
+  "version": "0.10.69",
   "description": "Plugin to handle assets and resources directly within figma",
   "main": "code.js",
   "type": "module",
@@ -64,6 +64,8 @@
     "mixpanel-figma": "^2.0.2",
     "node-fetch": "^3.3.0",
     "npm": "^9.8.1",
+    "overlayscrollbars": "^2.4.4",
+    "overlayscrollbars-react": "^0.5.3",
     "pjs": "^5.1.2",
     "quill": "github:martin-lysk/quill#develop",
     "react": "^17.0.2",

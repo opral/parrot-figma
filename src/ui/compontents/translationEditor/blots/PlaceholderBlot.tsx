@@ -6,6 +6,7 @@ const Inline = Quill.import('blots/inline');
 
 export default class PlaceholderBlot extends Inline {
   static create(value: Placeholder) {
+    
     const node = super.create() as HTMLElement;
     if (value.formatFunctionName) {
       node.setAttribute('formatFn', value.formatFunctionName);

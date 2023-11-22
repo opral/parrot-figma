@@ -175,15 +175,19 @@ export default function LocalizedLabelsListView({
       <div>
 
         <div className="table" ref={tableRef}>
+          <div className="top-border" />
+
           {[...parentIds].map((parentId) => (
-            <LocalizedFrameGroup
-              showMessage={showMessage}
-              localizedLabels={localizedLabels.filter((l) => l.rootFrameId === parentId).sort((a, b) => Math.hypot(a.x, a.y * (2) - Math.hypot(b.x, b.y * 2)))}
-              selectedNodes={selection}
-              figmaRemote={figmaRemote}
-              localizedLabelManager={localizedLabelManager}
-              key={parentId}
-            />
+            <div>
+              <LocalizedFrameGroup
+                showMessage={showMessage}
+                localizedLabels={localizedLabels.filter((l) => l.rootFrameId === parentId).sort((a, b) => Math.hypot(a.x, a.y * (2) - Math.hypot(b.x, b.y * 2)))}
+                selectedNodes={selection}
+                figmaRemote={figmaRemote}
+                localizedLabelManager={localizedLabelManager}
+                key={parentId}
+              />
+            </div>
           ))}
         </div>
       </div>

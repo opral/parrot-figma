@@ -110,7 +110,7 @@ select.select-menu {
   height: 30px;
   width: 100%;
   margin: 1px 0 1px 0;
-  padding: 0px 10px 0px 10px;
+  padding: 0px;
   overflow-y: hidden;
   border-radius: var(--border-radius-small);
   background-color: transparent;
@@ -169,6 +169,12 @@ select.select-menu {
 }
 
 
+.select-menu__label-spacer {
+  padding-left: 8px;
+}
+
+
+
 .select-menu__label.select-menu__label-part1 {
   margin-right: 4px;
 }
@@ -203,7 +209,7 @@ select.select-menu {
   height: 30px;
   display: block;
   margin-top: -1px;
-  
+  margin-right: 8px;
 }
 
 .select-menu .icon {
@@ -222,7 +228,6 @@ select.select-menu {
   left: 0;
   */
   background-color: var(--figma-color-bg-menu-hover);
-  box-shadow: var(--shadow-hud);
   padding: var(--size-xxsmall) 0 var(--size-xxsmall) 0;
   border-radius: var(--border-radius-small);
   margin: 0;
@@ -280,7 +285,6 @@ select.select-menu {
 .select-menu__item-check {
     width: 18px;
     padding-left: 8px;
-    padding-right: 6px;
     flex-shrink: 0;
 }
 
@@ -300,6 +304,7 @@ select.select-menu {
   text-overflow: ellipsis;
   pointer-events: none;
   padding-right: 8px;
+  padding-left: 8px;
 }
 
 .select-menu__item-icon .svg-container {
@@ -307,9 +312,9 @@ select.select-menu {
   height: 15px;
 }
 
-.select-menu__item-check .svg-container.checkmark-svg {
-  width: 10px;
-  height: 10px;
+.select-menu__item-check .svg-container.menu-checkmark-svg {
+  width: 16px;
+  height: 16px;
   background-color: var(--color-text-menu);
 }
 
@@ -341,6 +346,9 @@ select.select-menu {
 
 .select-menu__menu_container.select-menu__menu_container-expanded {
   display: inherit;
+
+  box-shadow: var(--shadow-hud);
+  border-radius: var(--border-radius-small);
 }
 
 .select-menu__menu_container {
@@ -391,10 +399,21 @@ select.select-menu {
   width: 100%;
 }
 
-.select-menu .select-menu__menu-scroll-up > .svg-container {
+.select-menu__menu-scroll-up > .svg-container {
   background-color: var(--color-text-menu);
   width: 8px;
   height: 8px;
+}
+
+.select-menu__item-label-tag {
+  background-color: grey;
+  color: var(--figma-color-text-onbrand);
+  border-radius: 3px;
+  padding-top: 0px;
+  padding-bottom: 0px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin-right: 8px;
 }
 
 .select-menu__menu-scroll-down {
@@ -409,8 +428,9 @@ select.select-menu {
   width: 100%;
 }
 
-.select-menu .select-menu__menu-scroll-down > .svg-container {
+.select-menu__menu-scroll-down > .svg-container {
   background-color: var(--color-text-menu);
   width: 8px;
   height: 8px;
 }
+

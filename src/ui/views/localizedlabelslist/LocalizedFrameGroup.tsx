@@ -35,6 +35,7 @@ function toLanguageOption(language: string, baseLanguage?: string) {
     return {
       value: language,
       label: `${languageNameInCurrentLanguage} - ${language}`,
+      tag: 'ref',
     };
   }
   return {
@@ -60,7 +61,7 @@ export default function LocalizedFrameGroup({
 
   const languages = localizedLabelManager.messageStore.getLanugages()!.sort();
 
-  languageOptiones.push(toLanguageOption(localizedLabelManager.messageStore.getRefLanugage()!));
+  languageOptiones.push(toLanguageOption(localizedLabelManager.messageStore.getRefLanugage()!, localizedLabelManager.messageStore.getRefLanugage()!));
 
   for (const language of languages) {
     const currentLanguageOption = toLanguageOption(language);
@@ -84,31 +85,31 @@ export default function LocalizedFrameGroup({
 
   return (
     <>
+      
+      <div className={`column-1 layer-group-header nodes-parent${selectedNodes[rootFrameId]?.directSelection ? ' selected' : ''}`} onClick={() => { onNodeSelect(rootFrameId); }}>
+        <div className="spacer" />
+        <div className="element-symbol">
+          <div className="svg-container number-sign-svg" />
+        </div>
+        <div className="element-name font-body-24-bold">
+          {rootFrameName}
+        </div>
+        <div
+          className="row-actions"
+        >
+          <Select
+            tooltip="Container Frame Langueage"
+            placeholder="Select item"
+            checkmark
+            iconClass="switch-language-svg"
+            onChange={(value) => { onLanguageSelectionClick(firstTranslationState, value.value as Locale); }}
+            defaultValue={languageOptiones.find((opt) => opt.value === rootFrameLanguage?.value)}
+            getOptions={() => languageOptiones}
+          />
 
-      <div className="header">
-        <div className={`column-1 nodes-parent${selectedNodes[rootFrameId]?.directSelection ? ' selected' : ''}`} onClick={() => { onNodeSelect(rootFrameId); }}>
-          <div className="spacer" />
-          <div className="element-symbol">
-            <div className="svg-container number-sign-svg" />
-          </div>
-          <div className="element-name font-body-24-bold">
-            {rootFrameName}
-
-          </div>
-          <div
-            className="row-actions"
-          >
-            <Select
-              tooltip="Container Frame Langueage"
-              placeholder="Select item"
-              onChange={(value) => { onLanguageSelectionClick(firstTranslationState, value.value as Locale); }}
-              defaultValue={languageOptiones.find((opt) => opt.value === rootFrameLanguage?.value)}
-              getOptions={() => languageOptiones}
-            />
-
-          </div>
         </div>
       </div>
+      <div className="layer-group-header-sticky-border" />
 
       {rootFrameLanguage?.value && localizedLabels.map((translationState) => {
         let selection = 'unselected' as 'unselected' | 'selected' | 'selected-by-parent';

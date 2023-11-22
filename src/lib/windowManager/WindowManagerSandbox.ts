@@ -145,14 +145,12 @@ export class WindowManagerSandbox {
       zoom: figma.viewport.zoom,
     };
 
-    console.log('awaiting promises');
 
     Promise.all([
       figma.clientStorage.getAsync('windowSize'),
       figma.clientStorage.getAsync('windowBottomSheetHeight'),
       figma.clientStorage.getAsync('windowMode'),
     ]).then((values) => {
-      console.log('awaiting promises donef');
       const [storedWindowSize, storedWindowBottomSheetHeight, storedWindowMode] = values;
 
       if (storedWindowSize
@@ -182,7 +180,11 @@ export class WindowManagerSandbox {
       // const patchedHtml = "<sc"+"ript>window.location.href = 'http://127.0.0.1:8080/dist/ui.html?nocache="+ (new Date()).getTime() +"';</scr"+"ipt>";
       
       figma.showUI(patchedHtml, {
-        themeColors: true, width: windowRect.width, height: windowRect.height, visible: false,
+        themeColors: true,
+        width: windowRect.width,
+        height: windowRect.height,
+        visible: false,
+        title: 'Parrot (Free Beta)',
       });
 
       // @ts-ignore -- figmas ui type does not expose the reposition atm

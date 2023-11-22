@@ -12,11 +12,10 @@ import { Locale } from '../../../lib/message/variants/Locale';
 export interface SelectOption {
   divider?: string | boolean;
   value: string | number | boolean;
-  plural?: Plural,
-  language?: Locale,
   type?: string;
-  label: string;
   icon?: string;
+  label: string;
+  tag?: string;
   title?: string;
 }
 
@@ -24,6 +23,7 @@ export interface SelectProps {
   className?: string;
   iconClass?: string,
   tooltip?: string,
+  checkmark: boolean,
   getOptions: () => SelectOption[];
   placeholder: string;
   isDisabled?: boolean;
@@ -36,6 +36,7 @@ export default function Select({
   className = '',
   iconClass,
   tooltip,
+  checkmark,
   getOptions,
   placeholder,
   isDisabled,
@@ -57,8 +58,8 @@ export default function Select({
   const [options, setOptions] = useState<SelectOption[]>([] as SelectOption[]);
 
   const wrapperMaxHeight = useRef(30);
-  const wrapperMaxHeightTop = useRef(30);
-  const wrapperMaxHeightBottom = useRef(30);
+  const wrapperMaxHeightAbove = useRef(30);
+  const wrapperMaxHeightBelow = useRef(30);
   const wrapperMenuEntryHeight = useRef(30);
   const lastScrollPos = useRef(0);
 
@@ -132,30 +133,43 @@ export default function Select({
     if (isExpanded && menuWrapperRef.current !== undefined) {
       // on expand calculate starting position
       const rect = buttonRef.current!.getBoundingClientRect();
-      menuContainerRef.current!.style.left = `${rect.left}px`;
 
+      let moveToLeft = 0;
+      if (iconClass !== '' && checkmark === true) {
+        // button may has an icon but and checkmark - no corection to be done
+      } else if (iconClass === '' && checkmark === true) {
+        // button may has no icon but a checkmark - move menu to the right - to align text?
+        moveToLeft = 24;
+      }
+
+      menuContainerRef.current!.style.left = `${rect.left - moveToLeft}px`;
+
+      const controllHeight = rect.height;
       const menuPadding = 8;
       const menuEntryHeight = 24;
-      const maxSpaceToTop = rect.top;
-      const maxSpaceToBottom = viewPortHeight - rect.top - menuEntryHeight;
+      const controlMenuHeightDif = controllHeight - menuEntryHeight;
+      const maxSpaceAbove = rect.top + (controlMenuHeightDif / 2);
+      const maxSpaceBelow = viewPortHeight - rect.top - (controlMenuHeightDif / 2) - menuEntryHeight;
 
-      const menuPositionIndex = options.findIndex((selectOption) => selectedOption !== undefined && selectOption.value === selectedOption?.value);
+      let menuPositionIndex = options.findIndex((selectOption) => selectedOption !== undefined && selectOption.value === selectedOption?.value);
+      // if nothing is selected - make it the first element in the list;
+      menuPositionIndex = menuPositionIndex >= 0 ? menuPositionIndex : 0;
 
       const selectedDiv = menuWrapperRef.current!.childNodes[0].childNodes[menuPositionIndex] as HTMLDivElement;
 
       const spaceNeededOnTop = selectedDiv ? selectedDiv?.offsetTop : 0;
       const spaceNeededOnBottom = (options.length - menuPositionIndex - 1) * menuEntryHeight + menuPadding;
 
-      let height = Math.min(maxSpaceToTop, spaceNeededOnTop) + menuEntryHeight + Math.min(maxSpaceToBottom, spaceNeededOnBottom);
+      let height = Math.min(maxSpaceAbove, spaceNeededOnTop) + menuEntryHeight + Math.min(maxSpaceBelow, spaceNeededOnBottom);
 
-      let top = maxSpaceToTop - spaceNeededOnTop;
+      let top = maxSpaceAbove - spaceNeededOnTop;
 
       if (top < 0) {
-        height = maxSpaceToTop + menuEntryHeight + Math.min(maxSpaceToBottom, spaceNeededOnBottom);
+        height = maxSpaceAbove + menuEntryHeight + Math.min(maxSpaceBelow, spaceNeededOnBottom);
         top = 0;
       }
 
-      const scrollTop = spaceNeededOnTop - maxSpaceToTop;
+      const scrollTop = spaceNeededOnTop - maxSpaceAbove;
 
       menuContainerRef.current!.style.height = `${height}px`;
       menuContainerRef.current!.style.top = `${top}px`;
@@ -164,14 +178,14 @@ export default function Select({
       const isOverlappingRight = menuContainerRef.current!.getBoundingClientRect().right - viewportWidth;
 
       if (isOverlappingRight > 0) {
-        menuContainerRef.current!.style.left = `${rect.left - isOverlappingRight}px`;
+        menuContainerRef.current!.style.left = `${rect.left - isOverlappingRight - 8}px`;
       }
 
       //
 
-      wrapperMaxHeight.current = maxSpaceToTop + menuEntryHeight + maxSpaceToBottom;
-      wrapperMaxHeightBottom.current = maxSpaceToBottom;
-      wrapperMaxHeightTop.current = maxSpaceToTop;
+      wrapperMaxHeight.current = maxSpaceAbove + menuEntryHeight + maxSpaceBelow;
+      wrapperMaxHeightBelow.current = maxSpaceBelow;
+      wrapperMaxHeightAbove.current = maxSpaceAbove;
       wrapperMenuEntryHeight.current = menuEntryHeight;
       menuWrapperRef.current!.scrollTop = scrollTop;
 
@@ -318,6 +332,7 @@ export default function Select({
     const startScrollUp = () => {
       if (startScrollUpTimeInterval.current === -1) {
         startScrollUpTimeInterval.current = setInterval(() => {
+          console.log('inteval to scroll up');
           menuWrapperRef.current!.scrollTop = menuWrapperRef.current!.scrollTop - 4;
         }, 20);
       }
@@ -417,7 +432,10 @@ export default function Select({
           type="button"
         >
           {iconClass !== undefined && (
-            <div className={`svg-container ${iconClass}`} style={{ marginRight: '8px' }} />
+            <div className={`svg-container ${iconClass}`} />
+          )}
+          {iconClass === undefined && (
+            <div className="select-menu__label-spacer" />
           )}
           <span className="select-menu__label select-menu__label-part1">
             {labelPart1}
@@ -425,6 +443,9 @@ export default function Select({
           <span className="select-menu__label select-menu__label-part2">
             {labelPart2}
           </span>
+          { selectedOption?.tag !== undefined && (
+            <div className="select-menu__item-label-tag">{ selectedOption?.tag }</div>
+          )}
           <span className="select-menu__caret svg-container caret-svg" />
         </button>
         {createPortal(
@@ -458,7 +479,7 @@ export default function Select({
               >
                 {options
                 && options.map(({
-                  value, label: optionLabel, divider, title, icon,
+                  value, label: optionLabel, divider, title, icon, tag,
                 }, i) => (divider ? (
                   // eslint-disable-next-line react/no-array-index-key  -- options are static and dont change - using the index is fine here
                   <React.Fragment key={`select-option-divider--${i}`}>
@@ -483,17 +504,23 @@ export default function Select({
                     title={title}
                     onMouseUp={() => handleSelectClick(value)}
                   >
+                    { true && (
                     <div className="select-menu__item-check">
                       { selectedOption && selectedOption.value === value && (
-                        <div className="svg-container checkmark-svg" />
+                      <div className="svg-container menu-checkmark-svg" />
                       )}
                     </div>
+                    )}
+
                     { icon && (
                     <div className="select-menu__item-icon">
                       <div className={`svg-container ${icon}`} />
                     </div>
                     )}
                     <span className="select-menu__item-label">{optionLabel}</span>
+                    { tag !== undefined && (
+                    <div className="select-menu__item-label-tag">{ tag }</div>
+                    )}
                   </li>
                 )))}
               </ul>

@@ -5,6 +5,7 @@ import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
+
 import { Locale } from '../../../lib/message/variants/Locale';
 
 import MessageStoreMemory, { SearchQuery } from '../../../lib/message/store/MessageStoreMemory';
@@ -47,6 +48,7 @@ export default function MessageListView({
 
   // const [keys, setKeys] = useState: UITranslationKeys,
   const [searchQuery, setSearchQuery] = useState<SearchQuery>(initialSearchQuery);
+
   const filteredKeys = messageStore.findMessages(searchQuery, selectedNodes);
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -124,9 +126,9 @@ export default function MessageListView({
         <div className="emptyStateTitle">No Messages yet</div>
         <div className="emptyStateSubtitle">
           <div>
-            Messages
+            Messages will show up here.
             <br />
-            will show up here. - Create one by Linking a Translation Key on a Text in the Design Tab or Import your existing Keys in the Setup Tab.
+            Create one by Linking a Message on a Text Layer in the Layers Tab or Import your existing Messages in the Setup Tab.
           </div>
         </div>
       </div>
@@ -146,221 +148,75 @@ export default function MessageListView({
   let rendered = 0;
 
   return (
-    <div>
-      { showSearchBar && (
-      <div className="style_picker--search search--margin">
-        <span className="svg-container search-svg" />
-        <input
-          type="text"
-          placeholder={t('keys__search_placeholder')!}
-          className="search--searchInput"
-          spellCheck="false"
-          dir="auto"
-          value={MessageStoreMemory.toSearchString(searchQuery)}
-          onChange={(e) => {
-            onSearchChange(e.target.value);
-            setRenderEntries(100);
-          }}
-        />
-      </div>
-      )}
-
-      <div className="searchResults">
-        { searchQuery.name !== undefined && (
-          <div className="searchResults-suggestion">
-            <div className="text">{`Name: ${searchQuery.name}`}</div>
-            <div
-              className="close svg-container cross-svg"
-              onClick={() => {
-                const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-                newQuery.name = undefined;
-                updateQuery(newQuery);
-              }}
-            />
-          </div>
-        )}
-
-        { searchQuery.name === undefined && (
-          <div style={{ paddingRight: '5px' }}>
-            <span>
-              {filteredKeys.matchingNames.size}
-              {' '}
-              Messages
-              {' '}
-            </span>
-            {searchQuery.missingTranslation === undefined && (
-            <>
-              {' '}
-              <span>
-                {' '}
-                -
-                {' '}
-                {filteredKeys.withMissingVariants.size}
-                {' '}
-                Missing Variants
-              </span>
-              <span
-                style={{ color: '#1DA1F2', cursor: 'pointer' }}
-                onClick={() => {
-                  const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-                  newQuery.missingTranslation = true;
-                  updateQuery(newQuery);
+    
+      <div className="message-view">
+        { showSearchBar && (
+          <div className="message-filter">
+            <div style={{ flexGrow: 1 }} />
+            <div className="message-filter-search">
+              <span className="svg-container search-svg" />
+              <input
+                type="text"
+                placeholder="Find..."
+                className="message-filter-search-input"
+                spellCheck="false"
+                dir="auto"
+                value={MessageStoreMemory.toSearchString(searchQuery)}
+                onChange={(e) => {
+                  onSearchChange(e.target.value);
+                  setRenderEntries(100);
                 }}
-              >
-                {' '}
-                filter
-
-              </span>
-            </>
-            )}
-
+              />
+            </div>
           </div>
         )}
-        { searchQuery.name === undefined && searchQuery.missingTranslation !== undefined && (
-          <div className="searchResults-suggestion">
-            <div className="text">Missing Translation</div>
-            <div
-              className="close svg-container cross-svg"
-              onClick={() => {
-                const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-                newQuery.missingTranslation = undefined;
-                updateQuery(newQuery);
-              }}
-            />
-          </div>
-        )}
+        
+        <div className="message-list" ref={tableRef}>
+          {/* helper row for css to set the width when partially rendered */}
 
-        { false && (
-        <>
-          <div
-            className={`searchResults-suggestion ${searchQuery.missingTranslation === false ? ' active' : ''}`}
-            onClick={() => {
-              const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-              newQuery.missingTranslation = searchQuery.missingTranslation === false ? undefined : false;
-
-              updateQuery(newQuery);
-            }}
-          >
-            {`Full Translation (${filteredKeys.withMissingVariants.size})`}
+          <TranslationKeyListItem
+            key="max-width-helper-row"
+            rowClassNames="hidden-helper-row"
+            messageStore={messageStore}
+            localizedLabelManager={localizedLabelManager}
+            searchMatch={undefined}
+            messageId={longestKey}
+            figmaRemote={figmaRemote}
+            select={select}
+            messageSelected={false}
+          />
+          {[...filteredKeys.matchingNames].length === 0 && (
+          <div className="emptyState">
+            <div className="emptyStateTitle">No Messages matched your search.</div>
+            <div className="emptyStateSubtitle">
+              <div>
+                Please remove some filters to get more matches.
+              </div>
+            </div>
           </div>
-          <div
-            className={`searchResults-suggestion ${searchQuery.selected === 'FRAME' ? ' active' : ''}`}
-            onClick={() => {
-              const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-              newQuery.selected = searchQuery.selected === 'FRAME' ? undefined : 'FRAME';
+          )}
+          {[...filteredKeys.matchingNames].map((messageId) => {
+            if (rendered > renderEntries) {
+              return;
+            }
 
-              updateQuery(newQuery);
-            }}
-          >
-            {`In Selected Frame (${filteredKeys.referencedInFrame.size})`}
-          </div>
-          <div
-            className={`searchResults-suggestion ${searchQuery.selected === 'LABEL' ? ' active' : ''}`}
-            onClick={() => {
-              const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-              newQuery.selected = searchQuery.selected === 'LABEL' ? undefined : 'LABEL';
-
-              updateQuery(newQuery);
-            }}
-          >
-            {`In Selected Label (${filteredKeys.referencedInLabels.size})`}
-          </div>
-          <div className="searchResults-suggestion">
-            results:
-            {' '}
-            {filteredKeys.matchingNames.size}
-            {' '}
-          </div>
-        </>
-        )}
-        {false && !searchQuery.name && filteredKeys.inNames.size > 0 && (
-        <div
-          className="searchResults-suggestion"
-          onClick={() => {
-            const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-            newQuery.name = searchQuery.text;
-            newQuery.nameAtEnd = false;
-            newQuery.text = '';
-
-            updateQuery(newQuery);
-          }}
-        >
-          {`key:${searchQuery.text} ${filteredKeys.inNames.size}`}
+            rendered += 1;
+            // eslint-disable-next-line consistent-return
+            return (
+              <TranslationKeyListItem
+                key={messageId}
+                messageStore={messageStore}
+                localizedLabelManager={localizedLabelManager}
+                searchMatch={filteredKeys.matches[messageId]}
+                messageId={messageId}
+                figmaRemote={figmaRemote}
+                select={select}
+                messageSelected={Object.values(selectedNodes).map((selectedNode) => selectedNode.messageId).includes(messageId) || selectedMessageId === messageId}
+              />
+            );
+          })}
         </div>
-        )}
-        {false && !searchQuery.name && filteredKeys.inText.size > 0 && (
-        <div
-          className="searchResults-suggestion"
-          onClick={() => {
-            const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-            newQuery.name = '*';
-            updateQuery(newQuery);
-          }}
-        >
-          {`Results in Text ${filteredKeys.inText.size}`}
-        </div>
-        )}
-        { false && searchQuery.unverified !== true && ( // TODO #9 activate again as soon as verification is in place
-        <div
-          className="searchResults-suggestion"
-          onClick={() => {
-            const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-            newQuery.unverified = true;
-            updateQuery(newQuery);
-          }}
-        >
-          {`unverified:true ${filteredKeys.withMissingReview.size}`}
-        </div>
-        )}
-        { false && searchQuery.missingTranslation === undefined && (
-        <div
-          className="searchResults-suggestion"
-          onClick={() => {
-            const newQuery = JSON.parse(JSON.stringify(searchQuery)) as SearchQuery;
-            newQuery.missingTranslation = true;
-            updateQuery(newQuery);
-          }}
-        >
-          {`missing_translation:true ${filteredKeys.withMissingVariants.size}`}
-        </div>
-        )}
       </div>
-
-      <div className="grid" ref={tableRef}>
-        {/* helper row for css to set the width when partially rendered */}
-
-        <TranslationKeyListItem
-          key="max-width-helper-row"
-          rowClassNames="hidden-helper-row"
-          messageStore={messageStore}
-          localizedLabelManager={localizedLabelManager}
-          searchMatch={undefined}
-          messageId={longestKey}
-          figmaRemote={figmaRemote}
-          select={select}
-          keySelected={false}
-        />
-        {[...filteredKeys.matchingNames].map((messageId) => {
-          if (rendered > renderEntries) {
-            return;
-          }
-
-          rendered += 1;
-          // eslint-disable-next-line consistent-return
-          return (
-            <TranslationKeyListItem
-              key={messageId}
-              messageStore={messageStore}
-              localizedLabelManager={localizedLabelManager}
-              searchMatch={filteredKeys.matches[messageId]}
-              messageId={messageId}
-              figmaRemote={figmaRemote}
-              select={select}
-              keySelected={Object.values(selectedNodes).map((selectedNode) => selectedNode.messageId).includes(messageId) || selectedMessageId === messageId}
-            />
-          );
-        })}
-      </div>
-    </div>
+    
   );
 }

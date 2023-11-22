@@ -216,7 +216,7 @@ export class WindowManagerSandbox {
   }
 
   async devModeUI() {
-    const response = await fetch('https://parrot-global.github.io/parrot-figma/ui.html');
+    const response = await fetch('http://127.0.0.1:8080/dist/ui.html');
     let devUI = await response.text();
 
     devUI = devUI.split('__%%InitialWindowMode%%__').join(this.currentWindowMode);

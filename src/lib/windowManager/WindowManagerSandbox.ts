@@ -174,8 +174,13 @@ export class WindowManagerSandbox {
       }
 
       const windowRect = this.calculateWindowRect(this.currentWindowMode);
+
+
       const patchedHtml = __html__.split('__%%InitialWindowMode%%__').join(this.currentWindowMode);
 
+
+      // const patchedHtml = "<sc"+"ript>window.location.href = 'http://127.0.0.1:8080/dist/ui.html?nocache="+ (new Date()).getTime() +"';</scr"+"ipt>";
+      
       figma.showUI(patchedHtml, {
         themeColors: true,
         width: windowRect.width,
@@ -202,9 +207,22 @@ export class WindowManagerSandbox {
             this.setWindowMode(message.requestedWindowMode);
           } else if (message.windowOverlapChanged) {
             this.onWindowOverlapChanged();
-          } 
+          } else if (message.startDevMode) {
+            this.devModeUI();
+          }
         }
       });
+    });
+  }
+
+  async devModeUI() {
+    const response = await fetch('https://parrot-global.github.io/parrot-figma/ui.html');
+    let devUI = await response.text();
+
+    devUI = devUI.split('__%%InitialWindowMode%%__').join(this.currentWindowMode);
+
+    figma.showUI(devUI, {
+      themeColors: true, visible: true,
     });
   }
 

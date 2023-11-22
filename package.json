@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "generate-strings": "node ./util/assets-and-resources.js;",
-    "start": "node ./util/assets-and-resources.js; webpack --mode development --watch",
+    "start": "node ./util/assets-and-resources.js; webpack --mode development --watch & npx http-server --cors -o ./dist",
     "build": "webpack --mode production",
     "lint": "./node_modules/.bin/eslint",
     "lintfix": "./node_modules/.bin/eslint . --fix "

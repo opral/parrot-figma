@@ -68,7 +68,7 @@ export default class WindowManagerUi extends EventTarget {
           lastRatio = entries[0].intersectionRatio;
 
           // eslint-disable-next-line no-restricted-globals
-          parent.postMessage({ pluginMessage: { target: 'WindowManager', windowOverlapChanged: true } }, '*');
+          parent.postMessage({ pluginMessage: { target: 'WindowManager', windowOverlapChanged: true }, pluginId: '*' }, '*');
         }
       }
     }, {
@@ -107,16 +107,20 @@ export default class WindowManagerUi extends EventTarget {
           this.openRequest = undefined;
           const changeEvent = new CustomEvent<any>('changed');
           this.dispatchEvent(changeEvent);
-        }
+        } 
       }
     });
 
     // eslint-disable-next-line no-restricted-globals
-    parent.postMessage({ pluginMessage: { target: 'WindowManager', uiInit: true } }, '*');
+    parent.postMessage({ pluginMessage: { target: 'WindowManager', uiInit: true }, pluginId: '*' }, '*');
   }
 
   requestResize(size: { height?: number, width?: number }) {
-    parent.postMessage({ pluginMessage: { target: 'WindowManager', size } }, '*');
+    parent.postMessage({ pluginMessage: { target: 'WindowManager', size }, pluginId: '*' }, '*');
+  }
+
+  startDevMode() {
+    parent.postMessage({ pluginMessage: { target: 'WindowManager', startDevMode: true }, pluginId: '*' }, '*');
   }
 
   onResizeHandleDrag(e: any) {
@@ -132,13 +136,13 @@ export default class WindowManagerUi extends EventTarget {
         width: Math.max(this.minWidth, Math.floor(e.clientX + 5)),
         height: Math.max(this.minHeight, Math.floor(e.clientY + 5)),
       };
-      parent.postMessage({ pluginMessage: { target: 'WindowManager', size, source: 'dragging' } }, '*');
+      parent.postMessage({ pluginMessage: { target: 'WindowManager', size, source: 'dragging' }, pluginId: '*' }, '*');
     } else if (this.windowMode === WindowMode.BottomSheet) {
       if (!isNaN(height)) {
         const size = {
           height: Math.max(this.minHeight, Math.floor(height - (e.clientY - this.startingOffsetY))),
         };
-        parent.postMessage({ pluginMessage: { target: 'WindowManager', size, source: 'dragging' } }, '*');
+        parent.postMessage({ pluginMessage: { target: 'WindowManager', size, source: 'dragging' }, pluginId: '*'  }, '*');
       }
     }
     // eslint-disable-next-line no-restricted-globals
@@ -176,7 +180,7 @@ export default class WindowManagerUi extends EventTarget {
 
     if (this.windowMode !== mode && this.openRequest !== mode) {
       this.openRequest = mode;
-      parent.postMessage({ pluginMessage: { target: 'WindowManager', requestedWindowMode: mode, fromDrag } }, '*');
+      parent.postMessage({ pluginMessage: { target: 'WindowManager', requestedWindowMode: mode, fromDrag }, pluginId: '*' }, '*');
     }
   }
 }

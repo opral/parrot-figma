@@ -24,6 +24,7 @@ import { Gender } from '../../../lib/message/variants/Gender';
 import { FillinToPlaceholder } from '../../../lib/message/MessageExtnesions';
 import { MessageParameterValues } from '../../../lib/message/MessageParameterValues';
 
+
 type LocalizedLabelListItemProps = {
   showMessage: Function,
   localizedLabel: UILocalizedLabel,
@@ -47,6 +48,9 @@ export default function LocalizedLabelListItem({
   const labelState = localizedLabel.state!;
 
   const [messageSearch, setMessageSearch] = useState(undefined as any);
+
+  const [showMessageInDrawer, setShowMessageInDrawer] = useState(undefined as any);
+
   const drawerSelectedKey = useRef<string | undefined>(undefined);
   // Dummy state variable to trigger re-render when currentHighlightIndex.current changes
   const [, setDummyState] = useState<any>();
@@ -119,6 +123,7 @@ export default function LocalizedLabelListItem({
   return (
     <>
       <Drawer
+        
         position="top"
         buttons={[
           {
@@ -148,23 +153,62 @@ export default function LocalizedLabelListItem({
         ]}
         shown={messageSearch !== undefined}
       >
-        <div className="history_view--topHeader" style={{ width: '3000px' }}>
-          Select Key
+        <div className="modal-title" style={{ width: '1000px' }}>
+          Select a Message
         </div>
         { messageSearch !== undefined && (
-        <MessageListView
-          showSearchBar
-          messageStore={messageStore}
-          localizedLabelManager={localizedLabelManager}
-          figmaRemote={figmaRemote}
-          selectedMessageId={drawerSelectedKey.current}
-          initialSearchQuery={MessageStoreMemory.toQueryObject(`name:* ${messageSearch.search}`)}
-          select={(key: string, language: Locale, plural: Plural) => {
-            drawerSelectedKey.current = key;
-            setDummyState({});
-          }}
-          highlightSelectedNodes={false}
-        />
+
+          <MessageListView
+            showSearchBar
+            messageStore={messageStore}
+            localizedLabelManager={localizedLabelManager}
+            figmaRemote={figmaRemote}
+            selectedMessageId={drawerSelectedKey.current}
+            initialSearchQuery={MessageStoreMemory.toQueryObject(`name:* ${messageSearch.search}`)}
+            select={(key: string, language: Locale, plural: Plural) => {
+              drawerSelectedKey.current = key;
+              setDummyState({});
+            }}
+            highlightSelectedNodes={false}
+          />
+        )}
+
+      </Drawer>
+
+      <Drawer
+        className="message-editor-drawer"
+        position="top"
+        buttons={[
+          {
+            type: 'secondary',
+            text: 'Close',
+            key: 'escape',
+            callback: () => {
+              setShowMessageInDrawer(undefined);
+            },
+          },
+          
+        ]}
+        shown={showMessageInDrawer !== undefined}
+      >
+        <div className="modal-title" style={{ width: '1000px' }}>
+          Edit Message
+        </div>
+        { showMessageInDrawer !== undefined && (
+
+          <MessageListView
+            showSearchBar={false}
+            messageStore={messageStore}
+            localizedLabelManager={localizedLabelManager}
+            figmaRemote={figmaRemote}
+            selectedMessageId={showMessageInDrawer}
+            initialSearchQuery={MessageStoreMemory.toQueryObject(`name:${showMessageInDrawer}`)}
+            select={(key: string, language: Locale, plural: Plural) => {
+             // drawerSelectedKey.current = showMessage;
+              setDummyState({});
+            }}
+            highlightSelectedNodes={false}
+          />
         )}
 
       </Drawer>
@@ -197,7 +241,6 @@ export default function LocalizedLabelListItem({
               isDisabled={localizedLabel.matchingLabelLints.length > 0}
               iconClass={iconClass}
               inputPlaceholder="e.g. home__tagline"
-              tooltip="Link a Message to this Text to reuse messages and for a straight forwaredd Developer handover."
               onCancel={() => {
                 setDummyState({});
               }}
@@ -208,7 +251,7 @@ export default function LocalizedLabelListItem({
                       search: localizedLabel.characters,
                     });
                   } else if (selectedOption.value === 'show-message') {
-                    showMessage(localizedLabel.getMessageName());
+                    setShowMessageInDrawer(localizedLabel.getMessageName());
                   } else if (selectedOption.value === 'reset') { // triggered by empty field - option added by the select field it self
                     reset();
                     await localizedLabelManager.unsetLabel(localizedLabel);
@@ -402,27 +445,26 @@ export default function LocalizedLabelListItem({
                         </div>
                       )} */}
               </div>
-            </div>
+              { (localizedLabel.messageLinkState === MessageLinkState.Linked && (labelState.modified || localizedLabel.language !== localizedLabel.rootFrameLanguage)) && ( // allow the user to catch up with the keys version
+              <div
+                className="layerIcon iconWrapper button"
+                data-tooltip-content="Reset all changes"
+                onClick={updateToLatestKeyVersion}
+              >
+                <div className="svg-container update-text-layer-svg" />
+              </div>
+              )}
 
-            { (localizedLabel.messageLinkState === MessageLinkState.Linked && (labelState.modified || localizedLabel.language !== localizedLabel.rootFrameLanguage)) && ( // allow the user to catch up with the keys version
-            <div
-              className="layerIcon iconWrapper button"
-              data-tooltip-content="Reset all changes"
-              onClick={updateToLatestKeyVersion}
-            >
-              <div className="svg-container update-text-layer-svg" />
+              { ((localizedLabel.messageLinkState === MessageLinkState.Linked && labelState.modified)) && (
+              <div
+                className="layerIcon iconWrapper button"
+                data-tooltip-content="Push changes to Message"
+                onClick={createNewVersionFromDesign}
+              >
+                <div className="svg-container update-message-svg" />
+              </div>
+              )}
             </div>
-            )}
-
-            { ((localizedLabel.messageLinkState === MessageLinkState.Linked && labelState.modified)) && (
-            <div
-              className="layerIcon iconWrapper button"
-              data-tooltip-content="Push changes to Message"
-              onClick={createNewVersionFromDesign}
-            >
-              <div className="svg-container update-message-svg" />
-            </div>
-            )}
 
           </div>
         </div>
@@ -438,7 +480,7 @@ export default function LocalizedLabelListItem({
             </span>
           )}
         </div>
-
+        <div className="layer-spacer" />
       </div>
     </>
   );

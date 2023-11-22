@@ -14,6 +14,7 @@ type ButtonConfig = {
 };
 
 type DrawerProps = {
+  className?: string,
   buttons: ButtonConfig[],
   beforeShow?: () => Promise<void> | undefined,
   onCancel?: () => void
@@ -24,6 +25,7 @@ type DrawerProps = {
 
 export default function Drawer({
   buttons,
+  className,
   children,
   shown,
   onCancel,
@@ -106,7 +108,7 @@ export default function Drawer({
       disabled={!isShown}
       display="contents"
     >
-      <div ref={drawerDiv} className={`${position}-drawer${isShown ? ' open' : ' '}`}>
+      <div ref={drawerDiv} className={`${position}-drawer${isShown ? ' open' : ' '} ${className ?? ''}`}>
         {children}
         <div className="buttonGroup buttonGroup-reversed">
           {buttons.reverse().map((button) => (

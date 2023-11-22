@@ -145,14 +145,12 @@ export class WindowManagerSandbox {
       zoom: figma.viewport.zoom,
     };
 
-    console.log('awaiting promises');
 
     Promise.all([
       figma.clientStorage.getAsync('windowSize'),
       figma.clientStorage.getAsync('windowBottomSheetHeight'),
       figma.clientStorage.getAsync('windowMode'),
     ]).then((values) => {
-      console.log('awaiting promises donef');
       const [storedWindowSize, storedWindowBottomSheetHeight, storedWindowMode] = values;
 
       if (storedWindowSize

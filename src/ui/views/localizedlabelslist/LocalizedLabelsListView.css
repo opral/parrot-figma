@@ -74,19 +74,6 @@
 }
 
 
-.layer::after {
-    content: "";
-    position: absolute;
-    z-index: 3;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    background-color: transparent;
-    border: 1px solid transparent;
-    pointer-events: none;
-}
-
 .layer:hover::after {
     border-color: var(--figma-color-border-selected);
 }
@@ -108,7 +95,7 @@
     top: 0;
     left: 0;
     bottom: 0;
-    right: 0;
+    right: 1;
     background-color: transparent;
     border: 1px solid transparent;
     pointer-events: none;
@@ -154,11 +141,11 @@
 .layer::after {
   content: "";
   position: absolute;
-  z-index: 1;
+  z-index: 0;
   top: 0;
   left: 0;
   bottom: 0;
-  right: 0;
+  right: 1;
   background-color: transparent;
   border: 1px solid transparent;
   pointer-events: none;
@@ -225,6 +212,7 @@
 
 .layer-details {
     flex-grow: 1;
+    margin-right: 8px;
 }
 
 .header .column-1 {
@@ -324,7 +312,10 @@ margin-left: auto;
 }
 
 .top-drawer {
-    overflow: scroll;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
     max-width: calc(100% - 20px);
     max-height: calc(100% - 10px);
     background: var(--figma-color-bg);
@@ -339,6 +330,8 @@ margin-left: auto;
     transition: box-shadow 0.3s ease-out, transform 0.3s ease-out;
     width: max-content;
     
+    display: flex;
+    flex-direction: column;
   }
   
 
@@ -424,3 +417,11 @@ margin-left: auto;
     overflow: hidden;
   }
   
+
+.layer-spacer {
+    width: 4px;
+}
+
+.top-drawer.message-editor-drawer {
+    overflow-y: auto;
+}

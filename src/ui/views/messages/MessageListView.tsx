@@ -5,6 +5,7 @@ import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
+
 import { Locale } from '../../../lib/message/variants/Locale';
 
 import MessageStoreMemory, { SearchQuery } from '../../../lib/message/store/MessageStoreMemory';
@@ -147,70 +148,75 @@ export default function MessageListView({
   let rendered = 0;
 
   return (
-    <div className="message-view">
-      <div className="message-filter">
-        <div style={{ flexGrow: 1 }} />
-        <div className="message-filter-search">
-          <span className="svg-container search-svg" />
-          <input
-            type="text"
-            placeholder="Find..."
-            className="message-filter-search-input"
-            spellCheck="false"
-            dir="auto"
-            value={MessageStoreMemory.toSearchString(searchQuery)}
-            onChange={(e) => {
-              onSearchChange(e.target.value);
-              setRenderEntries(100);
-            }}
-          />
-        </div>
-      </div>
-      <div className="message-list" ref={tableRef}>
-        {/* helper row for css to set the width when partially rendered */}
-
-        <TranslationKeyListItem
-          key="max-width-helper-row"
-          rowClassNames="hidden-helper-row"
-          messageStore={messageStore}
-          localizedLabelManager={localizedLabelManager}
-          searchMatch={undefined}
-          messageId={longestKey}
-          figmaRemote={figmaRemote}
-          select={select}
-          messageSelected={false}
-        />
-        {[...filteredKeys.matchingNames].length === 0 && (
-        <div className="emptyState">
-          <div className="emptyStateTitle">No Messages matched your search.</div>
-          <div className="emptyStateSubtitle">
-            <div>
-            Please remove some filters to get more matches.
+    
+      <div className="message-view">
+        { showSearchBar && (
+          <div className="message-filter">
+            <div style={{ flexGrow: 1 }} />
+            <div className="message-filter-search">
+              <span className="svg-container search-svg" />
+              <input
+                type="text"
+                placeholder="Find..."
+                className="message-filter-search-input"
+                spellCheck="false"
+                dir="auto"
+                value={MessageStoreMemory.toSearchString(searchQuery)}
+                onChange={(e) => {
+                  onSearchChange(e.target.value);
+                  setRenderEntries(100);
+                }}
+              />
             </div>
           </div>
-        </div>
         )}
-        {[...filteredKeys.matchingNames].map((messageId) => {
-          if (rendered > renderEntries) {
-            return;
-          }
+        
+        <div className="message-list" ref={tableRef}>
+          {/* helper row for css to set the width when partially rendered */}
 
-          rendered += 1;
-          // eslint-disable-next-line consistent-return
-          return (
-            <TranslationKeyListItem
-              key={messageId}
-              messageStore={messageStore}
-              localizedLabelManager={localizedLabelManager}
-              searchMatch={filteredKeys.matches[messageId]}
-              messageId={messageId}
-              figmaRemote={figmaRemote}
-              select={select}
-              messageSelected={Object.values(selectedNodes).map((selectedNode) => selectedNode.messageId).includes(messageId) || selectedMessageId === messageId}
-            />
-          );
-        })}
+          <TranslationKeyListItem
+            key="max-width-helper-row"
+            rowClassNames="hidden-helper-row"
+            messageStore={messageStore}
+            localizedLabelManager={localizedLabelManager}
+            searchMatch={undefined}
+            messageId={longestKey}
+            figmaRemote={figmaRemote}
+            select={select}
+            messageSelected={false}
+          />
+          {[...filteredKeys.matchingNames].length === 0 && (
+          <div className="emptyState">
+            <div className="emptyStateTitle">No Messages matched your search.</div>
+            <div className="emptyStateSubtitle">
+              <div>
+                Please remove some filters to get more matches.
+              </div>
+            </div>
+          </div>
+          )}
+          {[...filteredKeys.matchingNames].map((messageId) => {
+            if (rendered > renderEntries) {
+              return;
+            }
+
+            rendered += 1;
+            // eslint-disable-next-line consistent-return
+            return (
+              <TranslationKeyListItem
+                key={messageId}
+                messageStore={messageStore}
+                localizedLabelManager={localizedLabelManager}
+                searchMatch={filteredKeys.matches[messageId]}
+                messageId={messageId}
+                figmaRemote={figmaRemote}
+                select={select}
+                messageSelected={Object.values(selectedNodes).map((selectedNode) => selectedNode.messageId).includes(messageId) || selectedMessageId === messageId}
+              />
+            );
+          })}
+        </div>
       </div>
-    </div>
+    
   );
 }

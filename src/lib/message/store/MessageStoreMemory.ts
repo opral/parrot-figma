@@ -114,8 +114,6 @@ export default class MessageStoreMemory extends EventTarget {
       }
 
       this.inlangProject?.query.messages.upsert({ where: { id: freshMessage.id }, data: freshMessage});
-      const updatedMessage = this.inlangProject?.query.messages.get({ where: { id: freshMessage.id } });
-      console.log(JSON.stringify(updatedMessage, null, 4));
       changes.updated.push(updatedMessageId);
       changes.changedKeys.push(updatedMessageId);
     }

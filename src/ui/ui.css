@@ -240,11 +240,6 @@ body {
     overflow: hidden;
   }
   
-  .ql-container {
-    white-space: pre-wrap;
-    /* overflow: hidden; */
-  }
-  
   
   
 .circular-button {
@@ -398,4 +393,89 @@ button:focus:not(:disabled), .basic_form--btn--t7Y67:active:not(:disabled) {
 .modal-drawer-body {
   margin: 16;
   color: var(--figma-color-text);
+}
+
+
+.scroll_container--track--HEzfy:hover {
+  border-left: 1px solid var(--color-border, #efefef);
+  background: var(--color-scrollbartrackhover, rgba(245, 245, 245, .5));
+}
+
+.scroll_container--scrollBar--YLWIi:after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  width: 100%;
+  border-radius: 6px;
+  background: var(--color-scrollbar, rgba(0, 0, 0, .15));
+}
+
+div.os-scrollbar.os-scrollbar-vertical {
+  width: 11px;
+  position: absolute;
+  z-index: 1000;  
+}
+
+
+div.os-scrollbar.os-scrollbar-interaction {
+  border-left: 1px solid var(--figma-color-border, #efefef);
+  background: rgba(245, 245, 245, .5);
+}
+
+div.os-scrollbar.os-scrollbar-wheel {
+  border-left: 1px solid var(--figma-color-border, #efefef);
+  background: rgba(245, 245, 245, .5);
+}
+
+
+div>.os-scrollbar.os-scrollbar-vertical {
+  visibility: hidden;
+}
+
+div>.os-scrollbar.os-scrollbar-vertical:hover {
+  visibility: unset;
+}
+
+div:hover>.os-scrollbar.os-scrollbar-vertical {
+  visibility: unset;
+}
+
+.os-scrollbar div.os-scrollbar-handle {
+  background-color: rgba(179,179,179,.50196);
+  border-color: rgba(179,179,179,.50196);
+}
+
+.os-scrollbar div.os-scrollbar-handle:hover {
+  background-color: rgba(179,179,179,.50196);
+  border-color: rgba(179,179,179,.50196);
+}
+
+
+@media (prefers-color-scheme: dark) {
+
+  .os-scrollbar.os-scrollbar-vertical {
+    border-left: 1px solid var(--color-border, #444444);
+    background: var(--color-scrollbartrackhover, rgba(56, 56, 56, .5))
+  }
+
+  .os-scrollbar div.os-scrollbar-handle {
+    background-color: rgba(179,179,179,.50196);
+    border-color: rgba(179,179,179,.50196);
+  }
+
+
+  .os-scrollbar div.os-scrollbar-handle:hover {
+    background-color: rgba(179,179,179,.50196);
+    border-color: rgba(179,179,179,.50196);
+  }
+}
+
+.os-scrollbar  {
+  z-index: -1;
+}
+
+.modal-title {
+  font-weight: 600;
+  padding: 16px;
 }

@@ -9,6 +9,7 @@ import * as ReactDOM from 'react-dom';
 import TimeAgo from 'javascript-time-ago';
 import en from 'javascript-time-ago/locale/en.json';
 import * as Sentry from '@sentry/react';
+
 import { initializeSentry } from './utils/sentry';
 import { initializeAnalytics, track, identify } from './utils/analytics';
 
@@ -19,7 +20,6 @@ import './ui.css';
 import WindowManagerUi from '../lib/windowManager/WindowManagerUI';
 import { WindowMode } from '../lib/windowManager/WindowManagerSandbox';
 import MessageListView from './views/messages/MessageListView';
-
 import MessageStoreMemory from '../lib/message/store/MessageStoreMemory';
 
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
@@ -43,6 +43,8 @@ import Drawer from './compontents/drawer/Drawer';
 import ConsumptionPaywall from './compontents/plans/ConsumptionPaywall';
 import ComparisonChart from './compontents/plans/ComparisonChart';
 import { InlangMessageStore } from '../lib/message/store/InlangMessageStoreFigmaRoot';
+import 'overlayscrollbars/overlayscrollbars.css';
+import { OverlayScrollbarsComponent } from './compontents/overlayscrollbar';
 
 console.log(`Starting Figma UI - Version ${pjs.version}`);
 
@@ -468,10 +470,20 @@ function App() {
         </div>
 
       </div>
+      <OverlayScrollbarsComponent
+        className="view"
+        options={{
+          showNativeOverlaidScrollbars: true,
+          scrollbars: {
+            clickScroll: true,
+          },
+        }}
+        defer
+      >
 
-      <div className="view">
         {view}
-      </div>
+
+      </OverlayScrollbarsComponent>
       <a id="focusHelper" href="" />
       <Drawer
         shown={consumptionPayWallFeature !== undefined}

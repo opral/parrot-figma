@@ -436,6 +436,7 @@ export default function InputSelect({
     }
 
     return () => {
+      stopScrollDown();
       scrollDownRef.current?.removeEventListener('mouseover', startScrollDown);
       scrollDownRef.current?.removeEventListener('mouseout', stopScrollDown);
     };

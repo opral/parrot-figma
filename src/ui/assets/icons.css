@@ -304,6 +304,52 @@
     mask-image: url(./32/with_message.svg);
   }
 
+  .text-decoration-underline-svg {
+    -webkit-mask-image: url(./16/text-decoration-underline.svg);
+    mask-image: url(./16/text-decoration-underline.svg);
+  }
+
+
+  .text-decoration-strikethrough-svg {
+    -webkit-mask-image: url(./16/text-decoration-strikethrough.svg);
+    mask-image: url(./16/text-decoration-strikethrough.svg);
+  }
+
+
+  .text-decoration-italic-svg {
+    -webkit-mask-image: url(./16/text-decoration-italic.svg);
+    mask-image: url(./16/text-decoration-italic.svg);
+  }
+
+
+  .text-decoration-bold-svg {
+    -webkit-mask-image: url(./16/text-decoration-bold.svg);
+    mask-image: url(./16/text-decoration-bold.svg);
+  }
+
+  .list-bullet-svg {
+    -webkit-mask-image: url(./16/list-detailed.svg);
+    mask-image: url(./16/list-detailed.svg);
+  }
+
+
+  .hyperlink-svg {
+    -webkit-mask-image: url(./16/hyperlink.svg);
+    mask-image: url(./16/hyperlink.svg);
+  }
+
+  .list-ordered-svg {
+    -webkit-mask-image: url(./16/list-numbered.svg);
+    mask-image: url(./16/list-numbered.svg);
+  }
+
+
+  .variable-svg {
+    -webkit-mask-image: url(./16/variable.svg);
+    mask-image: url(./16/variable.svg);
+  }
+
+
   .world-svg {
     -webkit-mask-image: url(./world.svg);
     mask-image: url(./world.svg);

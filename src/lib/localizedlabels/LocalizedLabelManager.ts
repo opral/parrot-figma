@@ -173,7 +173,7 @@ export default class LocalizedLabelManager {
 
           if (!selectedNodeStateByUser[user.id] || selectedNodeStateByUser[user.id].nodeId !== currentState.nodeId) {
             selectedNodeStateByUser[user.id] = currentState;
-            console.log('no change');
+            // console.log('no change');
           } else if (selectedNodeStateByUser[user.id].textSegments.length !== currentState.textSegments.length) {
             // TODO change detected
             selectedNodeStateByUser[user.id] = currentState;
@@ -215,7 +215,7 @@ export default class LocalizedLabelManager {
       // }
 
       if (changeEvent.documentChanges.length > 0) {
-        console.log('emulating event');
+        // console.log('emulating event');
         that.forwardDocumentChanges(changeEvent);
       }
     }, 100);

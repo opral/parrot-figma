@@ -37,15 +37,21 @@ type TranslationKeyListItemProps = {
   onBlur?: (messageId: string, locale?: Locale, variantMatch?: string[]) => void,
 };
 
-// TODO #27 select message on click - message / message variant
-// TODO #27 highlight first screen that matches the given combination
-// TODO #27 make show message a drawer - no need for the list
-// TODO #27 fix search drawer layout for to long messages
-// TODO #27 style scrollbars https://stackblitz.com/edit/react-ts-frji5h?file=components%2Fscrollbar%2Findex.tsx
-// TODO #27 add x to seach field to reset filter
-// TODO #27 deactivate the full seach if no message is available
-// TODO #27 add little info label to message tab to indicate how many messages are managed
+// TODO #roadmap select message on click - message / message variant
+// TODO #roadmap highlight first screen that matches the given combination
+// TODO #roadmap add x to seach field to reset filter
+// TODO #roadmap deactivate the full seach if no message is available
+// TODO #roadmap add little info label to message tab to indicate how many messages are managed
 
+// TODO #27 add celebration and pricing message
+// TODO #27 test in firefox
+// TODO #27 remove log statements
+
+
+// TODO #27 make show message a drawer - no need for the list
+// DONE #27 fix search drawer layout for to long messages
+// DONE #27 ESC does not work to cancel message edit
+// DONE #27 style scrollbars https://stackblitz.com/edit/react-ts-frji5h?file=components%2Fscrollbar%2Findex.tsx
 // DONE #27 fix sync message buttons
 // DONE #27 fix message that are to long / scrolling
 // DONE #27 check all z-indexes
@@ -76,6 +82,7 @@ export default function TranslationKeyListItem({
   const [message, setMessage] = useState(localizedLabelManager.messageStore.getMessage(messageId)!);
 
   const rowRef = React.useRef<HTMLDivElement>(null);
+  
 
   useEffect(() => {
     messageStore.inlangProject?.query.messages.get.subscribe({ where: { id: messageId } }, (updatedMessage) => {
@@ -218,7 +225,7 @@ export default function TranslationKeyListItem({
                   messageStore={messageStore}
                 />
               </div>
-              { false && ( // TODO #27 make this depending on the warning
+              { false && ( // TODO roadmap - message lints make this depending on the warning
                 <div
                   className="layerIcon iconWrapper button"
                   data-tooltip-content="Show warnings..."
@@ -229,7 +236,7 @@ export default function TranslationKeyListItem({
                   <span className="svg-container notice-svg" />
                 </div>
               )}
-              { false && ( // TODO #27 make this depending on the warning
+              { false && ( // TODO roadmap - message lints make this depending on the warning
                 <div
                   className="layerIcon iconWrapper button"
                   data-tooltip-content="More..."

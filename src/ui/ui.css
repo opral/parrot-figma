@@ -395,6 +395,7 @@ button:focus:not(:disabled), .basic_form--btn--t7Y67:active:not(:disabled) {
 
 .height-resize-container {
   height: 180px;
+  opacity: 0;
   overflow-y: scroll;
   position: absolute;
   bottom: -140px;

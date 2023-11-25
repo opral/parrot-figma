@@ -197,7 +197,7 @@ export class WindowManagerSandbox {
         target: 'WindowManager',
         viewportBounds: {
           height: figma.viewport.bounds.height * figma.viewport.zoom,
-        }
+        },
       });
 
       this.viewportResizeCheckInterval = setInterval(() => {
@@ -222,13 +222,20 @@ export class WindowManagerSandbox {
   }
 
   async devModeUI() {
-    const response = await fetch('http://127.0.0.1:8080/dist/ui.html');
+    const response = await fetch(`http://127.0.0.1:8080/dist/ui.html?nocache=${(new Date()).getTime()}`);
     let devUI = await response.text();
 
     devUI = devUI.split('__%%InitialWindowMode%%__').join(this.currentWindowMode);
 
     figma.showUI(devUI, {
       themeColors: true, visible: true,
+    });
+
+    figma.ui.postMessage({
+      target: 'WindowManager',
+      viewportBounds: {
+        height: figma.viewport.bounds.height * figma.viewport.zoom,
+      },
     });
   }
 
@@ -347,10 +354,10 @@ export class WindowManagerSandbox {
         break;
       case WindowMode.Window:
         if (message.size.width === undefined) {
-          throw new Error('width not provided handleSizeMessage for window mode')
+          throw new Error('width not provided handleSizeMessage for window mode');
         }
         if (message.size.height === undefined) {
-          throw new Error('height not provided handleSizeMessage for window mode')
+          throw new Error('height not provided handleSizeMessage for window mode');
         }
         this.windowModeSize = {
           width: Math.floor(message.size.width),
@@ -367,7 +374,7 @@ export class WindowManagerSandbox {
           this.introModeSize.height = message.size.height;
         }
 
-        console.log('updating intor window size to ' + JSON.stringify(this.introModeSize));
+        console.log(`updating intor window size to ${JSON.stringify(this.introModeSize)}`);
         this.updateWindowRect(this.introModeSize);
         break;
       default:

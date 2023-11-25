@@ -99,15 +99,17 @@ window.addEventListener('keydown', (e) => {
 });
 
 const resizeHandle = document.getElementById('resize-handle')!;
+const resizeHeightHandle = document.getElementById('height-resize-handle')!;
 
 WindowManagerUi.init(
   document.getElementById('sizing-wrapper')!,
   document.getElementById('react-page')!,
   resizeHandle,
+  resizeHeightHandle,
+  'toolbar-resize-handle',
 );
 // @ts-expect-error
-window['startDevMode'] = WindowManagerUi.instance!.startDevMode;
-
+window.startDevMode = WindowManagerUi.instance!.startDevMode;
 
 const asyncFunctionProxy = new AsyncFunctionProxy('UIAsyncFunctionProxy', (data: any) => {
   // eslint-disable-next-line no-restricted-globals
@@ -425,27 +427,17 @@ function App() {
           <div className={`tab ${appScreen === 'settings' ? 'active' : ''}`} onClick={() => setAppScreen('settings')}>Setup</div>
           {/* <div className={`tab ${appScreen === 'users' ? 'active' : ''}`} onClick={() => setAppScreen('users')}>Users</div> */}
         </div>
-        { windowMode === WindowMode.BottomSheet && (
-          <div
-            className="toolbar-resize-handle"
-            style={{ flexGrow: 1 }}
-            onPointerDown={(event) => {
-              event.preventDefault(); // Prevent the default behavior
-              event.stopPropagation(); // Stop event bubbling
-              resizeHandle.dispatchEvent(new PointerEvent('pointerdown', event as any));
-            }}
-            onPointerUp={(event) => {
-              event.preventDefault(); // Prevent the default behavior
-              event.stopPropagation(); // Stop event bubbling
-              resizeHandle.dispatchEvent(new PointerEvent('onpointerup', event as any));
-            }}
-            onMouseEnter={(event) => {
-              event.preventDefault(); // Prevent the default behavior
-              event.stopPropagation(); // Stop event bubbling
-              resizeHandle.dispatchEvent(new PointerEvent('mouseenter', event as any));
-            }}
-          />
-        )}
+
+        <div
+          id='toolbar-resize-handle'
+          className="toolbar-resize-handle"
+          style={{
+            pointerEvents: 'none',
+            flexGrow: 1,
+            display: windowMode === WindowMode.BottomSheet ? 'block' : 'none',
+          }}
+        >
+        </div>
 
         <div className="window-control">
           <SegmentedControl

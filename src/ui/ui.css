@@ -118,16 +118,11 @@ body {
 }
 
 #resize-handle.bottomSheet {
-  position: fixed;
-  right: 0px;
-  left: 0px;
-  top: 0px;
-  height: 5px;
-  cursor: ns-resize;
+  display: none;
 }
 
 #resize-handle.bottomSheet svg {
-  visibility: hidden;
+  visibility: visible;
 }
 
 #resize-handle {
@@ -389,4 +384,34 @@ button:focus:not(:disabled), .basic_form--btn--t7Y67:active:not(:disabled) {
 }
 .start-staging-ui:hover {
   opacity: 1;
+}
+
+.height-resize-handle {
+  position: fixed;
+  overflow: visible;
+  width: 30px; 
+  height: 42px;
+}
+
+.height-resize-container {
+  height: 180px;
+  overflow-y: scroll;
+  position: absolute;
+  bottom: -140px;
+  width: 20px;
+}
+
+.height-resize-container::-webkit-scrollbar {
+  cursor: pointer;
+} 
+
+.height-resize-overlay {
+  position: absolute;
+  pointer-events: none;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background-color: green;
 }

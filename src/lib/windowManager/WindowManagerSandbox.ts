@@ -176,13 +176,12 @@ export class WindowManagerSandbox {
 
       const patchedHtml = __html__.split('__%%InitialWindowMode%%__').join(this.currentWindowMode);
 
-
       // const patchedHtml = "<sc"+"ript>window.location.href = 'http://127.0.0.1:8080/dist/ui.html?nocache="+ (new Date()).getTime() +"';</scr"+"ipt>";
-      
+
       figma.showUI(patchedHtml, {
         themeColors: true,
         width: windowRect.width,
-        height: windowRect.height,
+        height: Math.max(50, windowRect.height),
         visible: false,
         title: 'Parrot (Free Beta)',
       });
@@ -191,6 +190,11 @@ export class WindowManagerSandbox {
       figma.ui.reposition(windowRect.x, windowRect.y);
       console.log('calling show');
       figma.ui.show();
+
+      figma.ui.postMessage({
+        target: 'WindowManager',
+        viewportBounds: figma.viewport.bounds,
+      });
 
       this.viewportResizeCheckInterval = setInterval(() => {
         // check if the viewports width has changed
@@ -214,7 +218,7 @@ export class WindowManagerSandbox {
   }
 
   async devModeUI() {
-    const response = await fetch('https://parrot-global.github.io/parrot-figma/ui.html');
+    const response = await fetch('http://127.0.0.1:8080/dist/ui.html');
     let devUI = await response.text();
 
     devUI = devUI.split('__%%InitialWindowMode%%__').join(this.currentWindowMode);
@@ -437,15 +441,15 @@ export class WindowManagerSandbox {
    * @param forceReshow pass false to skip the reshow workarround (for example in the bootom sheet)
    */
   updateWindowRect(windowRect: WindowRect) {
-    console.log('[WM] windowRect');
+    // console.log('[VM] windowRect');
     if (windowRect.x && windowRect.y && this.wasDragged) {
-      console.log('[WM] reshow needed');
+      // console.log('[VM] reshow needed');
       figma.ui.hide();
       this.reshowing = true;
       setTimeout(() => {
         figma.ui.show();
         setTimeout(() => {
-          console.log('[WM] reshow done');
+          // console.log('[VM] reshow done');
           this.reshowing = false;
         }, 100);
       }, 1);

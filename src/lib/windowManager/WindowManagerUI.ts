@@ -1,4 +1,5 @@
 /* eslint-disable class-methods-use-this */
+import { debug } from 'console';
 import { RESIZEDETECTION_OVERLAP_PX, WindowMode } from './WindowManagerSandbox';
 
 const threshol = [] as number[];
@@ -13,13 +14,23 @@ export default class WindowManagerUi extends EventTarget {
 
   resizeHandelEl: HTMLElement;
 
-  intersectionObserver: IntersectionObserver | undefined;
+  heightResizeHandleEl: HTMLElement;
 
-  windowHeight: number;
+  heightResizeScrollContainerEl: HTMLElement;
+
+  heightResizeScrollContentEl: HTMLElement;
+
+  handleElementId: string;
+
+  intersectionObserver: IntersectionObserver | undefined;
 
   sizeSettled: any;
 
   static instance: WindowManagerUi | undefined;
+
+  viewportBounds: undefined | {
+    height: number,
+  };
 
   isResizing = false;
 
@@ -36,24 +47,82 @@ export default class WindowManagerUi extends EventTarget {
 
   minWidth = 370;
 
-  static init(sizeWrapperEl: HTMLElement, contentEl: HTMLElement, resizeHandelEl: HTMLElement) {
+  static init(sizeWrapperEl: HTMLElement, contentEl: HTMLElement, resizeHandelEl: HTMLElement, heightResizeHandleEl: HTMLElement, handleElementId: string) {
     if (this.instance) {
       throw Error('WindowManagerUi initialized twice');
     }
-    this.instance = new WindowManagerUi(sizeWrapperEl, contentEl, resizeHandelEl);
+    this.instance = new WindowManagerUi(sizeWrapperEl, contentEl, resizeHandelEl, heightResizeHandleEl, handleElementId);
   }
 
-  private constructor(sizeWrapperEl: HTMLElement, contentEl: HTMLElement, resizeHandelEl: HTMLElement) {
+  private constructor(sizeWrapperEl: HTMLElement, contentEl: HTMLElement, resizeHandelEl: HTMLElement, heightResizeHandleEl: HTMLElement, handleElementId: string) {
     super();
     this.sizeWrapper = sizeWrapperEl;
     this.contentEl = contentEl;
     this.resizeHandelEl = resizeHandelEl;
+    this.heightResizeHandleEl = heightResizeHandleEl;
+    this.heightResizeScrollContainerEl = this.heightResizeHandleEl.children[0] as HTMLElement;
+    this.heightResizeScrollContentEl = this.heightResizeScrollContainerEl.children[0] as HTMLElement;
 
-    const computedStyle = getComputedStyle(this.sizeWrapper);
-    const { height } = computedStyle;
+    this.handleElementId = handleElementId;
 
-    this.windowHeight = parseInt(height, 10);
+    document.body.onmousemove = (event) => {
+      const handle = document.getElementById(this.handleElementId);
+      if (!handle) {
+        return;
+      }
+      const mouseX = event.clientX;
+      const mouseY = event.clientY;
 
+      const handleRect = handle.getBoundingClientRect();
+      const handleX = handleRect.x;
+      const handleY = handleRect.y;
+      const handleWidth = handleRect.width;
+      const handleHeight = handleRect.height;
+
+      if (
+        mouseX >= handleX
+        && mouseX <= handleX + handleWidth
+        && mouseY >= handleY
+        && mouseY <= handleY + handleHeight
+      ) {
+        document.body.style.cursor = 'ns-resize';
+        this.heightResizeHandleEl.style.left = `${mouseX - 10}px`;
+        this.heightResizeHandleEl.style.display = 'unset';
+      } else {
+        document.body.style.cursor = 'unset';
+        this.heightResizeHandleEl.style.display = 'none';
+      }
+    };
+
+    this.heightResizeHandleEl.onmouseup = () => {
+      this.updateDragContainer();
+      this.isResizing = false;
+    };
+
+    let lastCall = Date.now();
+    this.heightResizeScrollContainerEl.onscroll = (e) => {
+      if (!this.viewportBounds || this.windowMode !== WindowMode.BottomSheet) {
+        return;
+      }
+
+      // NOTE - we throttle the scroll to give the browser time to realign when the frame is resposition
+      if (Date.now() < lastCall + 35) {
+        return;
+      }
+
+      lastCall = Date.now();
+
+      const scrolledHeight = this.viewportBounds.height - ((e.target as any).scrollTop / 3);
+      const minHeight = 60;
+      const maxHeight = this.viewportBounds.height - 60;
+
+      const size = {
+        height: Math.min(Math.max(minHeight, scrolledHeight), maxHeight),
+      };
+
+      this.isResizing = true;
+      parent.postMessage({ pluginMessage: { target: 'WindowManager', size, source: 'dragging' }, pluginId: '*' }, '*');
+    };
     ((document.querySelector(':root')!) as HTMLElement).style.setProperty('--resize-detection-overlap', `${RESIZEDETECTION_OVERLAP_PX + 2}px`);
 
     let lastRatio = 0 as number;
@@ -78,7 +147,7 @@ export default class WindowManagerUi extends EventTarget {
 
     this.intersectionObserver.observe(sizeWrapperEl!);
 
-    console.log(this.resizeHandelEl);
+    // console.log(this.resizeHandelEl);
     this.resizeHandelEl.onpointerdown = this.onResizeHandlePointerDown.bind(this);
     this.resizeHandelEl.onpointerup = this.onResizeHandlePointerUp.bind(this);
     this.resizeHandelEl.onmouseenter = this.onMouseEnter.bind(this);
@@ -107,12 +176,44 @@ export default class WindowManagerUi extends EventTarget {
           this.openRequest = undefined;
           const changeEvent = new CustomEvent<any>('changed');
           this.dispatchEvent(changeEvent);
-        } 
+        } else if (event.data.pluginMessage.viewportBounds) {
+          this.viewportBounds = event.data.pluginMessage.viewportBounds;
+          this.updateDragContainer();
+        }
       }
     });
 
     // eslint-disable-next-line no-restricted-globals
     parent.postMessage({ pluginMessage: { target: 'WindowManager', uiInit: true }, pluginId: '*' }, '*');
+  }
+
+  updateDragContainer() {
+    if (!this.viewportBounds) {
+      return;
+    }
+
+    const titleBarHeight = 42;
+
+    const computedStyle = getComputedStyle(this.sizeWrapper);
+    const { height } = computedStyle;
+    const windowHeight = parseInt(height, 10);
+
+    // make the content three times as height as window + viewport to be able to scroll up and down in an visible area of the window height
+    this.heightResizeScrollContentEl.style.height = `${(this.viewportBounds.height + windowHeight) * 3}px`;
+    // the scroll container should be the full viewport height plus the an additional scrolling area of the plugin window
+    this.heightResizeScrollContainerEl.style.height = `${this.viewportBounds.height + windowHeight}px`;
+
+    // start at the top of the plugin windo
+    this.heightResizeScrollContainerEl.scrollTop = (this.viewportBounds.height - windowHeight) * 3;
+
+    // place the handle
+    this.heightResizeHandleEl.style.bottom = `${windowHeight - titleBarHeight}px`;
+    // console.log("this.heightResizeHandleEl.style.bottom: "+  this.heightResizeHandleEl.style.bottom);
+
+    // place the containers relative to the bottom - it should overlap with the plugin wihdow height
+    this.heightResizeScrollContainerEl.style.bottom = `${-windowHeight + titleBarHeight - windowHeight}px`;
+    // console.log('bottom2: ' + (-windowHeight + titleBarHeight - windowHeight))
+    this.heightResizeScrollContainerEl.style.bottom = `${-windowHeight + titleBarHeight - windowHeight}px`;
   }
 
   requestResize(size: { height?: number, width?: number }) {
@@ -124,28 +225,14 @@ export default class WindowManagerUi extends EventTarget {
   }
 
   onResizeHandleDrag(e: any) {
-    if (e.buttons !== 1) {
+    if (e.buttons !== 1 || this.windowMode !== WindowMode.Window) {
       return;
     }
 
-    const computedStyle = getComputedStyle(this.sizeWrapper);
-    const height = parseInt(computedStyle.height, 10);
-    const width = parseInt(computedStyle.width, 10);
-    if (this.windowMode === WindowMode.Window) {
-      const size = {
-        width: Math.max(this.minWidth, Math.floor(e.clientX + 5)),
-        height: Math.max(this.minHeight, Math.floor(e.clientY + 5)),
-      };
-      parent.postMessage({ pluginMessage: { target: 'WindowManager', size, source: 'dragging' }, pluginId: '*' }, '*');
-    } else if (this.windowMode === WindowMode.BottomSheet) {
-      if (!isNaN(height)) {
-        const size = {
-          height: Math.max(this.minHeight, Math.floor(height - (e.clientY - this.startingOffsetY))),
-        };
-        parent.postMessage({ pluginMessage: { target: 'WindowManager', size, source: 'dragging' }, pluginId: '*'  }, '*');
-      }
-    }
-    // eslint-disable-next-line no-restricted-globals
+    parent.postMessage({ pluginMessage: { target: 'WindowManager', size: {
+      width: Math.max(this.minWidth, Math.floor(e.clientX + 5)),
+      height: Math.max(this.minHeight, Math.floor(e.clientY + 5)),
+    }, source: 'dragging' }, pluginId: '*' }, '*');
   }
 
   onResizeHandlePointerUp(e: any) {

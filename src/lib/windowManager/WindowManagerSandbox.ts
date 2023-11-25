@@ -195,7 +195,9 @@ export class WindowManagerSandbox {
 
       figma.ui.postMessage({
         target: 'WindowManager',
-        viewportBounds: figma.viewport.bounds,
+        viewportBounds: {
+          height: figma.viewport.bounds.height * figma.viewport.zoom,
+        }
       });
 
       this.viewportResizeCheckInterval = setInterval(() => {

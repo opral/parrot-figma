@@ -191,14 +191,8 @@ export class WindowManagerSandbox {
       // @ts-ignore -- figmas ui type does not expose the reposition atm
       figma.ui.reposition(windowRect.x, windowRect.y);
       console.log('calling show');
+      
       figma.ui.show();
-
-      figma.ui.postMessage({
-        target: 'WindowManager',
-        viewportBounds: {
-          height: figma.viewport.bounds.height * figma.viewport.zoom,
-        },
-      });
 
       this.viewportResizeCheckInterval = setInterval(() => {
         // check if the viewports width has changed
@@ -207,7 +201,14 @@ export class WindowManagerSandbox {
 
       figma.ui.on('message', (message) => {
         if (message.target === 'WindowManager') {
-          if (message.size) {
+          if (message.uiInit) {
+            figma.ui.postMessage({
+              target: 'WindowManager',
+              viewportBounds: {
+                height: figma.viewport.bounds.height * figma.viewport.zoom,
+              },
+            });
+          } else if (message.size) {
             this.handleSizeMessage(message);
           } else if (message.requestedWindowMode !== undefined) {
             this.setWindowMode(message.requestedWindowMode);
@@ -230,7 +231,7 @@ export class WindowManagerSandbox {
     figma.showUI(devUI, {
       themeColors: true, visible: true,
     });
-
+    
     figma.ui.postMessage({
       target: 'WindowManager',
       viewportBounds: {
@@ -306,6 +307,13 @@ export class WindowManagerSandbox {
     this.viewPortResizeSettleTimeout = setTimeout(() => {
       this.viewPortResizing = false;
     }, this.settleTime);
+
+    figma.ui.postMessage({
+      target: 'WindowManager',
+      viewportBounds: {
+        height: figma.viewport.bounds.height * figma.viewport.zoom,
+      },
+    });
 
     if (this.currentWindowMode === WindowMode.BottomSheet
       // || this.currentWindowMode === WindowMode.Minimized

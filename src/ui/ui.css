@@ -395,24 +395,14 @@ button:focus:not(:disabled), .basic_form--btn--t7Y67:active:not(:disabled) {
 
 .height-resize-container {
   height: 180px;
-  opacity: 0;
+  
   overflow-y: scroll;
   position: absolute;
   bottom: -140px;
   width: 20px;
+  opacity: 0;
 }
 
 .height-resize-container::-webkit-scrollbar {
   cursor: pointer;
-} 
-
-.height-resize-overlay {
-  position: absolute;
-  pointer-events: none;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-  background-color: green;
 }

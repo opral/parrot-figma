@@ -99,13 +99,17 @@ export default class WindowManagerUi extends EventTarget {
     };
 
     this.heightResizeHandleEl.onmouseup = () => {
-      this.updateDragContainer();
       this.isResizing = false;
+      this.updateDragContainer();
     };
+
+    this.heightResizeHandleEl.onmousedown = () => {
+      this.isResizing = true;
+    }
 
     let lastCall = Date.now();
     this.heightResizeScrollContainerEl.onscroll = (e) => {
-      if (!this.viewportBounds || this.windowMode !== WindowMode.BottomSheet) {
+      if (!this.isResizing || !this.viewportBounds || this.windowMode !== WindowMode.BottomSheet) {
         return;
       }
 
@@ -124,7 +128,6 @@ export default class WindowManagerUi extends EventTarget {
         height: Math.min(Math.max(minHeight, scrolledHeight), maxHeight),
       };
 
-      this.isResizing = true;
       parent.postMessage({ pluginMessage: { target: 'WindowManager', size, source: 'dragging' }, pluginId: '*' }, '*');
     };
     ((document.querySelector(':root')!) as HTMLElement).style.setProperty('--resize-detection-overlap', `${RESIZEDETECTION_OVERLAP_PX + 2}px`);

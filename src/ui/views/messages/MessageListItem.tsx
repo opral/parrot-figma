@@ -44,11 +44,11 @@ type TranslationKeyListItemProps = {
 // TODO #roadmap add little info label to message tab to indicate how many messages are managed
 
 // TODO #27 add celebration and pricing message
-// TODO #27 test in firefox
-// TODO #27 remove log statements
 
 
-// TODO #27 make show message a drawer - no need for the list
+// DONE #27 test in firefox
+// DONE #27 remove log statements
+// DONE #27 make show message a drawer - no need for the list
 // DONE #27 fix search drawer layout for to long messages
 // DONE #27 ESC does not work to cancel message edit
 // DONE #27 style scrollbars https://stackblitz.com/edit/react-ts-frji5h?file=components%2Fscrollbar%2Findex.tsx

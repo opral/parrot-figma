@@ -68,6 +68,7 @@ export default class WindowManagerUi extends EventTarget {
     document.body.onmousemove = (event) => {
       const handle = document.getElementById(this.handleElementId);
       if (!handle) {
+        console.log('no handle found!!!');
         return;
       }
       const mouseX = event.clientX;
@@ -85,23 +86,30 @@ export default class WindowManagerUi extends EventTarget {
         && mouseY >= handleY
         && mouseY <= handleY + handleHeight
       ) {
-        document.body.style.cursor = 'ns-resize';
+        this.heightResizeHandleEl.style.cursor = 'ns-resize';
         this.heightResizeHandleEl.style.left = `${mouseX - 10}px`;
         this.heightResizeHandleEl.style.display = 'unset';
+        if (!this.isResizing) {
+          this.updateDragContainer();
+        }
       } else {
-        document.body.style.cursor = 'unset';
+        this.heightResizeHandleEl.style.cursor = 'unset';
         this.heightResizeHandleEl.style.display = 'none';
       }
     };
 
     this.heightResizeHandleEl.onmouseup = () => {
-      this.updateDragContainer();
       this.isResizing = false;
+      this.updateDragContainer();
     };
+
+    this.heightResizeHandleEl.onmousedown = () => {
+      this.isResizing = true;
+    }
 
     let lastCall = Date.now();
     this.heightResizeScrollContainerEl.onscroll = (e) => {
-      if (!this.viewportBounds || this.windowMode !== WindowMode.BottomSheet) {
+      if (!this.isResizing || !this.viewportBounds || this.windowMode !== WindowMode.BottomSheet) {
         return;
       }
 
@@ -120,7 +128,6 @@ export default class WindowManagerUi extends EventTarget {
         height: Math.min(Math.max(minHeight, scrolledHeight), maxHeight),
       };
 
-      this.isResizing = true;
       parent.postMessage({ pluginMessage: { target: 'WindowManager', size, source: 'dragging' }, pluginId: '*' }, '*');
     };
     ((document.querySelector(':root')!) as HTMLElement).style.setProperty('--resize-detection-overlap', `${RESIZEDETECTION_OVERLAP_PX + 2}px`);
@@ -177,6 +184,7 @@ export default class WindowManagerUi extends EventTarget {
           const changeEvent = new CustomEvent<any>('changed');
           this.dispatchEvent(changeEvent);
         } else if (event.data.pluginMessage.viewportBounds) {
+          console.log('viewportBounds viewportBounds viewportBounds viewportBounds ');
           this.viewportBounds = event.data.pluginMessage.viewportBounds;
           this.updateDragContainer();
         }
@@ -198,22 +206,31 @@ export default class WindowManagerUi extends EventTarget {
     const { height } = computedStyle;
     const windowHeight = parseInt(height, 10);
 
+    console.log('updating drag container using view bounds');
+    console.log(this.viewportBounds);
+
     // make the content three times as height as window + viewport to be able to scroll up and down in an visible area of the window height
     this.heightResizeScrollContentEl.style.height = `${(this.viewportBounds.height + windowHeight) * 3}px`;
     // the scroll container should be the full viewport height plus the an additional scrolling area of the plugin window
     this.heightResizeScrollContainerEl.style.height = `${this.viewportBounds.height + windowHeight}px`;
 
-    // start at the top of the plugin windo
-    this.heightResizeScrollContainerEl.scrollTop = (this.viewportBounds.height - windowHeight) * 3;
 
     // place the handle
-    this.heightResizeHandleEl.style.bottom = `${windowHeight - titleBarHeight}px`;
+    this.heightResizeHandleEl.style.bottom = `${windowHeight}px`;
     // console.log("this.heightResizeHandleEl.style.bottom: "+  this.heightResizeHandleEl.style.bottom);
 
     // place the containers relative to the bottom - it should overlap with the plugin wihdow height
-    this.heightResizeScrollContainerEl.style.bottom = `${-windowHeight + titleBarHeight - windowHeight}px`;
-    // console.log('bottom2: ' + (-windowHeight + titleBarHeight - windowHeight))
-    this.heightResizeScrollContainerEl.style.bottom = `${-windowHeight + titleBarHeight - windowHeight}px`;
+    this.heightResizeScrollContainerEl.style.bottom = `${-windowHeight - windowHeight}px`;
+
+    // start at the top of the plugin windo
+    this.heightResizeScrollContainerEl.scrollTop = (this.viewportBounds.height - (windowHeight)) * 3;
+  //  console.log('---------------------------------------------------------------')
+  //   console.log("this.viewportBounds.height" + this.viewportBounds.height);
+  //   console.log("windowHeight" + windowHeight);
+  //   console.log("sum" + (this.viewportBounds.height - (windowHeight)) * 3);
+  //   console.log((this.viewportBounds.height - (windowHeight)) * 3);
+  //   console.log(this.heightResizeScrollContainerEl.scrollTop);
+
   }
 
   requestResize(size: { height?: number, width?: number }) {

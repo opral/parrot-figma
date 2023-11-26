@@ -189,14 +189,8 @@ export class WindowManagerSandbox {
       // @ts-ignore -- figmas ui type does not expose the reposition atm
       figma.ui.reposition(windowRect.x, windowRect.y);
       console.log('calling show');
+      
       figma.ui.show();
-
-      figma.ui.postMessage({
-        target: 'WindowManager',
-        viewportBounds: {
-          height: figma.viewport.bounds.height * figma.viewport.zoom,
-        }
-      });
 
       this.viewportResizeCheckInterval = setInterval(() => {
         // check if the viewports width has changed
@@ -205,7 +199,14 @@ export class WindowManagerSandbox {
 
       figma.ui.on('message', (message) => {
         if (message.target === 'WindowManager') {
-          if (message.size) {
+          if (message.uiInit) {
+            figma.ui.postMessage({
+              target: 'WindowManager',
+              viewportBounds: {
+                height: figma.viewport.bounds.height * figma.viewport.zoom,
+              },
+            });
+          } else if (message.size) {
             this.handleSizeMessage(message);
           } else if (message.requestedWindowMode !== undefined) {
             this.setWindowMode(message.requestedWindowMode);
@@ -220,13 +221,20 @@ export class WindowManagerSandbox {
   }
 
   async devModeUI() {
-    const response = await fetch('http://127.0.0.1:8080/dist/ui.html');
+    const response = await fetch(`http://127.0.0.1:8080/dist/ui.html?nocache=${(new Date()).getTime()}`);
     let devUI = await response.text();
 
     devUI = devUI.split('__%%InitialWindowMode%%__').join(this.currentWindowMode);
 
     figma.showUI(devUI, {
       themeColors: true, visible: true,
+    });
+    
+    figma.ui.postMessage({
+      target: 'WindowManager',
+      viewportBounds: {
+        height: figma.viewport.bounds.height * figma.viewport.zoom,
+      },
     });
   }
 
@@ -298,6 +306,13 @@ export class WindowManagerSandbox {
       this.viewPortResizing = false;
     }, this.settleTime);
 
+    figma.ui.postMessage({
+      target: 'WindowManager',
+      viewportBounds: {
+        height: figma.viewport.bounds.height * figma.viewport.zoom,
+      },
+    });
+
     if (this.currentWindowMode === WindowMode.BottomSheet
       // || this.currentWindowMode === WindowMode.Minimized
       || this.currentWindowMode === WindowMode.Fullscreen) {
@@ -345,10 +360,10 @@ export class WindowManagerSandbox {
         break;
       case WindowMode.Window:
         if (message.size.width === undefined) {
-          throw new Error('width not provided handleSizeMessage for window mode')
+          throw new Error('width not provided handleSizeMessage for window mode');
         }
         if (message.size.height === undefined) {
-          throw new Error('height not provided handleSizeMessage for window mode')
+          throw new Error('height not provided handleSizeMessage for window mode');
         }
         this.windowModeSize = {
           width: Math.floor(message.size.width),
@@ -365,7 +380,7 @@ export class WindowManagerSandbox {
           this.introModeSize.height = message.size.height;
         }
 
-        console.log('updating intor window size to ' + JSON.stringify(this.introModeSize));
+        console.log(`updating intor window size to ${JSON.stringify(this.introModeSize)}`);
         this.updateWindowRect(this.introModeSize);
         break;
       default:

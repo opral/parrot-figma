@@ -49,8 +49,14 @@ body {
   background-color: var(--figma-color-bg-hover);
 }
 
+@keyframes flash-active {
+  0% { background-color: var(--figma-color-bg-disabled); }
+  100% { background-color: transparent; }
+}
+
 .window-control .segmented-control-segment.selected {
   box-shadow: inset 0 0 0 1px transparent;
+  animation: flash-active 2s ease;
   background-color: transparent;
 }
 
@@ -493,23 +499,14 @@ div:hover>.os-scrollbar.os-scrollbar-vertical {
 
 .height-resize-container {
   height: 180px;
+  
   overflow-y: scroll;
   position: absolute;
   bottom: -140px;
   width: 20px;
+  opacity: 0;
 }
 
 .height-resize-container::-webkit-scrollbar {
   cursor: pointer;
-} 
-
-.height-resize-overlay {
-  position: absolute;
-  pointer-events: none;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-  background-color: green;
 }

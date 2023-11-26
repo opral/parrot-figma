@@ -29,7 +29,17 @@ body {
 }
 
 .windowmanager-bottomSheet .toolbar-resize-handle {
-  cursor: ns-resize
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+}
+
+.windowmanager-bottomSheet .toolbar-resize-handle .svg-container {
+  width: 16px;
+  height: 16px;
+  background-color: var(--figma-color-text-disabled);
+  margin-right: 8px;
+  margin-left: auto;
 }
 
 .window-control {
@@ -406,7 +416,7 @@ button:focus:not(:disabled), .basic_form--btn--t7Y67:active:not(:disabled) {
   position: absolute;
   bottom: -140px;
   width: 20px;
-  opacity: 0;
+  opacity: 0.001;
 }
 
 .height-resize-container::-webkit-scrollbar {

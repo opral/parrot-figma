@@ -429,14 +429,15 @@ function App() {
         </div>
 
         <div
-          id='toolbar-resize-handle'
+          id="toolbar-resize-handle"
           className="toolbar-resize-handle"
           style={{
             pointerEvents: 'none',
             flexGrow: 1,
-            display: windowMode === WindowMode.BottomSheet ? 'block' : 'none',
+            display: windowMode === WindowMode.BottomSheet ? 'flex' : 'none',
           }}
         >
+          <div className="svg-container resize-height" />
         </div>
 
         <div className="window-control">

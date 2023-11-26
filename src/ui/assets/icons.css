@@ -286,6 +286,12 @@
     mask-image: url(./32/with_message.svg);
   }
 
+
+  .resize-height {
+    -webkit-mask-image: url(./16/resize-height.svg);
+    mask-image: url(./16/resize-height.svg);
+  }
+
   .world-svg {
     -webkit-mask-image: url(./world.svg);
     mask-image: url(./world.svg);

@@ -204,7 +204,7 @@ export default class WindowManagerUi extends EventTarget {
 
     const computedStyle = getComputedStyle(this.sizeWrapper);
     const { height } = computedStyle;
-    const windowHeight = parseInt(height, 10);
+    const windowHeight = parseInt(height, 10) - 5;
 
     console.log('updating drag container using view bounds');
     console.log(this.viewportBounds);

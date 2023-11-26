@@ -129,6 +129,12 @@
   }
   
 
+  .resize-height {
+    -webkit-mask-image: url(./16/resize-height.svg);
+    mask-image: url(./16/resize-height.svg);
+  }
+
+
 
   .upload-svg {
     -webkit-mask-image: url(./upload.svg);

@@ -520,3 +520,56 @@ div:hover>.os-scrollbar.os-scrollbar-vertical {
 .height-resize-container::-webkit-scrollbar {
   cursor: pointer;
 }
+
+
+.free-beta-badge {
+  position: fixed; 
+  left: 0px; 
+  bottom: 0px; 
+  width: 91px;
+  height: 91px;
+  pointer-events: none;
+
+  /* -webkit-mask-image: url(./assets/free-beta-badge.svg);
+  mask-image: url(./assets/free-beta-badge.svg); */
+  
+}
+
+
+.free-beta-badge rect {
+  pointer-events: auto;
+  -webkit-filter: grayscale(0.8);
+}
+
+
+.free-beta-badge rect:hover {
+  cursor: help;
+  -webkit-filter: grayscale(0);
+}
+
+.announcement {
+  padding: 16px;
+  width: 600;
+}
+
+.announcement h1 {
+  font-size: 20;
+  font-weight: 600;
+  
+}
+
+.announcement h2 {
+  font-size: 16;
+  padding-top: 16px;
+  font-weight: 600;
+}
+
+
+.announcement b {
+  font-weight: 600;
+}
+
+.announcement a {
+  color: var(--figma-color-text-brand);
+  
+}

@@ -184,6 +184,7 @@ function App() {
   const [appScreen, setAppScreen] = useState(undefined as String | undefined);
   const [consumptionPayWallFeature, setCunsumptionPayWallFeature] = useState(undefined as String | undefined);
   const [showAllFeatures, setShowAllFeatures] = useState(false);
+  const [showFreeBetaInfo, setShowFreeBetaInfo] = useState(true);
 
   const [user, setUser] = useState(undefined as PluginUser | undefined);
 
@@ -191,6 +192,13 @@ function App() {
   const [keyQuery, setKeyQuery] = useState(MessageStoreMemory.toQueryObject(''));
 
   useEffect(() => {
+    const freeBetaBadge = document.getElementById('free-beta-badge');
+    if (freeBetaBadge) {
+      freeBetaBadge.onclick = () => {
+        setShowFreeBetaInfo(true);
+      };
+    }
+
     // asynchronous fetch the state from figma helper
     (async () => {
       await userStateManagerUi.loadUserState();
@@ -508,6 +516,64 @@ function App() {
         />
 
       </Drawer>
+      <Drawer
+        shown={showFreeBetaInfo}
+        beforeShow={async () => {
+          const waitOneFrame = () => new Promise<void>((resolve) => {
+            setTimeout(() => {
+              resolve();
+            }, 30);
+          });
+          WindowManagerUi.instance?.requestWindowMode(WindowMode.Fullscreen, false);
+          return waitOneFrame();
+        }}
+        buttons={[
+
+          {
+            type: 'primary',
+            text: 'Join #parrot-figma for Feedback',
+            key: 'enter',
+            callback: () => {
+              window.open('https://discord.gg/jTzBjgg6UK', '_blank');
+              setShowFreeBetaInfo(false);
+            },
+          },
+          {
+            type: 'secondary',
+            text: 'Maybe later...',
+            key: 'escape',
+            callback: () => {
+              setShowFreeBetaInfo(false);
+            },
+          },
+        ]}
+        onCancel={() => {
+          setShowFreeBetaInfo(false);
+        }}
+        position="top"
+      >
+        <div className="announcement">
+          <p><h1>🌟 Exciting News! 🌟</h1></p>
+
+          <p><h2>Important Update:</h2></p>
+          <p>Big changes are coming to Parrot! In the beginning of 2024, we&apos;re introducing new subscription plans for teams and larger projects, while keeping it free for individuals and small projects.</p>
+
+          <p><h2>Why the Change?</h2></p>
+          <p>We&apos;ve poured our hearst into this project for the past nine months, and now We are taking the leap to turn it from a hobby into a full-time venture. Your support means the world to us!</p>
+
+          <p><h2>Shape the Future:</h2></p>
+          <p>We are still fine-tuning the pricing details and would love your input! Explore the upcoming features like i18n Design Linting, Message QA and many more on our</p>
+          <p></p>
+          <p><a href="https://github.com/parrot-global/parrot/blob/main/upcomming-features.md"> Upcomming Features list</a> and let us know your thoughts on what feels fair and valuable to you.</p>
+
+          <p><b>Join the Conversation:</b></p>
+          <p>Become a part of the dialogue on our Discord <a href="https://discord.gg/jTzBjgg6UK">#parrot-figma</a> to share your insights and help define the future of Parrot.global.
+
+          <p>Thank you for being a crucial part of this journey!</p>
+        </div>
+
+      </Drawer>
+
       <Drawer
         shown={showAllFeatures}
         beforeShow={async () => {

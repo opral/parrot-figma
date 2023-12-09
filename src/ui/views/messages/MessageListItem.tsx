@@ -173,7 +173,7 @@ export default function TranslationKeyListItem({
       <div className="message-group-header-sticky-border">test</div>
 
       {languages.map((language, i, allLanguages) => {
-        const variant = message.variants.find((currentVariant) => currentVariant.languageTag === language);
+        const variant = message.variants.find((currentVariant: any) => currentVariant.languageTag === language);
         let variantHTML = '';
         if (variant !== undefined) {
           variantHTML = MessageStoreMemory.patternToHtml(variant.pattern);

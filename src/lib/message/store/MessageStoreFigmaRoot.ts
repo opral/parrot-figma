@@ -1,3 +1,4 @@
+/* eslint-disable no-continue */
 /* eslint-disable class-methods-use-this */
 /* eslint-disable no-await-in-loop */
 
@@ -63,7 +64,7 @@ export class InlangMessageStore {
         // eslint-disable-next-line no-continue
         continue;
       }
-      
+
       // TODO #25 CACHING implement for multi user - keep tracK of changes in config as well
       // eslint-disable-next-line default-case
       const currentFileStorageKeys = figma.root.getPluginDataKeys().filter((value) => value.indexOf(InlangMessageStore.messagePrefix) === 0);
@@ -146,6 +147,8 @@ export class InlangMessageStore {
     if (messageRaw === '') {
       return undefined;
     }
+
+    // we hash the content and store it in memory - to know which state the iframe is aware of - in case another user edits the message
     const messageRawHash = blake.blake2sHex(encoder.encode(messageRaw));
     const message = JSON.parse(messageRaw);
     if (message !== undefined) {
@@ -157,12 +160,15 @@ export class InlangMessageStore {
   async load(): Promise<Message[]> {
     const messages = [] as Message[];
     for (const messageStorageKey of figma.root.getPluginDataKeys()) {
-      if (messageStorageKey.startsWith(InlangMessageStore.messagePrefix)) {
-        const messageName = messageStorageKey.substring(InlangMessageStore.messagePrefix.length);
-        const message = this.getMessage(messageName);
-        if (message !== undefined) {
-          messages.push(message);
-        }
+      if (!messageStorageKey.startsWith(InlangMessageStore.messagePrefix)) {
+        continue;
+      }
+
+      // 
+      const messageName = messageStorageKey.substring(InlangMessageStore.messagePrefix.length);
+      const message = this.getMessage(messageName);
+      if (message !== undefined) {
+        messages.push(message);
       }
     }
     return messages;

@@ -3,7 +3,7 @@
 import { Gender } from '../message/variants/Gender';
 import { Plural } from '../message/variants/Plural';
 
-import { InlangMessageStore } from '../message/store/InlangMessageStoreFigmaRoot';
+import { InlangMessageStore } from '../message/store/MessageStoreFigmaRoot';
 import { MARKER_CHARACTER } from '../localizedlabels/LocalizedLabelManager';
 import PlaceholderHelper from '../message/PlaceholderUtil';
 import { MessageParameterValues } from '../message/MessageParameterValues';

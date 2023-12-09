@@ -8,7 +8,7 @@ import VirtualTree, { VirtualTreeNode } from './VirtualTree';
 import LinksLoadedEvent from './LinksLoadedEvent';
 import TextNodeLinter from './lint/TextNodeLinter';
 import FontHelper from './FontUtil';
-import { InlangMessageStore } from '../message/store/InlangMessageStoreFigmaRoot';
+import { InlangMessageStore } from '../message/store/MessageStoreFigmaRoot';
 import { FillinToPlaceholder as FillinsToPlaceholder } from '../message/MessageExtnesions';
 import { MessageParameterValues } from "../message/MessageParameterValues";
 

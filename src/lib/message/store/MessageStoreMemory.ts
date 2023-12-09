@@ -1,18 +1,19 @@
 /* eslint-disable no-plusplus */
 /* eslint-disable no-await-in-loop */
 import {
-  ProjectSettings, loadProject, getVariant, InlangProject, LanguageTag, updateVariantPattern, createVariant,
+  loadProject, getVariant, InlangProject, updateVariantPattern, createVariant,
 } from '@inlang/sdk';
-import { Message, Pattern } from '@inlang/message';
-import blake from 'blakejs';
+import { Message, Pattern } from '@inlang/sdk';
+
+import { NodeishFilesystem } from '@lix-js/fs';
 import { Locale } from '../variants/Locale';
-import { Plural, getPluralFormsByLanguage } from '../variants/Plural';
+import { Plural } from '../variants/Plural';
 
 import { NodeSelection } from '../../localizedlabels/LocalizedLabelManager';
 import { Gender, genderList } from '../variants/Gender';
 import { createNodeishMemoryFs } from './inlang/FigmaRootFs';
-import { Config, InlangMessageStore } from './InlangMessageStoreFigmaRoot';
-import { MessageParameterValues } from "../MessageParameterValues";
+import { Config, InlangMessageStore } from './MessageStoreFigmaRoot';
+import { MessageParameterValues } from '../MessageParameterValues';
 import PlaceholderHelper from '../PlaceholderUtil';
 
 export type SearchQuery = {
@@ -49,26 +50,31 @@ export type SearchResult = {
 
 };
 
-const fs = createNodeishMemoryFs();
+
+const projectFolder = '/project2.inlang';
+const messagePath = projectFolder + '/messages/';
 
 export default class MessageStoreMemory extends EventTarget {
-  config: Config | undefined;
+  config: Config = { };
 
   inlangProject: InlangProject | undefined;
 
-  parentKeyStore: InlangMessageStore;
+  // parentKeyStore: InlangMessageStore;
 
-  constructor(parentKeyStore: InlangMessageStore) {
+  fs: NodeishFilesystem;
+
+  constructor(parentKeyStore: InlangMessageStore, fs: NodeishFilesystem) {
     super();
-    this.parentKeyStore = parentKeyStore;
+    // this.parentKeyStore = parentKeyStore;
+    this.fs = fs;
 
-    window.addEventListener('message', (event : MessageEvent) => {
-      if (event.data.pluginMessage.target === 'TranslationKeyStore') {
-        if (event.data.pluginMessage.type === 'cacheUpdate') {
-          this.processCacheUpdate(event.data.pluginMessage.changedKeys);
-        }
-      }
-    });
+    // window.addEventListener('message', (event : MessageEvent) => {
+    //   if (event.data.pluginMessage.target === 'TranslationKeyStore') {
+    //     if (event.data.pluginMessage.type === 'cacheUpdate') {
+    //       this.processCacheUpdate(event.data.pluginMessage.changedKeys);
+    //     }
+    //   }
+    // });
   }
 
   public async updateMessageLinks(messageIds: string[]) {
@@ -93,81 +99,102 @@ export default class MessageStoreMemory extends EventTarget {
 
   static UPDATE_EVENT = 'updated';
 
-  private async processCacheUpdate(changedMessages: { deleted: string[], added: string[], updated: string[] }) {
-    const changes = {
-      deleted: [] as string[],
-      updated: [] as string[],
-      added: [] as string[],
-      changedKeys: [] as string[],
-    };
-    
-    for (const deltedMessageId of changedMessages.deleted) {
-      this.inlangProject?.query.messages.delete({ where: { id: deltedMessageId } });
-      changes.deleted.push(deltedMessageId);
-      changes.changedKeys.push(deltedMessageId);
-    }
+  // private async processCacheUpdate(changedMessages: { deleted: string[], added: string[], updated: string[] }) {
+  //   const changes = {
+  //     deleted: [] as string[],
+  //     updated: [] as string[],
+  //     added: [] as string[],
+  //     changedKeys: [] as string[],
+  //   };
 
-    for (const updatedMessageId of changedMessages.updated) {
-      const freshMessage = await this.parentKeyStore.getMessageAsync(updatedMessageId);
-      if (!freshMessage) {
-        throw new Error(`fresh message does not exist... [${updatedMessageId}]`);
-      }
+  //   for (const deltedMessageId of changedMessages.deleted) {
+  //     this.inlangProject?.query.messages.delete({ where: { id: deltedMessageId } });
+  //     changes.deleted.push(deltedMessageId);
+  //     changes.changedKeys.push(deltedMessageId);
+  //   }
 
-      this.inlangProject?.query.messages.upsert({ where: { id: freshMessage.id }, data: freshMessage});
-      changes.updated.push(updatedMessageId);
-      changes.changedKeys.push(updatedMessageId);
-    }
+  //   for (const updatedMessageId of changedMessages.updated) {
+  //     const freshMessage = await this.parentKeyStore.getMessageAsync(updatedMessageId);
+  //     if (!freshMessage) {
+  //       throw new Error(`fresh message does not exist... [${updatedMessageId}]`);
+  //     }
 
-    for (const addedMessageId of changedMessages.added) {
-      const freshMessage = await this.parentKeyStore.getMessageAsync(addedMessageId);
-      if (!freshMessage) {
-        throw new Error(`fresh message does not exist... [${addedMessageId}]`);
-      }
-      this.inlangProject?.query.messages.upsert({ where: { id: freshMessage.id }, data: freshMessage });
-      changes.added.push(addedMessageId);
-      changes.changedKeys.push(addedMessageId);
-    }
+  //     this.inlangProject?.query.messages.upsert({ where: { id: freshMessage.id }, data: freshMessage });
+  //     changes.updated.push(updatedMessageId);
+  //     changes.changedKeys.push(updatedMessageId);
+  //   }
 
-    const event = new CustomEvent<any>(MessageStoreMemory.UPDATE_EVENT, { detail: changes });
-    this.dispatchEvent(event);
-  }
+  //   for (const addedMessageId of changedMessages.added) {
+  //     const freshMessage = await this.parentKeyStore.getMessageAsync(addedMessageId);
+  //     if (!freshMessage) {
+  //       throw new Error(`fresh message does not exist... [${addedMessageId}]`);
+  //     }
+  //     this.inlangProject?.query.messages.upsert({ where: { id: freshMessage.id }, data: freshMessage });
+  //     changes.added.push(addedMessageId);
+  //     changes.changedKeys.push(addedMessageId);
+  //   }
+
+  //   const event = new CustomEvent<any>(MessageStoreMemory.UPDATE_EVENT, { detail: changes });
+  //   this.dispatchEvent(event);
+  // }
 
   getLanugages(): Locale[] | undefined {
-    return this.config!.enabledLanguages;
+    if (this.inlangProject) {
+      return this.inlangProject.settings().languageTags as Locale[];
+    }
+    return this.config.enabledLanguages;
   }
 
   async setLanguages(languages: Locale[]) {
-    const parentConfig = await this.parentKeyStore.getConfig();
-    parentConfig.enabledLanguages = languages;
-    this.config!.enabledLanguages = languages;
+    this.config.enabledLanguages = languages;
 
-    await this.parentKeyStore.setConfig(parentConfig);
+    if (this.inlangProject === undefined) {
+      if (this.config.enabledLanguages && this.config.refLanguage) {
+        this.loadInlangProject();
+      }
+    } else {
+      this.inlangProject.settings().languageTags = languages;
+      // const { sourceLanguageTag } = this.inlangProject.settings();
+      // // await this.parentKeyStore.setConfig(parentConfig);
 
-    // forwared languages to inlang project - if initialzied already
-    this.inlangProject?.setSettings({
-      sourceLanguageTag: this.config?.refLanguage!,
-      languageTags: languages as string[],
-      modules: [],
-    });
+      // // forwared languages to inlang project - if initialzied already
+      // this.inlangProject.setSettings({
+      //   sourceLanguageTag,
+      //   languageTags: languages as string[],
+      //   modules: [],
+      // });
+    }
   }
 
   getRefLanugage(): Locale | undefined {
+    if (this.inlangProject) {
+      const settings = this.inlangProject.settings();
+      return settings.sourceLanguageTag as Locale;
+    }
     return this.config!.refLanguage;
   }
 
   async setRefLanguage(language: Locale) {
-    const parentConfig = await this.parentKeyStore.getConfig();
-    this.config!.refLanguage = language;
-    parentConfig.refLanguage = language;
+    this.config.refLanguage = language;
 
-    await this.parentKeyStore.setConfig(parentConfig);
+    if (this.inlangProject === undefined) {
+      if (this.config.enabledLanguages && this.config.refLanguage) {
+        this.loadInlangProject();
+      }
+    } else {
+      this.inlangProject.settings().sourceLanguageTag = language;
+      // // TODO #28 check if we can set the single property as well
+      // // TODO #28 check if we neeed the languages on load?
+      // const { languageTags } = this.inlangProject.settings();
+      // // await this.parentKeyStore.setConfig(parentConfig);
 
-    // forwared ref language to inlang project - if initialzied already
-    this.inlangProject?.setSettings({
-      sourceLanguageTag: language,
-      languageTags: this.config!.enabledLanguages as string[],
-      modules: [],
-    });
+      // // forwared languages to inlang project - if initialzied already
+      // this.inlangProject.setSettings({
+      //   sourceLanguageTag: language,
+      //   languageTags,
+      //   modules: [],
+      // });
+    }
   }
 
   getMessage(id: string) : Message | undefined {
@@ -513,21 +540,32 @@ export default class MessageStoreMemory extends EventTarget {
   deletedMessageIds = new Set<string>();
 
   private async loadInlangProject() {
-    // creating a project file
-    const inlangConfig = {
-      sourceLanguageTag: this.config!.refLanguage,
-      modules: ['./plugin.js'],
-      languageTags: this.config!.enabledLanguages,
-      // languageTags: ['en', 'de'],
-    };
+    debugger;
+    try {
+      await this.fs.readFile(projectFolder + '/settings.json');
+    } catch (e) {
+      if (this.config.refLanguage && this.config.enabledLanguages && this.config.enabledLanguages.length > 0) {
+        // creating a project file
+        const inlangConfig = {
+          sourceLanguageTag: this.config!.refLanguage,
+          modules: ['./plugin.js'],
+          languageTags: this.config!.enabledLanguages,
+          // languageTags: ['en', 'de'],
+        };
 
-    // writing the project file to the virtual filesystem
-    await fs.writeFile('/project.inlang.json', JSON.stringify(inlangConfig));
+        await this.fs.mkdir(projectFolder);
+        // writing the project file to the virtual filesystem
+        await this.fs.writeFile(projectFolder + '/settings.json', JSON.stringify(inlangConfig));
+        return;
+      }
+      console.log('no inlang settings yet - not initialziing until ');
+      return;
+    }
 
     // opening the project file and loading the plugin
     this.inlangProject = await loadProject({
-      nodeishFs: fs,
-      settingsFilePath: '/project.inlang.json',
+      nodeishFs: this.fs,
+      projectPath: projectFolder,
       // simulate the import function that the SDK uses
       // to inject the plugin into the project
       _import: async () => {
@@ -538,41 +576,52 @@ export default class MessageStoreMemory extends EventTarget {
             id: 'plugin.organization.pluginName', // as Plugin['id'],
             displayName: { en: 'test' }, // as Plugin['displayName'],
             description: { en: 'test' }, // as Plugin['description'],
-            // displayName,
-            // description,
-            loadMessages: async () => {
-              const messages = await this.parentKeyStore.load();
+            /*loadMessages: async () => {
+              // load all messages
+              const messages: Message[] = [];// await this.parentKeyStore.load();
+
+              await this.fs.mkdir(messagePath);
+
+              const messageFilePaths = await this.fs.readdir(messagePath);
+              for (const messageFilePath of messageFilePaths) {
+                const messageRaw = await this.fs.readFile(`${messagePath}${messageFilePath}`, { encoding: 'utf-8' });
+                const message = JSON.parse(messageRaw) as Message;
+                messages.push(message);
+              }
+
               return messages;
             },
             saveMessages: async ({ messages, settings, nodeishFs }: { messages: Message[], settings: any, nodeishFs: any }) => {
               for (const message of messages) {
                 if (this.upsertedMessageIds.has(message.id)) {
-                  await this.parentKeyStore.saveMessage(message);
+                  // await this.parentKeyStore.saveMessage(message);
+                  await this.fs.writeFile(`${messagePath}${message.id}`, JSON.stringify(message));
                 }
               }
 
               for (const deletedMessageId of [...this.deletedMessageIds]) {
-                await this.parentKeyStore.deleteMessage(deletedMessageId);
+                await this.fs.rm(`${messagePath}${deletedMessageId}`);
+                // await this.parentKeyStore.deleteMessage(deletedMessageId);
               }
               this.upsertedMessageIds = new Set<string>();
-            },
+            },*/
           },
 
         };
         // return import('./inlang/FigmaPlugin');
       },
     });
+
+    this.fs.watch(messagePath, { recursive: true });
   }
 
-  async load(): Promise<Readonly<Message[]>> {
-    this.config = await this.parentKeyStore.getConfig();
-
-    if (this.config?.refLanguage === undefined) {
-      return [];
-    }
-
+  async load(): Promise<boolean> {
     await this.loadInlangProject();
-    return this.inlangProject!.query.messages.getAll();
+    if (this.inlangProject) {
+      this.inlangProject!.query.messages.getAll();
+      return true;
+    }
+    return false;
   }
 
   // wrapper methods to centralize the integration of inlang in case of api changes
@@ -633,7 +682,7 @@ export default class MessageStoreMemory extends EventTarget {
     targetLanguage: Locale,
     match: string[],
   ) {
-    // 
+    //
     const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, match);
     if (sourceVariantPatternHTML === undefined) {
       throw new Error(`Pattern did not exist for source language: ${sourceLanguage}`);

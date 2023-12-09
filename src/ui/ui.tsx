@@ -25,6 +25,9 @@ import MessageStoreMemory from '../lib/message/store/MessageStoreMemory';
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
 import LocalizedLabelManagerUI from '../lib/localizedlabels/LocalizedLabelManagerUI';
 
+import FigmaFsUI from '../lib/figmafs/FigmaFsUI';
+import FigmaFsSandbox from '../lib/figmafs/FigmaFsSandbox';
+
 import './tabbar.css';
 import './assets/icons.css';
 import SegmentedControl from './compontents/segmentedControl/SegmentedControl';
@@ -42,7 +45,7 @@ import UserManagement from './views/usermanagement/Usermanagement';
 import Drawer from './compontents/drawer/Drawer';
 import ConsumptionPaywall from './compontents/plans/ConsumptionPaywall';
 import ComparisonChart from './compontents/plans/ComparisonChart';
-import { InlangMessageStore } from '../lib/message/store/InlangMessageStoreFigmaRoot';
+import { InlangMessageStore } from '../lib/message/store/MessageStoreFigmaRoot';
 import 'overlayscrollbars/overlayscrollbars.css';
 import { OverlayScrollbarsComponent } from './compontents/overlayscrollbar';
 
@@ -167,13 +170,18 @@ setInterval(() => {
   checkVersion().catch(console.log);
 }, versionCheckInterval);
 
+const fsSandbox = new FigmaFsSandbox(true);
+asyncFunctionProxy.proxyAsyncMethods(fsSandbox);
+FigmaFsUI.init(fsSandbox);
+
+
 const userStateManagerSandbox = new UserManager(true);
 asyncFunctionProxy.proxyAsyncMethods(userStateManagerSandbox);
 const userStateManagerUi = new UserManagerUI(userStateManagerSandbox);
 const figmaFileTranslationKeyStore = new InlangMessageStore(true);
 
 asyncFunctionProxy.proxyAsyncMethods(figmaFileTranslationKeyStore);
-const memoryTranslationKeyStore = new MessageStoreMemory(figmaFileTranslationKeyStore);
+const memoryTranslationKeyStore = new MessageStoreMemory(figmaFileTranslationKeyStore, FigmaFsUI.instance!);
 
 const remoteLocalizedLabelManager = new LocalizedLabelManager();
 asyncFunctionProxy.proxyAsyncMethods(remoteLocalizedLabelManager);
@@ -230,16 +238,14 @@ function App() {
   useEffect(() => {
     // asynchronous fetch the state from figma helper
     (async () => {
-      console.log('load - keys');
-
       const fileSetupCompleted = await figmaRemote.getRootPluginData('fileSetupCompleted');
 
       await localizedLabelManager.prepare();
-      await memoryTranslationKeyStore.load();
+      const inlangProjectLoaded = await memoryTranslationKeyStore.load();
       localizedLabelManager.startFillupCache();
 
       let initialScreen = (await figmaRemote.getLocalFileConfig('lastView')) ?? 'design';
-      if (fileSetupCompleted === undefined || fileSetupCompleted === '') {
+      if (fileSetupCompleted === undefined || fileSetupCompleted === '' || !inlangProjectLoaded) {
         initialScreen = 'onboarding';
       }
       setAppScreen(initialScreen);

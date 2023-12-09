@@ -1,6 +1,6 @@
 import Quill, { Delta as DeltaType, DeltaOperation } from 'quill';
 import blake from 'blakejs';
-import { Message } from '@inlang/message';
+import { Message } from '@inlang/sdk';
 import { Locale } from '../message/variants/Locale';
 import { MessageLinkState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
 

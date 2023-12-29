@@ -5,6 +5,7 @@ import {
 } from '@inlang/sdk';
 import { Message, Pattern } from '@inlang/sdk';
 
+import { Repository, openRepository } from '@lix-js/client';
 import { NodeishFilesystem } from '@lix-js/fs';
 import { Locale } from '../variants/Locale';
 import { Plural } from '../variants/Plural';
@@ -50,12 +51,18 @@ export type SearchResult = {
 
 };
 
+const projectFolder = '/project.inlang';
+const messagePath = `${projectFolder}/messages/`;
 
-const projectFolder = '/project2.inlang';
-const messagePath = projectFolder + '/messages/';
+const PUBLIC_GIT_PROXY_BASE_URL = 'http://localhost:3001';
+const host = 'github.com';
+const owner = 'martin-lysk';
+const repository = 'example';
 
 export default class MessageStoreMemory extends EventTarget {
   config: Config = { };
+
+  repo: Repository | undefined;
 
   inlangProject: InlangProject | undefined;
 
@@ -63,10 +70,166 @@ export default class MessageStoreMemory extends EventTarget {
 
   fs: NodeishFilesystem;
 
-  constructor(parentKeyStore: InlangMessageStore, fs: NodeishFilesystem) {
+  async pushChanges() {
+    // stage all changes
+    const status = await this.repo!.statusMatrix({
+      filter: (f: any) => f.endsWith('.json')
+          || f.endsWith('.po')
+          || f.endsWith('.yaml')
+          || f.endsWith('.yml')
+          || f.endsWith('.js')
+          || f.endsWith('.ts'),
+    });
+
+    await this.repo!.pull({
+      author: {
+        name: 'test',
+        email: 'test@test.test',
+      },
+      fastForward: true,
+      singleBranch: true,
+    });
+
+    const filesWithUncommittedChanges = status.filter(
+      (row: any) =>
+      // files with unstaged and uncommitted changes
+        (row[2] === 2 && row[3] === 1)
+          // added files
+          || (row[2] === 2 && row[3] === 0),
+    );
+    if (filesWithUncommittedChanges.length > 0) {
+      // add all changes
+      for (const file of filesWithUncommittedChanges) {
+        await this.repo!.add({ filepath: file[0] });
+      }
+      // commit changes
+      await this.repo!.commit({
+        author: {
+          name: 'test',
+          email: 'test@test.test',
+        },
+        message: 'inlang: update translations',
+      });
+
+      const push = await this.repo!.push();
+      if (push?.ok === false) {
+        return 'ERROR';
+      }
+    }
+    return 'success';
+  }
+
+  watcher: any;
+
+  constructor(fs: NodeishFilesystem) {
     super();
     // this.parentKeyStore = parentKeyStore;
     this.fs = fs;
+
+    const httpPath = `${PUBLIC_GIT_PROXY_BASE_URL}/git/${host}/${owner}/${repository}`;
+    openRepository(
+      httpPath,
+      {
+        nodeishFs: fs,
+        auth: false,
+        branch: 'main',
+      },
+    ).then((repo) => {
+      this.repo = repo;
+      console.log(repo);
+      // this.repo = repo
+      let pushed = false;
+      
+      const startWatching = async () => {
+        try {
+          this.watcher = this.fs.watch('/project.inlang/', {
+            // TODO #1844  - check who would signal here -
+            // signal: abortController.signal,
+            persistent: false,
+            recursive: true,
+          });
+          if (this.watcher) {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            for await (const event of this.watcher) {
+              
+              console.log('change detected - push!');
+              if (!pushed) {
+                pushed = true;
+                setTimeout(() => { pushed = false }, 2000)
+                this.pushChanges();
+              }
+            }
+          }
+        } catch (err: any) {
+          if (err.name === 'AbortError') return;
+          // https://github.com/inlang/monorepo/issues/1647
+          // the file does not exist (yet)
+          // this is not testable beacause the fs.watch api differs
+          // from node and lix. lenghty
+          if (err.code === 'ENOENT') return;
+          throw err;
+        }
+      };
+      startWatching();
+    });
+
+    //   ;(async () => {
+    //     try {
+    //       const watcher = nodeishFs.watch(messageFolderPath, {
+    //         // TODO #1844  - check who would signal here -
+    //         // signal: abortController.signal,
+    //         persistent: false,
+    //         recursive: true,
+    //       })
+    //       if (watcher) {
+    //         //eslint-disable-next-line @typescript-eslint/no-unused-vars
+    //         for await (const event of watcher) {
+    //           if (!event.filename) {
+    //             throw new Error("filename not set in event...")
+    //           }
+
+    //           let fileContent: string | undefined
+    //           // TODO #1844 lets read the message and reload it
+    //           try {
+    //             fileContent = await nodeishFs.readFile(
+    //               messageFolderPath + "/" + event.filename!,
+    //               { encoding: "utf-8" }
+    //             )
+    //           } catch (e) {
+    //             // TODO #1844 check for file not exists - ENOENT and rethrow if different error
+    //             // if (e.code !== 'ENOENT') {
+    //             // 	throw e;
+    //             // }
+    //             // deleted = true;
+    //             // file does not exis - drop message in inlang project
+    //           }
+
+    //           const messageId = getMessageIdFromPath(event.filename)
+
+    //           if (!fileContent) {
+    //             messagesQuery.delete({ where: { id: messageId } })
+    //           } else {
+    //             const message = parseMessage(fileContent)
+    //             const currentMessage = messagesQuery.get({ where: { id: messageId } })
+    //             if (currentMessage && encodeMessage(currentMessage) === fileContent) {
+    //               continue
+    //             }
+
+    //             messagesQuery.upsert({ where: { id: messageId }, data: message })
+    //           }
+    //         }
+    //       }
+    //     } catch (err: any) {
+    //       if (err.name === "AbortError") return
+    //       // https://github.com/inlang/monorepo/issues/1647
+    //       // the file does not exist (yet)
+    //       // this is not testable beacause the fs.watch api differs
+    //       // from node and lix. lenghty
+    //       else if (err.code === "ENOENT") return
+    //       throw err
+    //     }
+    //   })()
+    // })
 
     // window.addEventListener('message', (event : MessageEvent) => {
     //   if (event.data.pluginMessage.target === 'TranslationKeyStore') {
@@ -540,9 +703,8 @@ export default class MessageStoreMemory extends EventTarget {
   deletedMessageIds = new Set<string>();
 
   private async loadInlangProject() {
-    debugger;
     try {
-      await this.fs.readFile(projectFolder + '/settings.json');
+      await this.fs.readFile(`${projectFolder}/settings.json`);
     } catch (e) {
       if (this.config.refLanguage && this.config.enabledLanguages && this.config.enabledLanguages.length > 0) {
         // creating a project file
@@ -555,13 +717,14 @@ export default class MessageStoreMemory extends EventTarget {
 
         await this.fs.mkdir(projectFolder);
         // writing the project file to the virtual filesystem
-        await this.fs.writeFile(projectFolder + '/settings.json', JSON.stringify(inlangConfig));
+        await this.fs.writeFile(`${projectFolder}/settings.json`, JSON.stringify(inlangConfig));
         return;
       }
       console.log('no inlang settings yet - not initialziing until ');
       return;
     }
 
+    debugger;
     // opening the project file and loading the plugin
     this.inlangProject = await loadProject({
       nodeishFs: this.fs,
@@ -576,7 +739,7 @@ export default class MessageStoreMemory extends EventTarget {
             id: 'plugin.organization.pluginName', // as Plugin['id'],
             displayName: { en: 'test' }, // as Plugin['displayName'],
             description: { en: 'test' }, // as Plugin['description'],
-            /*loadMessages: async () => {
+            /* loadMessages: async () => {
               // load all messages
               const messages: Message[] = [];// await this.parentKeyStore.load();
 
@@ -604,7 +767,7 @@ export default class MessageStoreMemory extends EventTarget {
                 // await this.parentKeyStore.deleteMessage(deletedMessageId);
               }
               this.upsertedMessageIds = new Set<string>();
-            },*/
+            }, */
           },
 
         };
@@ -612,7 +775,7 @@ export default class MessageStoreMemory extends EventTarget {
       },
     });
 
-    this.fs.watch(messagePath, { recursive: true });
+    // this.fs.watch(messagePath, { recursive: true });
   }
 
   async load(): Promise<boolean> {

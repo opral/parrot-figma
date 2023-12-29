@@ -119,7 +119,6 @@ export class AsyncFunctionProxy {
   }
 
   handleInvocationRequest(pluginMessage: any) {
-    
     if (!this.invocationRequestHandler[pluginMessage.name]) {
       throw new Error(`${this.name} Invocation handler for [${pluginMessage.name}] does not exist (did you register the executing instance in [${this.name}]?`);
     }
@@ -131,7 +130,7 @@ export class AsyncFunctionProxy {
         target: 'AsyncFunctionProxy',
         type: AsyncMessageBus.invocationResult,
         invocationId: pluginMessage.id,
-        result: data,
+        result: this.cleanFunctions(data),
       };
       this.postMessage(transferObj);
     }).catch((error: Error) => {
@@ -143,6 +142,25 @@ export class AsyncFunctionProxy {
         error: this.toSerializableError(error),
       });
     });
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  cleanFunctions(obj: any) {
+    const cleanedObject: any = {};
+    if (typeof obj === 'object' && obj !== null && !Array.isArray(obj)) {
+      // eslint-disable-next-line no-restricted-syntax
+      for (const key in obj) {
+        if (typeof obj[key] !== 'function') {
+          // eslint-disable-next-line no-param-reassign
+          cleanedObject[key] = obj[key];
+        } /* else if (typeof obj[key] === 'object') {
+          replaceFunctionProperties(obj[key]);
+        } */
+      }
+      return cleanedObject;
+    }
+
+    return obj;
   }
 
   handleInvocationResult(pluginMessage: any) {
@@ -168,6 +186,7 @@ export class AsyncFunctionProxy {
       message: error.message,
       name: error.name,
       stack: error.stack,
+      code: (error as any).code,
     };
   }
 
@@ -177,6 +196,7 @@ export class AsyncFunctionProxy {
     const error = new Error(message);
     error.name = name;
     error.stack = stack;
+    (error as any).code = serializedError.code;
     return error;
   }
 }

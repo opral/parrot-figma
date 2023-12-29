@@ -182,6 +182,7 @@ export function createNodeishMemoryFs(): NodeishFilesystem {
         return path;
       }
 
+      // direct parent did not exist - create parents recursive first
       if (options?.recursive) {
         const firstPath = await mkdir(getDirname(path), options);
         await mkdir(path, options);

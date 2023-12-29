@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "generate-strings": "node ./util/assets-and-resources.js;",
-    "start": "node ./util/assets-and-resources.js; webpack --mode development --watch & npx http-server --cors -o ./dist",
+    "start": "webpack --mode development --watch",
     "build": "webpack --mode production",
     "lint": "./node_modules/.bin/eslint",
     "lintfix": "./node_modules/.bin/eslint . --fix "
@@ -43,7 +43,9 @@
   },
   "dependencies": {
     "@figma-plugin/helpers": "^0.15.2",
-    "@inlang/sdk": "^0.9.0",
+    "@inlang/sdk": "file:../../parrot.global/inlang/monorepo/inlang/source-code/sdk",
+    "@lix-js/client": "file:../../parrot.global/inlang/monorepo/lix/source-code/client",
+    "@lix-js/fs": "file:../../parrot.global/inlang/monorepo/lix/source-code/fs",
     "@sentry/react": "^7.57.0",
     "@types/diff": "^5.0.2",
     "@types/ejs": "^3.1.2",
@@ -51,6 +53,7 @@
     "@types/react": "^17.0.19",
     "@types/react-dom": "^17.0.9",
     "blakejs": "^1.2.1",
+    "buffer": "^6.0.3",
     "diff": "^5.1.0",
     "dotenv": "^16.3.1",
     "dotenv-webpack": "^8.0.1",

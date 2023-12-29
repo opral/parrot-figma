@@ -69,7 +69,13 @@ module.exports = (env, argv) => {
       alias: {
         fs: false, // or any other value that makes sense for your project
         path: false, // or any other value that makes sense for your project
-      }
+        os: false,
+        crypto: false,
+      },
+      fallback: {
+          buffer: require.resolve('buffer/'),
+      },
+    
     },
     output: {
       filename: '[name].js',
@@ -89,10 +95,14 @@ module.exports = (env, argv) => {
             
             // mixed panel key must be added to the client :-(
             MIXPANEL_ACCESS_TOKEN: process.env.MIXPANEL_ACCESS_TOKEN,
-          }
+          },
+          
         }) + ')',
       }),
       
+      new webpack.ProvidePlugin({
+        Buffer: ['buffer', 'Buffer'],
+      }),
       // TODO fail build if we are in a release build and the token is missing!
       process.env.SENTRY_AUTH_TOKEN ?
         sentryWebpackPlugin({

@@ -1,3 +1,5 @@
+
+
 /* eslint-disable jsx-a11y/anchor-is-valid */
 /* eslint-disable jsx-a11y/anchor-has-content */
 /* eslint-disable jsx-a11y/control-has-associated-label */
@@ -48,6 +50,9 @@ import ComparisonChart from './compontents/plans/ComparisonChart';
 import { InlangMessageStore } from '../lib/message/store/MessageStoreFigmaRoot';
 import 'overlayscrollbars/overlayscrollbars.css';
 import { OverlayScrollbarsComponent } from './compontents/overlayscrollbar';
+import DelegatingFs from '../lib/figmafs/DelegatingFs';
+import { createNodeishMemoryFs } from '@lix-js/client';
+
 
 console.log(`Starting Figma UI - Version ${pjs.version}`);
 
@@ -174,14 +179,18 @@ const fsSandbox = new FigmaFsSandbox(true);
 asyncFunctionProxy.proxyAsyncMethods(fsSandbox);
 FigmaFsUI.init(fsSandbox);
 
+const splitFileSystem = new DelegatingFs([
+  { path: '/.git', fs: createNodeishMemoryFs() },
+  { path: '/', fs: FigmaFsUI.instance! },
+]);
+
+(window as any).filesystem = FigmaFsUI.instance;
 
 const userStateManagerSandbox = new UserManager(true);
 asyncFunctionProxy.proxyAsyncMethods(userStateManagerSandbox);
 const userStateManagerUi = new UserManagerUI(userStateManagerSandbox);
-const figmaFileTranslationKeyStore = new InlangMessageStore(true);
 
-asyncFunctionProxy.proxyAsyncMethods(figmaFileTranslationKeyStore);
-const memoryTranslationKeyStore = new MessageStoreMemory(figmaFileTranslationKeyStore, FigmaFsUI.instance!);
+const memoryTranslationKeyStore = new MessageStoreMemory(splitFileSystem);
 
 const remoteLocalizedLabelManager = new LocalizedLabelManager();
 asyncFunctionProxy.proxyAsyncMethods(remoteLocalizedLabelManager);

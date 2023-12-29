@@ -1,13 +1,16 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 /* eslint-disable no-param-reassign */
 import { NodeishFilesystem } from '@lix-js/fs';
+import TextEncoding from 'text-encoding';
 import { FileChangeInfo, NodeishStats } from './types/NodishStats';
-import { FigmaSandboxFsProvider } from './types/FigmaSandboxFsProvider';
 import normalPath from './utils/normalPath';
 import { FigFsStats, figFsStatsToStats } from './types/FigFsStats';
 import getBasename from './utils/getBasename';
 import getDirname from './utils/getDirname';
+import recreateFstatsMethods from './utils/recreateFstatsMethods';
 
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
 
 /**
  * This FS is split into two parts:
@@ -26,12 +29,12 @@ export default class FigmaFsUI implements NodeishFilesystem {
   // filestats also cached like files
   private fsStatsCache: Map<string, NodeishStats> = new Map();
 
-  private sandboxFs: FigmaSandboxFsProvider;
+  private sandboxFs: NodeishFilesystem;
 
   static instance: FigmaFsUI | undefined;
 
   static init(
-    sandboxFs: FigmaSandboxFsProvider,
+    sandboxFs: NodeishFilesystem,
   ) {
     if (this.instance) {
       throw new Error('init called twice');
@@ -40,95 +43,93 @@ export default class FigmaFsUI implements NodeishFilesystem {
     this.instance = new FigmaFsUI(sandboxFs);
   }
 
-  constructor(sandboxFs: FigmaSandboxFsProvider) {
+  constructor(sandboxFs: NodeishFilesystem) {
     this.sandboxFs = sandboxFs;
 
     window.addEventListener('message', (event : MessageEvent) => {
       if (event.data.pluginMessage.target === 'FigmaFsUI') {
-        if (event.data.pluginMessage.type === 'filechanges') {
-          if (event.data.pluginMessage.origin !== 'LOCAL' || event.data.pluginMessage.origin !== 'REMOTE') {
-            this.processFileChanges(event.data.pluginMessage.origin, event.data.pluginMessage.changedFiles);
-          }
+        debugger;
+        if (event.data.pluginMessage.type === 'changeEvent') {
+          this.processFileChanges(event.data.pluginMessage.event as FileChangeInfo);
         }
       }
     });
   }
 
-  private processFileChanges(origin: 'LOCAL' | 'REMOTE', changedFiles: { added: string[], updated: [], deleted: [] }) {
-    for (const addedFilePath of changedFiles.added) {
-      for (const listener of this.listeners) {
-        // "On most platforms, 'rename' is emitted whenever a filename appears or disappears in the directory."
-        listener({ eventType: 'rename', filename: addedFilePath });
-      }
-    }
+  private processFileChanges(event: FileChangeInfo) {
+    const normalizedPath = normalPath(event.filename!);
+    this.fsStatsCache.delete(normalizedPath);
+    this.fileContentCache.delete(normalizedPath);
 
-    for (const deletedFilePath of changedFiles.deleted) {
-      if (origin === 'REMOTE') {
-        const normalizedPath = normalPath(deletedFilePath);
-        this.fsStatsCache.delete(normalizedPath);
-        this.fileContentCache.delete(normalizedPath);
-      }
-
-      for (const listener of this.listeners) {
-        // "On most platforms, 'rename' is emitted whenever a filename appears or disappears in the directory."
-        listener({ eventType: 'rename', filename: deletedFilePath });
-      }
-    }
-
-    for (const updatedFilePath of changedFiles.updated) {
-      if (origin === 'REMOTE') {
-        const normalizedPath = normalPath(updatedFilePath);
-        this.fsStatsCache.delete(normalizedPath);
-        this.fileContentCache.delete(normalizedPath);
-      }
-      for (const listener of this.listeners) {
-        // "On most platforms, 'rename' is emitted whenever a filename appears or disappears in the directory."
-        listener({ eventType: 'rename', filename: updatedFilePath });
-      }
+    for (const listener of this.listeners) {
+      // "On most platforms, 'rename' is emitted whenever a filename appears or disappears in the directory."
+      listener(event);
     }
   }
 
   async writeFile(path: string, data: string | Uint8Array, options?: { mode: number; } | undefined): Promise<void> {
     const normalizedPath = normalPath(path);
 
-    const dataString = typeof data !== 'string' ? new TextDecoder().decode(data) : data;
+    // const dataString = typeof data !== 'string' ? new TextDecoder().decode(data) : data;
 
-    const newStats: FigFsStats = {
-      mt: Date.now(),
-      m: options?.mode ?? 0o644,
-      t: 0,
-    };
+    // const newStats: FigFsStats = {
+    //   mt: Date.now(),
+    //   m: options?.mode ?? 0o644,
+    //   t: 0,
+    // };
 
-    const currentStatsForRollback = this.fsStatsCache.get(normalizedPath);
-    const currentContentForRollback = this.fileContentCache.get(normalizedPath);
+    // const currentStatsForRollback = this.fsStatsCache.get(normalizedPath);
+    // const currentContentForRollback = this.fileContentCache.get(normalizedPath);
 
-    // file was written successfully - update file in ui as well
-    // TODO #28 check if we should update the cache before we write and rollback on error instead?
-    // thoughts: we hand over the content and the stats to the remote - async -
-    // this means we don't know the state of the content. we can handle it as:
-    // - it was written - we update the cache
-    // - it was not written - we don't update the cache
-    // we have two channels - cache invalidation, file watch
-    // - cache invalidation should only fire if another user changes data
-    // - file watch fires on every change - even when triggered by the user
+    // // file was written successfully - update file in ui as well
+    // // TODO #28 check if we should update the cache before we write and rollback on error instead?
+    // // thoughts: we hand over the content and the stats to the remote - async -
+    // // this means we don't know the state of the content. we can handle it as:
+    // // - it was written - we update the cache
+    // // - it was not written - we don't update the cache
+    // // we have two channels - cache invalidation, file watch
+    // // - cache invalidation should only fire if another user changes data
+    // // - file watch fires on every change - even when triggered by the user
 
-    this.fsStatsCache.set(normalizedPath, figFsStatsToStats(newStats));
-    this.fileContentCache.set(normalizedPath, dataString);
+    // this.fsStatsCache.set(normalizedPath, figFsStatsToStats(newStats));
+    // this.fileContentCache.set(normalizedPath, dataString);
 
-    try {
-      await this.sandboxFs.writeFileFromUI(path, dataString, newStats);
-    } catch (e) {
-      // rollback cache
-      if (currentStatsForRollback) {
-        this.fsStatsCache.set(normalizedPath, currentStatsForRollback);
-      }
+    // try {
 
-      if (currentContentForRollback) {
-        this.fileContentCache.set(normalizedPath, currentContentForRollback);
-      }
+    this.fsStatsCache.delete(normalizedPath);
+    this.fileContentCache.delete(normalizedPath);
 
-      throw e;
+    
+    // we only allow passing stirngs
+    const stringData = typeof data !== 'string' ? decoder.decode(data as Uint8Array) : data;
+
+    if (normalizedPath === '/.git/objects/pack/pack-ee366b1cbd33c57026e4dc15e59d1533670d6b99.idx/') {
+      console.log('CONTENT OF WRITE /.git/objects/pack/pack-ee366b1cbd33c57026e4dc15e59d1533670d6b99.idx');
+      console.log(data);
+
+      const base64 = btoa(String.fromCharCode.apply(null, Array.from(data as Uint8Array)));
+      const decodedBinaryString = atob(base64);
+      const decodedBinaryData = new Uint8Array([...decodedBinaryString].map((char) => char.charCodeAt(0)));
+      console.log(stringData);
+
+      console.log(encoder.encode(decoder.decode(data as Uint8Array)));
+
+      console.log(decodedBinaryData);
     }
+
+    await this.sandboxFs.writeFile(path, stringData, options);
+    // } catch (e) {
+    //   // rollback cache
+    //   if (currentStatsForRollback) {
+    //     this.fsStatsCache.set(normalizedPath, currentStatsForRollback);
+    //   }
+
+    //   if (currentContentForRollback) {
+    //     this.fileContentCache.set(normalizedPath, currentContentForRollback);
+    //   }
+
+    //   throw e;
+    // }
   }
 
   async readFile(path: string): Promise<Uint8Array>;
@@ -145,19 +146,28 @@ export default class FigmaFsUI implements NodeishFilesystem {
         return cachedContent;
       }
 
-      return new TextEncoder().encode(cachedContent);
+      return encoder.encode(cachedContent);
     }
 
-    const fileStats = await this.sandboxFs.getStatFromUi(path);
-    const fileContent = await this.sandboxFs.readFileFromUI(path);
+    const fileStats = await this.sandboxFs.stat(path);
+    recreateFstatsMethods(fileStats);
+    const fileContent = await this.sandboxFs.readFile(path, { encoding: 'utf-8' });
 
-    this.fsStatsCache.set(normalizedPath, figFsStatsToStats(fileStats));
+    this.fsStatsCache.set(normalizedPath, fileStats);
     this.fileContentCache.set(normalizedPath, fileContent);
+
+
+    if (normalizedPath === '/.git/objects/pack/pack-ee366b1cbd33c57026e4dc15e59d1533670d6b99.idx/') {
+      console.log('CONTENT OF READ /.git/objects/pack/pack-ee366b1cbd33c57026e4dc15e59d1533670d6b99.idx');
+      console.log(fileContent);
+      console.log(encoder.encode(fileContent));
+    }
+
 
     if (options?.encoding || typeof options === 'string') {
       return fileContent;
     }
-    return new TextEncoder().encode(fileContent);
+    return encoder.encode(fileContent);
   }
 
   async readdir(path: string): Promise<string[]> {
@@ -171,11 +181,22 @@ export default class FigmaFsUI implements NodeishFilesystem {
   async rm(path: string, options?: { recursive: boolean; } | undefined): Promise<void> {
     const normalizedPath = normalPath(path);
 
-    await this.sandboxFs.rmFromUI(path, options?.recursive ?? false);
-
-    // rm cache after awaited the rm - could also be done by the events fired by the method...
-    this.fileContentCache.delete(normalizedPath);
     this.fsStatsCache.delete(normalizedPath);
+    this.fileContentCache.delete(normalizedPath);
+
+    if (options && options.recursive) {
+      for (const statsCacheFilePath of this.fsStatsCache.keys()) {
+        if (statsCacheFilePath.startsWith(normalizedPath)) {
+          this.fsStatsCache.delete(statsCacheFilePath);
+        }
+      }
+      for (const contentCacheFilePath of this.fileContentCache.keys()) {
+        if (contentCacheFilePath.startsWith(normalizedPath)) {
+          this.fileContentCache.delete(contentCacheFilePath);
+        }
+      }
+    }
+    await this.sandboxFs.rm(path, options);
   }
 
   async rmdir(path: string): Promise<void> {
@@ -195,8 +216,8 @@ export default class FigmaFsUI implements NodeishFilesystem {
       return cachedStat;
     }
 
-    const freshFigStats = await this.sandboxFs.getStatFromUi(path);
-    const freshStats = figFsStatsToStats(freshFigStats);
+    const freshStats = await this.sandboxFs.stat(path);
+    recreateFstatsMethods(freshStats);
     this.fsStatsCache.set(path, freshStats);
 
     if (freshStats.symlinkTarget) {
@@ -212,24 +233,23 @@ export default class FigmaFsUI implements NodeishFilesystem {
       return cachedStat;
     }
 
-    const freshFigStats = await this.sandboxFs.getStatFromUi(path);
-    const freshStats = figFsStatsToStats(freshFigStats);
-    this.fsStatsCache.set(path, freshStats);
-    return freshStats;
+    const freshLStats = await this.sandboxFs.lstat(path);
+    recreateFstatsMethods(freshLStats);
+    return freshLStats;
   }
 
   symlink(target: string, path: string): Promise<void> {
-    throw new Error('Method not implemented.');
+    return this.sandboxFs.symlink(target, path);
   }
 
   unlink(path: string): Promise<void> {
-    throw new Error('Method unlink not implemented.');
+    return this.sandboxFs.unlink(path);
   }
 
   readlink(path: string): Promise<string> {
-    throw new Error('Method readlink not implemented.');
+    return this.sandboxFs.readlink(path);
   }
-  
+
   watch(
     path: string,
     options?: {
@@ -239,11 +259,10 @@ export default class FigmaFsUI implements NodeishFilesystem {
     },
     // WatchOptions
   ): AsyncIterable<FileChangeInfo> {
-
     const normalizedPath = normalPath(path);
     const watchName = getBasename(normalizedPath);
     const watchDir = getDirname(normalizedPath);
-    const watchPath = watchDir + watchName;
+    const watchPath = watchName === '/' ? watchDir : watchDir + watchName;
 
     // @ts-ignore
     if (options?.persistent || options?.encoding) {
@@ -259,7 +278,12 @@ export default class FigmaFsUI implements NodeishFilesystem {
       rejecteNext = reject;
     });
 
-    const listener = (event: FileChangeInfo) => {
+    const listener = (passedEvent: FileChangeInfo) => {
+      const event = {
+        eventType: passedEvent.eventType,
+        filename: passedEvent.filename,
+      };
+
       if (event.filename === null) {
         throw new Error('Internal watcher error: missing filename');
       }

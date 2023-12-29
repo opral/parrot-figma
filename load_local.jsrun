@@ -1,0 +1,97 @@
+  // Save the original XMLHttpRequest object
+  let originalXhr = window.XMLHttpRequest;
+
+  function createPluginBundle(sourceContent, htmlContent) {
+    let o = (n) => JSON.stringify(n).split(/(<!--|-->|\bimport)/g).map((l, c) => c & 1 ? l.slice(0, 2) + '"+"' + l.slice(2) : l).join("");
+
+    if (typeof htmlContent === 'string') {
+        return `const __html__ = ${o(htmlContent)};${sourceContent}`
+    }
+    return `const __uiFiles__ = {${Object.entries(htmlContent).map(([n, i]) => `[${o(n)}]:${o(i)}`).join(",")}};${sourceContent}`
+  }
+
+  async function catchBundle() {
+    const codeResponse = await fetch('https://parrot-global.github.io/parrot/versions/dev/code.js', { cache: 'no-cache' });
+    const codeRaw = await codeResponse.text();
+
+    const uiResponse = await fetch('https://parrot-global.github.io/parrot/versions/dev/ui.html', { cache: 'no-cache' });
+    const uiRaw = await uiResponse.text(); 
+
+    const bundle = createPluginBundle(codeRaw, uiRaw);
+
+    return bundle;
+  }
+
+  // Override the original XMLHttpRequest object with a custom implementation
+  function MyXHR() {
+    let xhr = new originalXhr();
+
+    // Save the original send method
+    let originalSend = xhr.send;
+
+    // Override the send method with a custom implementation
+    xhr.send = function(data) {
+      
+      // Check if the request is targeting 'test.de'
+      if (this.__sentry_xhr__ && this.__sentry_xhr__.url && this.__sentry_xhr__.url.indexOf('ommunity/plugin/1205803482754362456/code') !== -1) {
+        debugger;
+        console.log('sending a fetch instead');
+
+        
+        // Use fetch to perform the actual request
+        catchBundle()
+          .then(responseText => {
+            // Simulate the XHR events
+            this.readyState = 4;
+            
+
+            Object.defineProperty(this, 'status', {
+              get: function () { return 200; },
+              configurable: true
+            });
+            
+
+            // Create a new Response object
+            var response = new Response(responseText);
+
+            // Override the responseText property
+            Object.defineProperty(this, 'responseText', {
+              get: function () { return responseText; },
+              configurable: true
+            });
+            
+            console.log('got response a fetch instead');
+            // Call the original onreadystatechange if it exists
+            if (typeof this.onreadystatechange === 'function') {
+              this.onreadystatechange();
+            } else {
+              // Call the event handler directly
+              var loadEvent = new Event('load');
+              this.dispatchEvent(loadEvent);
+            }
+          })
+          .catch(error => {
+            console.error('Fetch error:', error);
+
+            // Simulate an error in the XHR
+            this.readyState = 4;
+            this.status = 500;
+
+            // Call the original onreadystatechange if it exists
+            if (typeof this.onreadystatechange === 'function') {
+              this.onreadystatechange();
+            }
+          });
+      } else {
+        // Call the original send method for non-'test.de' requests
+        originalSend.apply(this, arguments);
+      }
+    };
+
+    return xhr;
+  }
+
+  // Replace the original XMLHttpRequest with your custom implementation
+  window.XMLHttpRequest = MyXHR;
+
+  // Now, any new XMLHttpRequest instances will be your custom MyXHR

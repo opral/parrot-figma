@@ -8,9 +8,9 @@
 
 // This shows the HTML page in "ui.html".
 
-
+// import { createNodeishMemoryFs } from '@lix-js/fs';
 import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
-import MigrationManager from '../lib/migrations/MigrationManager'
+import MigrationManager from '../lib/migrations/MigrationManager';
 
 import FigmaUtil from '../shared/FigmaUtil';
 import FigmaHelper from '../shared/FigmaHelper';
@@ -46,8 +46,6 @@ WindowManagerSandbox.init({
   windowMode: WindowMode.IntroWindow,
 }, (!fileConfigured || !introShownToUser) ? WindowMode.IntroWindow : undefined);
 
-
-
 const asyncFunctionProxy = new AsyncFunctionProxy('SandboxAsyncFunctionProxy', (data: any) => {
   figma.ui.postMessage(data);
 }, figma.ui);
@@ -64,7 +62,45 @@ const remoteLocalizedLabelManager = new LocalizedLabelManager(inlangMessageStore
 asyncFunctionProxy.registerInstance(remoteLocalizedLabelManager);
 
 const figmaFs = new FigmaFsSandbox(false);
+/*new DelegatingFs([
+  { path: '/.git', fs: createNodeishMemoryFs() },
+  { path: '/', fs: new FigmaFsSandbox(false) },
+]);*/
 asyncFunctionProxy.registerInstance(figmaFs);
+
+const startWatching = async () => {
+  try {
+    const watcher = figmaFs.watch('.', {
+      // TODO #1844  - check who would signal here -
+      // signal: abortController.signal,
+      persistent: false,
+      recursive: true,
+    });
+    if (watcher) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for await (const event of watcher) {
+        if (!event.filename) {
+          throw new Error('filename not set in event...');
+        }
+        figma.ui.postMessage({
+          target: 'FigmaFsUI',
+          type: 'changeEvent',
+          event,
+        });
+      }
+    }
+  } catch (err: any) {
+    if (err.name === 'AbortError') return;
+    // https://github.com/inlang/monorepo/issues/1647
+    // the file does not exist (yet)
+    // this is not testable beacause the fs.watch api differs
+    // from node and lix. lenghty
+    if (err.code === 'ENOENT') return;
+    throw err;
+  }
+};
+
+startWatching();
 
 const figmaHelper = new FigmaHelper(figma);
 asyncFunctionProxy.registerInstance(figmaHelper);

@@ -78,10 +78,12 @@ export default class GoogleTranslator {
           },
         });
       } else {
-        const resultMessage = translationResults[0][0][0];
-        translatedSentences.push(resultMessage.split('{{dot}}').join('.').split('{{route}}').join('#')
-          .split('{{newline}}')
-          .join('\n'));
+        for (let i = 0; i < translationResults[0].length; i += 1) {
+          const resultMessage = translationResults[0][i][0];
+          translatedSentences.push(resultMessage.split('{{dot}}').join('.').split('{{route}}').join('#')
+            .split('{{newline}}')
+            .join('\n'));
+        }
       }
     }
 

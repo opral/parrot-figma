@@ -111,8 +111,10 @@ export default function Drawer({
       <div ref={drawerDiv} className={`${position}-drawer${isShown ? ' open' : ' '} ${className ?? ''}`}>
         {children}
         <div className="buttonGroup buttonGroup-reversed">
-          {buttons.reverse().map((button) => (
+          {buttons.reverse().map((button, index) => (
             <button
+              // eslint-disable-next-line react/no-array-index-key -- buttons should not be updated dynamically here
+              key={index}
               className={`button button-${button.type}`}
               type="button"
               onClick={() => {

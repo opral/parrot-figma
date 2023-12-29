@@ -24,7 +24,6 @@ import { Gender } from '../../../lib/message/variants/Gender';
 import { FillinToPlaceholder } from '../../../lib/message/MessageExtnesions';
 import { MessageParameterValues } from '../../../lib/message/MessageParameterValues';
 
-
 type LocalizedLabelListItemProps = {
   showMessage: Function,
   localizedLabel: UILocalizedLabel,
@@ -123,7 +122,7 @@ export default function LocalizedLabelListItem({
   return (
     <>
       <Drawer
-        
+
         position="top"
         buttons={[
           {
@@ -187,7 +186,7 @@ export default function LocalizedLabelListItem({
               setShowMessageInDrawer(undefined);
             },
           },
-          
+
         ]}
         shown={showMessageInDrawer !== undefined}
       >
@@ -204,7 +203,7 @@ export default function LocalizedLabelListItem({
             selectedMessageId={showMessageInDrawer}
             initialSearchQuery={MessageStoreMemory.toQueryObject(`name:${showMessageInDrawer}`)}
             select={(key: string, language: Locale, plural: Plural) => {
-             // drawerSelectedKey.current = showMessage;
+              // drawerSelectedKey.current = showMessage;
               setDummyState({});
             }}
             highlightSelectedNodes={false}
@@ -464,22 +463,21 @@ export default function LocalizedLabelListItem({
                 <div className="svg-container update-message-svg" />
               </div>
               )}
+
+              { ((localizedLabel.matchingLabelLints.length > 0)) && (
+              <div
+                className="layerIcon iconWrapper button"
+                data-tooltip-content={`Label contains unsupported inline styles: ${localizedLabel.matchingLabelLints.join(', ')}`}
+                onClick={fixLints}
+              >
+                <div className="svg-container warning-svg" />
+              </div>
+              )}
             </div>
 
           </div>
         </div>
 
-        <div className="layer-actions">
-          { ((localizedLabel.matchingLabelLints.length > 0)) && (
-            <span
-              className="row-action-icon"
-              data-tooltip-content={`Label contains unsupported inline styles: ${localizedLabel.matchingLabelLints.join(', ')}`}
-              onClick={fixLints}
-            >
-              <span className="svg-container warning-svg" />
-            </span>
-          )}
-        </div>
         <div className="layer-spacer" />
       </div>
     </>

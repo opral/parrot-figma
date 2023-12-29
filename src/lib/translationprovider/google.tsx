@@ -7,16 +7,16 @@ export default class GoogleTranslator {
     if (/^\s*$/.test(text) || text === '') {
       return text;
     }
-    
+
     (async () => {
-      mixpanel.people.increment(`characters_translated_from_${sourceLanguage}`, text.length);
-      mixpanel.people.increment(`characters_translated_to_${targetLanguage}`, text.length);
-      mixpanel.people.increment('characters_translated_total', text.length);
+      mixpanel.people?.increment?.(`characters_translated_from_${sourceLanguage}`, text.length);
+      mixpanel.people?.increment?.(`characters_translated_to_${targetLanguage}`, text.length);
+      mixpanel.people?.increment?.('characters_translated_total', text.length);
     })();
-    
+
     // replace placeholder with numbers to not translate them
 
-    const pattern = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;
+    const pattern = /(<ph( type="([^"]*)"=)?( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*))<\/ph>)/g;
 
     const placeholderIndexMapping = [] as string[];
     let currentIndex = 0;

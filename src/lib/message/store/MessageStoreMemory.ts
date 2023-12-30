@@ -792,7 +792,15 @@ export default class MessageStoreMemory extends EventTarget {
 
               return messages;
             },
-            saveMessages: async ({ messages, settings, nodeishFs }: { messages: Message[], settings: any, nodeishFs: any }) => {
+            saveMessages: async ({
+              messages,
+              settings,
+              nodeishFs,
+            }: {
+              messages: Message[];
+              settings: any;
+              nodeishFs: any;
+            }) => {
               for (const message of messages) {
                 if (this.upsertedMessageIds.has(message.id)) {
                   // await this.parentKeyStore.saveMessage(message);

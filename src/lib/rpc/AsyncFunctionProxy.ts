@@ -153,7 +153,11 @@ export class AsyncFunctionProxy {
           target: 'AsyncFunctionProxy',
           type: AsyncMessageBus.invocationResult,
           invocationId: pluginMessage.id,
+<<<<<<< HEAD
           result: this.cleanFunctions(data),
+=======
+          result: data,
+>>>>>>> dev
         };
         this.postMessage(transferObj);
       })
@@ -166,6 +170,7 @@ export class AsyncFunctionProxy {
           error: this.toSerializableError(error),
         });
       });
+<<<<<<< HEAD
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -185,6 +190,8 @@ export class AsyncFunctionProxy {
     }
 
     return obj;
+=======
+>>>>>>> dev
   }
 
   handleInvocationResult(pluginMessage: any) {

@@ -1,5 +1,3 @@
-
-
 /* eslint-disable jsx-a11y/anchor-is-valid */
 /* eslint-disable jsx-a11y/anchor-has-content */
 /* eslint-disable jsx-a11y/control-has-associated-label */
@@ -53,7 +51,6 @@ import { OverlayScrollbarsComponent } from './compontents/overlayscrollbar';
 import DelegatingFs from '../lib/figmafs/DelegatingFs';
 import { createNodeishMemoryFs } from '@lix-js/client';
 
-
 console.log(`Starting Figma UI - Version ${pjs.version}`);
 
 TimeAgo.addDefaultLocale(en);
@@ -66,7 +63,7 @@ const monkeyPatchCommandExec = document.execCommand;
 // eslint-disable-next-line func-names
 document.execCommand = function () {
   // eslint-disable-next-line prefer-rest-params
-  if (arguments[0] === 'undo' || arguments[0] === 'redo') {
+  if (arguments[0] === 'undo' || arguments[0] === 'redo') {
     return false;
   }
 
@@ -80,24 +77,37 @@ document.execCommand = function () {
     return monkeyPatchCommandExec.call(document, 'redo');
   }
   // eslint-disable-next-line prefer-rest-params
-  return monkeyPatchCommandExec.apply(document, (arguments as any));
+  return monkeyPatchCommandExec.apply(document, arguments as any);
 };
 
-document.addEventListener('keydown', (e) => {
-  // Handle Select All, Undo and Redo in the desktop app
-  if (e.keyCode === 65 /* A */ && e.metaKey && !(e.target! as any).classList.contains('cm-content')) {
-    document.execCommand('selectAll');
-  } else if (e.keyCode === 90 /* Z */ && e.metaKey) {
-    if (e.shiftKey) {
-      document.execCommand('redoForce');
-    } else {
-      document.execCommand('undoForce');
+document.addEventListener(
+  'keydown',
+  (e) => {
+    // Handle Select All, Undo and Redo in the desktop app
+    if (
+      e.keyCode === 65 /* A */ &&
+      e.metaKey &&
+      !(e.target! as any).classList.contains('cm-content')
+    ) {
+      document.execCommand('selectAll');
+    } else if (e.keyCode === 90 /* Z */ && e.metaKey) {
+      if (e.shiftKey) {
+        document.execCommand('redoForce');
+      } else {
+        document.execCommand('undoForce');
+      }
     }
-  }
-}, true);
+  },
+  true,
+);
 
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'z' && !e.shiftKey && !e.altKey && !(e.target! as any).classList.contains('cm-content')) {
+  if (
+    e.key === 'z' &&
+    !e.shiftKey &&
+    !e.altKey &&
+    !(e.target! as any).classList.contains('cm-content')
+  ) {
     // Undo the action in Figma
     const isMac = navigator.userAgent.indexOf('Macintosh') >= 0;
     const isCmd = isMac && e.metaKey && !e.ctrlKey;
@@ -121,13 +131,20 @@ WindowManagerUi.init(
 // @ts-expect-error
 window.startDevMode = WindowManagerUi.instance!.startDevMode;
 
-const asyncFunctionProxy = new AsyncFunctionProxy('UIAsyncFunctionProxy', (data: any) => {
-  // eslint-disable-next-line no-restricted-globals
-  parent.postMessage({
-    pluginMessage: data,
-    pluginId: '*',
-  }, '*');
-}, window);
+const asyncFunctionProxy = new AsyncFunctionProxy(
+  'UIAsyncFunctionProxy',
+  (data: any) => {
+    // eslint-disable-next-line no-restricted-globals
+    parent.postMessage(
+      {
+        pluginMessage: data,
+        pluginId: '*',
+      },
+      '*',
+    );
+  },
+  window,
+);
 
 const figmaRemote = new FigmaUtil();
 asyncFunctionProxy.proxyAsyncMethods(figmaRemote);
@@ -138,7 +155,9 @@ asyncFunctionProxy.proxyAsyncMethods(figmaRemote);
   for (const report of Object.values(reports)) {
     if (!report.reportedToSentry) {
       console.log(`reporting: Migration version: ${report.version} - ${report.message}`);
-      Sentry.captureException(new Error(`Migration version: ${report.version} - ${report.message}`));
+      Sentry.captureException(
+        new Error(`Migration version: ${report.version} - ${report.message}`),
+      );
       report.reportedToSentry = true;
       // eslint-disable-next-line no-await-in-loop
       await figmaRemote.updateReport(report);
@@ -194,12 +213,17 @@ const memoryTranslationKeyStore = new MessageStoreMemory(splitFileSystem);
 
 const remoteLocalizedLabelManager = new LocalizedLabelManager();
 asyncFunctionProxy.proxyAsyncMethods(remoteLocalizedLabelManager);
-const localizedLabelManager = new LocalizedLabelManagerUI(remoteLocalizedLabelManager, memoryTranslationKeyStore);
+const localizedLabelManager = new LocalizedLabelManagerUI(
+  remoteLocalizedLabelManager,
+  memoryTranslationKeyStore,
+);
 
 function App() {
   // initial app screen is startup until we initialy loaded the data
   const [appScreen, setAppScreen] = useState(undefined as String | undefined);
-  const [consumptionPayWallFeature, setCunsumptionPayWallFeature] = useState(undefined as String | undefined);
+  const [consumptionPayWallFeature, setCunsumptionPayWallFeature] = useState(
+    undefined as String | undefined,
+  );
   const [showAllFeatures, setShowAllFeatures] = useState(false);
 
   const [user, setUser] = useState(undefined as PluginUser | undefined);
@@ -291,16 +315,13 @@ function App() {
         <Tooltip contentAttribute="data-tooltip-content" />
         <div className="view dev-panel">
           <div className="comming-soon">
-            Parrot´s Dev Mode version is comming soon...
-            {' '}
-            <br />
+            Parrot´s Dev Mode version is comming soon... <br />
             <br />
             Translate your Designs with Parrot in Design Mode in the meantime!
             <br />
             <br />
             🦜
           </div>
-
         </div>
       </>
     );
@@ -309,9 +330,8 @@ function App() {
   if (user.userRole !== UserRole.designer && user.userRole !== UserRole.owner) {
     return (
       <>
-        Not the permission to view
-        {' '}
-        {user.openUserRoleRequest !== undefined ? (`${user.openUserRoleRequest} requested`) : ' -'}
+        Not the permission to view{' '}
+        {user.openUserRoleRequest !== undefined ? `${user.openUserRoleRequest} requested` : ' -'}
       </>
     );
   }
@@ -337,17 +357,19 @@ function App() {
 
           <div className="window-control">
             <SegmentedControl
-              segments={[{
-                iconName: 'window-mode-window-svg',
-                value: WindowMode.Window,
-                tooltip: 'Window Mode',
-              }]}
+              segments={[
+                {
+                  iconName: 'window-mode-window-svg',
+                  value: WindowMode.Window,
+                  tooltip: 'Window Mode',
+                },
+              ]}
               selectedSegment={windowMode}
-              onChoose={(choosenWindowMode: WindowMode) => { WindowManagerUi.instance?.requestWindowMode(choosenWindowMode, false); }}
+              onChoose={(choosenWindowMode: WindowMode) => {
+                WindowManagerUi.instance?.requestWindowMode(choosenWindowMode, false);
+              }}
             />
-
           </div>
-
         </div>
       </>
     );
@@ -382,18 +404,11 @@ function App() {
       );
       break;
     case 'settings':
-      view = (
-        <SetupView labelManager={localizedLabelManager} />
-      );
+      view = <SetupView labelManager={localizedLabelManager} />;
       break;
 
     case 'export':
-      view = (
-        <Export
-          userManager={userStateManagerUi}
-          labelManager={localizedLabelManager}
-        />
-      );
+      view = <Export userManager={userStateManagerUi} labelManager={localizedLabelManager} />;
       break;
     case 'design':
       view = (
@@ -408,11 +423,7 @@ function App() {
       );
       break;
     case 'users':
-      view = (
-        <UserManagement
-          userManager={userStateManagerUi}
-        />
-      );
+      view = <UserManagement userManager={userStateManagerUi} />;
       break;
     default:
       break;
@@ -423,12 +434,14 @@ function App() {
   }
 
   return (
-
     <>
       <Tooltip contentAttribute="data-tooltip-content" />
       <div className="toolbar">
         <div className="tabHeader">
-          <div className={`tab ${appScreen === 'design' ? 'active' : ''}`} onClick={() => setAppScreen('design')}>
+          <div
+            className={`tab ${appScreen === 'design' ? 'active' : ''}`}
+            onClick={() => setAppScreen('design')}
+          >
             Layers
           </div>
           <div
@@ -440,8 +453,20 @@ function App() {
           >
             Messages
           </div>
-          { FEATURES_FLAGS.export && (<div className={`tab ${appScreen === 'export' ? 'active' : ''}`} onClick={() => setAppScreen('export')}>{ FEATURES_FLAGS.versioning ? 'Versions & Export' : 'Export'}</div>)}
-          <div className={`tab ${appScreen === 'settings' ? 'active' : ''}`} onClick={() => setAppScreen('settings')}>Setup</div>
+          {FEATURES_FLAGS.export && (
+            <div
+              className={`tab ${appScreen === 'export' ? 'active' : ''}`}
+              onClick={() => setAppScreen('export')}
+            >
+              {FEATURES_FLAGS.versioning ? 'Versions & Export' : 'Export'}
+            </div>
+          )}
+          <div
+            className={`tab ${appScreen === 'settings' ? 'active' : ''}`}
+            onClick={() => setAppScreen('settings')}
+          >
+            Setup
+          </div>
           {/* <div className={`tab ${appScreen === 'users' ? 'active' : ''}`} onClick={() => setAppScreen('users')}>Users</div> */}
         </div>
 
@@ -459,7 +484,8 @@ function App() {
 
         <div className="window-control">
           <SegmentedControl
-            segments={[/* {
+            segments={[
+              /* {
               iconName: 'window-mode-minimized-svg',
               value: WindowMode.Minimized,
               tooltip: 'Minimize',
@@ -467,20 +493,24 @@ function App() {
                 iconName: 'window-mode-bottom-attached-svg',
                 value: WindowMode.BottomSheet,
                 tooltip: 'Dock to bottom',
-              }, {
+              },
+              {
                 iconName: 'window-mode-window-svg',
                 value: WindowMode.Window,
                 tooltip: 'Use as Window',
-              }, {
+              },
+              {
                 iconName: 'window-mode-fullscreen-svg',
                 value: WindowMode.Fullscreen,
                 tooltip: 'Switch to Fullscreen',
-              }]}
+              },
+            ]}
             selectedSegment={windowMode}
-            onChoose={(choosenWindowMode: WindowMode) => { WindowManagerUi.instance?.requestWindowMode(choosenWindowMode, false); }}
+            onChoose={(choosenWindowMode: WindowMode) => {
+              WindowManagerUi.instance?.requestWindowMode(choosenWindowMode, false);
+            }}
           />
         </div>
-
       </div>
       <OverlayScrollbarsComponent
         className="view"
@@ -492,19 +522,18 @@ function App() {
         }}
         defer
       >
-
         {view}
-
       </OverlayScrollbarsComponent>
       <a id="focusHelper" href="" />
       <Drawer
         shown={consumptionPayWallFeature !== undefined}
         beforeShow={async () => {
-          const waitOneFrame = () => new Promise<void>((resolve) => {
-            setTimeout(() => {
-              resolve();
-            }, 30);
-          });
+          const waitOneFrame = () =>
+            new Promise<void>((resolve) => {
+              setTimeout(() => {
+                resolve();
+              }, 30);
+            });
           WindowManagerUi.instance?.requestWindowMode(WindowMode.Fullscreen, false);
           return waitOneFrame();
         }}
@@ -521,16 +550,16 @@ function App() {
             upgradePlan();
           }}
         />
-
       </Drawer>
       <Drawer
         shown={showAllFeatures}
         beforeShow={async () => {
-          const waitOneFrame = () => new Promise<void>((resolve) => {
-            setTimeout(() => {
-              resolve();
-            }, 30);
-          });
+          const waitOneFrame = () =>
+            new Promise<void>((resolve) => {
+              setTimeout(() => {
+                resolve();
+              }, 30);
+            });
           WindowManagerUi.instance?.requestWindowMode(WindowMode.Fullscreen, false);
           return waitOneFrame();
         }}
@@ -546,7 +575,6 @@ function App() {
             upgradePlan();
           }}
         />
-
       </Drawer>
 
       {/* <Drawer
@@ -584,7 +612,6 @@ function App() {
         <div>Thanks for your support!</div>
 
       </Drawer> */}
-
     </>
   );
 }

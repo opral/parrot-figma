@@ -9,14 +9,14 @@ import OutsideClickHandler from 'react-outside-click-handler';
 import './TextField.css';
 
 type TextFieldProps = {
-  singleClick: boolean
-  editingTrigger?: number
-  placeholder?: string
-  icon?: string
-  onSearchClick?: Function
-  onNoKeyClick?: Function
-  text?: string
-  onSave: Function
+  singleClick: boolean;
+  editingTrigger?: number;
+  placeholder?: string;
+  icon?: string;
+  onSearchClick?: Function;
+  onNoKeyClick?: Function;
+  text?: string;
+  onSave: Function;
 };
 
 export default function TextField({
@@ -58,7 +58,8 @@ export default function TextField({
     const keydownFunction = (e: any) => {
       if (e.key === 'Escape') {
         onCancel();
-      } if (e.key === 'Enter') {
+      }
+      if (e.key === 'Enter') {
         doSave();
       }
     };
@@ -93,13 +94,16 @@ export default function TextField({
       display="contents"
     >
       <div className={`text-field${isEditing ? ' editing' : ''}`}>
-
-        <div ref={textDivRef} className={`text-field-text${isEditing ? ' editing ' : ''}${icon ? ' icon-left ' : ''}${onSearchClick ? ' icon-right' : ''}`}>
-
+        <div
+          ref={textDivRef}
+          className={`text-field-text${isEditing ? ' editing ' : ''}${icon ? ' icon-left ' : ''}${
+            onSearchClick ? ' icon-right' : ''
+          }`}
+        >
           <input
             ref={inputFieldRef}
             style={{
-              visibility: (isEditing ? 'visible' : 'hidden'),
+              visibility: isEditing ? 'visible' : 'hidden',
             }}
             value={textState}
             onChange={handleChange}
@@ -119,16 +123,24 @@ export default function TextField({
               }
             }}
           >
-            {textState === undefined || textState === '' ? placeholder : textState }
+            {textState === undefined || textState === '' ? placeholder : textState}
           </p>
-          { icon !== undefined && (
-          <span className={`svg-container ${icon}`} />
+          {icon !== undefined && <span className={`svg-container ${icon}`} />}
+          {onSearchClick !== undefined && (
+            <span
+              className="svg-container right search-svg"
+              onClick={() => {
+                if (onSearchClick !== undefined) onSearchClick(text);
+              }}
+            />
           )}
-          { onSearchClick !== undefined && (
-          <span className="svg-container right search-svg" onClick={(() => { if (onSearchClick !== undefined) onSearchClick(text); })} />
-          )}
-          { onNoKeyClick !== undefined && (
-          <span className="svg-container right unlinked-svg" onClick={(() => { if (onNoKeyClick !== undefined) onNoKeyClick(text); })} />
+          {onNoKeyClick !== undefined && (
+            <span
+              className="svg-container right unlinked-svg"
+              onClick={() => {
+                if (onNoKeyClick !== undefined) onNoKeyClick(text);
+              }}
+            />
           )}
         </div>
       </div>

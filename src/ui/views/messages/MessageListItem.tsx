@@ -24,16 +24,16 @@ import { MessageParameterValues } from '../../../lib/message/MessageParameterVal
 // import ReactQuill from 'react-quill';
 
 type TranslationKeyListItemProps = {
-  rowClassNames?: string | undefined,
-  figmaRemote: FigmaUtil,
-  searchMatch: any,
-  messageStore: MessageStoreMemory,
-  messageId: string,
-  localizedLabelManager: LocalizedLabelManagerUI,
-  select?: Function,
-  messageSelected: boolean,
-  onFocus?: (messageId: string, locale?: Locale, variantMatch?: string[]) => void,
-  onBlur?: (messageId: string, locale?: Locale, variantMatch?: string[]) => void,
+  rowClassNames?: string | undefined;
+  figmaRemote: FigmaUtil;
+  searchMatch: any;
+  messageStore: MessageStoreMemory;
+  messageId: string;
+  localizedLabelManager: LocalizedLabelManagerUI;
+  select?: Function;
+  messageSelected: boolean;
+  onFocus?: (messageId: string, locale?: Locale, variantMatch?: string[]) => void;
+  onBlur?: (messageId: string, locale?: Locale, variantMatch?: string[]) => void;
 };
 
 // TODO #roadmap select message on click - message / message variant
@@ -43,7 +43,6 @@ type TranslationKeyListItemProps = {
 // TODO #roadmap add little info label to message tab to indicate how many messages are managed
 
 // TODO #27 add celebration and pricing message
-
 
 // DONE #27 test in firefox
 // DONE #27 remove log statements
@@ -56,7 +55,6 @@ type TranslationKeyListItemProps = {
 // DONE #27 check all z-indexes
 // DONE #27 style delete drawer
 // DONE #27 add no messages found with filter
-
 
 export default function TranslationKeyListItem({
   rowClassNames,
@@ -72,7 +70,9 @@ export default function TranslationKeyListItem({
 }: TranslationKeyListItemProps) {
   const [messageNameHovered, setMessageNameHoverd] = useState(false);
 
-  const [focusedMessageVariant, setFocusedMessageVariant] = useState<undefined | { messageId: string, locale?: Locale, match?: string[] }>(undefined);
+  const [focusedMessageVariant, setFocusedMessageVariant] = useState<
+    undefined | { messageId: string; locale?: Locale; match?: string[] }
+  >(undefined);
 
   // const [history, setHistory] = useState<undefined | VersionEntry[]>(undefined);
   const [messageIdToDelete, setMessageIdToDelete] = useState<undefined | string>(undefined);
@@ -81,20 +81,23 @@ export default function TranslationKeyListItem({
   const [message, setMessage] = useState(localizedLabelManager.messageStore.getMessage(messageId)!);
 
   const rowRef = React.useRef<HTMLDivElement>(null);
-  
 
   useEffect(() => {
-    messageStore.inlangProject?.query.messages.get.subscribe({ where: { id: messageId } }, (updatedMessage) => {
-      if (updatedMessage !== undefined) {
-        // skip deleted
-        setMessage(updatedMessage);
-      }
-    });
+    messageStore.inlangProject?.query.messages.get.subscribe(
+      { where: { id: messageId } },
+      (updatedMessage) => {
+        if (updatedMessage !== undefined) {
+          // skip deleted
+          setMessage(updatedMessage);
+        }
+      },
+    );
   }, []);
 
   useEffect(() => {
     const updateReferenceCount = async () => {
-      const referenceCount = (await localizedLabelManager.getWithMessage(messageIdToDelete!)).length;
+      const referenceCount = (await localizedLabelManager.getWithMessage(messageIdToDelete!))
+        .length;
       setKeyToDeleteReferences(referenceCount);
     };
 
@@ -106,12 +109,19 @@ export default function TranslationKeyListItem({
   const refLanguage = messageStore.getRefLanugage();
 
   // create an array of languages with baselanguage at position zero
-  const languages = [refLanguage, ...messageStore.getLanugages()!.filter((l) => l !== refLanguage)] as Locale[];
+  const languages = [
+    refLanguage,
+    ...messageStore.getLanugages()!.filter((l) => l !== refLanguage),
+  ] as Locale[];
 
   return (
     <div
       ref={rowRef}
-      className={`message-group ${messageSelected ? 'message-group-selected' : ''} ${rowClassNames !== undefined ? rowClassNames : ''} ${messageNameHovered ? ' message-group-hovered' : ''} ${focusedMessageVariant !== undefined ? ' message-group-focused' : ''}`}
+      className={`message-group ${messageSelected ? 'message-group-selected' : ''} ${
+        rowClassNames !== undefined ? rowClassNames : ''
+      } ${messageNameHovered ? ' message-group-hovered' : ''} ${
+        focusedMessageVariant !== undefined ? ' message-group-focused' : ''
+      }`}
       onClick={() => {
         if (select) {
           select(message.id);
@@ -120,8 +130,12 @@ export default function TranslationKeyListItem({
     >
       <div
         className={'message-group-header ' + (messageSelected ? ' selected' : '')}
-        onMouseOver={() => { setMessageNameHoverd(true); }}
-        onMouseOut={() => { setMessageNameHoverd(false); }}
+        onMouseOver={() => {
+          setMessageNameHoverd(true);
+        }}
+        onMouseOut={() => {
+          setMessageNameHoverd(false);
+        }}
       >
         <div className="spacer" />
         <div className="message-group-header-element-symbol">
@@ -144,7 +158,7 @@ export default function TranslationKeyListItem({
           </div>
         </div>
         <div className="message-group-header-actions">
-          { select === undefined && (
+          {select === undefined && (
             <>
               {/* <div
               className="layerIcon iconWrapper button"
@@ -164,7 +178,6 @@ export default function TranslationKeyListItem({
               >
                 <span className="svg-container trash-svg" />
               </div>
-
             </>
           )}
         </div>
@@ -172,40 +185,59 @@ export default function TranslationKeyListItem({
       <div className="message-group-header-sticky-border">test</div>
 
       {languages.map((language, i, allLanguages) => {
-        const variant = message.variants.find((currentVariant: any) => currentVariant.languageTag === language);
+        const variant = message.variants.find(
+          (currentVariant: any) => currentVariant.languageTag === language,
+        );
         let variantHTML = '';
         if (variant !== undefined) {
           variantHTML = MessageStoreMemory.patternToHtml(variant.pattern);
         }
 
         return (
-          <div className={`message-group-variant-wrapper ${language === refLanguage ? ' ref-language' : ''} ${focusedMessageVariant !== undefined && focusedMessageVariant.locale === language ? ' message-group-variant-focused' : ''}`} key={language}>
+          <div
+            className={`message-group-variant-wrapper ${
+              language === refLanguage ? ' ref-language' : ''
+            } ${
+              focusedMessageVariant !== undefined && focusedMessageVariant.locale === language
+                ? ' message-group-variant-focused'
+                : ''
+            }`}
+            key={language}
+          >
             <div className="message-group-variant">
               <div className="spacer" />
               <div className="spacer" />
               <div className="message-group-variant-column-language">
                 <span className="language">{language}</span>
-                { language === localizedLabelManager.messageStore.getRefLanugage() && (
+                {language === localizedLabelManager.messageStore.getRefLanugage() && (
                   <span className="language-tag">ref</span>
                 )}
               </div>
               <div className="message-group-variant-column-translation">
                 <TranslationEditor
-                  parameterValues={{} /*  TODO #18 default values  support fillins message.defaultFillins */}
+                  parameterValues={
+                    {} /*  TODO #18 default values  support fillins message.defaultFillins */
+                  }
                   editable={select === undefined}
                   isDisabled={false}
                   match={searchMatch?.textMatches[language]?.['*']}
                   onSave={async (text: string | undefined, parameters: MessageParameterValues) => {
-                  // let skip = message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.skip ?? false;
+                    // let skip = message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.skip ?? false;
 
                     Object.values(parameters).forEach((parameter) => {
-                    // eslint-disable-next-line no-param-reassign
+                      // eslint-disable-next-line no-param-reassign
                       parameter.default = true;
                     });
 
                     // TODO #18 variables how to deal with default values acutally - as soon as we have variants this can become tricky since the matcher does differ from the default value :( )
                     // - one thought on this - variables used in selectors can not have a default value...
-                    const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(message, undefined, language, [], text ?? '');
+                    const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(
+                      message,
+                      undefined,
+                      language,
+                      [],
+                      text ?? '',
+                    );
                     await localizedLabelManager.updateMessage(updatedMessage, parameters);
                   }}
                   onFocus={() => {
@@ -224,7 +256,7 @@ export default function TranslationKeyListItem({
                   messageStore={messageStore}
                 />
               </div>
-              { false && ( // TODO roadmap - message lints make this depending on the warning
+              {false && ( // TODO roadmap - message lints make this depending on the warning
                 <div
                   className="layerIcon iconWrapper button"
                   data-tooltip-content="Show warnings..."
@@ -235,7 +267,7 @@ export default function TranslationKeyListItem({
                   <span className="svg-container notice-svg" />
                 </div>
               )}
-              { false && ( // TODO roadmap - message lints make this depending on the warning
+              {false && ( // TODO roadmap - message lints make this depending on the warning
                 <div
                   className="layerIcon iconWrapper button"
                   data-tooltip-content="More..."
@@ -275,38 +307,25 @@ export default function TranslationKeyListItem({
               setMessageIdToDelete(undefined);
             },
           },
-
         ]}
         shown={messageIdToDelete !== undefined}
       >
         <div className="modal-drawer-header">
-          Delete
-          {' '}
-          {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id}
+          Delete {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id}
         </div>
         <div className="modal-drawer-body">
           {keyToDeleteReferences !== undefined && keyToDeleteReferences > 0 && (
             <>
-              Deletion of the Message
-              {' '}
-              {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id}
-              {' '}
-              will unlink
-              {' '}
-              {keyToDeleteReferences}
-              {' '}
-              referencing text layers.
-
+              Deletion of the Message{' '}
+              {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id} will unlink{' '}
+              {keyToDeleteReferences} referencing text layers.
             </>
           )}
           {keyToDeleteReferences === 0 && (
-          <>
-            Key
-            {' '}
-            {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id}
-            {' '}
-            is not refrenced by a label
-          </>
+            <>
+              Key {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id} is not
+              refrenced by a label
+            </>
           )}
         </div>
       </Drawer>

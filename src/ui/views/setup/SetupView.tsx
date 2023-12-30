@@ -10,12 +10,10 @@ import { Locale } from '../../../lib/message/variants/Locale';
 import LanguageSetup from '../../compontents/languageSetup/LanguageSetup';
 
 type SetupViewProps = {
-  labelManager: LocalizedLabelManagerUI
+  labelManager: LocalizedLabelManagerUI;
 };
 
-export default function SetupView({
-  labelManager,
-}: SetupViewProps) {
+export default function SetupView({ labelManager }: SetupViewProps) {
   return (
     <>
       <LanguageSetup
@@ -35,7 +33,6 @@ export default function SetupView({
         }}
       >
         stagin-ui
-
       </div>
     </>
   );

@@ -10,9 +10,9 @@ import FigmaUtil from '../../../shared/FigmaUtil';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 
 type AsyncImageProps = {
-  labelId: string
-  figmaRemote: FigmaUtil
-  localizedLabelManager: LocalizedLabelManagerUI
+  labelId: string;
+  figmaRemote: FigmaUtil;
+  localizedLabelManager: LocalizedLabelManagerUI;
 };
 
 export default function AsyncImage({
@@ -50,7 +50,5 @@ export default function AsyncImage({
     getImageEncoded();
   }, []);
 
-  return (
-    <img src={imageEncoded} />
-  );
+  return <img src={imageEncoded} />;
 }

@@ -12,14 +12,13 @@ export enum MessageLinkState {
 }
 
 export interface LabelStyle {
-  fontFamily: string | undefined | null,
-  bold: boolean | 'MIXED' | undefined | null,
-  italic: boolean | 'MIXED' | undefined | null,
-  textDecoration: TextDecoration | 'MIXED' | undefined | null,
+  fontFamily: string | undefined | null;
+  bold: boolean | 'MIXED' | undefined | null;
+  italic: boolean | 'MIXED' | undefined | null;
+  textDecoration: TextDecoration | 'MIXED' | undefined | null;
 }
 
 export interface LocalizedLabel {
-
   pageId: string;
   pageName: string;
 
@@ -46,7 +45,7 @@ export interface LocalizedLabel {
   // fillins needed to suppoert bidirectional template filling and extraction
   // 1. if we look at the label Text "Hello Martin, how are you today?" we want to be able to get the key string inclusive placeholders like:
   //    "Hello [[firstname]], how are you today?"
-  // 2. if we want to update the text of a lable with a new key string "Hi [[firstname]], how are you today?" we want to use the last fill in value 
+  // 2. if we want to update the text of a lable with a new key string "Hi [[firstname]], how are you today?" we want to use the last fill in value
   //    in this case Martin for firstname ->  "Hi Martin, how are you today?"
   // We enrich the fillins with the invisible character: Zero Width Space (U+200B) to uniquly match the replace texts.
   // For example you have a Welcome Message "Hi [[first_name]] this app has been brought to you by Martin".
@@ -77,7 +76,7 @@ export interface LocalizedLabel {
   // float: 3,14...
   // these typeDefault values get set as 'parameterDefault' per key and can be overriden if needed.
   // the parameterDefault can be overriden by each instance of a label
-  // 
+  //
   // When labels need to be updated:
   //  The labels version is not fixed
   //  The label needs to be updated when the parameterDefault has changed and the fillins is not overriden in the label

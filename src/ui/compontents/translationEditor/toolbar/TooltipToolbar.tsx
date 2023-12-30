@@ -1,12 +1,6 @@
 import * as React from 'react';
 
-import Quill, {
-  DeltaStatic,
-  Sources,
-
-  Delta as DeltaType,
-  RangeStatic,
-} from 'quill';
+import Quill, { DeltaStatic, Sources, Delta as DeltaType, RangeStatic } from 'quill';
 import { useEffect, useRef, useState } from 'react';
 import { Bounds, Range } from 'quill/core/selection';
 import Emitter from 'quill/core/emitter';
@@ -18,10 +12,10 @@ import FormatPlaceholder from './compontents/FormatPlaceholder';
 import { MessageParameterValues } from '../../../../lib/message/MessageParameterValues';
 
 type TooltipToolbarProps = {
-  rootView: HTMLElement,
-  editorScrollContainer: HTMLElement,
-  editor: Quill,
-  parameterValues: MessageParameterValues,
+  rootView: HTMLElement;
+  editorScrollContainer: HTMLElement;
+  editor: Quill;
+  parameterValues: MessageParameterValues;
   setParameterValue: (name: string, value: string, save: boolean) => void;
 };
 
@@ -40,7 +34,9 @@ export default function TooltipToolbar({
   const tooltipContainer = useRef<HTMLDivElement>(null);
 
   const [rootViewBounds, setRootViewBounds] = useState<Bounds>(rootView.getBoundingClientRect());
-  const [editorScrollContainerBounds, setEditorScrollContainerBounds] = useState<Bounds>(editorScrollContainer.getBoundingClientRect());
+  const [editorScrollContainerBounds, setEditorScrollContainerBounds] = useState<Bounds>(
+    editorScrollContainer.getBoundingClientRect(),
+  );
   const [contentBounds, setContentBounds] = useState<Bounds>(editor.root.getBoundingClientRect());
 
   const [selectionBounds, setSelectionBounds] = useState<Bounds | undefined>(undefined);
@@ -55,7 +51,7 @@ export default function TooltipToolbar({
   const [pointUp, setPointUp] = useState(false);
 
   const [arrowPosition, setArrowPosition] = useState<{ left: number } | undefined>(undefined);
-  const [position, setPosition] = useState<{ left: number, top: number } | undefined>(undefined);
+  const [position, setPosition] = useState<{ left: number; top: number } | undefined>(undefined);
 
   function updateSelectionBounds(range: any) {
     setContentBounds(editor.root.getBoundingClientRect());
@@ -66,17 +62,19 @@ export default function TooltipToolbar({
     } else {
       const lastLine = lines[lines.length - 1];
       const index = editor.getIndex(lastLine);
-      const length = Math.min(
-        lastLine.length() - 1,
-        range.index + range.length - index,
-      );
+      const length = Math.min(lastLine.length() - 1, range.index + range.length - index);
       // @ts-expect-error
       const indexBounds = editor.getBounds(new Range(index, length));
       setSelectionBounds(indexBounds);
     }
   }
 
-  function onEditorChange(name: 'text-change' | 'selection-change', deltaOrRange: DeltaStatic | RangeStatic, oldContents: DeltaStatic | RangeStatic, source: Sources) {
+  function onEditorChange(
+    name: 'text-change' | 'selection-change',
+    deltaOrRange: DeltaStatic | RangeStatic,
+    oldContents: DeltaStatic | RangeStatic,
+    source: Sources,
+  ) {
     let range: Range | undefined;
 
     if (name === 'text-change') {
@@ -135,7 +133,7 @@ export default function TooltipToolbar({
   }
 
   function updateControlStates(range: Range) {
-    const formats = range == null ? {} as any : editor.getFormat(range);
+    const formats = range == null ? ({} as any) : editor.getFormat(range);
     setSelectionFormats(formats);
   }
 
@@ -151,34 +149,37 @@ export default function TooltipToolbar({
     const framedLeft = Math.max(maxLeft, selectionBounds.left);
 
     const maxRightFromLeft = maxLeft + editorScrollContainerBounds.width;
-    const framedRightFromLeft = Math.min(maxRightFromLeft, selectionBounds.left + selectionBounds.width);
+    const framedRightFromLeft = Math.min(
+      maxRightFromLeft,
+      selectionBounds.left + selectionBounds.width,
+    );
     const framedWidth = framedRightFromLeft - framedLeft;
 
     const minTop = rootViewBounds.top + 40 + 32;
     const maxTopAbove = rootViewBounds.top + rootViewBounds.height;
-    const maxTopBelow = rootViewBounds.top + rootViewBounds.height - (tooltipContainer.current.offsetHeight + 6);
+    const maxTopBelow =
+      rootViewBounds.top + rootViewBounds.height - (tooltipContainer.current.offsetHeight + 6);
 
     const containerMaxLeft = rootViewBounds.left + 10;
-    const containerMaxRightLeft = rootViewBounds.left + rootViewBounds.width - tooltipContainer.current.offsetWidth - 10;
+    const containerMaxRightLeft =
+      rootViewBounds.left + rootViewBounds.width - tooltipContainer.current.offsetWidth - 10;
 
-    const arrowLeftAbsolut = (framedLeft + framedWidth / 2) + leftCorrection;
+    const arrowLeftAbsolut = framedLeft + framedWidth / 2 + leftCorrection;
     const containerLeftUnFramed = arrowLeftAbsolut - tooltipContainer.current.offsetWidth / 2;
 
     let containerLeft = Math.max(containerLeftUnFramed, containerMaxLeft);
     containerLeft = Math.min(containerLeft, containerMaxRightLeft);
 
-    let top = (selectionBounds.bottom + editor.root.scrollTop) + topCorrection + 6;
+    let top = selectionBounds.bottom + editor.root.scrollTop + topCorrection + 6;
 
-    if (framedWidth <= 0
-      || top < minTop
-      || top > maxTopAbove) {
+    if (framedWidth <= 0 || top < minTop || top > maxTopAbove) {
       setToolbtipVisible(false);
     } else {
       if (top >= maxTopBelow) {
         setPointUp(false);
 
         const height = tooltipContainer.current.offsetHeight;
-        const verticalShift = selectionBounds.bottom - selectionBounds.top + height + (6 * 2);
+        const verticalShift = selectionBounds.bottom - selectionBounds.top + height + 6 * 2;
         top -= verticalShift;
       } else {
         setPointUp(true);
@@ -225,7 +226,9 @@ export default function TooltipToolbar({
   return (
     <div
       ref={tooltipContainer}
-      className={`ql-tooltip ${pointUp ? '' : 'ql-flip'} ${tooltipVisible ? '' : 'ql-tooltip-hidden'}`}
+      className={`ql-tooltip ${pointUp ? '' : 'ql-flip'} ${
+        tooltipVisible ? '' : 'ql-tooltip-hidden'
+      }`}
       style={{
         top: `${position?.top ?? 0}px`,
         left: `${position?.left ?? 0}px`,
@@ -234,17 +237,58 @@ export default function TooltipToolbar({
       <span className="ql-tooltip-arrow" style={{ left: arrowPosition?.left ?? 0 }} />
       <div role="toolbar" className="ql-toolbar">
         <span className="ql-formats">
-          <FormatButton format="bold" icon="text-decoration-bold-svg" formats={selectionFormats} editor={editor} />
-          <FormatButton format="italic" icon="text-decoration-italic-svg" formats={selectionFormats} editor={editor} />
+          <FormatButton
+            format="bold"
+            icon="text-decoration-bold-svg"
+            formats={selectionFormats}
+            editor={editor}
+          />
+          <FormatButton
+            format="italic"
+            icon="text-decoration-italic-svg"
+            formats={selectionFormats}
+            editor={editor}
+          />
           <div className="ql-button-group">
-            <FormatButton format="textDecoration" value="UNDERLINE" icon="text-decoration-underline-svg" formats={selectionFormats} editor={editor} />
-            <FormatButton format="textDecoration" value="STRIKETHROUGH" icon="text-decoration-strikethrough-svg" formats={selectionFormats} editor={editor} />
+            <FormatButton
+              format="textDecoration"
+              value="UNDERLINE"
+              icon="text-decoration-underline-svg"
+              formats={selectionFormats}
+              editor={editor}
+            />
+            <FormatButton
+              format="textDecoration"
+              value="STRIKETHROUGH"
+              icon="text-decoration-strikethrough-svg"
+              formats={selectionFormats}
+              editor={editor}
+            />
           </div>
           <div className="ql-button-group">
-            <FormatButton format="list" icon="list-bullet-svg" formats={selectionFormats} value="bullet" editor={editor} />
-            <FormatButton format="list" icon="list-ordered-svg" formats={selectionFormats} value="ordered" editor={editor} />
+            <FormatButton
+              format="list"
+              icon="list-bullet-svg"
+              formats={selectionFormats}
+              value="bullet"
+              editor={editor}
+            />
+            <FormatButton
+              format="list"
+              icon="list-ordered-svg"
+              formats={selectionFormats}
+              value="ordered"
+              editor={editor}
+            />
           </div>
-          <FormatLinkButton format="link" icon="hyperlink-svg" formats={selectionFormats} editor={editor} toolbarActive={toolbarActive} placeholder="Insert Url" />
+          <FormatLinkButton
+            format="link"
+            icon="hyperlink-svg"
+            formats={selectionFormats}
+            editor={editor}
+            toolbarActive={toolbarActive}
+            placeholder="Insert Url"
+          />
           <FormatPlaceholder
             format="placeholder"
             icon="variable-svg"

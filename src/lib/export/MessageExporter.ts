@@ -4,7 +4,9 @@ import { Locale } from '../message/variants/Locale';
 import MessageStoreMemory from '../message/store/MessageStoreMemory';
 
 const androidXmlExporterTmpl = ejs.compile(require('./templates/AndroidXmlExporter.ejs').default); // include the EJS template as a string
-const appleStringsFileExporterTmpl = ejs.compile(require('./templates/AppleStringsFileExporter.ejs').default);
+const appleStringsFileExporterTmpl = ejs.compile(
+  require('./templates/AppleStringsFileExporter.ejs').default,
+);
 // const appleDictFileExporterTmpl = ejs.compile(require('./templates/AppleDictFileExporter.ejs').default);
 const i18nextJsonExporter = ejs.compile(require('./templates/i18nextJsonExporter.ejs').default);
 

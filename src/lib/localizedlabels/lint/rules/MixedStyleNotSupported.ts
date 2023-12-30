@@ -1,4 +1,4 @@
-import BaseTextNodeLintRule from "./BaseTextNodeLintRule";
+import BaseTextNodeLintRule from './BaseTextNodeLintRule';
 
 // eslint-disable-next-line max-classes-per-file
 export default class MixedStyleNotSupported extends BaseTextNodeLintRule {
@@ -10,7 +10,9 @@ export default class MixedStyleNotSupported extends BaseTextNodeLintRule {
   }
 
   static createRuleForField(styleField: string) {
-    const ruleName = `MixedStyleNotSupportedFor${styleField.charAt(0).toUpperCase()}${styleField.slice(1)}`;
+    const ruleName = `MixedStyleNotSupportedFor${styleField
+      .charAt(0)
+      .toUpperCase()}${styleField.slice(1)}`;
     return new MixedStyleNotSupported(ruleName, styleField);
   }
 

@@ -21,19 +21,23 @@ export enum ImportType {
 }
 
 export type ImportResult = {
-  fileName: string,
-  type: ImportType,
-  messages: Message[] | undefined,
-  language: Locale,
+  fileName: string;
+  type: ImportType;
+  messages: Message[] | undefined;
+  language: Locale;
 };
 
 export default class MessageImporter {
-  static getImportStatistics(messageStore: MessageStoreMemory, importMessages: Message[], language: Locale) {
+  static getImportStatistics(
+    messageStore: MessageStoreMemory,
+    importMessages: Message[],
+    language: Locale,
+  ) {
     const changedMessages = {
       language,
       newMessages: [] as Message[],
-      newVariants: [] as { message: Message, variant: Variant }[],
-      updatedVariants: [] as { message: Message, variant: Variant }[],
+      newVariants: [] as { message: Message; variant: Variant }[],
+      updatedVariants: [] as { message: Message; variant: Variant }[],
     };
 
     for (const messageToImport of importMessages) {
@@ -44,15 +48,19 @@ export default class MessageImporter {
           changedMessages.newMessages.push(messageToImport);
           break;
         case 'updated':
-          changedMessages.newVariants = changedMessages.newVariants.concat(diff.addedVariants.map((variant) => ({
-            message: diff.message,
-            variant,
-          })));
+          changedMessages.newVariants = changedMessages.newVariants.concat(
+            diff.addedVariants.map((variant) => ({
+              message: diff.message,
+              variant,
+            })),
+          );
 
-          changedMessages.updatedVariants = changedMessages.updatedVariants.concat(diff.updatedVariants.map((variant) => ({
-            message: diff.message,
-            variant,
-          })));
+          changedMessages.updatedVariants = changedMessages.updatedVariants.concat(
+            diff.updatedVariants.map((variant) => ({
+              message: diff.message,
+              variant,
+            })),
+          );
           break;
         default:
           break;
@@ -62,10 +70,14 @@ export default class MessageImporter {
     return changedMessages;
   }
 
-  static getDiff(messageStore: MessageStoreMemory, importMessage: Message, language: Locale):
-  { type: 'equal' }
-  | { type: 'new', message: Message }
-  | { type: 'updated', message: Message, addedVariants: Variant[], updatedVariants: Variant[] } {
+  static getDiff(
+    messageStore: MessageStoreMemory,
+    importMessage: Message,
+    language: Locale,
+  ):
+    | { type: 'equal' }
+    | { type: 'new'; message: Message }
+    | { type: 'updated'; message: Message; addedVariants: Variant[]; updatedVariants: Variant[] } {
     const currentMessage = messageStore.getMessageByName(importMessage.id);
     if (!currentMessage) {
       return { type: 'new', message: importMessage };
@@ -76,7 +88,9 @@ export default class MessageImporter {
 
     // TODO #18 when we support selectors we need to take those into account as well when importing (the matchers count and order might differ...)
     for (const variantToImport of importMessage.variants) {
-      const currentVariant = getVariant(currentMessage, { where: { languageTag: language, match: variantToImport.match } });
+      const currentVariant = getVariant(currentMessage, {
+        where: { languageTag: language, match: variantToImport.match },
+      });
       if (currentVariant) {
         // TODO #24 check if this is an exact match - we need an exact match for import! - can we use an sdk message? - add exact flag to query?
         if (JSON.stringify(currentVariant.match) === JSON.stringify(variantToImport.match)) {
@@ -94,7 +108,7 @@ export default class MessageImporter {
       addedVariants.push(variantToImport);
     }
 
-    if (addedVariants.length > 0 || updatedVariants.length > 0) {
+    if (addedVariants.length > 0 || updatedVariants.length > 0) {
       return {
         type: 'updated',
         message: importMessage,
@@ -140,7 +154,7 @@ export default class MessageImporter {
     return results;
   }
 }
-  
+
 /* const changedKeys = {
       added: [] as TranslationKey[],
       updated: [] as TranslationKey[],

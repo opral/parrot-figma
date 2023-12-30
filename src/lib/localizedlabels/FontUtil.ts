@@ -8,13 +8,14 @@ export enum InlineFormats {
 export default class FontHelper {
   static availableFonts: Font[] | undefined;
 
-  static stylingSupportCache = {
-  } as { [fontFamily: string]: {
-    regular: FontName | undefined,
-    bold: FontName | undefined,
-    italic: FontName | undefined,
-    boldItalic: FontName | undefined,
-  } };
+  static stylingSupportCache = {} as {
+    [fontFamily: string]: {
+      regular: FontName | undefined;
+      bold: FontName | undefined;
+      italic: FontName | undefined;
+      boldItalic: FontName | undefined;
+    };
+  };
 
   static async initialize() {
     this.availableFonts = await figma.listAvailableFontsAsync();
@@ -44,7 +45,9 @@ export default class FontHelper {
       throw new Error('Fonthelper not yet initialized');
     }
 
-    const fontFamilyVariants = this.availableFonts.filter((font: Font) => font.fontName.family === fontName.family).map((font) => font.fontName);
+    const fontFamilyVariants = this.availableFonts
+      .filter((font: Font) => font.fontName.family === fontName.family)
+      .map((font) => font.fontName);
 
     const font = {
       variants: {} as { [style: string]: FontName },
@@ -65,27 +68,37 @@ export default class FontHelper {
       return font;
     }
 
-    const regulaStyle = Object.keys(font.variants).find((variant) => variant.toLowerCase() === 'regular');
+    const regulaStyle = Object.keys(font.variants).find(
+      (variant) => variant.toLowerCase() === 'regular',
+    );
     if (regulaStyle) {
       font.regular = font.variants[regulaStyle];
     }
 
-    const boldStyle = Object.keys(font.variants).find((variant) => variant.toLowerCase() === 'bold');
+    const boldStyle = Object.keys(font.variants).find(
+      (variant) => variant.toLowerCase() === 'bold',
+    );
     if (boldStyle) {
       font.bold = font.variants[boldStyle];
     }
 
-    const italicStyle = Object.keys(font.variants).find((variant) => variant.toLowerCase() === 'italic');
+    const italicStyle = Object.keys(font.variants).find(
+      (variant) => variant.toLowerCase() === 'italic',
+    );
     if (italicStyle) {
       font.italic = font.variants[italicStyle];
     }
 
-    let boldItalicStyle = Object.keys(font.variants).find((variant) => variant.toLowerCase() === 'bold italic');
+    let boldItalicStyle = Object.keys(font.variants).find(
+      (variant) => variant.toLowerCase() === 'bold italic',
+    );
     if (boldItalicStyle) {
       font.boldItalic = font.variants[boldItalicStyle];
     }
 
-    boldItalicStyle = Object.keys(font.variants).find((variant) => variant.toLowerCase() === 'bolditalic');
+    boldItalicStyle = Object.keys(font.variants).find(
+      (variant) => variant.toLowerCase() === 'bolditalic',
+    );
     if (boldItalicStyle) {
       font.boldItalic = font.variants[boldItalicStyle];
     }
@@ -112,8 +125,7 @@ export default class FontHelper {
         }
 
         // exclude variants
-        if (variantNameLower.indexOf('italic') === -1
-                && variantNameLower.indexOf('bold') === -1) {
+        if (variantNameLower.indexOf('italic') === -1 && variantNameLower.indexOf('bold') === -1) {
           return true;
         }
 

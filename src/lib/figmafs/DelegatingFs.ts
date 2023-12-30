@@ -24,9 +24,9 @@ export default class DelegatingFs implements NodeishFilesystem {
 
   listeners: Set<(event: FileChangeInfo) => void> = new Set();
 
-  fileSystems: { path: string, fs: NodeishFilesystem }[];
+  fileSystems: { path: string; fs: NodeishFilesystem }[];
 
-  constructor(fileSystems?: { path: string, fs: NodeishFilesystem }[]) {
+  constructor(fileSystems?: { path: string; fs: NodeishFilesystem }[]) {
     if (fileSystems) {
       this.fileSystems = fileSystems;
 
@@ -39,7 +39,7 @@ export default class DelegatingFs implements NodeishFilesystem {
     }
   }
 
-  private propagateEvents(delegateFs: { path: string, fs: NodeishFilesystem }) {
+  private propagateEvents(delegateFs: { path: string; fs: NodeishFilesystem }) {
     const startWatching = async () => {
       try {
         const watcher = delegateFs.fs.watch(delegateFs.path, {
@@ -55,7 +55,8 @@ export default class DelegatingFs implements NodeishFilesystem {
               throw new Error('filename not set in event...');
             }
             const newEvent = { ...event };
-            newEvent.filename = delegateFs.path !== '/' ? delegateFs.path + event.filename : event.filename;
+            newEvent.filename =
+              delegateFs.path !== '/' ? delegateFs.path + event.filename : event.filename;
             for (const listener of this.listeners) {
               listener(newEvent);
             }
@@ -96,14 +97,18 @@ export default class DelegatingFs implements NodeishFilesystem {
   }
 
   async readFile(path: string): Promise<Uint8Array>;
-  async readFile(path: string, options: { encoding: 'utf-8' | 'binary'; }): Promise<string>;
+  async readFile(path: string, options: { encoding: 'utf-8' | 'binary' }): Promise<string>;
   async readFile(path: any, options?: any): Promise<string | Uint8Array> {
     const fs = this.getFilesystemForPath(path);
     const data = fs.readFile(path, options);
     return data;
   }
 
-  async writeFile(path: string, data: string | Uint8Array, options?: { mode: number; } | undefined): Promise<void> {
+  async writeFile(
+    path: string,
+    data: string | Uint8Array,
+    options?: { mode: number } | undefined,
+  ): Promise<void> {
     const fs = this.getFilesystemForPath(path);
     return fs.writeFile(path, data, options);
   }
@@ -122,11 +127,13 @@ export default class DelegatingFs implements NodeishFilesystem {
     }
     const fs = this.getFilesystemForPath(path);
 
-
     return fs.readdir(path);
   }
 
-  async mkdir(path: string, options?: { recursive: boolean; } | undefined): Promise<string | undefined> {
+  async mkdir(
+    path: string,
+    options?: { recursive: boolean } | undefined,
+  ): Promise<string | undefined> {
     const normalizedPath = normalPath(path);
     const parentDirPath = getDirname(path);
 
@@ -173,13 +180,13 @@ export default class DelegatingFs implements NodeishFilesystem {
     return path;
   }
 
-  async rm(path: string, options?: { recursive: boolean; } | undefined): Promise<void> {
+  async rm(path: string, options?: { recursive: boolean } | undefined): Promise<void> {
     const normalizedPath = normalPath(path);
     // if file does not exist it will throw here
     const statsOfPathToDelete = this.lstat(path);
 
     if ((await statsOfPathToDelete).isDirectory()) {
-      if (options === undefined ||  !options.recursive) {
+      if (options === undefined || !options.recursive) {
         throw new FilesystemError('EISDIR', normalizedPath, 'rm');
       }
 
@@ -225,9 +232,9 @@ export default class DelegatingFs implements NodeishFilesystem {
   watch(
     path: string,
     options?: {
-      recursive?: boolean
-      signal?: AbortSignal
-      persistent?: false
+      recursive?: boolean;
+      signal?: AbortSignal;
+      persistent?: false;
     },
     // WatchOptions
   ): AsyncIterable<FileChangeInfo> {
@@ -313,7 +320,7 @@ export default class DelegatingFs implements NodeishFilesystem {
           });
         }
       }
-    }
+    };
 
     return asyncIterator();
   }

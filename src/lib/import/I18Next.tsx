@@ -15,33 +15,37 @@ export default class I18NextKeyValueImporter {
   static toParrotPlaceholders(inputString: string) {
     const regexDoubleBrackets = /{{([^}]*)}}/g;
 
-    const replacedStringDoubleBrackets = inputString.replace(regexDoubleBrackets, (match, group1) => {
-      // const type = group1 === 'count' ? 'd' : 's';
-      // const format = '';
-      // const arg = '';
-      const parameterName = group1;
+    const replacedStringDoubleBrackets = inputString.replace(
+      regexDoubleBrackets,
+      (match, group1) => {
+        // const type = group1 === 'count' ? 'd' : 's';
+        // const format = '';
+        // const arg = '';
+        const parameterName = group1;
 
-
-      // TODO #19 add attributes for formatting to the tag
-      // TODO #20 add attributes for argument indext here.
-      // return `<ph type="${type}"${format}${arg} unnamed>${parameterName}</ph>`;
-      return `<ph>${parameterName}</ph>`;
-    });
+        // TODO #19 add attributes for formatting to the tag
+        // TODO #20 add attributes for argument indext here.
+        // return `<ph type="${type}"${format}${arg} unnamed>${parameterName}</ph>`;
+        return `<ph>${parameterName}</ph>`;
+      },
+    );
 
     const regex = /{([^}]*)}/g;
 
-    const replacedStringSingleBrackets = replacedStringDoubleBrackets.replace(regex, (match, group1) => {
-      // const type = group1 === 'count' ? 'd' : 's';
-      // const format = '';
-      // const arg = '';
-      const parameterName = group1;
+    const replacedStringSingleBrackets = replacedStringDoubleBrackets.replace(
+      regex,
+      (match, group1) => {
+        // const type = group1 === 'count' ? 'd' : 's';
+        // const format = '';
+        // const arg = '';
+        const parameterName = group1;
 
-
-      // TODO #19 add attributes for formatting to the tag
-      // TODO #20 add attributes for argument indext here.
-      // return `<ph type="${type}"${format}${arg} unnamed>${parameterName}</ph>`;
-      return `<ph>${parameterName}</ph>`;
-    });
+        // TODO #19 add attributes for formatting to the tag
+        // TODO #20 add attributes for argument indext here.
+        // return `<ph type="${type}"${format}${arg} unnamed>${parameterName}</ph>`;
+        return `<ph>${parameterName}</ph>`;
+      },
+    );
     return replacedStringSingleBrackets;
   }
 
@@ -70,11 +74,11 @@ export default class I18NextKeyValueImporter {
   private static getPluralItems(pluralNode: Element) {
     const items = pluralNode.getElementsByTagName('item');
     const plurals = {} as {
-      [plural in Plural]? : {
-        text?: string,
+      [plural in Plural]?: {
+        text?: string;
         // TODO #9 verified
-        skip?: boolean
-      }
+        skip?: boolean;
+      };
     };
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
@@ -88,7 +92,11 @@ export default class I18NextKeyValueImporter {
     return value;
   }
 
-  static toImportObject(filename: string, stringsFileContent: string, language: Locale): Message[] | undefined {
+  static toImportObject(
+    filename: string,
+    stringsFileContent: string,
+    language: Locale,
+  ): Message[] | undefined {
     const fileNameParts = filename.split('.');
     const fileExtension = fileNameParts[fileNameParts.length - 1];
     if (fileExtension !== 'json') {
@@ -116,7 +124,12 @@ export default class I18NextKeyValueImporter {
     return Object.values(foundMessages);
   }
 
-  static nodeToImpotObjects(messageName: string, node: any, foundMessages: { [messsageName: string]: Message }, language: Locale) {
+  static nodeToImpotObjects(
+    messageName: string,
+    node: any,
+    foundMessages: { [messsageName: string]: Message },
+    language: Locale,
+  ) {
     for (const [key, subNode] of Object.entries(node)) {
       const currentKeyName = `${messageName}${key}`;
       if (typeof subNode === 'string') {
@@ -137,7 +150,12 @@ export default class I18NextKeyValueImporter {
           ],
         };
       } else if (typeof subNode === 'object') {
-        I18NextKeyValueImporter.nodeToImpotObjects((currentKeyName + separator), subNode, foundMessages, language);
+        I18NextKeyValueImporter.nodeToImpotObjects(
+          currentKeyName + separator,
+          subNode,
+          foundMessages,
+          language,
+        );
       }
     }
   }

@@ -16,7 +16,8 @@ export default class GoogleTranslator {
 
     // replace placeholder with numbers to not translate them
 
-    const pattern = /(<ph( type="([^"]*)"=)?( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*))<\/ph>)/g;
+    const pattern =
+      /(<ph( type="([^"]*)"=)?( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*))<\/ph>)/g;
 
     const placeholderIndexMapping = [] as string[];
     let currentIndex = 0;
@@ -25,19 +26,38 @@ export default class GoogleTranslator {
     // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
     // const name = paramMatch[2];
 
-    const textWithMaskedPlaceholders = text.replace(pattern, (match, _helper1, type, _helper3, format, _helper5, argumentPosition, unnamed, _helper8, _helper9, name) => {
-      // const placeholderName = name;
-      placeholderIndexMapping[currentIndex] = match;
-      const placeholderReplacement = `[[${currentIndex}]]`;
-      // eslint-disable-next-line no-plusplus
-      currentIndex++;
-      return placeholderReplacement;
-    });
+    const textWithMaskedPlaceholders = text.replace(
+      pattern,
+      (
+        match,
+        _helper1,
+        type,
+        _helper3,
+        format,
+        _helper5,
+        argumentPosition,
+        unnamed,
+        _helper8,
+        _helper9,
+        name,
+      ) => {
+        // const placeholderName = name;
+        placeholderIndexMapping[currentIndex] = match;
+        const placeholderReplacement = `[[${currentIndex}]]`;
+        // eslint-disable-next-line no-plusplus
+        currentIndex++;
+        return placeholderReplacement;
+      },
+    );
 
     const sentences = textWithMaskedPlaceholders.split('. ');
     const translatedSentences = [] as string[];
     for (const sentence of sentences) {
-      const patchedQuery = sentence.split('.').join('{{dot}}').split('#').join('{{route}}')
+      const patchedQuery = sentence
+        .split('.')
+        .join('{{dot}}')
+        .split('#')
+        .join('{{route}}')
         .split('\n')
         .join('{{newline}}');
 
@@ -47,18 +67,21 @@ export default class GoogleTranslator {
       }
 
       // eslint-disable-next-line no-await-in-loop
-      const result = await fetch(`https://translate.googleapis.com/translate_a/single?${new URLSearchParams({
-        client: 'gtx',
-        dt: 't',
-        sl: sourceLanguage === 'se' ? 'SV' : sourceLanguage,
-        tl: targetLanguage === 'se' ? 'SV' : targetLanguage,
-        q: patchedQuery,
-      })}`, {
-        method: 'GET',
-        /* headers: {
+      const result = await fetch(
+        `https://translate.googleapis.com/translate_a/single?${new URLSearchParams({
+          client: 'gtx',
+          dt: 't',
+          sl: sourceLanguage === 'se' ? 'SV' : sourceLanguage,
+          tl: targetLanguage === 'se' ? 'SV' : targetLanguage,
+          q: patchedQuery,
+        })}`,
+        {
+          method: 'GET',
+          /* headers: {
                 'origin-when-cross-origin': '*',
               }, */
-      });
+        },
+      );
 
       if (!result.ok) {
         Sentry.captureMessage(`Translation of ${text} failed. Status code (${result.status}).`);
@@ -67,7 +90,7 @@ export default class GoogleTranslator {
       // eslint-disable-next-line no-await-in-loop
       const translationResults = await result.json();
 
-      if (!translationResults[0] || !translationResults[0][0] || !translationResults[0][0][0]) {
+      if (!translationResults[0] || !translationResults[0][0] || !translationResults[0][0][0]) {
         const error = new Error('Expected a translation within [0][0][0] not found');
         Sentry.captureException(error, {
           extra: {
@@ -80,9 +103,15 @@ export default class GoogleTranslator {
       } else {
         for (let i = 0; i < translationResults[0].length; i += 1) {
           const resultMessage = translationResults[0][i][0];
-          translatedSentences.push(resultMessage.split('{{dot}}').join('.').split('{{route}}').join('#')
-            .split('{{newline}}')
-            .join('\n'));
+          translatedSentences.push(
+            resultMessage
+              .split('{{dot}}')
+              .join('.')
+              .split('{{route}}')
+              .join('#')
+              .split('{{newline}}')
+              .join('\n'),
+          );
         }
       }
     }
@@ -95,7 +124,11 @@ export default class GoogleTranslator {
     // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
     // const name = paramMatch[2];
 
-    const translationWithoutPlaceholders = translationWithMaskedPlaceholders.replace(patternMaskedPlaceholders, (match, placeholderIndex, _argumentPosition) => `${placeholderIndexMapping[placeholderIndex]}`);
+    const translationWithoutPlaceholders = translationWithMaskedPlaceholders.replace(
+      patternMaskedPlaceholders,
+      (match, placeholderIndex, _argumentPosition) =>
+        `${placeholderIndexMapping[placeholderIndex]}`,
+    );
 
     return translationWithoutPlaceholders;
     /*

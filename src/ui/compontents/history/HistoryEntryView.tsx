@@ -6,17 +6,17 @@ import ReactTimeAgo from 'react-time-ago';
 import './HistoryEntryView.css';
 
 interface HistoryEntryViewProps {
-  first: boolean,
-  last: boolean,
+  first: boolean;
+  last: boolean;
   tag?: string;
   text?: string;
   version: number;
   time: number;
-  currentVersion: boolean,
+  currentVersion: boolean;
   userName: string;
   userIconUrl: string;
   previousText?: string;
-  onReuse?: Function
+  onReuse?: Function;
 }
 
 export default function HistoryEntryView({
@@ -35,7 +35,11 @@ export default function HistoryEntryView({
   const { t } = useTranslation();
   return (
     <div className="history_view">
-      <div className={`history_view--verticalLineRow ${first ? 'history_view--firstVerticalLineRow' : ''} ${last ? 'history_view--lastVerticalLineRow' : ''}`} />
+      <div
+        className={`history_view--verticalLineRow ${
+          first ? 'history_view--firstVerticalLineRow' : ''
+        } ${last ? 'history_view--lastVerticalLineRow' : ''}`}
+      />
       <div className="history_view--itemInfo">
         <div
           className="history_view--versionInfo"
@@ -74,7 +78,7 @@ export default function HistoryEntryView({
                 dir="auto"
                 style={{ maxWidth: '165px' }}
               >
-                { `Current Version (${version})` }
+                {`Current Version (${version})`}
               </div>
             )}
             {tag && (
@@ -87,7 +91,6 @@ export default function HistoryEntryView({
                 {tag}
               </div>
             )}
-
           </div>
         </div>
         <div
@@ -96,12 +99,16 @@ export default function HistoryEntryView({
           style={{ marginTop: tag || currentVersion ? '-8px' : '-24px' }}
         >
           <span>{text}</span>
-          { onReuse !== undefined && (
-          <button className="button button--buttonSecondary" type="button" onClick={() => { onReuse(text); }}>
-            <span data-tooltip-type="text">
-              { t('keys__version__reuse_button') }
-            </span>
-          </button>
+          {onReuse !== undefined && (
+            <button
+              className="button button--buttonSecondary"
+              type="button"
+              onClick={() => {
+                onReuse(text);
+              }}
+            >
+              <span data-tooltip-type="text">{t('keys__version__reuse_button')}</span>
+            </button>
           )}
         </div>
         <div>
@@ -115,7 +122,13 @@ export default function HistoryEntryView({
                   width: '15px',
                 }}
               >
-                <svg className="svg" width="22" height="22" viewBox="0 0 22 22" xmlns="http://www.w3.org/2000/svg">
+                <svg
+                  className="svg"
+                  width="22"
+                  height="22"
+                  viewBox="0 0 22 22"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
                   <path
                     d="M7.333 8.25c0-2.025 1.642-3.667 3.667-3.667 2.025 0 3.667 1.642 3.667 3.667 0 2.025-1.642 3.667-3.667 3.667-2.025 0-3.667-1.642-3.667-3.667zm3.61 4.583c-5.73 0-9.257 5.02-7.943 9.167h16c1.432-4.583-2.328-9.167-8.057-9.167z"
                     fillRule="nonzero"
@@ -133,13 +146,11 @@ export default function HistoryEntryView({
                 data-tooltip-max-width="1000"
                 dir="auto"
               >
-                { userName }
+                {userName}
               </div>
             </span>
           </div>
-          <span
-            className="history_view--editsByList history_view--timeRevised"
-          >
+          <span className="history_view--editsByList history_view--timeRevised">
             {' '}
             <span className="">
               <ReactTimeAgo date={time} locale="en-US" />

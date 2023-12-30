@@ -3,8 +3,8 @@ import { Message, Variant, getVariant } from '@inlang/sdk';
 import { Locale } from './variants/Locale';
 
 import MessageStoreMemory from './store/MessageStoreMemory';
-import { MessageParameterValues } from "./MessageParameterValues";
-import { Placeholder } from "./Placeholder";
+import { MessageParameterValues } from './MessageParameterValues';
+import { Placeholder } from './Placeholder';
 
 export enum ParameterType {
   string = 's',
@@ -18,28 +18,26 @@ export enum ParameterType {
  * Parameters do not have a representation in message format they are derived by the union of selectors and placeholders.
  */
 export interface Parameter {
-  name: string, // name of the placeholder - always preferred to have one but optional as some imports do not provide this
-  named: boolean, // false if no name provided
+  name: string; // name of the placeholder - always preferred to have one but optional as some imports do not provide this
+  named: boolean; // false if no name provided
 
   // default is string, derived by usage of the parameter - could be by a placeholders render function or by a selector mapper function
   // selectors: :gender -> string, :number -> number, :plural -> number
   // placeholder: :datetime -> date, :number -> number ....
-  type: ParameterType,
-  specifiedArgumentPosition: undefined | number, // if defined the position to provide the argument at when using printf for example
-  derivedArgumentPosition: undefined | number, // the argument position derived by analyzing all message variants
+  type: ParameterType;
+  specifiedArgumentPosition: undefined | number; // if defined the position to provide the argument at when using printf for example
+  derivedArgumentPosition: undefined | number; // the argument position derived by analyzing all message variants
 }
 
-
 export interface PlaceholdersByName {
-  [placeholderName: string] : Placeholder
+  [placeholderName: string]: Placeholder;
 }
 
 // Fillin represents a rendered placeholder - a placeholder can exists multiple times in the same variant - each with different formattings. the same value could lead to different outputs
 // based on the formatting function. We keep track of the formatted output by saving the renderered result as fillins in the labels
 export interface FillinToPlaceholder {
-  [fillin: string]: Placeholder
+  [fillin: string]: Placeholder;
 }
-
 
 export class MessageExtension {
   /**
@@ -50,15 +48,17 @@ export class MessageExtension {
    * @param currentParameterValues the parameters used to get the variant, variantHtml overrides
    * @param variantHtml the variant to use instead of the one found in the message
    */
-  static getParameter(message: Message, /* TODO #20 add ref language to analize message including index - order is important refLanguage: Locale, */ overrideVariant?: {
-    locale: Locale,
-    parameterValues: MessageParameterValues,
-    variantHtml: string
-  }) {
+  static getParameter(
+    message: Message,
+    /* TODO #20 add ref language to analize message including index - order is important refLanguage: Locale, */ overrideVariant?: {
+      locale: Locale;
+      parameterValues: MessageParameterValues;
+      variantHtml: string;
+    },
+  ) {
     const parameterToPlaceholders = {} as {
-      [plarameterName: string]: Placeholder[],
+      [plarameterName: string]: Placeholder[];
     };
-
 
     let overwrittenVariant: Variant | undefined;
     if (overrideVariant) {
@@ -71,16 +71,20 @@ export class MessageExtension {
       });
 
       if (overrideVariant) {
-        overwrittenVariant!.pattern = MessageStoreMemory.patternHtmlToPattern(overrideVariant.variantHtml);
+        overwrittenVariant!.pattern = MessageStoreMemory.patternHtmlToPattern(
+          overrideVariant.variantHtml,
+        );
       }
     }
 
     // build union
     for (let variant of message.variants) {
       // a variant to be overwritten was found - check if the  current variant is the one
-      if (overwrittenVariant !== undefined
-        && variant.languageTag === overwrittenVariant?.languageTag
-        && JSON.stringify(variant.match) === JSON.stringify(overwrittenVariant)) {
+      if (
+        overwrittenVariant !== undefined &&
+        variant.languageTag === overwrittenVariant?.languageTag &&
+        JSON.stringify(variant.match) === JSON.stringify(overwrittenVariant)
+      ) {
         variant = overwrittenVariant;
       }
 
@@ -98,7 +102,6 @@ export class MessageExtension {
             // TODO #19 until we support other parameter types than string no format function or options are required
             // formatFunctionName
             // options
-
           });
         }
       }
@@ -120,68 +123,68 @@ export class MessageExtension {
     return parameters;
   }
   /**
-     * Placeholder index:
-     * The placeholder format should always have a type. The position index as well as the name is optional.
-     *
-     * The output will *always* create a positioned index. The logic for the indexing is the following:
-     *
-     * ## The base language takes care of the indexing. Current Index + 1 on the first apearance of a named key:
-     *  "[%s:separator] [%s:name] [%s:separator] [%s:firstname]" -> 1:name 2:separator 3:firstname
-     *
-     * ## If a placehodlder is introduced in a plural we add the index in the order OTHER -> ZERO -> MANY if an argument position is provided it will be taken
-     *
-     * Example:
-     * - OTHER: "You have [[number_of_kids:d]] Kids "
-     * - ZERO:  "You plan to give your first child the name [[first_child_name]]"
-     * - ONE:   "You have [[number_of_kids:d]] Kid her name is [[first_child_name]] your next kid will be named [[1:second_child_name]]"
-     *
-     * This will start with Other, and find "number_of_kids",  followed by Zero which introduces "first_child_name".
-     * -> If ony those two forms would have been introduced the order would be 1:number_of_kids, 2:first_child_name
-     * Since the plural one introduces second_child with a fixed position 1 the resulting params will be like:
-     * 1:second_child_name 2:number_of_kids, 3:first_child_name
-     *
-     * The placeholders argument number abrivation continues with the languages:
-     *
-     * If a placehodlder is introduced in a language other than the base language we add the index by language alphabetically
-     * Example:
-     * - EN: "[[firstname]] "
-     * - DE: "[[title]] [[firstname]] [[lastname]]"
-     * - SE: "[[form_of_address]] [[lastname]] [[firstname]]"
-     * -> In this example EN is the base language so we use its translation first and we give firstname index number 1:
-     *   -> 1:firstname
-     * -> The next language, now after the alphabet, is german. this results in index 2 for title and index 3 for lastname
-     *   -> 1:firstname 2:title 3:lastname
-     * -> With the last language, Swedish, another parameter "form_of_address" is introduced. Its index is according to 4
-     *   -> 1:firstname 2:title 3:lastname 4:form_of_address
-     *
-     * Conflicting argument positions:
-     * A conflicting argument postions will be ignored for index building - first index wins. A warning should be shown to the user.
-     * Example:
-     *
-     * - a conflict
-     *
-     * If a placehodlder is introduced in a language other than the base language we add the index by language alphabetically
-     * - EN: "[%s:firstname] "
-     * - DE: "[%s:title] [%s:firstname] [%s:lastname]"
-     * - SE: "[%s:form_of_address] [%s:lastname] [%s:firstname]"
-     * -> In this example EN is the base language so we use its translation first and we give firstname index number 1:
-     *   -> 1:firstname
-     * -> The next language, now after the alphabet, is german. this results in index 2 for title and index 3 for lastname
-     *   -> 1:firstname 2:title 3:lastname
-     * -> With the last language, Swedish, another parameter "form_of_address" is introduced. Its index is according to 4
-     *   -> 1:firstname 2:title 3:lastname 4:form_of_address
-     *
-     * This rule also applies for plurals. The Order here is baselang, Other, One ... alphatbetic string
-     *
-     * Parameters may only containe alphabetic charactes and underscores.
-     *
-     * Open question: do we need a list of parameters per translation?
-     * - How do we know that a text misses a parameter?
-     *    - we check if all parameters defined in the base language are provided?
-     *    - do we check more languages than the base language?
-     * - how shall we flag false positives - parameters that are not needed in a specific language?
-     *
-     */
+   * Placeholder index:
+   * The placeholder format should always have a type. The position index as well as the name is optional.
+   *
+   * The output will *always* create a positioned index. The logic for the indexing is the following:
+   *
+   * ## The base language takes care of the indexing. Current Index + 1 on the first apearance of a named key:
+   *  "[%s:separator] [%s:name] [%s:separator] [%s:firstname]" -> 1:name 2:separator 3:firstname
+   *
+   * ## If a placehodlder is introduced in a plural we add the index in the order OTHER -> ZERO -> MANY if an argument position is provided it will be taken
+   *
+   * Example:
+   * - OTHER: "You have [[number_of_kids:d]] Kids "
+   * - ZERO:  "You plan to give your first child the name [[first_child_name]]"
+   * - ONE:   "You have [[number_of_kids:d]] Kid her name is [[first_child_name]] your next kid will be named [[1:second_child_name]]"
+   *
+   * This will start with Other, and find "number_of_kids",  followed by Zero which introduces "first_child_name".
+   * -> If ony those two forms would have been introduced the order would be 1:number_of_kids, 2:first_child_name
+   * Since the plural one introduces second_child with a fixed position 1 the resulting params will be like:
+   * 1:second_child_name 2:number_of_kids, 3:first_child_name
+   *
+   * The placeholders argument number abrivation continues with the languages:
+   *
+   * If a placehodlder is introduced in a language other than the base language we add the index by language alphabetically
+   * Example:
+   * - EN: "[[firstname]] "
+   * - DE: "[[title]] [[firstname]] [[lastname]]"
+   * - SE: "[[form_of_address]] [[lastname]] [[firstname]]"
+   * -> In this example EN is the base language so we use its translation first and we give firstname index number 1:
+   *   -> 1:firstname
+   * -> The next language, now after the alphabet, is german. this results in index 2 for title and index 3 for lastname
+   *   -> 1:firstname 2:title 3:lastname
+   * -> With the last language, Swedish, another parameter "form_of_address" is introduced. Its index is according to 4
+   *   -> 1:firstname 2:title 3:lastname 4:form_of_address
+   *
+   * Conflicting argument positions:
+   * A conflicting argument postions will be ignored for index building - first index wins. A warning should be shown to the user.
+   * Example:
+   *
+   * - a conflict
+   *
+   * If a placehodlder is introduced in a language other than the base language we add the index by language alphabetically
+   * - EN: "[%s:firstname] "
+   * - DE: "[%s:title] [%s:firstname] [%s:lastname]"
+   * - SE: "[%s:form_of_address] [%s:lastname] [%s:firstname]"
+   * -> In this example EN is the base language so we use its translation first and we give firstname index number 1:
+   *   -> 1:firstname
+   * -> The next language, now after the alphabet, is german. this results in index 2 for title and index 3 for lastname
+   *   -> 1:firstname 2:title 3:lastname
+   * -> With the last language, Swedish, another parameter "form_of_address" is introduced. Its index is according to 4
+   *   -> 1:firstname 2:title 3:lastname 4:form_of_address
+   *
+   * This rule also applies for plurals. The Order here is baselang, Other, One ... alphatbetic string
+   *
+   * Parameters may only containe alphabetic charactes and underscores.
+   *
+   * Open question: do we need a list of parameters per translation?
+   * - How do we know that a text misses a parameter?
+   *    - we check if all parameters defined in the base language are provided?
+   *    - do we check more languages than the base language?
+   * - how shall we flag false positives - parameters that are not needed in a specific language?
+   *
+   */
   /* TODO #19 variables check if this function can become handy in inlang scope
   static extractParameters(messages: Variants, baseLanguage: Locale, includeGenderForms: boolean, includePluralForms: boolean) : PlaceholdersByName {
     // a placeholder can be processed in two ways:

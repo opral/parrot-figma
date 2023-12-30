@@ -4,11 +4,11 @@ import Emitter from 'quill/core/emitter';
 import { useEffect, useState } from 'react';
 import { MessageParameterValues } from '../../../../../lib/message/MessageParameterValues';
 import { Placeholder } from '../../../../../lib/message/Placeholder';
- 
+
 const Delta = Quill.import('delta') as typeof DeltaType;
 
 type FormatPlaceholderProps = {
-  toolbarActive: boolean,
+  toolbarActive: boolean;
   format: string;
   value?: string;
   icon: string;
@@ -22,16 +22,19 @@ type FormatPlaceholderProps = {
 };
 
 export default function FormatPlaceholder({
-  format, 
-  value, 
-  icon, 
-  editor, 
-  formats, valuePlaceholder, namePlaceholder, toolbarActive, parameterValues, setParameterValue,
+  format,
+  value,
+  icon,
+  editor,
+  formats,
+  valuePlaceholder,
+  namePlaceholder,
+  toolbarActive,
+  parameterValues,
+  setParameterValue,
 }: FormatPlaceholderProps) {
-
   const [placeholderNameInputShown, setPlaceholderNameInputShown] = useState(false);
   const [placeholderValueInputShown, setPlaceholderValueInputShown] = useState(false);
-
 
   const [currentPlaceholderName, setCurrentPlaceholderName] = useState('');
   const [currentPlaceholderValue, setCurrentPlaceholderValue] = useState<string>('');
@@ -74,7 +77,10 @@ export default function FormatPlaceholder({
 
     if (currentPlaceholderName) {
       const parameterName = currentPlaceholderName;
-      const parameterValue = formats[format] && formats[format].name ? parameterValues[formats[format].name].value : (editor as any).getText({ index: range?.index, length: range?.length! });
+      const parameterValue =
+        formats[format] && formats[format].name
+          ? parameterValues[formats[format].name].value
+          : (editor as any).getText({ index: range?.index, length: range?.length! });
       const parameterType = 'string';
 
       setParameterValue(parameterName, parameterValue, false);
@@ -89,11 +95,12 @@ export default function FormatPlaceholder({
       };
       updatedAttributes.placeholder = { name: parameterName, named: true } as Placeholder;
 
-      const replacementDelta = (new Delta()).insert(parameterName, updatedAttributes);
+      const replacementDelta = new Delta().insert(parameterName, updatedAttributes);
       // }
 
-      const updatedDelta = beforeSelectionContents.concat(replacementDelta as any).concat(afterSelectionContents);
-
+      const updatedDelta = beforeSelectionContents
+        .concat(replacementDelta as any)
+        .concat(afterSelectionContents);
 
       editor.setContents(updatedDelta, 'user' /* Emitter.sources.USER */);
     } else {
@@ -102,29 +109,39 @@ export default function FormatPlaceholder({
   }
 
   function resetPlaceholderName(event: React.KeyboardEvent) {
-    console.log('resetting placeholder name in control to ' + formats[format].name)
+    console.log('resetting placeholder name in control to ' + formats[format].name);
     setCurrentPlaceholderName(formats[format].name ?? '');
   }
 
   function resetPlaceholderValue(event: React.KeyboardEvent) {
-    console.log('resetting placeholder value in control to ' + parameterValues[currentPlaceholderName].value)
+    console.log(
+      'resetting placeholder value in control to ' + parameterValues[currentPlaceholderName].value,
+    );
     setCurrentPlaceholderValue(parameterValues[currentPlaceholderName].value ?? '');
   }
 
   function updatePlaceholderValue(event: React.KeyboardEvent) {
-    console.log("updateingPlaceholderValue "+currentPlaceholderName + " to " + currentPlaceholderValue );
+    console.log(
+      'updateingPlaceholderValue ' + currentPlaceholderName + ' to ' + currentPlaceholderValue,
+    );
     setParameterValue(currentPlaceholderName, currentPlaceholderValue, true);
   }
 
   return (
     <>
       <div className="ql-button-group">
-        <button className={`ql-button${formats[format] !== undefined ? ' ql-active' : ''}`} type="button" onClick={onClick}>
-          <div className="close svg-container"><div className={icon} /></div>
+        <button
+          className={`ql-button${formats[format] !== undefined ? ' ql-active' : ''}`}
+          type="button"
+          onClick={onClick}
+        >
+          <div className="close svg-container">
+            <div className={icon} />
+          </div>
         </button>
         <input
           className="ql-input"
-          style={{ display: (placeholderValueInputShown ? 'flex' : 'none') }}
+          style={{ display: placeholderValueInputShown ? 'flex' : 'none' }}
           type="text"
           placeholder={valuePlaceholder}
           onKeyDown={(e) => {
@@ -138,7 +155,10 @@ export default function FormatPlaceholder({
           value={currentPlaceholderValue}
         />
       </div>
-      <div className="ql-input-overlay" style={{ display: placeholderNameInputShown ? undefined : 'none' }}>
+      <div
+        className="ql-input-overlay"
+        style={{ display: placeholderNameInputShown ? undefined : 'none' }}
+      >
         <div className="ql-placholder-wrapper">
           <input
             type="text"

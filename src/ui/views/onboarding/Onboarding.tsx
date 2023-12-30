@@ -12,20 +12,21 @@ import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabel
 import WindowManagerUi from '../../../lib/windowManager/WindowManagerUI';
 
 type OnboardingProps = {
-  labelManager: LocalizedLabelManagerUI,
-  onFinishSetup: Function,
+  labelManager: LocalizedLabelManagerUI;
+  onFinishSetup: Function;
 };
 
-export default function Onboarding({
-  labelManager,
-  onFinishSetup,
-}: OnboardingProps) {
-  const [selectedLanguages, setSelectedLanguages] = useState<Locale[]>(labelManager.messageStore.getLanugages() ?? []);
-  const [selectedBaseLanguage, setSelectedBaseLanguage] = useState<Locale | undefined>(labelManager.messageStore.getRefLanugage());
+export default function Onboarding({ labelManager, onFinishSetup }: OnboardingProps) {
+  const [selectedLanguages, setSelectedLanguages] = useState<Locale[]>(
+    labelManager.messageStore.getLanugages() ?? [],
+  );
+  const [selectedBaseLanguage, setSelectedBaseLanguage] = useState<Locale | undefined>(
+    labelManager.messageStore.getRefLanugage(),
+  );
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const scrollHeightCheckInterval = useRef<any | undefined>(undefined);
+  const scrollHeightCheckInterval = useRef<any | undefined>(undefined);
 
-  const lastPropagatedScrollheight = useRef<number | undefined>(undefined);
+  const lastPropagatedScrollheight = useRef<number | undefined>(undefined);
 
   const finishSetupClick = () => {
     onFinishSetup();
@@ -34,11 +35,16 @@ export default function Onboarding({
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
 
-    scrollHeightCheckInterval.current = setInterval(() => { 
-      if (scrollContainerRef.current && scrollContainerRef.current.scrollHeight !== lastPropagatedScrollheight.current) {
+    scrollHeightCheckInterval.current = setInterval(() => {
+      if (
+        scrollContainerRef.current &&
+        scrollContainerRef.current.scrollHeight !== lastPropagatedScrollheight.current
+      ) {
         lastPropagatedScrollheight.current = scrollContainerRef.current.scrollHeight;
         console.log(`propagateScrollHeight${lastPropagatedScrollheight.current}`);
-        WindowManagerUi.instance!.requestResize({ height: lastPropagatedScrollheight.current + 16 });
+        WindowManagerUi.instance!.requestResize({
+          height: lastPropagatedScrollheight.current + 16,
+        });
       }
     }, 30) as any;
 
@@ -56,7 +62,8 @@ export default function Onboarding({
           <div className="setup-header-title">Set up your file</div>
         </div>
         <div className="setup-text">
-          Let Parrot know which language your design file is mainly using. You can then define target locales to translate to.
+          Let Parrot know which language your design file is mainly using. You can then define
+          target locales to translate to.
         </div>
         <LanguageSetup
           labelManager={labelManager}
@@ -65,16 +72,19 @@ export default function Onboarding({
           onChange={async (baselanguage: Locale, activeLanguages: Locale[]) => {
             setSelectedBaseLanguage(baselanguage);
             setSelectedLanguages(activeLanguages);
-            
+
             await labelManager.messageStore.setRefLanguage(baselanguage);
             await labelManager.messageStore.setLanguages(activeLanguages);
           }}
         />
         <div className="onboarding-buttonbar">
-          <button className="button button--buttonPrimary" disabled={selectedBaseLanguage === undefined || selectedLanguages.length === 0} type="button" onClick={finishSetupClick}>
-            <span data-tooltip-type="text">
-              Finish Setup
-            </span>
+          <button
+            className="button button--buttonPrimary"
+            disabled={selectedBaseLanguage === undefined || selectedLanguages.length === 0}
+            type="button"
+            onClick={finishSetupClick}
+          >
+            <span data-tooltip-type="text">Finish Setup</span>
           </button>
         </div>
       </div>

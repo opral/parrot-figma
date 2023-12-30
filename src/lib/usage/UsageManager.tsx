@@ -1,17 +1,17 @@
 /* eslint-disable max-classes-per-file */
 // TODO use the local storage for now - information will be sourced by the backend later
 
-import { FileUsage } from "./FileUsage";
-import { UserRoleRequest } from "./UserRoleRequest";
-import generateGUID from "./generateGUID";
-import mergeDeep from "./mergeDeep";
+import { FileUsage } from './FileUsage';
+import { UserRoleRequest } from './UserRoleRequest';
+import generateGUID from './generateGUID';
+import mergeDeep from './mergeDeep';
 
 export interface PluginUser {
-  userId: string,
-  name: string,
-  photoUrl: string | null,
-  userRole: UserRole,
-  openUserRoleRequest: UserRoleRequest | undefined,
+  userId: string;
+  name: string;
+  photoUrl: string | null;
+  userRole: UserRole;
+  openUserRoleRequest: UserRoleRequest | undefined;
   // permissions
 }
 
@@ -30,23 +30,26 @@ const UserRoleUtils = {
     }
     switch (type) {
       case UserRole.owner:
-        if (comparetToType === UserRole.designer
-                    || comparetToType === UserRole.developer
-                    || comparetToType === UserRole.inactive
-                    || comparetToType === undefined) {
+        if (
+          comparetToType === UserRole.designer ||
+          comparetToType === UserRole.developer ||
+          comparetToType === UserRole.inactive ||
+          comparetToType === undefined
+        ) {
           return 1;
         }
         break;
       case UserRole.designer:
-        if (comparetToType === UserRole.developer
-                    || comparetToType === UserRole.inactive
-                    || comparetToType === undefined) {
+        if (
+          comparetToType === UserRole.developer ||
+          comparetToType === UserRole.inactive ||
+          comparetToType === undefined
+        ) {
           return 1;
         }
         break;
       case UserRole.developer:
-        if (comparetToType === UserRole.inactive
-                    || comparetToType === undefined) {
+        if (comparetToType === UserRole.inactive || comparetToType === undefined) {
           return 1;
         }
         break;
@@ -102,9 +105,11 @@ export default class UserManager {
 
     figma.on('documentchange', (event: any) => {
       for (const change of event.documentChanges) {
-        if (change.id === this.rootNodeId
-                    && change === 'PROPERTY_CHANGE'
-                    && change.properties.includes('pluginData')) {
+        if (
+          change.id === this.rootNodeId &&
+          change === 'PROPERTY_CHANGE' &&
+          change.properties.includes('pluginData')
+        ) {
           const newFileState = UserManager.loadFileStateFromRoot();
           this.state = UserManager.mergeStates(this.state, newFileState);
 
@@ -241,7 +246,10 @@ export default class UserManager {
     };
     this.propagateState();
 
-    if (userRole !== UserRole.owner && this.autoApplyUserRole /* in the beta we auto apply requested roles */) {
+    if (
+      userRole !== UserRole.owner &&
+      this.autoApplyUserRole /* in the beta we auto apply requested roles */
+    ) {
       setTimeout(() => this.setUserRole(userRole, forUser, 'plugin'), 1);
     }
 
@@ -297,11 +305,16 @@ export default class UserManager {
     return this.findMostRecentUserRoleStateWithEntryType('set', userId)?.type;
   }
 
-  findMostRecentUserRoleStateWithEntryType(entryType: 'request' | 'set', userId: string): UserRoleRequest | undefined {
+  findMostRecentUserRoleStateWithEntryType(
+    entryType: 'request' | 'set',
+    userId: string,
+  ): UserRoleRequest | undefined {
     if (!this.state.usersInFile[userId]) {
       return undefined;
     }
-    const times = Object.keys(this.state.usersInFile[userId].userStates).map(Number).sort((a, b) => b - a); // Get the sorted array of timestamps in descending order
+    const times = Object.keys(this.state.usersInFile[userId].userStates)
+      .map(Number)
+      .sort((a, b) => b - a); // Get the sorted array of timestamps in descending order
 
     for (const time of times) {
       const entry = this.state.usersInFile[userId].userStates[time];
@@ -339,15 +352,15 @@ export default class UserManager {
     const localStorageKeys = await figma.clientStorage.keysAsync();
     for (const localStorageKey of localStorageKeys) {
       if (localStorageKey.startsWith(clientStorageKeyPrefix)) {
-        const userLocalState = await figma.clientStorage.getAsync(localStorageKey) as FileUsage;
+        const userLocalState = (await figma.clientStorage.getAsync(localStorageKey)) as FileUsage;
         if (userLocalState) {
-          usageStatistcs.push(userLocalState)
+          usageStatistcs.push(userLocalState);
         }
       }
     }
     return usageStatistcs;
   }
-/*
+  /*
   async checkFeature(feature: string) {
     switch (feature) {
       case 'collaboration':

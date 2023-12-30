@@ -11,11 +11,7 @@ import OutsideClickHandler from 'react-outside-click-handler';
 import './quill.bubble.css';
 import './TranslationEditor.css';
 
-import Quill, {
-  DeltaStatic,
-  Sources,
-  Delta as DeltaType,
-} from 'quill';
+import Quill, { DeltaStatic, Sources, Delta as DeltaType } from 'quill';
 
 import Emitter from 'quill/core/emitter';
 import { createPortal } from 'react-dom';
@@ -52,29 +48,31 @@ const saveOnEnter = true;
 
 const Delta = Quill.import('delta') as typeof DeltaType;
 
-
-
 type TranslationEditorProps = {
-  variantHTML?: string,
-  parameterValues: MessageParameterValues,
+  variantHTML?: string;
+  parameterValues: MessageParameterValues;
   /**
    * Triggered when a save is requested - like enter press or click out of the controll
    */
-  onSave?: (patternHtml: string | undefined, parameters: MessageParameterValues) => void,
+  onSave?: (patternHtml: string | undefined, parameters: MessageParameterValues) => void;
   /**
    * Triggered when the user presses esc
    */
-  onCancel?: Function,
+  onCancel?: Function;
   /**
    * Triggered when the user changed the fillins or the text
    */
-  onChange?: (patternHtml: string | undefined, parameters: MessageParameterValues, reset?: ()=>void) => void,
-  onBlur?: Function,
-  onFocus?: Function,
-  match: { start: number, length: number } | undefined
-  isDisabled: false | true
-  editable: boolean,
-  messageStore: MessageStoreMemory,
+  onChange?: (
+    patternHtml: string | undefined,
+    parameters: MessageParameterValues,
+    reset?: () => void,
+  ) => void;
+  onBlur?: Function;
+  onFocus?: Function;
+  match: { start: number; length: number } | undefined;
+  isDisabled: false | true;
+  editable: boolean;
+  messageStore: MessageStoreMemory;
 };
 
 // We use this view in two ocations:
@@ -108,7 +106,7 @@ export default function TranslationEditor({
   const tooltipContainerRef = useRef<HTMLDivElement>(null);
 
   const reset = () => {
-    ((document.activeElement) as any)?.blur?.();
+    (document.activeElement as any)?.blur?.();
     console.log('setEditingState false reset');
     setEditingState(false);
     setTextState(variantHTML);
@@ -187,7 +185,11 @@ export default function TranslationEditor({
               handler(_range: any, context: any) {
                 const format = 'textDecoration';
                 // eslint-disable-next-line react/no-this-in-sfc
-                this.quill.format(format, context.format[format] === 'UNDERLINE' ? undefined : 'UNDERLINE', Emitter.sources.USER);
+                this.quill.format(
+                  format,
+                  context.format[format] === 'UNDERLINE' ? undefined : 'UNDERLINE',
+                  Emitter.sources.USER,
+                );
               },
             },
             custom: {
@@ -205,13 +207,28 @@ export default function TranslationEditor({
         },
         clipboard: {
           matchers: [
-            ['PH', (node: HTMLElement, delta: any) => {
-              const parameterValue = node.getAttribute('parameterValue');
-              const name = node.innerHTML;
-              return delta.compose(new Delta().retain(delta.length(), { placeholder: { parameterValue, name } }));
-            }],
-            ['S', (node: HTMLElement, delta: any) => delta.compose(new Delta().retain(delta.length(), { textDecoration: 'STRIKETHROUGH' }))],
-            ['U', (node: HTMLElement, delta: any) => delta.compose(new Delta().retain(delta.length(), { textDecoration: 'UNDERLINE' }))],
+            [
+              'PH',
+              (node: HTMLElement, delta: any) => {
+                const parameterValue = node.getAttribute('parameterValue');
+                const name = node.innerHTML;
+                return delta.compose(
+                  new Delta().retain(delta.length(), { placeholder: { parameterValue, name } }),
+                );
+              },
+            ],
+            [
+              'S',
+              (node: HTMLElement, delta: any) =>
+                delta.compose(
+                  new Delta().retain(delta.length(), { textDecoration: 'STRIKETHROUGH' }),
+                ),
+            ],
+            [
+              'U',
+              (node: HTMLElement, delta: any) =>
+                delta.compose(new Delta().retain(delta.length(), { textDecoration: 'UNDERLINE' })),
+            ],
           ],
         },
       },
@@ -221,9 +238,16 @@ export default function TranslationEditor({
     return editor;
   }
 
-  function updateQuill(currentQuillEditor: Quill, updatedHtml: string, updatedParameters: MessageParameterValues) {
+  function updateQuill(
+    currentQuillEditor: Quill,
+    updatedHtml: string,
+    updatedParameters: MessageParameterValues,
+  ) {
     // eslint-disable-next-line no-param-reassign
-    (currentQuillEditor.clipboard as any).matchers[0][1] = function matchText(node: any, delta: any) {
+    (currentQuillEditor.clipboard as any).matchers[0][1] = function matchText(
+      node: any,
+      delta: any,
+    ) {
       const text = node.data;
       return delta.insert(text);
     };
@@ -243,7 +267,6 @@ export default function TranslationEditor({
     }
     currentQuillEditor.setContents(contents, 'silent');
   }
-  
 
   useEffect(() => {
     if (!isDisabled && (isMouseOver || editingState)) {
@@ -303,7 +326,8 @@ export default function TranslationEditor({
         setEditingState(false);
         handleCancel();
         dontSaveOnBlurFlag.current = false;
-      } if (e.key === 'Enter' && !e.shiftKey && saveOnEnter) {
+      }
+      if (e.key === 'Enter' && !e.shiftKey && saveOnEnter) {
         e.preventDefault(); // Prevent the default behavior
         e.stopPropagation(); // Stop event bubbling
         quillEditor.current?.blur();
@@ -354,10 +378,9 @@ export default function TranslationEditor({
       return;
     }
     handleSave();
-  }
+  };
 
   const handleCancel = () => {
-    
     // console.log('#23 QuillEditor.handleCancel');
 
     reset();
@@ -383,8 +406,8 @@ export default function TranslationEditor({
 
   if (textState === undefined || textState === '') {
     textToUse = 'no translation';
-  // } else if (textState.charAt(textState.length - 1) === '\n') {
-  //   textToUse = `${textState}\n`;
+    // } else if (textState.charAt(textState.length - 1) === '\n') {
+    //   textToUse = `${textState}\n`;
   } else {
     textToUse = textState;
   }
@@ -395,21 +418,28 @@ export default function TranslationEditor({
       disabled={!editingState}
       display="contents"
     >
-      <div className={`translation-editor${editingState ? ' editing' : ''} ${isDisabled ? ' translation-editor-disabled' : ''}`}>
+      <div
+        className={`translation-editor${editingState ? ' editing' : ''} ${
+          isDisabled ? ' translation-editor-disabled' : ''
+        }`}
+      >
         <div
           onMouseOver={() => {
             setMouseOver(true);
           }}
-          onMouseLeave={() => { setMouseOver(false); }}
+          onMouseLeave={() => {
+            setMouseOver(false);
+          }}
           className={`translation-editor-text${editingState ? ' editing' : ''}`}
         >
-
           <div
             style={{
-              visibility: (!isDisabled && (isMouseOver || editingState)) ? 'hidden' : 'unset',
-              pointerEvents: (!isDisabled && (isMouseOver || editingState)) ? 'none' : 'unset',
+              visibility: !isDisabled && (isMouseOver || editingState) ? 'hidden' : 'unset',
+              pointerEvents: !isDisabled && (isMouseOver || editingState) ? 'none' : 'unset',
             }}
-            className={`translation${editingState ? ' editing ' : ''}${textState === undefined ? ' missing ' : ''}`}
+            className={`translation${editingState ? ' editing ' : ''}${
+              textState === undefined ? ' missing ' : ''
+            }`}
             onClick={() => {
               if (!editingState && editable) {
                 console.log('editin state set to' + !editingState);
@@ -417,16 +447,13 @@ export default function TranslationEditor({
               }
             }}
           >
-            <TranslationView
-              match={match}
-              text={textToUse}
-            />
+            <TranslationView match={match} text={textToUse} />
           </div>
 
           <div
             style={{
               position: 'absolute',
-              display: (!isDisabled && (isMouseOver || editingState)) ? 'unset' : 'none',
+              display: !isDisabled && (isMouseOver || editingState) ? 'unset' : 'none',
               zIndex: 1,
               top: 0,
               bottom: 0,
@@ -445,8 +472,11 @@ export default function TranslationEditor({
               defer
             >
               <pre ref={editorPreRef} />
-              {quillEditor.current && scrollContainer.current && !isDisabled && editingState
-                && createPortal(
+              {quillEditor.current &&
+                scrollContainer.current &&
+                !isDisabled &&
+                editingState &&
+                createPortal(
                   <div style={{ display: 'contents' }} ref={tooltipContainerRef}>
                     <TooltipToolbar
                       editorScrollContainer={scrollContainer.current}
@@ -454,7 +484,11 @@ export default function TranslationEditor({
                       rootView={document.body}
                       parameterValues={parameterValues}
                       // eslint-disable-next-line react/jsx-no-bind
-                      setParameterValue={(name: string, value: string, propagate: boolean): void => {
+                      setParameterValue={(
+                        name: string,
+                        value: string,
+                        propagate: boolean,
+                      ): void => {
                         // eslint-disable-next-line no-param-reassign -- TODO check if this acutally works
                         parameterValues[name] = {
                           type: 'string',
@@ -470,7 +504,6 @@ export default function TranslationEditor({
                 )}
             </OverlayScrollbarsComponent>
           </div>
-
         </div>
       </div>
     </OutsideClickHandler>

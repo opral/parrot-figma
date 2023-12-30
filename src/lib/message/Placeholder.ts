@@ -13,5 +13,4 @@ export interface Placeholder {
   formatFunctionName?: string;
   // options utilized by formatting function like Date formating pattern or number format
   options?: Record<string, string>;
-
 }

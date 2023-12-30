@@ -25,40 +25,36 @@ if (!Element.prototype.scrollIntoViewIfNeeded) {
 
     const parent = this.parentNode! as HTMLElement;
     const parentComputedStyle = window.getComputedStyle(parent, null);
-    const parentBorderTopWidth = parseInt(
-      parentComputedStyle.getPropertyValue('border-top-width'),
-    );
+    const parentBorderTopWidth = parseInt(parentComputedStyle.getPropertyValue('border-top-width'));
     const parentBorderLeftWidth = parseInt(
       parentComputedStyle.getPropertyValue('border-left-width'),
     );
     const overTop = this.offsetTop - parent.offsetTop < parent.scrollTop;
-    const overBottom = this.offsetTop
-          - parent.offsetTop
-          + this.clientHeight
-          - parentBorderTopWidth
-        > parent.scrollTop + parent.clientHeight;
+    const overBottom =
+      this.offsetTop - parent.offsetTop + this.clientHeight - parentBorderTopWidth >
+      parent.scrollTop + parent.clientHeight;
     const overLeft = this.offsetLeft - parent.offsetLeft < parent.scrollLeft;
-    const overRight = this.offsetLeft
-          - parent.offsetLeft
-          + this.clientWidth
-          - parentBorderLeftWidth
-        > parent.scrollLeft + parent.clientWidth;
+    const overRight =
+      this.offsetLeft - parent.offsetLeft + this.clientWidth - parentBorderLeftWidth >
+      parent.scrollLeft + parent.clientWidth;
     const alignWithTop = overTop && !overBottom;
 
     if ((overTop || overBottom) && centerIfNeeded) {
-      parent.scrollTop = this.offsetTop
-        - parent.offsetTop
-        - parent.clientHeight / 2
-        - parentBorderTopWidth
-        + this.clientHeight / 2;
+      parent.scrollTop =
+        this.offsetTop -
+        parent.offsetTop -
+        parent.clientHeight / 2 -
+        parentBorderTopWidth +
+        this.clientHeight / 2;
     }
 
     if ((overLeft || overRight) && centerIfNeeded) {
-      parent.scrollLeft = this.offsetLeft
-        - parent.offsetLeft
-        - parent.clientWidth / 2
-        - parentBorderLeftWidth
-        + this.clientWidth / 2;
+      parent.scrollLeft =
+        this.offsetLeft -
+        parent.offsetLeft -
+        parent.clientWidth / 2 -
+        parentBorderLeftWidth +
+        this.clientWidth / 2;
     }
 
     if ((overTop || overBottom || overLeft || overRight) && !centerIfNeeded) {
@@ -68,9 +64,9 @@ if (!Element.prototype.scrollIntoViewIfNeeded) {
 }
 
 type LocalizedLabelsListViewProps = {
-  showMessage: Function,
-  figmaRemote: FigmaUtil
-  localizedLabelManager: LocalizedLabelManagerUI,
+  showMessage: Function;
+  figmaRemote: FigmaUtil;
+  localizedLabelManager: LocalizedLabelManagerUI;
 };
 
 export default function LocalizedLabelsListView({
@@ -102,7 +98,9 @@ export default function LocalizedLabelsListView({
       if (!updatedParentIds.has(selectedNode.rootFrameId)) {
         // console.log('getting labels from manager');
         // eslint-disable-next-line no-await-in-loop -- parallizing would not bring any advantage here
-        const selectedLabelsByFrame = await localizedLabelManager.getLocalizedLabelsByFrame(selectedNode.rootFrameId);
+        const selectedLabelsByFrame = await localizedLabelManager.getLocalizedLabelsByFrame(
+          selectedNode.rootFrameId,
+        );
 
         if (selectedLabelsByFrame) {
           selectedLabels = selectedLabels.concat(selectedLabelsByFrame);
@@ -147,11 +145,10 @@ export default function LocalizedLabelsListView({
     if (tableRef.current) {
       const firstSelected = tableRef.current.querySelector('.selected') as HTMLElement;
       if (firstSelected) {
-        const foundElement = (firstSelected.firstChild as any);
+        const foundElement = firstSelected.firstChild as any;
         if (foundElement.scrollIntoViewIfNeeded) {
           (firstSelected.firstChild as any).scrollIntoViewIfNeeded({ block: 'center' });
         } else {
-
         }
       }
     }
@@ -160,38 +157,37 @@ export default function LocalizedLabelsListView({
   return (
     <>
       {localizedLabels.length === 0 && (
-      <div className="emptyState">
-        <div className="emptyStateTitle">No Frame selected</div>
-        <div className="emptyStateSubtitle">
-          <div>
-            Labels for localization
-            <br />
-            will show up here when selected - Select a Frame containing Text in your Design.
+        <div className="emptyState">
+          <div className="emptyStateTitle">No Frame selected</div>
+          <div className="emptyStateSubtitle">
+            <div>
+              Labels for localization
+              <br />
+              will show up here when selected - Select a Frame containing Text in your Design.
+            </div>
           </div>
         </div>
-      </div>
       )}
       {localizedLabels.length >= 0 && (
-      <div>
+        <div>
+          <div className="table" ref={tableRef}>
+            <div className="top-border" />
 
-        <div className="table" ref={tableRef}>
-          <div className="top-border" />
-
-          {[...parentIds].map((parentId) => (
-            <div
-              key={parentId} >
-              <LocalizedFrameGroup
-                showMessage={showMessage}
-                localizedLabels={localizedLabels.filter((l) => l.rootFrameId === parentId).sort((a, b) => Math.hypot(a.x, a.y * (2) - Math.hypot(b.x, b.y * 2)))}
-                selectedNodes={selection}
-                figmaRemote={figmaRemote}
-                localizedLabelManager={localizedLabelManager}
-                
-              />
-            </div>
-          ))}
+            {[...parentIds].map((parentId) => (
+              <div key={parentId}>
+                <LocalizedFrameGroup
+                  showMessage={showMessage}
+                  localizedLabels={localizedLabels
+                    .filter((l) => l.rootFrameId === parentId)
+                    .sort((a, b) => Math.hypot(a.x, a.y * 2 - Math.hypot(b.x, b.y * 2)))}
+                  selectedNodes={selection}
+                  figmaRemote={figmaRemote}
+                  localizedLabelManager={localizedLabelManager}
+                />
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
       )}
     </>
   );

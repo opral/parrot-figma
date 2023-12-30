@@ -1,16 +1,16 @@
 import * as React from 'react';
 import {
-  useEffect, type ComponentPropsWithoutRef, type ElementRef, type ForwardedRef, useImperativeHandle, useRef, forwardRef,
+  useEffect,
+  type ComponentPropsWithoutRef,
+  type ElementRef,
+  type ForwardedRef,
+  useImperativeHandle,
+  useRef,
+  forwardRef,
 } from 'react';
-import type {
-  EventListeners,
-  PartialOptions,
-} from 'overlayscrollbars';
+import type { EventListeners, PartialOptions } from 'overlayscrollbars';
 
-import { 
-  OverlayScrollbars, 
-  ClickScrollPlugin, 
-} from 'overlayscrollbars';
+import { OverlayScrollbars, ClickScrollPlugin } from 'overlayscrollbars';
 
 import { useOverlayScrollbars } from 'overlayscrollbars-react';
 
@@ -44,9 +44,7 @@ function OverlayScrollbarsComponent<T extends keyof JSX.IntrinsicElements>(
   props: OverlayScrollbarsComponentBaseProps<T>,
   ref: ForwardedRef<OverlayScrollbarsComponentRef<T>>,
 ) {
-  const {
-    element = 'div', options, events, defer, children, ...other
-  } = props;
+  const { element = 'div', options, events, defer, children, ...other } = props;
   const Tag = element;
   const elementRef = useRef<ElementRef<T>>(null);
   const childrenRef = useRef<HTMLDivElement>(null);
@@ -90,7 +88,7 @@ function OverlayScrollbarsComponent<T extends keyof JSX.IntrinsicElements>(
 const OverlayScrollbarsComponentForwardedRef = forwardRef(OverlayScrollbarsComponent) as <
   T extends keyof JSX.IntrinsicElements,
 >(
-  props: OverlayScrollbarsComponentProps<T>
+  props: OverlayScrollbarsComponentProps<T>,
 ) => ReturnType<typeof OverlayScrollbarsComponent>;
 
 export { OverlayScrollbarsComponentForwardedRef as OverlayScrollbarsComponent };

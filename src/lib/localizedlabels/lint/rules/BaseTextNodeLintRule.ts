@@ -6,17 +6,15 @@ export default abstract class BaseTextNodeLintRule {
   }
 
   /**
-     *
-     * @param textNode the textnode to check if the lintRule matches against
-     * @returns if the lintrule matches
-     */
+   *
+   * @param textNode the textnode to check if the lintRule matches against
+   * @returns if the lintrule matches
+   */
   abstract matches(textNode: TextNode): boolean;
 
   abstract fix(textNode: TextNode): void;
 
-  static fieldsToSetSegmentMethodName = {
-
-  } as any;
+  static fieldsToSetSegmentMethodName = {} as any;
 
   static fixWithMostProminent(textNode: TextNode, field: string) {
     const currentStyleSegments = textNode.getStyledTextSegments([field as any]);
@@ -29,12 +27,12 @@ export default abstract class BaseTextNodeLintRule {
       stylesPresent[serializedStyle] += stlyeSegment.end - stlyeSegment.start;
     }
 
-    let mostPresentStyleSerialized : undefined | string;
+    let mostPresentStyleSerialized: undefined | string;
     let mostPresentStylePresens = 0 as number;
 
     for (const [styleSerialized, presens] of Object.entries(stylesPresent)) {
       if (mostPresentStylePresens < (presens as number)) {
-        mostPresentStylePresens = (presens as number);
+        mostPresentStylePresens = presens as number;
         mostPresentStyleSerialized = styleSerialized;
       }
     }
@@ -43,7 +41,9 @@ export default abstract class BaseTextNodeLintRule {
       // eslint-disable-next-line no-param-reassign
       (textNode as any)[field] = JSON.parse(mostPresentStyleSerialized!);
     } catch (e) {
-      throw new Error(`${field} inline styles can't get fixed automatically at the Moment. please remvoe those styles manually from the TextNode to use within Parrot.`);
+      throw new Error(
+        `${field} inline styles can't get fixed automatically at the Moment. please remvoe those styles manually from the TextNode to use within Parrot.`,
+      );
     }
   }
 }

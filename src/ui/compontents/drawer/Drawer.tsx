@@ -6,21 +6,21 @@ import OutsideClickHandler from 'react-outside-click-handler';
 import './Drawer.css';
 
 type ButtonConfig = {
-  text: string,
-  callback: Function,
-  type: 'primary' | 'primary-destructive' | 'secondary' | 'secondary-destructive',
-  key: undefined | 'enter' | 'escape'
-  disabled?: boolean
+  text: string;
+  callback: Function;
+  type: 'primary' | 'primary-destructive' | 'secondary' | 'secondary-destructive';
+  key: undefined | 'enter' | 'escape';
+  disabled?: boolean;
 };
 
 type DrawerProps = {
-  className?: string,
-  buttons: ButtonConfig[],
-  beforeShow?: () => Promise<void> | undefined,
-  onCancel?: () => void
-  children: ReactNode,
-  shown: boolean,
-  position: 'top' | 'left' | 'right'
+  className?: string;
+  buttons: ButtonConfig[];
+  beforeShow?: () => Promise<void> | undefined;
+  onCancel?: () => void;
+  children: ReactNode;
+  shown: boolean;
+  position: 'top' | 'left' | 'right';
 };
 
 export default function Drawer({
@@ -108,7 +108,10 @@ export default function Drawer({
       disabled={!isShown}
       display="contents"
     >
-      <div ref={drawerDiv} className={`${position}-drawer${isShown ? ' open' : ' '} ${className ?? ''}`}>
+      <div
+        ref={drawerDiv}
+        className={`${position}-drawer${isShown ? ' open' : ' '} ${className ?? ''}`}
+      >
         {children}
         <div className="buttonGroup buttonGroup-reversed">
           {buttons.reverse().map((button, index) => (
@@ -122,9 +125,7 @@ export default function Drawer({
               }}
               disabled={button.disabled}
             >
-              <span data-tooltip-type="text">
-                {button.text}
-              </span>
+              <span data-tooltip-type="text">{button.text}</span>
             </button>
           ))}
         </div>

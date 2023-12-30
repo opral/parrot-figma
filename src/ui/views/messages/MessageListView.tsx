@@ -18,14 +18,14 @@ import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabel
 import { NodeSelection } from '../../../lib/localizedlabels/LocalizedLabelManager';
 
 type MessageListViewProps = {
-  initialSearchQuery: SearchQuery,
-  showSearchBar: boolean,
-  messageStore: MessageStoreMemory
-  localizedLabelManager: LocalizedLabelManagerUI
-  figmaRemote: FigmaUtil
-  select?: (key: string, language: Locale, plural: Plural) => void
-  selectedMessageId?: string,
-  highlightSelectedNodes: boolean
+  initialSearchQuery: SearchQuery;
+  showSearchBar: boolean;
+  messageStore: MessageStoreMemory;
+  localizedLabelManager: LocalizedLabelManagerUI;
+  figmaRemote: FigmaUtil;
+  select?: (key: string, language: Locale, plural: Plural) => void;
+  selectedMessageId?: string;
+  highlightSelectedNodes: boolean;
 };
 
 export default function MessageListView({
@@ -63,7 +63,10 @@ export default function MessageListView({
 
   useEffect(() => {
     const messageHandler = (event: any) => {
-      if (event.data.pluginMessage.type === 'event' && event.data.pluginMessage.name === 'selectionchange') {
+      if (
+        event.data.pluginMessage.type === 'event' &&
+        event.data.pluginMessage.name === 'selectionchange'
+      ) {
         // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
         refreshSelection(true);
       }
@@ -94,7 +97,7 @@ export default function MessageListView({
   const renderChunkSize = 250;
   useEffect(() => {
     // we use any here since NodeJS.Timout - the suggested type by the ide is not correct
-    let renderStepTimeout : any | undefined;
+    let renderStepTimeout: any | undefined;
     if (Object.keys(filteredKeys).length > renderEntries) {
       renderStepTimeout = setTimeout(() => {
         // console.log(`rending next portion ${renderEntries + 100}`);
@@ -104,7 +107,9 @@ export default function MessageListView({
 
     setFullyRendered(true);
 
-    return () => { if (renderStepTimeout !== undefined) clearTimeout(renderStepTimeout); };
+    return () => {
+      if (renderStepTimeout !== undefined) clearTimeout(renderStepTimeout);
+    };
   }, [renderEntries]);
 
   useEffect(() => {
@@ -128,7 +133,8 @@ export default function MessageListView({
           <div>
             Messages will show up here.
             <br />
-            Create one by Linking a Message on a Text Layer in the Layers Tab or Import your existing Messages in the Setup Tab.
+            Create one by Linking a Message on a Text Layer in the Layers Tab or Import your
+            existing Messages in the Setup Tab.
           </div>
         </div>
       </div>
@@ -143,80 +149,82 @@ export default function MessageListView({
     setSearchQuery(MessageStoreMemory.toQueryObject(searchString));
   };
 
-  const longestKey = allMessages.map((message) => message.id).reduce((acc, id) => (id.length > acc.length ? id : acc), '');
+  const longestKey = allMessages
+    .map((message) => message.id)
+    .reduce((acc, id) => (id.length > acc.length ? id : acc), '');
 
   let rendered = 0;
 
   return (
-    
-      <div className="message-view">
-        { showSearchBar && (
-          <div className="message-filter">
-            <div style={{ flexGrow: 1 }} />
-            <div className="message-filter-search">
-              <span className="svg-container search-svg" />
-              <input
-                type="text"
-                placeholder="Find..."
-                className="message-filter-search-input"
-                spellCheck="false"
-                dir="auto"
-                value={MessageStoreMemory.toSearchString(searchQuery)}
-                onChange={(e) => {
-                  onSearchChange(e.target.value);
-                  setRenderEntries(100);
-                }}
-              />
-            </div>
+    <div className="message-view">
+      {showSearchBar && (
+        <div className="message-filter">
+          <div style={{ flexGrow: 1 }} />
+          <div className="message-filter-search">
+            <span className="svg-container search-svg" />
+            <input
+              type="text"
+              placeholder="Find..."
+              className="message-filter-search-input"
+              spellCheck="false"
+              dir="auto"
+              value={MessageStoreMemory.toSearchString(searchQuery)}
+              onChange={(e) => {
+                onSearchChange(e.target.value);
+                setRenderEntries(100);
+              }}
+            />
           </div>
-        )}
-        
-        <div className="message-list" ref={tableRef}>
-          {/* helper row for css to set the width when partially rendered */}
+        </div>
+      )}
 
-          <TranslationKeyListItem
-            key="max-width-helper-row"
-            rowClassNames="hidden-helper-row"
-            messageStore={messageStore}
-            localizedLabelManager={localizedLabelManager}
-            searchMatch={undefined}
-            messageId={longestKey}
-            figmaRemote={figmaRemote}
-            select={select}
-            messageSelected={false}
-          />
-          {[...filteredKeys.matchingNames].length === 0 && (
+      <div className="message-list" ref={tableRef}>
+        {/* helper row for css to set the width when partially rendered */}
+
+        <TranslationKeyListItem
+          key="max-width-helper-row"
+          rowClassNames="hidden-helper-row"
+          messageStore={messageStore}
+          localizedLabelManager={localizedLabelManager}
+          searchMatch={undefined}
+          messageId={longestKey}
+          figmaRemote={figmaRemote}
+          select={select}
+          messageSelected={false}
+        />
+        {[...filteredKeys.matchingNames].length === 0 && (
           <div className="emptyState">
             <div className="emptyStateTitle">No Messages matched your search.</div>
             <div className="emptyStateSubtitle">
-              <div>
-                Please remove some filters to get more matches.
-              </div>
+              <div>Please remove some filters to get more matches.</div>
             </div>
           </div>
-          )}
-          {[...filteredKeys.matchingNames].map((messageId) => {
-            if (rendered > renderEntries) {
-              return;
-            }
+        )}
+        {[...filteredKeys.matchingNames].map((messageId) => {
+          if (rendered > renderEntries) {
+            return;
+          }
 
-            rendered += 1;
-            // eslint-disable-next-line consistent-return
-            return (
-              <TranslationKeyListItem
-                key={messageId}
-                messageStore={messageStore}
-                localizedLabelManager={localizedLabelManager}
-                searchMatch={filteredKeys.matches[messageId]}
-                messageId={messageId}
-                figmaRemote={figmaRemote}
-                select={select}
-                messageSelected={Object.values(selectedNodes).map((selectedNode) => selectedNode.messageId).includes(messageId) || selectedMessageId === messageId}
-              />
-            );
-          })}
-        </div>
+          rendered += 1;
+          // eslint-disable-next-line consistent-return
+          return (
+            <TranslationKeyListItem
+              key={messageId}
+              messageStore={messageStore}
+              localizedLabelManager={localizedLabelManager}
+              searchMatch={filteredKeys.matches[messageId]}
+              messageId={messageId}
+              figmaRemote={figmaRemote}
+              select={select}
+              messageSelected={
+                Object.values(selectedNodes)
+                  .map((selectedNode) => selectedNode.messageId)
+                  .includes(messageId) || selectedMessageId === messageId
+              }
+            />
+          );
+        })}
       </div>
-    
+    </div>
   );
 }

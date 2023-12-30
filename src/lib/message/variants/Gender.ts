@@ -5,6 +5,4 @@ export enum Gender {
   MALE = 'm',
 }
 
-export const genderList = [
-  Gender.MALE, Gender.FEMALE, Gender.NEUTRAL,
-];
+export const genderList = [Gender.MALE, Gender.FEMALE, Gender.NEUTRAL];

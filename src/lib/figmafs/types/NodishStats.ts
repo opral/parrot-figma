@@ -1,16 +1,16 @@
 export type NodeishStats = {
-  ctimeMs: number
-  mtimeMs: number
-  dev: number
-  ino: number
-  mode: number
-  uid: number
-  gid: number
-  size: number
-  isFile(): boolean
-  isDirectory(): boolean
-  isSymbolicLink(): boolean
-  symlinkTarget?: string
+  ctimeMs: number;
+  mtimeMs: number;
+  dev: number;
+  ino: number;
+  mode: number;
+  uid: number;
+  gid: number;
+  size: number;
+  isFile(): boolean;
+  isDirectory(): boolean;
+  isSymbolicLink(): boolean;
+  symlinkTarget?: string;
 };
 
 export class FilesystemError extends Error {
@@ -56,4 +56,4 @@ export class FilesystemError extends Error {
   }
 }
 
-export type FileChangeInfo = { eventType: "rename" | "change"; filename: string | null }
+export type FileChangeInfo = { eventType: 'rename' | 'change'; filename: string | null };

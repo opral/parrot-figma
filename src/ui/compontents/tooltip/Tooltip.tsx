@@ -6,11 +6,20 @@ interface TooltipProps {
   contentAttribute: string;
 }
 
-interface Placement { top: number, left: number, position: string, transformX?: number}
+interface Placement {
+  top: number;
+  left: number;
+  position: string;
+  transformX?: number;
+}
 
 export default function Tooltip({ contentAttribute }: TooltipProps) {
   const [tooltipVisible, setTooltipVisible] = useState(false);
-  const [tooltipPlacement, setTooltipPlacement] = useState<any | Placement>({ top: 0, left: 0, position: 'none' });
+  const [tooltipPlacement, setTooltipPlacement] = useState<any | Placement>({
+    top: 0,
+    left: 0,
+    position: 'none',
+  });
   const [tooltipSourceRect, setTooltipSourceRect] = useState<DOMRect | undefined>(undefined);
   const tooltipContentEl = useRef<HTMLDivElement | null>(null);
 
@@ -91,10 +100,11 @@ export default function Tooltip({ contentAttribute }: TooltipProps) {
         position: 'bottom-center',
       } as Placement;
 
-      if (parentRect.right - (tooltipSourceRect.left! + (elementRect.width / 2)) < 0) {
+      if (parentRect.right - (tooltipSourceRect.left! + elementRect.width / 2) < 0) {
         console.log('overlapping right1');
-        placement.transformX = (parentRect.right - (tooltipSourceRect.left! + (elementRect.width + 16)));
-      } else if (parentRect.left - (tooltipSourceRect.left! - (elementRect.width / 2)) > 0) {
+        placement.transformX =
+          parentRect.right - (tooltipSourceRect.left! + (elementRect.width + 16));
+      } else if (parentRect.left - (tooltipSourceRect.left! - elementRect.width / 2) > 0) {
         console.log('overlapping left1');
         placement.transformX = parentRect.left - (tooltipSourceRect.left! + 16);
       }
@@ -111,10 +121,11 @@ export default function Tooltip({ contentAttribute }: TooltipProps) {
         position: 'top-center',
       } as Placement;
 
-      if (parentRect.right - (tooltipSourceRect.left! + (elementRect.width / 2)) < 0) {
+      if (parentRect.right - (tooltipSourceRect.left! + elementRect.width / 2) < 0) {
         console.log('overlapping right1');
-        placement.transformX = (parentRect.right - (tooltipSourceRect.left! + (elementRect.width + 16)));
-      } else if (parentRect.left - (tooltipSourceRect.left! - (elementRect.width / 2)) > 0) {
+        placement.transformX =
+          parentRect.right - (tooltipSourceRect.left! + (elementRect.width + 16));
+      } else if (parentRect.left - (tooltipSourceRect.left! - elementRect.width / 2) > 0) {
         console.log('overlapping left1');
         placement.transformX = parentRect.left - (tooltipSourceRect.left! + 16);
       }
@@ -133,7 +144,7 @@ export default function Tooltip({ contentAttribute }: TooltipProps) {
 
       const target = event.target as HTMLElement;
 
-      let tooltipSource : HTMLElement | undefined;
+      let tooltipSource: HTMLElement | undefined;
       let currentEl = target as HTMLElement | null;
 
       while (currentEl) {
@@ -192,16 +203,20 @@ export default function Tooltip({ contentAttribute }: TooltipProps) {
 
   return (
     <OutsideClickHandler
-      onOutsideClick={() => { setTooltipVisible(false); }}
+      onOutsideClick={() => {
+        setTooltipVisible(false);
+      }}
       disabled={!tooltipVisible}
     >
-      <div className="tooltip--notInteractive" style={{ visibility: tooltipVisible && tooltipPlacement ? 'visible' : 'hidden' }}>
+      <div
+        className="tooltip--notInteractive"
+        style={{ visibility: tooltipVisible && tooltipPlacement ? 'visible' : 'hidden' }}
+      >
         <div
           className={`tooltip--${arrowDirection}Arrow tooltip--arrowInset tooltip--arrow`}
           style={{
             top: tooltipPlacement?.top ?? 0,
             left: tooltipPlacement?.left ?? 0,
-
           }}
         />
         <div
@@ -210,7 +225,9 @@ export default function Tooltip({ contentAttribute }: TooltipProps) {
           style={{
             top: tooltipPlacement?.top ?? 0,
             left: tooltipPlacement?.left ?? 0,
-            transform: tooltipPlacement?.transformX ? `translate(${tooltipPlacement.transformX}px, 0)` : 'translate(-50%, 0)',
+            transform: tooltipPlacement?.transformX
+              ? `translate(${tooltipPlacement.transformX}px, 0)`
+              : 'translate(-50%, 0)',
           }}
           dir="auto"
         >

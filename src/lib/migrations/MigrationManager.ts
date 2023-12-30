@@ -111,7 +111,7 @@ export default class MigrationManager {
             }
           }
 
-          return migratedMessage.variants.length > 0 ? migratedMessage :  undefined;
+          return migratedMessage.variants.length > 0 ? migratedMessage : undefined;
         };
 
         // remove prt_t - tag data
@@ -142,7 +142,11 @@ export default class MigrationManager {
               migratedMessages += 1;
               const inlangMessage = migrateParrotMessageToInlangMessage(legacyMessage);
               if (inlangMessage) {
-                this.setPluginData(figma.root, InlangMessageStore.messagePrefix + inlangMessage.id, JSON.stringify(inlangMessage));
+                this.setPluginData(
+                  figma.root,
+                  InlangMessageStore.messagePrefix + inlangMessage.id,
+                  JSON.stringify(inlangMessage),
+                );
                 // remove prt_m__{msg_id}
                 this.setPluginData(figma.root, rootDataKey, '');
                 legacyIdToNameMap[messageId] = inlangMessage.id;
@@ -160,7 +164,11 @@ export default class MigrationManager {
           const parameterValues = {} as MessageParameterValues;
           for (const [fillinName, fillinObj] of Object.entries(legacyFillins)) {
             const fillinValue = (fillinObj as any).value;
-            fillinsToPlaceholder[fillinValue + MARKER_CHARACTER] = { name: fillinName, named: true, specifiedArgumentPosition: undefined };
+            fillinsToPlaceholder[fillinValue + MARKER_CHARACTER] = {
+              name: fillinName,
+              named: true,
+              specifiedArgumentPosition: undefined,
+            };
             parameterValues[fillinName] = { type: 'string', value: fillinValue, default: false };
           }
           return { fillinsToPlaceholder, parameterValues };
@@ -186,11 +194,17 @@ export default class MigrationManager {
           // reset mv - former message version
           this.setPluginData(textNodeWitAnonymMessageToMigrate, 'mt', '');
 
-          const anonymousMessage = JSON.parse(textNodeWitAnonymMessageToMigrate.getPluginData('am'));
+          const anonymousMessage = JSON.parse(
+            textNodeWitAnonymMessageToMigrate.getPluginData('am'),
+          );
 
           // migrate old anonymouse message
           const inlangMessage = migrateParrotMessageToInlangMessage(anonymousMessage);
-          this.setPluginData(textNodeWitAnonymMessageToMigrate, 'iam', JSON.stringify(inlangMessage));
+          this.setPluginData(
+            textNodeWitAnonymMessageToMigrate,
+            'iam',
+            JSON.stringify(inlangMessage),
+          );
           this.setPluginData(textNodeWitAnonymMessageToMigrate, 'am', '');
 
           const fillinRaw = textNodeWitAnonymMessageToMigrate.getPluginData('fi');
@@ -198,8 +212,16 @@ export default class MigrationManager {
             const legacyFillin = JSON.parse(fillinRaw);
             const fillinToPlaceholder = migrateFillins(legacyFillin);
             migratedPlaceholders += Object.keys(fillinToPlaceholder.parameterValues).length;
-            this.setPluginData(textNodeWitAnonymMessageToMigrate, 'fitp', JSON.stringify(fillinToPlaceholder.fillinsToPlaceholder));
-            this.setPluginData(textNodeWitAnonymMessageToMigrate, 'parameterValuesKey', JSON.stringify(fillinToPlaceholder.parameterValues));
+            this.setPluginData(
+              textNodeWitAnonymMessageToMigrate,
+              'fitp',
+              JSON.stringify(fillinToPlaceholder.fillinsToPlaceholder),
+            );
+            this.setPluginData(
+              textNodeWitAnonymMessageToMigrate,
+              'parameterValuesKey',
+              JSON.stringify(fillinToPlaceholder.parameterValues),
+            );
             this.setPluginData(textNodeWitAnonymMessageToMigrate, 'fi', '');
           }
         }
@@ -241,13 +263,24 @@ export default class MigrationManager {
             const fillinToPlaceholder = migrateFillins(legacyFillin);
             migratedPlaceholders += Object.keys(fillinToPlaceholder.parameterValues).length;
 
-            this.setPluginData(textNodeWithReferenceToMigrate, 'fitp', JSON.stringify(fillinToPlaceholder.fillinsToPlaceholder));
-            this.setPluginData(textNodeWithReferenceToMigrate, 'parameterValuesKey', JSON.stringify(fillinToPlaceholder.parameterValues));
+            this.setPluginData(
+              textNodeWithReferenceToMigrate,
+              'fitp',
+              JSON.stringify(fillinToPlaceholder.fillinsToPlaceholder),
+            );
+            this.setPluginData(
+              textNodeWithReferenceToMigrate,
+              'parameterValuesKey',
+              JSON.stringify(fillinToPlaceholder.parameterValues),
+            );
             this.setPluginData(textNodeWithReferenceToMigrate, 'fi', '');
           }
         }
 
-        this.figmaUtil.addMigrationReport(version, `Migration successfull: Migrated Messages: ${migratedMessages} Migrated Linked labels ${migratedLinkedLabels} Migrated Labels with anonym Messages ${migratedAnonymousLabels} Parameters: ${migratedPlaceholders}`);
+        this.figmaUtil.addMigrationReport(
+          version,
+          `Migration successfull: Migrated Messages: ${migratedMessages} Migrated Linked labels ${migratedLinkedLabels} Migrated Labels with anonym Messages ${migratedAnonymousLabels} Parameters: ${migratedPlaceholders}`,
+        );
 
         return true;
       },

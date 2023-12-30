@@ -1,9 +1,7 @@
 /* eslint-disable jsx-a11y/mouse-events-have-key-events */
 /* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
 /* eslint-disable jsx-a11y/no-static-element-interactions */
-import React, {
-  useEffect, useState, useRef, MouseEvent,
-} from 'react';
+import React, { useEffect, useState, useRef, MouseEvent } from 'react';
 import OutsideClickHandler from 'react-outside-click-handler';
 import './inputselect.css';
 import { Plural } from '../../../lib/message/variants/Plural';
@@ -19,8 +17,8 @@ export enum InputSelectionOptionType {
 export interface InputSelectOption {
   divider?: string | boolean;
   value: string;
-  plural?: Plural,
-  language?: Locale,
+  plural?: Plural;
+  language?: Locale;
   type: InputSelectionOptionType;
   label: string;
   icon?: string;
@@ -29,8 +27,8 @@ export interface InputSelectOption {
 
 export interface InputSelectProps {
   className?: string;
-  iconClass?: string,
-  tooltip?: string,
+  iconClass?: string;
+  tooltip?: string;
   getOptions: (inputValue: string) => InputSelectOption[];
   placeholder: string;
   inputPlaceholder: string;
@@ -39,7 +37,7 @@ export interface InputSelectProps {
   onExpand?: (state: boolean) => void;
   onChange?: (option: InputSelectOption, reset: () => void) => void;
   onCancel?: () => void;
-  valueReplaceFn?: (value: string) => string,
+  valueReplaceFn?: (value: string) => string;
 }
 
 function positiveModulo(a: number, b: number) {
@@ -98,18 +96,26 @@ export default function InputSelect({
   }, [defaultValue]);
 
   useEffect(() => {
-    const highlightedEls = menuRef.current?.getElementsByClassName('input-select-menu__item--highlighted');
-    if (currentMouseOverHighlightIndex.current === undefined && highlightedEls && highlightedEls?.length > 0) {
+    const highlightedEls = menuRef.current?.getElementsByClassName(
+      'input-select-menu__item--highlighted',
+    );
+    if (
+      currentMouseOverHighlightIndex.current === undefined &&
+      highlightedEls &&
+      highlightedEls?.length > 0
+    ) {
       // console.log('scolling into view:');
       const rectToMakeVisible = highlightedEls[0].getBoundingClientRect();
       const visibleRect = menuWrapperRef.current!.getBoundingClientRect();
       const visibleBottom = visibleRect.bottom - scrollDownRef.current!.clientHeight;
       const visibleTop = visibleRect.top + scrollDownRef.current!.clientHeight;
       if (rectToMakeVisible.bottom > visibleBottom) {
-        menuWrapperRef.current!.scrollTop = menuWrapperRef.current!.scrollTop + (rectToMakeVisible.bottom - visibleBottom);
+        menuWrapperRef.current!.scrollTop =
+          menuWrapperRef.current!.scrollTop + (rectToMakeVisible.bottom - visibleBottom);
       }
       if (rectToMakeVisible.top < visibleTop) {
-        menuWrapperRef.current!.scrollTop = menuWrapperRef.current!.scrollTop - (visibleTop - rectToMakeVisible.top);
+        menuWrapperRef.current!.scrollTop =
+          menuWrapperRef.current!.scrollTop - (visibleTop - rectToMakeVisible.top);
       }
 
       // highlightedEls[0].scrollIntoViewIfNeeded();
@@ -123,12 +129,15 @@ export default function InputSelect({
       threshol.push(i);
     }
 
-    const intersectionObserver = new IntersectionObserver((entries: IntersectionObserverEntry[]) => {
-      setViewPortHeight(entries[0].intersectionRect.height);
-    }, {
-      root: null, // default is the viewport
-      threshold: threshol, // percentage of target's visible area. Triggers "onIntersection"
-    });
+    const intersectionObserver = new IntersectionObserver(
+      (entries: IntersectionObserverEntry[]) => {
+        setViewPortHeight(entries[0].intersectionRect.height);
+      },
+      {
+        root: null, // default is the viewport
+        threshold: threshol, // percentage of target's visible area. Triggers "onIntersection"
+      },
+    );
 
     const resizeObserver = new ResizeObserver(() => {
       // reobserve the intersection to get the correct sizing
@@ -172,11 +181,14 @@ export default function InputSelect({
     if (i === undefined) {
       if (value === '') {
         onExpandedStateChange(false);
-        onChange?.({
-          type: InputSelectionOptionType.ACTION,
-          value: 'reset',
-          label: '',
-        }, reset);
+        onChange?.(
+          {
+            type: InputSelectionOptionType.ACTION,
+            value: 'reset',
+            label: '',
+          },
+          reset,
+        );
       }
       return;
     }
@@ -184,7 +196,6 @@ export default function InputSelect({
     const newOption = options[i];
     onExpandedStateChange(false);
     onChange?.(newOption!, reset);
-    
   };
 
   const highlightMouseOverIndex = (i: number | undefined) => {
@@ -199,8 +210,11 @@ export default function InputSelect({
 
     let i = 0;
     for (const option of options) {
-      if ((option.type === InputSelectionOptionType.ADD
-      || option.type === InputSelectionOptionType.SUGGESTION) && option.value === value) {
+      if (
+        (option.type === InputSelectionOptionType.ADD ||
+          option.type === InputSelectionOptionType.SUGGESTION) &&
+        option.value === value
+      ) {
         updateCurrentHighlightIndex(i);
       }
       i += 1;
@@ -217,7 +231,9 @@ export default function InputSelect({
     }
 
     do {
-      updateCurrentHighlightIndex(positiveModulo!(currentHighlightIndex.current! + 1, options.length));
+      updateCurrentHighlightIndex(
+        positiveModulo!(currentHighlightIndex.current! + 1, options.length),
+      );
     } while (options[currentHighlightIndex.current!].type === InputSelectionOptionType.DIVIDER);
   };
 
@@ -230,7 +246,9 @@ export default function InputSelect({
       updateCurrentHighlightIndex(options.length);
     }
     do {
-      updateCurrentHighlightIndex(positiveModulo(currentHighlightIndex.current! - 1, options.length));
+      updateCurrentHighlightIndex(
+        positiveModulo(currentHighlightIndex.current! - 1, options.length),
+      );
     } while (options[currentHighlightIndex.current!].type === InputSelectionOptionType.DIVIDER);
   };
 
@@ -255,11 +273,20 @@ export default function InputSelect({
   };
 
   useEffect(() => {
-    const mouseHighlight = currentMouseOverHighlightIndex.current !== undefined && options[currentMouseOverHighlightIndex.current]?.type === InputSelectionOptionType.SUGGESTION ? options[currentMouseOverHighlightIndex.current]?.value : undefined;
+    const mouseHighlight =
+      currentMouseOverHighlightIndex.current !== undefined &&
+      options[currentMouseOverHighlightIndex.current]?.type === InputSelectionOptionType.SUGGESTION
+        ? options[currentMouseOverHighlightIndex.current]?.value
+        : undefined;
     if (mouseHighlight) {
       setSuggestion(mouseHighlight);
     } else {
-      setSuggestion(currentHighlightIndex.current && options[currentHighlightIndex.current]?.type === InputSelectionOptionType.SUGGESTION ? options[currentHighlightIndex.current]?.value : undefined);
+      setSuggestion(
+        currentHighlightIndex.current &&
+          options[currentHighlightIndex.current]?.type === InputSelectionOptionType.SUGGESTION
+          ? options[currentHighlightIndex.current]?.value
+          : undefined,
+      );
     }
   }, [currentHighlightIndex.current, currentMouseOverHighlightIndex.current]);
 
@@ -283,8 +310,10 @@ export default function InputSelect({
   function updateScrollButtons() {
     const menuRect = menuWrapperRef.current!.getBoundingClientRect();
     if (
-      (menuWrapperRef.current!.scrollTop - (menuWrapperRef.current!.scrollHeight - menuRect.height) > -1)
-    || menuRef.current!.clientHeight === menuWrapperRef.current?.clientHeight) {
+      menuWrapperRef.current!.scrollTop - (menuWrapperRef.current!.scrollHeight - menuRect.height) >
+        -1 ||
+      menuRef.current!.clientHeight === menuWrapperRef.current?.clientHeight
+    ) {
       // at bottom
       setCanScrollDown(false);
     } else {
@@ -312,11 +341,13 @@ export default function InputSelect({
 
       const minimumItemsVisible = 3;
 
-      const showBelow = maxSpaceBelow > (menuEntryHeight) * minimumItemsVisible;
+      const showBelow = maxSpaceBelow > menuEntryHeight * minimumItemsVisible;
 
       const spaceNeeded = menuRef.current!.scrollHeight;
 
-      const height = showBelow ? Math.min(maxSpaceBelow, spaceNeeded) : Math.min(maxSpaceAbove, spaceNeeded);
+      const height = showBelow
+        ? Math.min(maxSpaceBelow, spaceNeeded)
+        : Math.min(maxSpaceAbove, spaceNeeded);
 
       /*
       if (top < 0) {
@@ -338,7 +369,8 @@ export default function InputSelect({
       }
 
       const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-      const isOverlappingRight = menuOverlayRef.current!.getBoundingClientRect().right > viewportWidth;
+      const isOverlappingRight =
+        menuOverlayRef.current!.getBoundingClientRect().right > viewportWidth;
       if (isOverlappingRight) {
         menuOverlayRef.current!.style.right = `${3}px`;
       }
@@ -357,10 +389,12 @@ export default function InputSelect({
     }
 
     const scrollHandler = (evt: any) => {
-      if (evt.target !== scrollDownRef.current
-        && !scrollDownRef.current?.contains(evt.target)
-        && evt.target !== scrollUpRef.current
-        && !scrollUpRef.current?.contains(evt.target)) {
+      if (
+        evt.target !== scrollDownRef.current &&
+        !scrollDownRef.current?.contains(evt.target) &&
+        evt.target !== scrollUpRef.current &&
+        !scrollUpRef.current?.contains(evt.target)
+      ) {
         updateScrollButtons();
       }
     };
@@ -370,7 +404,9 @@ export default function InputSelect({
       menuWrapperRef.current.addEventListener('scroll', scrollHandler);
     }
 
-    return () => { menuWrapperRef.current?.removeEventListener('scroll', scrollHandler); };
+    return () => {
+      menuWrapperRef.current?.removeEventListener('scroll', scrollHandler);
+    };
   }, [options, isExpanded, viewPortHeight, menuWrapperRef]);
 
   useEffect(() => {
@@ -446,9 +482,15 @@ export default function InputSelect({
   const expanListClass = isExpanded ? 'input-select-menu__menu--active' : '';
   const disabledColorClass = isDisabled ? 'icon--black-3' : '';
 
-  const addOptionIndex = options.findIndex((option) => option.type === InputSelectionOptionType.ADD);
+  const addOptionIndex = options.findIndex(
+    (option) => option.type === InputSelectionOptionType.ADD,
+  );
 
-  const addActive = ((currentMouseOverHighlightIndex.current === undefined && currentHighlightIndex.current === addOptionIndex) || (currentMouseOverHighlightIndex.current !== undefined && currentMouseOverHighlightIndex.current === addOptionIndex));
+  const addActive =
+    (currentMouseOverHighlightIndex.current === undefined &&
+      currentHighlightIndex.current === addOptionIndex) ||
+    (currentMouseOverHighlightIndex.current !== undefined &&
+      currentMouseOverHighlightIndex.current === addOptionIndex);
 
   let suggestionFieldValue = inputPlaceholder;
   if (suggestion !== undefined) {
@@ -473,7 +515,9 @@ export default function InputSelect({
         data-tooltip-content={!isExpanded ? tooltip : undefined}
       >
         <button
-          className={`input-select-menu__button ${expandButtonClass} ${disabledColorClass} ${value ? '' : 'placeholder'}`}
+          className={`input-select-menu__button ${expandButtonClass} ${disabledColorClass} ${
+            value ? '' : 'placeholder'
+          }`}
           onClick={handleExpandClick}
           disabled={isDisabled}
           title={value}
@@ -492,8 +536,10 @@ export default function InputSelect({
           </span> */}
           <span className="input-select-menu__caret svg-container caret-svg" />
         </button>
-        <div ref={menuOverlayRef} className={`input-select-editoverlay ${expanListClass} ${disabledColorClass}`}>
-
+        <div
+          ref={menuOverlayRef}
+          className={`input-select-editoverlay ${expanListClass} ${disabledColorClass}`}
+        >
           {/* INPUT Controll */}
           <div className={`input-select-menu__input ${expanListClass} `}>
             {/* NOTE we could add icon for input box reactive to selection? */}
@@ -501,21 +547,24 @@ export default function InputSelect({
               <div className={`svg-container ${'with-message-svg'}`} />
             </div>
             <div className="input-select-menu__input__wrapper">
-              <p
-                className={` ${addOptionIndex !== -1 ? 'suggestion addVisible' : 'suggestion'}`}
-              >
-                { suggestionFieldValue }
+              <p className={` ${addOptionIndex !== -1 ? 'suggestion addVisible' : 'suggestion'}`}>
+                {suggestionFieldValue}
               </p>
               <input
                 ref={inputFieldRef}
                 className={` ${addOptionIndex !== -1 ? 'addVisible' : ''}`}
                 value={value}
                 onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
-                  const val = valueReplaceFn ? valueReplaceFn(evt.target?.value) : evt.target?.value;
+                  const val = valueReplaceFn
+                    ? valueReplaceFn(evt.target?.value)
+                    : evt.target?.value;
                   setValue(val);
                 }}
                 onBlur={(evt) => {
-                  if (!evt.relatedTarget?.classList.contains('input-select-menu__item') && !evt.relatedTarget?.classList.contains('input-select-menu-add')) {
+                  if (
+                    !evt.relatedTarget?.classList.contains('input-select-menu__item') &&
+                    !evt.relatedTarget?.classList.contains('input-select-menu-add')
+                  ) {
                     onExpandedStateChange(false);
                     setValue(defaultValue);
                     onCancel?.();
@@ -559,29 +608,22 @@ export default function InputSelect({
                   }
                 }}
               />
-              { addOptionIndex !== -1 && (
-              // eslint-disable-next-line jsx-a11y/mouse-events-have-key-events
-              <div
-                tabIndex={addOptionIndex}
-                className={`input-select-menu-add  ${addActive ? 'on-primary' : ''}`}
-                onMouseOver={() => highlightMouseOverIndex(addOptionIndex)}
-                onMouseLeave={() => highlightMouseOverIndex(undefined)}
-                onMouseUp={() => selectHighlight()}
-              >
+              {addOptionIndex !== -1 && (
+                // eslint-disable-next-line jsx-a11y/mouse-events-have-key-events
                 <div
-                  className="svg-container plus-svg"
-                  style={{ pointerEvents: 'none' }}
-                />
-              </div>
+                  tabIndex={addOptionIndex}
+                  className={`input-select-menu-add  ${addActive ? 'on-primary' : ''}`}
+                  onMouseOver={() => highlightMouseOverIndex(addOptionIndex)}
+                  onMouseLeave={() => highlightMouseOverIndex(undefined)}
+                  onMouseUp={() => selectHighlight()}
+                >
+                  <div className="svg-container plus-svg" style={{ pointerEvents: 'none' }} />
+                </div>
               )}
             </div>
-
           </div>
           {/* MENU OPTIONS */}
-          <div
-            ref={menuScrollContainerRef}
-            className="input-select-menu__menu_container"
-          >
+          <div ref={menuScrollContainerRef} className="input-select-menu__menu_container">
             {/* SCROLLERS */}
             <div
               ref={scrollUpRef}
@@ -611,41 +653,39 @@ export default function InputSelect({
                 }
               }}
             >
-
               <ul
                 ref={menuRef}
                 className={`input-select-menu__menu ${expanListClass} ${disabledColorClass}`}
               >
-                {options?.map(({
-                  label: optionLabel, type: optionType, icon,
-                }, i) => {
+                {options?.map(({ label: optionLabel, type: optionType, icon }, i) => {
                   if (optionType === InputSelectionOptionType.DIVIDER) {
                     return (
                       // eslint-disable-next-line react/no-array-index-key -- does not change
                       <React.Fragment key={`input-select-option-divider--${i}`}>
                         {/* We only add diveder after the first icon and we ignore add entries? */}
                         {i > 0 && options[i - 1].type !== InputSelectionOptionType.ADD && (
-                        <div
-                          className="input-select-menu__divider"
-                        />
+                          <div className="input-select-menu__divider" />
                         )}
 
                         {optionLabel && optionLabel !== '' && (
-                        <span className="input-select-menu__divider-label">
-                          {optionLabel}
-                        </span>
+                          <span className="input-select-menu__divider-label">{optionLabel}</span>
                         )}
                       </React.Fragment>
                     );
                   }
-                  if (optionType === InputSelectionOptionType.SUGGESTION || optionType === InputSelectionOptionType.ACTION) {
+                  if (
+                    optionType === InputSelectionOptionType.SUGGESTION ||
+                    optionType === InputSelectionOptionType.ACTION
+                  ) {
                     return (
-                    // eslint-disable-next-line jsx-a11y/mouse-events-have-key-events
+                      // eslint-disable-next-line jsx-a11y/mouse-events-have-key-events
                       <li
                         tabIndex={i}
                         className={`input-select-menu__item ${
-                          (currentMouseOverHighlightIndex.current === undefined && currentHighlightIndex.current === i)
-                        || (currentMouseOverHighlightIndex.current !== undefined && currentMouseOverHighlightIndex.current === i)
+                          (currentMouseOverHighlightIndex.current === undefined &&
+                            currentHighlightIndex.current === i) ||
+                          (currentMouseOverHighlightIndex.current !== undefined &&
+                            currentMouseOverHighlightIndex.current === i)
                             ? 'input-select-menu__item--highlighted'
                             : ''
                         }`}
@@ -656,11 +696,10 @@ export default function InputSelect({
                         }}
                         onMouseMove={() => highlightMouseOverIndex(i)}
                       >
-
-                        { icon && (
-                        <div className="input-select-menu__item-icon">
-                          <div className={`svg-container ${icon}`} />
-                        </div>
+                        {icon && (
+                          <div className="input-select-menu__item-icon">
+                            <div className={`svg-container ${icon}`} />
+                          </div>
                         )}
                         <span className="input-select-menu__item-label">{optionLabel}</span>
                       </li>

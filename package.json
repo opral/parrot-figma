@@ -9,7 +9,9 @@
     "start": "webpack --mode development --watch",
     "build": "webpack --mode production",
     "lint": "./node_modules/.bin/eslint",
-    "lintfix": "./node_modules/.bin/eslint . --fix "
+    "lintfix": "./node_modules/.bin/eslint . --fix ",
+    "prettier-ts": "prettier --write '**/*.{ts,tsx}'"
+
   },
   "author": "Martin Lysk",
   "license": "",

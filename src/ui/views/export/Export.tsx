@@ -18,13 +18,21 @@ import UserManagerUI from '../../../lib/usage/UsageManagerUI';
 function toLanguageOption(language: string, baseLanguage?: string) {
   let languageNameInCurrentLanguage = 'no name found';
   try {
-    languageNameInCurrentLanguage = new Intl.DisplayNames('en', { type: 'language' }).of(language) ?? languageNameInCurrentLanguage;
-  } catch (e) { /* empty */ }
+    languageNameInCurrentLanguage =
+      new Intl.DisplayNames('en', { type: 'language' }).of(language) ??
+      languageNameInCurrentLanguage;
+  } catch (e) {
+    /* empty */
+  }
 
   let languageNameInForeignLanguage = 'no name found';
   try {
-    languageNameInForeignLanguage = new Intl.DisplayNames(language, { type: 'language' }).of(language) ?? languageNameInForeignLanguage;
-  } catch (e) { /* empty */ }
+    languageNameInForeignLanguage =
+      new Intl.DisplayNames(language, { type: 'language' }).of(language) ??
+      languageNameInForeignLanguage;
+  } catch (e) {
+    /* empty */
+  }
 
   if (baseLanguage && language === baseLanguage) {
     return {
@@ -46,38 +54,42 @@ function toLanguageOptions(languages: string[], baseLanguage?: string) {
 }
 
 type ExportProps = {
-  labelManager: LocalizedLabelManagerUI,
-  userManager: UserManagerUI,
+  labelManager: LocalizedLabelManagerUI;
+  userManager: UserManagerUI;
 };
 /**
  * Select versionTag (allow to tag current Version)
  * Select Language for export
  * Select platform (ios/android) / export format
  */
-export default function Export({
-  labelManager,
-  userManager,
-}: ExportProps) {
+export default function Export({ labelManager, userManager }: ExportProps) {
   const { t } = useTranslation();
   const translationKeyStore = labelManager.messageStore;
 
   const baseLanguage = labelManager.messageStore.getRefLanugage()!;
-  const selectedLanguages = toLanguageOptions(labelManager.messageStore.getLanugages()!.filter((language) => language !== baseLanguage));
+  const selectedLanguages = toLanguageOptions(
+    labelManager.messageStore.getLanugages()!.filter((language) => language !== baseLanguage),
+  );
   const selectedBaseLanguage = toLanguageOption(baseLanguage);
 
-  const defaultOptions = [{
-    label: 'Current Version',
-    value: 'head',
-  }, {
-    label: '',
-    divider: true,
-  }, {
-    label: 'Tag Current Version...',
-    value: 'tag-current',
-  }, {
-    label: '',
-    divider: true,
-  }] as SelectOption[];
+  const defaultOptions = [
+    {
+      label: 'Current Version',
+      value: 'head',
+    },
+    {
+      label: '',
+      divider: true,
+    },
+    {
+      label: 'Tag Current Version...',
+      value: 'tag-current',
+    },
+    {
+      label: '',
+      divider: true,
+    },
+  ] as SelectOption[];
 
   // const initTagOptions = defaultOptions.concat(labelManager.messageStore.historyTags.slice().reverse().map((historyTag) => ({
   //   label: historyTag.title,
@@ -91,16 +103,20 @@ export default function Export({
 
   const [exportTarget, setExportTarget] = useState<string | undefined>(undefined);
 
-  const exportPlatformOptions = [{
-    label: 'i18next - json format',
-    value: 'i18next',
-  }, {
-    label: 'Android - Resource XML',
-    value: 'android-xml',
-  }, {
-    label: 'iOS - .strings File',
-    value: 'apple-strings',
-  }] as SelectOption[];
+  const exportPlatformOptions = [
+    {
+      label: 'i18next - json format',
+      value: 'i18next',
+    },
+    {
+      label: 'Android - Resource XML',
+      value: 'android-xml',
+    },
+    {
+      label: 'iOS - .strings File',
+      value: 'apple-strings',
+    },
+  ] as SelectOption[];
 
   const downloadFile = (fileName: string, fileType: string, content: string) => {
     const contentBlob = new Blob([content], { type: fileType });
@@ -145,10 +161,14 @@ export default function Export({
     }
   };
 
-  const [keySummary, setKeySummary] = useState(labelManager.messageStore.findMessages({}, undefined));
+  const [keySummary, setKeySummary] = useState(
+    labelManager.messageStore.findMessages({}, undefined),
+  );
 
   useEffect(() => {
-    const updateSummary = () => { setKeySummary(labelManager.messageStore.findMessages({}, undefined)); };
+    const updateSummary = () => {
+      setKeySummary(labelManager.messageStore.findMessages({}, undefined));
+    };
 
     labelManager.messageStore.addEventListener('updated', updateSummary);
 
@@ -172,14 +192,14 @@ export default function Export({
       </div>
       )} */}
       <div style={{ display: 'flex' }}>
-        <div className="setup-header-title">
-          Export
-        </div>
+        <div className="setup-header-title">Export</div>
         <div style={{ marginLeft: 'auto', marginRight: '8px' }}>
           <Select
             checkmark={false}
             placeholder="Export Target"
-            onChange={(value) => { setExportTarget(value.value as string); }}
+            onChange={(value) => {
+              setExportTarget(value.value as string);
+            }}
             getOptions={() => exportPlatformOptions}
           />
         </div>
@@ -193,30 +213,38 @@ export default function Export({
             <div className="svg-container world-svg" />
 
             <div className="choosen-languages">
-              <div className="language-name"><div>{selectedBaseLanguage?.label}</div></div>
+              <div className="language-name">
+                <div>{selectedBaseLanguage?.label}</div>
+              </div>
               <div className="language-summary">
-                {keySummary.matchingNames.size}
-                {' '}
-                Translation Keys
-                {keySummary.withMissingVariantsPerLanguage[selectedBaseLanguage!.value as Locale]
-                 && keySummary.withMissingVariantsPerLanguage[selectedBaseLanguage!.value as Locale]!.size > 0 && (
-                 <div>
-                   (
-                   {keySummary.withMissingVariantsPerLanguage[selectedBaseLanguage!.value as Locale]!.size}
-                   {' '}
-                   Missing Translations)
-                 </div>
-                )}
+                {keySummary.matchingNames.size} Translation Keys
+                {keySummary.withMissingVariantsPerLanguage[selectedBaseLanguage!.value as Locale] &&
+                  keySummary.withMissingVariantsPerLanguage[selectedBaseLanguage!.value as Locale]!
+                    .size > 0 && (
+                    <div>
+                      (
+                      {
+                        keySummary.withMissingVariantsPerLanguage[
+                          selectedBaseLanguage!.value as Locale
+                        ]!.size
+                      }{' '}
+                      Missing Translations)
+                    </div>
+                  )}
               </div>
               <div className="language-export-action">
-                <button className="button button--buttonSecondary" disabled={exportTarget === undefined} type="button" onClick={() => { doExport(selectedBaseLanguage.value as Locale, exportTarget!); }}>
-                  <span data-tooltip-type="text">
-                    Export
-                  </span>
+                <button
+                  className="button button--buttonSecondary"
+                  disabled={exportTarget === undefined}
+                  type="button"
+                  onClick={() => {
+                    doExport(selectedBaseLanguage.value as Locale, exportTarget!);
+                  }}
+                >
+                  <span data-tooltip-type="text">Export</span>
                 </button>
               </div>
             </div>
-
           </div>
         </div>
         <div style={{ height: '8px' }} />
@@ -227,24 +255,30 @@ export default function Export({
           <div className="change-control">
             <div className="svg-container world-svg" />
             <div className="choosen-languages">
-              { selectedLanguages.map((languageOption) => (
+              {selectedLanguages.map((languageOption) => (
                 <>
-                  <div className="language-name-wrapper"><div className="language-name"><div>{languageOption.label}</div></div></div>
+                  <div className="language-name-wrapper">
+                    <div className="language-name">
+                      <div>{languageOption.label}</div>
+                    </div>
+                  </div>
                   <div className="language-summary">
-
                     <div>
-
-                      {keySummary.withMissingVariantsPerLanguage[languageOption.value as Locale]?.size ?? 0}
-                      {' '}
+                      {keySummary.withMissingVariantsPerLanguage[languageOption.value as Locale]
+                        ?.size ?? 0}{' '}
                       Missing Translations
                     </div>
-
                   </div>
                   <div className="language-export-action">
-                    <button className="button button--buttonSecondary" disabled={exportTarget === undefined} type="button" onClick={() => { doExport(languageOption.value as Locale, exportTarget!); }}>
-                      <span data-tooltip-type="text">
-                        Export
-                      </span>
+                    <button
+                      className="button button--buttonSecondary"
+                      disabled={exportTarget === undefined}
+                      type="button"
+                      onClick={() => {
+                        doExport(languageOption.value as Locale, exportTarget!);
+                      }}
+                    >
+                      <span data-tooltip-type="text">Export</span>
                     </button>
                   </div>
                 </>

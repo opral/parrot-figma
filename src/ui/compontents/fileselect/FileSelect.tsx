@@ -5,22 +5,21 @@ import React, { useState, ReactNode } from 'react';
 import './FileSelect.css';
 
 type FileSelectProps = {
-  onFilesReceived: Function
-  text: string,
+  onFilesReceived: Function;
+  text: string;
 };
 
-export default function FileSelect({
-  onFilesReceived,
-  text,
-}: FileSelectProps) {
-  const handleFiles = async function (files : FileList) {
+export default function FileSelect({ onFilesReceived, text }: FileSelectProps) {
+  const handleFiles = async function (files: FileList) {
     const filesReceived = {} as any;
 
     const contentPromises = [] as Promise<void>[];
     for (const file of files) {
-      contentPromises.push((async () => {
-        filesReceived[file.name] = await file.text();
-      })());
+      contentPromises.push(
+        (async () => {
+          filesReceived[file.name] = await file.text();
+        })(),
+      );
     }
 
     await Promise.all(contentPromises);
@@ -29,13 +28,12 @@ export default function FileSelect({
   };
 
   // triggers when file is selected with click
-  const handleChange = (e : React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
     if (e.target.files && e.target.files[0]) {
       handleFiles(e.target.files);
     }
   };
-
 
   return (
     <div className="file-select">

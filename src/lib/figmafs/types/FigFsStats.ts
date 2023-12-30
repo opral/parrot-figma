@@ -9,7 +9,6 @@ export enum FileType {
 const S_IFMT = 0o170000;
 
 export type FigFsStats = {
-
   // modify time
   mt: number;
 
@@ -20,8 +19,12 @@ export type FigFsStats = {
   st?: string;
 };
 
-export function newFigStats(modifiedTime: number, mode: number, type: FileType, symlinkTarget?: string): FigFsStats {
-    
+export function newFigStats(
+  modifiedTime: number,
+  mode: number,
+  type: FileType,
+  symlinkTarget?: string,
+): FigFsStats {
   return {
     mt: modifiedTime,
     // eslint-disable-next-line no-bitwise

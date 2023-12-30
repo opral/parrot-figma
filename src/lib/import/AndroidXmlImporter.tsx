@@ -36,7 +36,8 @@ export default class AndroidXmlImporter {
     if (str.startsWith('"') && str.endsWith('"')) {
       quotWrapped = true;
       str = str.slice(1, -1);
-    } if (str.startsWith('&quot;') && str.endsWith('&quot;')) {
+    }
+    if (str.startsWith('&quot;') && str.endsWith('&quot;')) {
       quotWrapped = true;
       str = str.slice(6, -6);
     }
@@ -71,7 +72,6 @@ export default class AndroidXmlImporter {
     CSS style: <span style=”color|background_color|text-decoration”>
     Paragraphs: <p dir=”rtl | ltr” style=”…”></div>
     */
-
   }
 
   private static toParrotPlaceholders(inputString: string) {
@@ -83,7 +83,7 @@ export default class AndroidXmlImporter {
       // let format = '';
       // let arg = '';
       const parameterName = `${index++}__unnamed`;
-      
+
       // TODO #19 add format function that allows to know its a float/decimal or keep empty for string
       // if (type === 'f' && group3) {
       //   format = ` format="${group3}"`;
@@ -101,14 +101,18 @@ export default class AndroidXmlImporter {
     return replacedString;
   }
 
-  static toImportObject(filename: string, stringsFileContent: string, language: Locale): Message[] | undefined {
+  static toImportObject(
+    filename: string,
+    stringsFileContent: string,
+    language: Locale,
+  ): Message[] | undefined {
     const fileNameParts = filename.split('.');
     const fileExtension = fileNameParts[fileNameParts.length - 1];
     if (fileExtension !== 'xml') {
       return undefined;
     }
 
-    let resources : Element;
+    let resources: Element;
 
     try {
       const xml = new DOMParser().parseFromString(stringsFileContent, 'text/xml');

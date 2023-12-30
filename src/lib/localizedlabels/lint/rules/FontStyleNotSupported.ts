@@ -20,15 +20,20 @@ export default class FontStyleNotSuppoorted extends BaseTextNodeLintRule {
       return false;
     }
 
-    const fontNameStyleSegments = textNode.getStyledTextSegments([this.fontNameStyleField], 0, textNode.characters.length);
+    const fontNameStyleSegments = textNode.getStyledTextSegments(
+      [this.fontNameStyleField],
+      0,
+      textNode.characters.length,
+    );
 
     for (const fontNameStyleSegment of fontNameStyleSegments) {
       // eslint-disable-next-line no-await-in-loop
       const font = FontUtil.getStylingSupport(fontNameStyleSegment.fontName);
-      if (fontNameStyleSegment.fontName.style !== font.bold?.style
-        && fontNameStyleSegment.fontName.style !== font.italic?.style
-        && fontNameStyleSegment.fontName.style !== font.boldItalic?.style
-        && fontNameStyleSegment.fontName.style !== font.regular?.style
+      if (
+        fontNameStyleSegment.fontName.style !== font.bold?.style &&
+        fontNameStyleSegment.fontName.style !== font.italic?.style &&
+        fontNameStyleSegment.fontName.style !== font.boldItalic?.style &&
+        fontNameStyleSegment.fontName.style !== font.regular?.style
       ) {
         return true;
       }
@@ -45,10 +50,11 @@ export default class FontStyleNotSuppoorted extends BaseTextNodeLintRule {
       const font = FontUtil.getStylingSupport(fontNameStyleSegment.fontName);
       fontFamily = fontNameStyleSegment.fontName.family;
 
-      if (fontNameStyleSegment.fontName.style === font.bold?.style
-        || fontNameStyleSegment.fontName.style === font.italic?.style
-        || fontNameStyleSegment.fontName.style === font.boldItalic?.style
-        || fontNameStyleSegment.fontName.style === font.regular?.style
+      if (
+        fontNameStyleSegment.fontName.style === font.bold?.style ||
+        fontNameStyleSegment.fontName.style === font.italic?.style ||
+        fontNameStyleSegment.fontName.style === font.boldItalic?.style ||
+        fontNameStyleSegment.fontName.style === font.regular?.style
       ) {
         const serializedStyle = JSON.stringify(fontNameStyleSegment[this.fontNameStyleField]);
         if (!stylesPresent[serializedStyle]) {
@@ -58,12 +64,12 @@ export default class FontStyleNotSuppoorted extends BaseTextNodeLintRule {
       }
     }
 
-    let mostPresentStyleSerialized : undefined | string;
+    let mostPresentStyleSerialized: undefined | string;
     let mostPresentStylePresens = 0 as number;
 
     for (const [styleSerialized, presens] of Object.entries(stylesPresent)) {
       if (mostPresentStylePresens < (presens as number)) {
-        mostPresentStylePresens = (presens as number);
+        mostPresentStylePresens = presens as number;
         mostPresentStyleSerialized = styleSerialized;
       }
     }
@@ -72,7 +78,9 @@ export default class FontStyleNotSuppoorted extends BaseTextNodeLintRule {
       // eslint-disable-next-line no-param-reassign
       (textNode as any)[this.fontNameStyleField] = JSON.parse(mostPresentStyleSerialized!);
     } catch (e) {
-      throw new Error(`${this.fontNameStyleField} inline styles can't get fixed automatically for font family ${fontFamily}. please remvoe those styles manually from the TextNode to use within Parrot.`);
+      throw new Error(
+        `${this.fontNameStyleField} inline styles can't get fixed automatically for font family ${fontFamily}. please remvoe those styles manually from the TextNode to use within Parrot.`,
+      );
     }
   }
 }

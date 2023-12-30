@@ -18,9 +18,11 @@ export default class TextDecorationUnknown extends BaseTextNodeLintRule {
 
     const styleSegments = textNode.getStyledTextSegments(['textDecoration']);
     for (const styleSegment of styleSegments) {
-      if (styleSegment.textDecoration !== 'NONE'
-        && styleSegment.textDecoration !== 'STRIKETHROUGH'
-        && styleSegment.textDecoration !== 'UNDERLINE') {
+      if (
+        styleSegment.textDecoration !== 'NONE' &&
+        styleSegment.textDecoration !== 'STRIKETHROUGH' &&
+        styleSegment.textDecoration !== 'UNDERLINE'
+      ) {
         return true;
       }
     }
@@ -32,9 +34,11 @@ export default class TextDecorationUnknown extends BaseTextNodeLintRule {
     const styleSegments = textNode.getStyledTextSegments(['textDecoration']);
     for (const styleSegment of styleSegments) {
       // change unsupported listoptions type to none
-      if (styleSegment.textDecoration !== 'NONE'
-      && styleSegment.textDecoration !== 'STRIKETHROUGH'
-      && styleSegment.textDecoration !== 'UNDERLINE') {
+      if (
+        styleSegment.textDecoration !== 'NONE' &&
+        styleSegment.textDecoration !== 'STRIKETHROUGH' &&
+        styleSegment.textDecoration !== 'UNDERLINE'
+      ) {
         textNode.setRangeTextDecoration(styleSegment.start, styleSegment.end, 'NONE');
       }
     }

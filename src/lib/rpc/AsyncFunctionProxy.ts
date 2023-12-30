@@ -17,16 +17,20 @@ export class AsyncFunctionProxy {
   postMessage: any;
 
   constructor(name: string, postMessage: any, messageBus: any) {
-    this.postMessage = (message: any) => { postMessage(message); };
+    this.postMessage = (message: any) => {
+      postMessage(message);
+    };
     this.name = name;
 
     try {
       if (messageBus.addEventListener) {
-        messageBus.addEventListener('message', (event : MessageEvent) => {
+        messageBus.addEventListener('message', (event: MessageEvent) => {
           this.handleMessage(event.data.pluginMessage);
         });
       } else {
-        messageBus.on('message', (message: any) => { this.handleMessage(message); });
+        messageBus.on('message', (message: any) => {
+          this.handleMessage(message);
+        });
       }
     } catch (e) {
       const error = new Error(`was not able to add event listener to receive events${name}`);
@@ -45,25 +49,30 @@ export class AsyncFunctionProxy {
   }
 
   /**
-     * monkey patches all async method of the given instnce and proxies calls via figmas postMessage to
-     * sandbox or / the ui
-     *
-     * @param instance
-     */
+   * monkey patches all async method of the given instnce and proxies calls via figmas postMessage to
+   * sandbox or / the ui
+   *
+   * @param instance
+   */
   proxyAsyncMethods(instance: any) {
     const instanceClassName = instance.proxyClassName;
 
     const instancePrototype = Object.getPrototypeOf(instance);
     for (const memberName of Object.getOwnPropertyNames(instancePrototype)) {
-      if (memberName !== 'constructor'
-                && instancePrototype[memberName].constructor
-                && instancePrototype[memberName].constructor.name === 'Function') {
+      if (
+        memberName !== 'constructor' &&
+        instancePrototype[memberName].constructor &&
+        instancePrototype[memberName].constructor.name === 'Function'
+      ) {
         const proxy = this;
         // eslint-disable-next-line func-names -- we store this function anonymous in an array and there is no way to dynamically name it for better - thats fine
         instancePrototype[memberName] = async function () {
           // console.log(proxy.name + ' request invocation of: ' + instanceClassName + '.' + memberName);
           // eslint-disable-next-line prefer-rest-params -- proxy here we want just forward the arguments
-          return proxy.invoke(`${instanceClassName}.${memberName}`, Array.prototype.slice.call(arguments));
+          return proxy.invoke(
+            `${instanceClassName}.${memberName}`,
+            Array.prototype.slice.call(arguments),
+          );
         };
       }
     }
@@ -76,16 +85,26 @@ export class AsyncFunctionProxy {
 
     const instancePrototype = Object.getPrototypeOf(instance);
     for (const memberName of Object.getOwnPropertyNames(instancePrototype)) {
-      if (memberName !== 'constructor'
-                && instancePrototype[memberName].constructor
-                && instancePrototype[memberName].constructor.name === 'Function') {
+      if (
+        memberName !== 'constructor' &&
+        instancePrototype[memberName].constructor &&
+        instancePrototype[memberName].constructor.name === 'Function'
+      ) {
         // console.log(this.name+ ' proxy class!' + instanceClassName + '.' + memberName);
-        this.registerInvocationHandler(`${instanceClassName}.${memberName}`, instance, instance[memberName]);
+        this.registerInvocationHandler(
+          `${instanceClassName}.${memberName}`,
+          instance,
+          instance[memberName],
+        );
       }
     }
   }
 
-  private registerInvocationHandler(messageName: string, instance: any, messageHandler: Promise<any>) {
+  private registerInvocationHandler(
+    messageName: string,
+    instance: any,
+    messageHandler: Promise<any>,
+  ) {
     // console.log(`registerInvocationHandler${messageName}`);
     if (this.invocationRequestHandler[messageName]) {
       // console.log(this.invocationRequestHandler[messageName]);
@@ -98,7 +117,7 @@ export class AsyncFunctionProxy {
   }
 
   private async invoke(messageName: string, parameter: any | undefined) {
-    const invocationId = `${messageName}.${this.invocationId += 1}`;
+    const invocationId = `${messageName}.${(this.invocationId += 1)}`;
 
     return new Promise((resolve, reject) => {
       this.invocationRequests[invocationId] = {
@@ -120,28 +139,33 @@ export class AsyncFunctionProxy {
 
   handleInvocationRequest(pluginMessage: any) {
     if (!this.invocationRequestHandler[pluginMessage.name]) {
-      throw new Error(`${this.name} Invocation handler for [${pluginMessage.name}] does not exist (did you register the executing instance in [${this.name}]?`);
+      throw new Error(
+        `${this.name} Invocation handler for [${pluginMessage.name}] does not exist (did you register the executing instance in [${this.name}]?`,
+      );
     }
 
     const methodHandler = this.invocationRequestHandler[pluginMessage.name];
 
-    methodHandler.method.apply(methodHandler.instance, pluginMessage.parameter).then((data: any) => {
-      const transferObj = {
-        target: 'AsyncFunctionProxy',
-        type: AsyncMessageBus.invocationResult,
-        invocationId: pluginMessage.id,
-        result: this.cleanFunctions(data),
-      };
-      this.postMessage(transferObj);
-    }).catch((error: Error) => {
-      // eslint-disable-next-line no-console
-      this.postMessage({
-        target: 'AsyncFunctionProxy',
-        type: AsyncMessageBus.invocationResult,
-        invocationId: pluginMessage.id,
-        error: this.toSerializableError(error),
+    methodHandler.method
+      .apply(methodHandler.instance, pluginMessage.parameter)
+      .then((data: any) => {
+        const transferObj = {
+          target: 'AsyncFunctionProxy',
+          type: AsyncMessageBus.invocationResult,
+          invocationId: pluginMessage.id,
+          result: this.cleanFunctions(data),
+        };
+        this.postMessage(transferObj);
+      })
+      .catch((error: Error) => {
+        // eslint-disable-next-line no-console
+        this.postMessage({
+          target: 'AsyncFunctionProxy',
+          type: AsyncMessageBus.invocationResult,
+          invocationId: pluginMessage.id,
+          error: this.toSerializableError(error),
+        });
       });
-    });
   }
 
   // eslint-disable-next-line class-methods-use-this

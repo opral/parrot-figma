@@ -1,7 +1,5 @@
 import * as React from 'react';
-import { Placeholder } from "../../../lib/message/Placeholder";
-
-
+import { Placeholder } from '../../../lib/message/Placeholder';
 
 // placeholder editor should be able to:
 // - change the name of a placeholder
@@ -29,9 +27,9 @@ import { Placeholder } from "../../../lib/message/Placeholder";
 //                                  ^ radio select to choose which one defines the quantity
 
 type PlaceholderEditorListItemProps = {
-  placeholder: Placeholder,
-  fillin: string | number
-  onValueChange: (placeholderName: string, value: string) => void
+  placeholder: Placeholder;
+  fillin: string | number;
+  onValueChange: (placeholderName: string, value: string) => void;
 };
 
 export default function PlaceholderEditorListItem({
@@ -61,11 +59,8 @@ export default function PlaceholderEditorListItem({
             setRenderEntries(100); */
           }}
         />
-
       </div>
-      <div>
-        {/* { placeholder.type === 'f' && placeholder.decimalPlaces} */}
-      </div>
+      <div>{/* { placeholder.type === 'f' && placeholder.decimalPlaces} */}</div>
     </>
   );
 }

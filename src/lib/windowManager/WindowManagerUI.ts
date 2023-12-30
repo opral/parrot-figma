@@ -28,9 +28,11 @@ export default class WindowManagerUi extends EventTarget {
 
   static instance: WindowManagerUi | undefined;
 
-  viewportBounds: undefined | {
-    height: number,
-  };
+  viewportBounds:
+    | undefined
+    | {
+        height: number;
+      };
 
   isResizing = false;
 
@@ -47,21 +49,40 @@ export default class WindowManagerUi extends EventTarget {
 
   minWidth = 370;
 
-  static init(sizeWrapperEl: HTMLElement, contentEl: HTMLElement, resizeHandelEl: HTMLElement, heightResizeHandleEl: HTMLElement, handleElementId: string) {
+  static init(
+    sizeWrapperEl: HTMLElement,
+    contentEl: HTMLElement,
+    resizeHandelEl: HTMLElement,
+    heightResizeHandleEl: HTMLElement,
+    handleElementId: string,
+  ) {
     if (this.instance) {
       throw Error('WindowManagerUi initialized twice');
     }
-    this.instance = new WindowManagerUi(sizeWrapperEl, contentEl, resizeHandelEl, heightResizeHandleEl, handleElementId);
+    this.instance = new WindowManagerUi(
+      sizeWrapperEl,
+      contentEl,
+      resizeHandelEl,
+      heightResizeHandleEl,
+      handleElementId,
+    );
   }
 
-  private constructor(sizeWrapperEl: HTMLElement, contentEl: HTMLElement, resizeHandelEl: HTMLElement, heightResizeHandleEl: HTMLElement, handleElementId: string) {
+  private constructor(
+    sizeWrapperEl: HTMLElement,
+    contentEl: HTMLElement,
+    resizeHandelEl: HTMLElement,
+    heightResizeHandleEl: HTMLElement,
+    handleElementId: string,
+  ) {
     super();
     this.sizeWrapper = sizeWrapperEl;
     this.contentEl = contentEl;
     this.resizeHandelEl = resizeHandelEl;
     this.heightResizeHandleEl = heightResizeHandleEl;
     this.heightResizeScrollContainerEl = this.heightResizeHandleEl.children[0] as HTMLElement;
-    this.heightResizeScrollContentEl = this.heightResizeScrollContainerEl.children[0] as HTMLElement;
+    this.heightResizeScrollContentEl = this.heightResizeScrollContainerEl
+      .children[0] as HTMLElement;
 
     this.handleElementId = handleElementId;
 
@@ -81,10 +102,10 @@ export default class WindowManagerUi extends EventTarget {
       const handleHeight = handleRect.height;
 
       if (
-        mouseX >= handleX
-        && mouseX <= handleX + handleWidth
-        && mouseY >= handleY
-        && mouseY <= handleY + handleHeight
+        mouseX >= handleX &&
+        mouseX <= handleX + handleWidth &&
+        mouseY >= handleY &&
+        mouseY <= handleY + handleHeight
       ) {
         this.heightResizeHandleEl.style.cursor = 'ns-resize';
         this.heightResizeHandleEl.style.left = `${mouseX - 10}px`;
@@ -105,7 +126,7 @@ export default class WindowManagerUi extends EventTarget {
 
     this.heightResizeHandleEl.onmousedown = () => {
       this.isResizing = true;
-    }
+    };
 
     let lastCall = Date.now();
     this.heightResizeScrollContainerEl.onscroll = (e) => {
@@ -120,7 +141,7 @@ export default class WindowManagerUi extends EventTarget {
 
       lastCall = Date.now();
 
-      const scrolledHeight = this.viewportBounds.height - ((e.target as any).scrollTop / 3);
+      const scrolledHeight = this.viewportBounds.height - (e.target as any).scrollTop / 3;
       const minHeight = 60;
       const maxHeight = this.viewportBounds.height - 60;
 
@@ -128,29 +149,48 @@ export default class WindowManagerUi extends EventTarget {
         height: Math.min(Math.max(minHeight, scrolledHeight), maxHeight),
       };
 
-      parent.postMessage({ pluginMessage: { target: 'WindowManager', size, source: 'dragging' }, pluginId: '*' }, '*');
+      parent.postMessage(
+        { pluginMessage: { target: 'WindowManager', size, source: 'dragging' }, pluginId: '*' },
+        '*',
+      );
     };
-    ((document.querySelector(':root')!) as HTMLElement).style.setProperty('--resize-detection-overlap', `${RESIZEDETECTION_OVERLAP_PX + 2}px`);
+    (document.querySelector(':root')! as HTMLElement).style.setProperty(
+      '--resize-detection-overlap',
+      `${RESIZEDETECTION_OVERLAP_PX + 2}px`,
+    );
 
     let lastRatio = 0 as number;
-    this.intersectionObserver = new IntersectionObserver((entries: IntersectionObserverEntry[]) => {
-      if (this.isResizing || this.openRequest) {
-        // ignoring - resizing
-        return;
-      }
-
-      if (entries[0] && entries[0].target === this.sizeWrapper) {
-        if (lastRatio !== entries[0].intersectionRatio && entries[0].intersectionRatio !== 1 && entries[0].intersectionRect.height !== 0) {
-          lastRatio = entries[0].intersectionRatio;
-
-          // eslint-disable-next-line no-restricted-globals
-          parent.postMessage({ pluginMessage: { target: 'WindowManager', windowOverlapChanged: true }, pluginId: '*' }, '*');
+    this.intersectionObserver = new IntersectionObserver(
+      (entries: IntersectionObserverEntry[]) => {
+        if (this.isResizing || this.openRequest) {
+          // ignoring - resizing
+          return;
         }
-      }
-    }, {
-      root: null, // default is the viewport
-      threshold: threshol, // percentage of target's visible area. Triggers "onIntersection"
-    });
+
+        if (entries[0] && entries[0].target === this.sizeWrapper) {
+          if (
+            lastRatio !== entries[0].intersectionRatio &&
+            entries[0].intersectionRatio !== 1 &&
+            entries[0].intersectionRect.height !== 0
+          ) {
+            lastRatio = entries[0].intersectionRatio;
+
+            // eslint-disable-next-line no-restricted-globals
+            parent.postMessage(
+              {
+                pluginMessage: { target: 'WindowManager', windowOverlapChanged: true },
+                pluginId: '*',
+              },
+              '*',
+            );
+          }
+        }
+      },
+      {
+        root: null, // default is the viewport
+        threshold: threshol, // percentage of target's visible area. Triggers "onIntersection"
+      },
+    );
 
     this.intersectionObserver.observe(sizeWrapperEl!);
 
@@ -162,7 +202,7 @@ export default class WindowManagerUi extends EventTarget {
     this.resizeHandelEl.classList.remove(...this.resizeHandelEl.classList);
     this.resizeHandelEl.classList.add(this.windowMode);
 
-    window.addEventListener('message', (event : MessageEvent) => {
+    window.addEventListener('message', (event: MessageEvent) => {
       if (event.data.pluginMessage.target === 'WindowManager') {
         if (event.data.pluginMessage.windowMode) {
           const mode = event.data.pluginMessage.windowMode as WindowMode;
@@ -172,13 +212,17 @@ export default class WindowManagerUi extends EventTarget {
           this.resizeHandelEl.classList.remove(...this.resizeHandelEl.classList);
           this.resizeHandelEl.classList.add(mode);
 
-          const currentModeClasses = [...this.contentEl.classList].filter((className) => className.startsWith('windowmanager-'));
+          const currentModeClasses = [...this.contentEl.classList].filter((className) =>
+            className.startsWith('windowmanager-'),
+          );
           this.contentEl.classList.remove(...currentModeClasses);
           this.contentEl.classList.add(`windowmanager-${mode}`);
 
           this.windowMode = mode;
           if (this.openRequest && mode !== this.openRequest) {
-            console.log(`WARNING: requested mode ${this.requestWindowMode} differs from received ${mode}`);
+            console.log(
+              `WARNING: requested mode ${this.requestWindowMode} differs from received ${mode}`,
+            );
           }
           this.openRequest = undefined;
           const changeEvent = new CustomEvent<any>('changed');
@@ -192,7 +236,10 @@ export default class WindowManagerUi extends EventTarget {
     });
 
     // eslint-disable-next-line no-restricted-globals
-    parent.postMessage({ pluginMessage: { target: 'WindowManager', uiInit: true }, pluginId: '*' }, '*');
+    parent.postMessage(
+      { pluginMessage: { target: 'WindowManager', uiInit: true }, pluginId: '*' },
+      '*',
+    );
   }
 
   updateDragContainer() {
@@ -210,10 +257,13 @@ export default class WindowManagerUi extends EventTarget {
     console.log(this.viewportBounds);
 
     // make the content three times as height as window + viewport to be able to scroll up and down in an visible area of the window height
-    this.heightResizeScrollContentEl.style.height = `${(this.viewportBounds.height + windowHeight) * 3}px`;
+    this.heightResizeScrollContentEl.style.height = `${
+      (this.viewportBounds.height + windowHeight) * 3
+    }px`;
     // the scroll container should be the full viewport height plus the an additional scrolling area of the plugin window
-    this.heightResizeScrollContainerEl.style.height = `${this.viewportBounds.height + windowHeight}px`;
-
+    this.heightResizeScrollContainerEl.style.height = `${
+      this.viewportBounds.height + windowHeight
+    }px`;
 
     // place the handle
     this.heightResizeHandleEl.style.bottom = `${windowHeight}px`;
@@ -223,33 +273,45 @@ export default class WindowManagerUi extends EventTarget {
     this.heightResizeScrollContainerEl.style.bottom = `${-windowHeight - windowHeight}px`;
 
     // start at the top of the plugin windo
-    this.heightResizeScrollContainerEl.scrollTop = (this.viewportBounds.height - (windowHeight)) * 3;
-  //  console.log('---------------------------------------------------------------')
-  //   console.log("this.viewportBounds.height" + this.viewportBounds.height);
-  //   console.log("windowHeight" + windowHeight);
-  //   console.log("sum" + (this.viewportBounds.height - (windowHeight)) * 3);
-  //   console.log((this.viewportBounds.height - (windowHeight)) * 3);
-  //   console.log(this.heightResizeScrollContainerEl.scrollTop);
-
+    this.heightResizeScrollContainerEl.scrollTop = (this.viewportBounds.height - windowHeight) * 3;
+    //  console.log('---------------------------------------------------------------')
+    //   console.log("this.viewportBounds.height" + this.viewportBounds.height);
+    //   console.log("windowHeight" + windowHeight);
+    //   console.log("sum" + (this.viewportBounds.height - (windowHeight)) * 3);
+    //   console.log((this.viewportBounds.height - (windowHeight)) * 3);
+    //   console.log(this.heightResizeScrollContainerEl.scrollTop);
   }
 
-  requestResize(size: { height?: number, width?: number }) {
+  requestResize(size: { height?: number; width?: number }) {
     parent.postMessage({ pluginMessage: { target: 'WindowManager', size }, pluginId: '*' }, '*');
   }
 
   startDevMode() {
-    parent.postMessage({ pluginMessage: { target: 'WindowManager', startDevMode: true }, pluginId: '*' }, '*');
+    parent.postMessage(
+      { pluginMessage: { target: 'WindowManager', startDevMode: true }, pluginId: '*' },
+      '*',
+    );
   }
 
   onResizeHandleDrag(e: any) {
-    if (e.buttons !== 1 || this.windowMode !== WindowMode.Window) {
+    if (e.buttons !== 1 || this.windowMode !== WindowMode.Window) {
       return;
     }
 
-    parent.postMessage({ pluginMessage: { target: 'WindowManager', size: {
-      width: Math.max(this.minWidth, Math.floor(e.clientX + 5)),
-      height: Math.max(this.minHeight, Math.floor(e.clientY + 5)),
-    }, source: 'dragging' }, pluginId: '*' }, '*');
+    parent.postMessage(
+      {
+        pluginMessage: {
+          target: 'WindowManager',
+          size: {
+            width: Math.max(this.minWidth, Math.floor(e.clientX + 5)),
+            height: Math.max(this.minHeight, Math.floor(e.clientY + 5)),
+          },
+          source: 'dragging',
+        },
+        pluginId: '*',
+      },
+      '*',
+    );
   }
 
   onResizeHandlePointerUp(e: any) {
@@ -279,12 +341,20 @@ export default class WindowManagerUi extends EventTarget {
 
   requestWindowMode(mode: WindowMode, fromDrag: boolean) {
     if (this.openRequest) {
-      console.log(`WARNING tried to request ${mode} while request is ongoing for${this.openRequest}`);
+      console.log(
+        `WARNING tried to request ${mode} while request is ongoing for${this.openRequest}`,
+      );
     }
 
     if (this.windowMode !== mode && this.openRequest !== mode) {
       this.openRequest = mode;
-      parent.postMessage({ pluginMessage: { target: 'WindowManager', requestedWindowMode: mode, fromDrag }, pluginId: '*' }, '*');
+      parent.postMessage(
+        {
+          pluginMessage: { target: 'WindowManager', requestedWindowMode: mode, fromDrag },
+          pluginId: '*',
+        },
+        '*',
+      );
     }
   }
 }

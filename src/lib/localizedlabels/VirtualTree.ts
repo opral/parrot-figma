@@ -89,7 +89,7 @@ export default class VirtualTree {
   public moveNode(identifier: string, newParent: BaseNode): VirtualTreeNode[] {
     const virtualNode = this.lookupTable.get(identifier);
     if (virtualNode === undefined) {
-     //  console.log('VirtualTree: NOTING TO MOVE');
+      //  console.log('VirtualTree: NOTING TO MOVE');
       return [];
     }
     const parentId = newParent.id;
@@ -99,7 +99,9 @@ export default class VirtualTree {
       virtualParent = this.addNode(newParent, parentId);
     }
 
-    virtualNode.parent!.children = virtualNode.parent!.children.filter((child) => child !== virtualNode);
+    virtualNode.parent!.children = virtualNode.parent!.children.filter(
+      (child) => child !== virtualNode,
+    );
 
     if (virtualNode.parent!.children.length === 0) {
       // console.log('VirtualTree: NO NEED OF PARENT - removing cache');
@@ -112,7 +114,7 @@ export default class VirtualTree {
     return this.getAllNodesInBranch(virtualNode);
   }
 
-  public getAllNodesInBranchByRootId(id: string) : VirtualTreeNode[] {
+  public getAllNodesInBranchByRootId(id: string): VirtualTreeNode[] {
     const virtualNode = this.lookupTable.get(id);
     if (virtualNode === undefined) {
       // console.log('VirtualTree: no node to get branch from');
@@ -122,7 +124,7 @@ export default class VirtualTree {
     return this.getAllNodesInBranch(virtualNode);
   }
 
-  private getAllNodesInBranch(node: VirtualTreeNode) : VirtualTreeNode[] {
+  private getAllNodesInBranch(node: VirtualTreeNode): VirtualTreeNode[] {
     let nodesInBranch = [node];
 
     for (const child of node.children) {

@@ -99,12 +99,13 @@ export default class FigmaFsSandbox implements NodeishFilesystem {
       throw new FilesystemError('EISDIR', path, 'readFile');
     }
 
-    const fileContentString = figma.root.getPluginData(`${fileContentKeyPrefix}${normalizedPath}`) ?? '';
+    const fileContentString =
+      figma.root.getPluginData(`${fileContentKeyPrefix}${normalizedPath}`) ?? '';
     return { content: fileContentString };
   }
 
   async readFile(path: string): Promise<Uint8Array>;
-  async readFile(path: string, options: { encoding: 'utf-8' | 'binary'; }): Promise<string>;
+  async readFile(path: string, options: { encoding: 'utf-8' | 'binary' }): Promise<string>;
   async readFile(path: any, options?: any): Promise<string | Uint8Array> {
     if (typeof path !== 'string') {
       throw new Error(`path other than string not supported - type found: ${typeof path}`);
@@ -119,7 +120,11 @@ export default class FigmaFsSandbox implements NodeishFilesystem {
     throw new Error('non string reads are not supported');
   }
 
-  private async writeFileToPluginData(path: string, data: string, figFsStats: FigFsStats): Promise<void> {
+  private async writeFileToPluginData(
+    path: string,
+    data: string,
+    figFsStats: FigFsStats,
+  ): Promise<void> {
     const normalizedPath = normalPath(path);
     const dirName = getDirname(normalizedPath);
     const baseName = getBasename(normalizedPath);
@@ -152,10 +157,13 @@ export default class FigmaFsSandbox implements NodeishFilesystem {
     return this.writeFileToPluginData(path, data, stats);
   }
 
-  async writeFile(path: string, data: string | Uint8Array, options?: { mode: number; } | undefined): Promise<void> {
-
+  async writeFile(
+    path: string,
+    data: string | Uint8Array,
+    options?: { mode: number } | undefined,
+  ): Promise<void> {
     const figFsStats = newFigStats(Date.now(), options?.mode ?? 0o644, FileType.File);
-    
+
     if (typeof data !== 'string') {
       throw new Error('non strings currently not supportet as file content');
     }
@@ -169,9 +177,14 @@ export default class FigmaFsSandbox implements NodeishFilesystem {
     const folderSubPaths = [];
 
     if (stat.isDirectory()) {
-      const keys = figma.root.getPluginDataKeys().filter((key) => key.startsWith(fileStatsKeyPrefix + normalizedPath));
+      const keys = figma.root
+        .getPluginDataKeys()
+        .filter((key) => key.startsWith(fileStatsKeyPrefix + normalizedPath));
       for (const key of keys) {
-        const pathAfterFolder = key.substring((fileStatsKeyPrefix + normalizedPath).length, key.length - 1);
+        const pathAfterFolder = key.substring(
+          (fileStatsKeyPrefix + normalizedPath).length,
+          key.length - 1,
+        );
         if (!pathAfterFolder.includes('/')) {
           folderSubPaths.push(pathAfterFolder);
         }
@@ -180,7 +193,10 @@ export default class FigmaFsSandbox implements NodeishFilesystem {
     return folderSubPaths;
   }
 
-  async mkdir(path: string, options?: { recursive: boolean; } | undefined): Promise<string | undefined> {
+  async mkdir(
+    path: string,
+    options?: { recursive: boolean } | undefined,
+  ): Promise<string | undefined> {
     console.log(`mkdir${path}`);
     const normalizedPath = normalPath(path);
     const parentDirPath = getDirname(path);
@@ -264,7 +280,7 @@ export default class FigmaFsSandbox implements NodeishFilesystem {
     }
   }
 
-  async rm(path: string, options?: { recursive: boolean; } | undefined): Promise<void> {
+  async rm(path: string, options?: { recursive: boolean } | undefined): Promise<void> {
     return this.rmPathFromPluginData(path, options?.recursive ?? false);
   }
 
@@ -303,9 +319,9 @@ export default class FigmaFsSandbox implements NodeishFilesystem {
   watch(
     path: string,
     options?: {
-      recursive?: boolean
-      signal?: AbortSignal
-      persistent?: false
+      recursive?: boolean;
+      signal?: AbortSignal;
+      persistent?: false;
     },
     // WatchOptions
   ): AsyncIterable<FileChangeInfo> {
@@ -345,11 +361,13 @@ export default class FigmaFsSandbox implements NodeishFilesystem {
         queue.push(eventToForward);
         setTimeout(() => handleNext(undefined), 0);
       } else if (changeDir === `${watchPath}/`) {
-        eventToForward.filename = eventToForward.filename.replace(`${watchPath}/`, '') || changeName;
+        eventToForward.filename =
+          eventToForward.filename.replace(`${watchPath}/`, '') || changeName;
         queue.push(eventToForward);
         setTimeout(() => handleNext(undefined), 0);
       } else if (options?.recursive && eventToForward.filename.startsWith(watchPath)) {
-        eventToForward.filename = eventToForward.filename.replace(`${watchPath}/`, '') || changeName;
+        eventToForward.filename =
+          eventToForward.filename.replace(`${watchPath}/`, '') || changeName;
         queue.push(eventToForward);
         setTimeout(() => handleNext(undefined), 0);
       }
@@ -393,12 +411,12 @@ export default class FigmaFsSandbox implements NodeishFilesystem {
 
   forwardDocumentChanges(event: any) {
     for (const change of event.documentChanges) {
-      
       if (
-      //  change.origin === 'LOCAL' we could optimize this for local changes....
-        change.type !== 'PROPERTY_CHANGE'
-      || change.node.id !== '0:0'
-      || change.properties.indexOf('pluginData') === -1) {
+        //  change.origin === 'LOCAL' we could optimize this for local changes....
+        change.type !== 'PROPERTY_CHANGE' ||
+        change.node.id !== '0:0' ||
+        change.properties.indexOf('pluginData') === -1
+      ) {
         // eslint-disable-next-line no-continue
         continue;
       }
@@ -406,7 +424,9 @@ export default class FigmaFsSandbox implements NodeishFilesystem {
 
       // TODO #25 CACHING implement for multi user - keep tracK of changes in config as well
       // eslint-disable-next-line default-case
-      const currentFileStatsStorageKeys = figma.root.getPluginDataKeys().filter((value) => value.startsWith(fileStatsKeyPrefix));
+      const currentFileStatsStorageKeys = figma.root
+        .getPluginDataKeys()
+        .filter((value) => value.startsWith(fileStatsKeyPrefix));
 
       const changedFiles = {
         deleted: [] as string[],
@@ -417,19 +437,28 @@ export default class FigmaFsSandbox implements NodeishFilesystem {
       let currentStatsKeys = [...this.propagatedFileState.keys()];
 
       for (const currentFileStatsStorageKey of currentFileStatsStorageKeys) {
-        const path = currentFileStatsStorageKey.substring((fileStatsKeyPrefix).length);
+        const path = currentFileStatsStorageKey.substring(fileStatsKeyPrefix.length);
         if (this.propagatedFileState.get(currentFileStatsStorageKey) === undefined) {
           changedFiles.added.push(path);
-          this.propagatedFileState.set(currentFileStatsStorageKey, figma.root.getPluginData(currentFileStatsStorageKey));
+          this.propagatedFileState.set(
+            currentFileStatsStorageKey,
+            figma.root.getPluginData(currentFileStatsStorageKey),
+          );
           for (const listener of this.listeners) {
             // "On most platforms, 'rename' is emitted whenever a filename appears or disappears in the directory."
             listener({ eventType: 'rename', filename: path });
             console.log('PLUGIN DATA UPDATE - propagating change1');
           }
         } else {
-          if (figma.root.getPluginData(currentFileStatsStorageKey) !== this.propagatedFileState.get(currentFileStatsStorageKey)) {
+          if (
+            figma.root.getPluginData(currentFileStatsStorageKey) !==
+            this.propagatedFileState.get(currentFileStatsStorageKey)
+          ) {
             changedFiles.updated.push(path);
-            this.propagatedFileState.set(currentFileStatsStorageKey, figma.root.getPluginData(currentFileStatsStorageKey));
+            this.propagatedFileState.set(
+              currentFileStatsStorageKey,
+              figma.root.getPluginData(currentFileStatsStorageKey),
+            );
             for (const listener of this.listeners) {
               // "On most platforms, 'rename' is emitted whenever a filename appears or disappears in the directory."
               listener({ eventType: 'rename', filename: path });
@@ -442,7 +471,7 @@ export default class FigmaFsSandbox implements NodeishFilesystem {
       }
 
       for (const deletedStatsKey of currentStatsKeys) {
-        const path = deletedStatsKey.substring((fileStatsKeyPrefix).length);
+        const path = deletedStatsKey.substring(fileStatsKeyPrefix.length);
         changedFiles.deleted.push(path);
         this.propagatedFileState.delete(deletedStatsKey);
         for (const listener of this.listeners) {

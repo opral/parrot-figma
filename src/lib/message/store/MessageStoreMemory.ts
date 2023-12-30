@@ -1,7 +1,11 @@
 /* eslint-disable no-plusplus */
 /* eslint-disable no-await-in-loop */
 import {
-  loadProject, getVariant, InlangProject, updateVariantPattern, createVariant,
+  loadProject,
+  getVariant,
+  InlangProject,
+  updateVariantPattern,
+  createVariant,
 } from '@inlang/sdk';
 import { Message, Pattern } from '@inlang/sdk';
 
@@ -18,37 +22,39 @@ import { MessageParameterValues } from '../MessageParameterValues';
 import PlaceholderHelper from '../PlaceholderUtil';
 
 export type SearchQuery = {
-  selected?: 'FRAME' | 'LABEL' | undefined,
-  hasLabel?: string[] | undefined,
-  oneLabelOf?: string[] | undefined,
-  unverified?: boolean | undefined,
-  missingTranslation?: boolean | undefined,
-  name?: string | undefined,
-  nameAtEnd?: boolean | undefined,
-  text?: string | undefined,
-  exactText?: boolean | undefined,
-  searchString?: string | undefined,
+  selected?: 'FRAME' | 'LABEL' | undefined;
+  hasLabel?: string[] | undefined;
+  oneLabelOf?: string[] | undefined;
+  unverified?: boolean | undefined;
+  missingTranslation?: boolean | undefined;
+  name?: string | undefined;
+  nameAtEnd?: boolean | undefined;
+  text?: string | undefined;
+  exactText?: boolean | undefined;
+  searchString?: string | undefined;
 };
 
 export type SearchResult = {
-
-  inNames: Set<string>,
-  inText: Set<string>,
-  withMissingVariants: Set<string>,
+  inNames: Set<string>;
+  inText: Set<string>;
+  withMissingVariants: Set<string>;
   withMissingVariantsPerLanguage: {
-    [language in Locale]? : Set<string>
-  },
-  withMissingReview: Set<string>,
-  matchingNames: Set<string>,
-  referencedInFrame: Set<string>,
-  referencedInLabels: Set<string>,
-  matches: { [messageId: string] : {
-    messageNameMatch: { start: number, length: number } | undefined,
-    textMatches: {
-      [language in Locale]?: { [gender in Gender]?: { [plural in Plural]?: { start: number, length: number } } }
-    }
-  } },
-
+    [language in Locale]?: Set<string>;
+  };
+  withMissingReview: Set<string>;
+  matchingNames: Set<string>;
+  referencedInFrame: Set<string>;
+  referencedInLabels: Set<string>;
+  matches: {
+    [messageId: string]: {
+      messageNameMatch: { start: number; length: number } | undefined;
+      textMatches: {
+        [language in Locale]?: {
+          [gender in Gender]?: { [plural in Plural]?: { start: number; length: number } };
+        };
+      };
+    };
+  };
 };
 
 const projectFolder = '/project.inlang';
@@ -60,7 +66,7 @@ const owner = 'martin-lysk';
 const repository = 'example';
 
 export default class MessageStoreMemory extends EventTarget {
-  config: Config = { };
+  config: Config = {};
 
   repo: Repository | undefined;
 
@@ -73,12 +79,13 @@ export default class MessageStoreMemory extends EventTarget {
   async pushChanges() {
     // stage all changes
     const status = await this.repo!.statusMatrix({
-      filter: (f: any) => f.endsWith('.json')
-          || f.endsWith('.po')
-          || f.endsWith('.yaml')
-          || f.endsWith('.yml')
-          || f.endsWith('.js')
-          || f.endsWith('.ts'),
+      filter: (f: any) =>
+        f.endsWith('.json') ||
+        f.endsWith('.po') ||
+        f.endsWith('.yaml') ||
+        f.endsWith('.yml') ||
+        f.endsWith('.js') ||
+        f.endsWith('.ts'),
     });
 
     await this.repo!.pull({
@@ -92,10 +99,10 @@ export default class MessageStoreMemory extends EventTarget {
 
     const filesWithUncommittedChanges = status.filter(
       (row: any) =>
-      // files with unstaged and uncommitted changes
-        (row[2] === 2 && row[3] === 1)
-          // added files
-          || (row[2] === 2 && row[3] === 0),
+        // files with unstaged and uncommitted changes
+        (row[2] === 2 && row[3] === 1) ||
+        // added files
+        (row[2] === 2 && row[3] === 0),
     );
     if (filesWithUncommittedChanges.length > 0) {
       // add all changes
@@ -127,19 +134,16 @@ export default class MessageStoreMemory extends EventTarget {
     this.fs = fs;
 
     const httpPath = `${PUBLIC_GIT_PROXY_BASE_URL}/git/${host}/${owner}/${repository}`;
-    openRepository(
-      httpPath,
-      {
-        nodeishFs: fs,
-        auth: false,
-        branch: 'main',
-      },
-    ).then((repo) => {
+    openRepository(httpPath, {
+      nodeishFs: fs,
+      auth: false,
+      branch: 'main',
+    }).then((repo) => {
       this.repo = repo;
       console.log(repo);
       // this.repo = repo
       let pushed = false;
-      
+
       const startWatching = async () => {
         try {
           this.watcher = this.fs.watch('/project.inlang/', {
@@ -151,11 +155,12 @@ export default class MessageStoreMemory extends EventTarget {
           if (this.watcher) {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             for await (const event of this.watcher) {
-              
               console.log('change detected - push!');
               if (!pushed) {
                 pushed = true;
-                setTimeout(() => { pushed = false }, 2000)
+                setTimeout(() => {
+                  pushed = false;
+                }, 2000);
                 this.pushChanges();
               }
             }
@@ -360,11 +365,11 @@ export default class MessageStoreMemory extends EventTarget {
     }
   }
 
-  getMessage(id: string) : Message | undefined {
+  getMessage(id: string): Message | undefined {
     return this.inlangProject!.query.messages.get({ where: { id } });
   }
 
-  getMessageByName(messageName: string) : Message | undefined {
+  getMessageByName(messageName: string): Message | undefined {
     return this.inlangProject!.query.messages.get({ where: { id: messageName } });
   }
 
@@ -533,19 +538,21 @@ export default class MessageStoreMemory extends EventTarget {
       inNames: new Set<string>(),
       inText: new Set<string>(),
       withMissingVariants: new Set<string>(),
-      withMissingVariantsPerLanguage: { } as {
-        [language in Locale]? : Set<string>
+      withMissingVariantsPerLanguage: {} as {
+        [language in Locale]?: Set<string>;
       },
       withMissingReview: new Set<string>(),
       matchingNames: new Set<string>(),
       referencedInFrame: new Set<string>(),
       referencedInLabels: new Set<string>(),
-      matches: {} as { [name:string] : {
-        messageNameMatch: { start: number, length: number } | undefined,
-        textMatches: {
-          [language: string]: { [matches: string]: { start: number, length: number } }
-        }
-      } },
+      matches: {} as {
+        [name: string]: {
+          messageNameMatch: { start: number; length: number } | undefined;
+          textMatches: {
+            [language: string]: { [matches: string]: { start: number; length: number } };
+          };
+        };
+      },
     };
 
     if (selection) {
@@ -568,14 +575,16 @@ export default class MessageStoreMemory extends EventTarget {
         results.matchingNames.add(message.id);
       } else {
         for (const messageVariant of message.variants) {
-          const patternsLower = messageVariant.pattern.map((pattern) => {
-            if (pattern.type === 'Text') {
-              return pattern.value.toLowerCase();
-            } if (pattern.type === 'VariableReference') {
-              return pattern.name.toLowerCase();
-            }
-            return '';
-          })
+          const patternsLower = messageVariant.pattern
+            .map((pattern) => {
+              if (pattern.type === 'Text') {
+                return pattern.value.toLowerCase();
+              }
+              if (pattern.type === 'VariableReference') {
+                return pattern.name.toLowerCase();
+              }
+              return '';
+            })
             .join('');
 
           const matchStartText = patternsLower.indexOf(query.text.toLowerCase());
@@ -592,7 +601,10 @@ export default class MessageStoreMemory extends EventTarget {
             if (!results.matches[message.id].textMatches![messageVariant.languageTag]!['*']) {
               results.inText.add(message.id);
               results.matchingNames.add(message.id);
-              results.matches[message.id].textMatches![messageVariant.languageTag]!['*'] = { start: matchStartText, length: query.text.length };
+              results.matches[message.id].textMatches![messageVariant.languageTag]!['*'] = {
+                start: matchStartText,
+                length: query.text.length,
+              };
             }
           }
         }
@@ -606,7 +618,10 @@ export default class MessageStoreMemory extends EventTarget {
             if (!results.matches[message.id]) {
               results.matches[message.id] = { textMatches: {}, messageNameMatch: undefined };
             }
-            results.matches[message.id].messageNameMatch = { start: mameMatchStart, length: query.name.length };
+            results.matches[message.id].messageNameMatch = {
+              start: mameMatchStart,
+              length: query.name.length,
+            };
             results.inNames.add(message.id);
           } else {
             // eslint-disable-next-line no-continue
@@ -619,32 +634,51 @@ export default class MessageStoreMemory extends EventTarget {
           if (!results.matches[message.id]) {
             results.matches[message.id] = { textMatches: {}, messageNameMatch: undefined };
           }
-          results.matches[message.id].messageNameMatch = { start: nameMatchStart, length: query.text.length };
+          results.matches[message.id].messageNameMatch = {
+            start: nameMatchStart,
+            length: query.text.length,
+          };
           results.inNames.add(message.id);
           results.matchingNames.add(message.id);
         }
       }
     }
 
-    results.withMissingReview = new Set([...results.withMissingReview].filter((x) => results.matchingNames.has(x)));
-    results.withMissingVariants = new Set([...results.withMissingVariants].filter((x) => results.matchingNames.has(x)));
+    results.withMissingReview = new Set(
+      [...results.withMissingReview].filter((x) => results.matchingNames.has(x)),
+    );
+    results.withMissingVariants = new Set(
+      [...results.withMissingVariants].filter((x) => results.matchingNames.has(x)),
+    );
 
     if (query.missingTranslation === true) {
-      results.matchingNames = new Set([...results.matchingNames].filter((x) => results.withMissingVariants.has(x)));
+      results.matchingNames = new Set(
+        [...results.matchingNames].filter((x) => results.withMissingVariants.has(x)),
+      );
     } else if (query.missingTranslation === false) {
-      results.matchingNames = new Set([...results.matchingNames].filter((x) => !results.withMissingVariants.has(x)));
+      results.matchingNames = new Set(
+        [...results.matchingNames].filter((x) => !results.withMissingVariants.has(x)),
+      );
     }
 
     if (query.unverified === true) {
-      results.matchingNames = new Set([...results.matchingNames].filter((x) => results.withMissingReview.has(x)));
+      results.matchingNames = new Set(
+        [...results.matchingNames].filter((x) => results.withMissingReview.has(x)),
+      );
     } else if (query.unverified === false) {
-      results.matchingNames = new Set([...results.matchingNames].filter((x) => !results.withMissingReview.has(x)));
+      results.matchingNames = new Set(
+        [...results.matchingNames].filter((x) => !results.withMissingReview.has(x)),
+      );
     }
 
     if (query.selected === 'FRAME') {
-      results.matchingNames = new Set([...results.matchingNames].filter((x) => results.referencedInFrame.has(x)));
+      results.matchingNames = new Set(
+        [...results.matchingNames].filter((x) => results.referencedInFrame.has(x)),
+      );
     } else if (query.selected === 'LABEL') {
-      results.matchingNames = new Set([...results.matchingNames].filter((x) => results.referencedInLabels.has(x)));
+      results.matchingNames = new Set(
+        [...results.matchingNames].filter((x) => results.referencedInLabels.has(x)),
+      );
     }
 
     // in case we have no specific we want to suggest specific like
@@ -706,7 +740,11 @@ export default class MessageStoreMemory extends EventTarget {
     try {
       await this.fs.readFile(`${projectFolder}/settings.json`);
     } catch (e) {
-      if (this.config.refLanguage && this.config.enabledLanguages && this.config.enabledLanguages.length > 0) {
+      if (
+        this.config.refLanguage &&
+        this.config.enabledLanguages &&
+        this.config.enabledLanguages.length > 0
+      ) {
         // creating a project file
         const inlangConfig = {
           sourceLanguageTag: this.config!.refLanguage,
@@ -735,7 +773,7 @@ export default class MessageStoreMemory extends EventTarget {
         console.log('import called');
         return {
           default: {
-          // id: id as Plugin["id"],
+            // id: id as Plugin["id"],
             id: 'plugin.organization.pluginName', // as Plugin['id'],
             displayName: { en: 'test' }, // as Plugin['displayName'],
             description: { en: 'test' }, // as Plugin['description'],
@@ -769,7 +807,6 @@ export default class MessageStoreMemory extends EventTarget {
               this.upsertedMessageIds = new Set<string>();
             }, */
           },
-
         };
         // return import('./inlang/FigmaPlugin');
       },
@@ -809,7 +846,13 @@ export default class MessageStoreMemory extends EventTarget {
   //   return false;
   // }
 
-  static upsertVariantPatternHtml(message: Message, sourceLanguage: Locale | undefined, language: Locale, match: string[], patternHtml: string) {
+  static upsertVariantPatternHtml(
+    message: Message,
+    sourceLanguage: Locale | undefined,
+    language: Locale,
+    match: string[],
+    patternHtml: string,
+  ) {
     // const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, match);
     const currentVariantClone = getVariant(message, { where: { languageTag: language, match } });
     // let variantPatternHTMLHash = '';
@@ -818,7 +861,10 @@ export default class MessageStoreMemory extends EventTarget {
     if (currentVariantClone) {
       // variantPatternHTMLHash = (blake.blake2sHex(sourceVariantPatternHTML));
       // XXX find the variant using language an pattern to be able to mutate it in place
-      messageClone = updateVariantPattern(message, { where: { languageTag: language, match }, data: MessageStoreMemory.patternHtmlToPattern(patternHtml) }).data!;
+      messageClone = updateVariantPattern(message, {
+        where: { languageTag: language, match },
+        data: MessageStoreMemory.patternHtmlToPattern(patternHtml),
+      }).data!;
     } else {
       const tranlatedVariant = {
         languageTag: language,
@@ -839,21 +885,39 @@ export default class MessageStoreMemory extends EventTarget {
   }
 
   static async upsertUsingAutoTranslateMessage(
-    translationProvider: (input: string, sourceLanguage: string, targetLanguage: string) => Promise<string | null>,
+    translationProvider: (
+      input: string,
+      sourceLanguage: string,
+      targetLanguage: string,
+    ) => Promise<string | null>,
     message: Message,
     sourceLanguage: Locale,
     targetLanguage: Locale,
     match: string[],
   ) {
     //
-    const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(message, sourceLanguage, match);
+    const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(
+      message,
+      sourceLanguage,
+      match,
+    );
     if (sourceVariantPatternHTML === undefined) {
       throw new Error(`Pattern did not exist for source language: ${sourceLanguage}`);
     }
 
-    const translatedPattern = await translationProvider(sourceVariantPatternHTML, sourceLanguage as string, targetLanguage);
+    const translatedPattern = await translationProvider(
+      sourceVariantPatternHTML,
+      sourceLanguage as string,
+      targetLanguage,
+    );
 
-    return this.upsertVariantPatternHtml(message, sourceLanguage, targetLanguage, match, translatedPattern!);
+    return this.upsertVariantPatternHtml(
+      message,
+      sourceLanguage,
+      targetLanguage,
+      match,
+      translatedPattern!,
+    );
   }
 
   static patternHtmlToPattern(patternHtml: string): Pattern {
@@ -928,11 +992,18 @@ export default class MessageStoreMemory extends EventTarget {
     return this.patternToHtml(variant!.pattern);
   }
 
-  static getBestExistingVariant(message: Message, languageTag: string, fallbackLanguageTags: string[], match?: string[]) {
+  static getBestExistingVariant(
+    message: Message,
+    languageTag: string,
+    fallbackLanguageTags: string[],
+    match?: string[],
+  ) {
     const variant = getVariant(message, { where: { languageTag, match } });
     if (!variant) {
       for (const fallbackLanguageTag of fallbackLanguageTags) {
-        const fallbackVariant = getVariant(message, { where: { languageTag: fallbackLanguageTag, match } });
+        const fallbackVariant = getVariant(message, {
+          where: { languageTag: fallbackLanguageTag, match },
+        });
         if (fallbackVariant !== undefined) {
           return fallbackVariant;
         }

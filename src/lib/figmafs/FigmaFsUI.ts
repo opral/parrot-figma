@@ -33,9 +33,7 @@ export default class FigmaFsUI implements NodeishFilesystem {
 
   static instance: FigmaFsUI | undefined;
 
-  static init(
-    sandboxFs: NodeishFilesystem,
-  ) {
+  static init(sandboxFs: NodeishFilesystem) {
     if (this.instance) {
       throw new Error('init called twice');
     }
@@ -46,7 +44,7 @@ export default class FigmaFsUI implements NodeishFilesystem {
   constructor(sandboxFs: NodeishFilesystem) {
     this.sandboxFs = sandboxFs;
 
-    window.addEventListener('message', (event : MessageEvent) => {
+    window.addEventListener('message', (event: MessageEvent) => {
       if (event.data.pluginMessage.target === 'FigmaFsUI') {
         debugger;
         if (event.data.pluginMessage.type === 'changeEvent') {
@@ -67,7 +65,11 @@ export default class FigmaFsUI implements NodeishFilesystem {
     }
   }
 
-  async writeFile(path: string, data: string | Uint8Array, options?: { mode: number; } | undefined): Promise<void> {
+  async writeFile(
+    path: string,
+    data: string | Uint8Array,
+    options?: { mode: number } | undefined,
+  ): Promise<void> {
     const normalizedPath = normalPath(path);
 
     // const dataString = typeof data !== 'string' ? new TextDecoder().decode(data) : data;
@@ -99,17 +101,22 @@ export default class FigmaFsUI implements NodeishFilesystem {
     this.fsStatsCache.delete(normalizedPath);
     this.fileContentCache.delete(normalizedPath);
 
-    
     // we only allow passing stirngs
     const stringData = typeof data !== 'string' ? decoder.decode(data as Uint8Array) : data;
 
-    if (normalizedPath === '/.git/objects/pack/pack-ee366b1cbd33c57026e4dc15e59d1533670d6b99.idx/') {
-      console.log('CONTENT OF WRITE /.git/objects/pack/pack-ee366b1cbd33c57026e4dc15e59d1533670d6b99.idx');
+    if (
+      normalizedPath === '/.git/objects/pack/pack-ee366b1cbd33c57026e4dc15e59d1533670d6b99.idx/'
+    ) {
+      console.log(
+        'CONTENT OF WRITE /.git/objects/pack/pack-ee366b1cbd33c57026e4dc15e59d1533670d6b99.idx',
+      );
       console.log(data);
 
       const base64 = btoa(String.fromCharCode.apply(null, Array.from(data as Uint8Array)));
       const decodedBinaryString = atob(base64);
-      const decodedBinaryData = new Uint8Array([...decodedBinaryString].map((char) => char.charCodeAt(0)));
+      const decodedBinaryData = new Uint8Array(
+        [...decodedBinaryString].map((char) => char.charCodeAt(0)),
+      );
       console.log(stringData);
 
       console.log(encoder.encode(decoder.decode(data as Uint8Array)));
@@ -133,7 +140,7 @@ export default class FigmaFsUI implements NodeishFilesystem {
   }
 
   async readFile(path: string): Promise<Uint8Array>;
-  async readFile(path: string, options: { encoding: 'utf-8' | 'binary'; }): Promise<string>;
+  async readFile(path: string, options: { encoding: 'utf-8' | 'binary' }): Promise<string>;
   async readFile(path: any, options?: any): Promise<Uint8Array | string> {
     if (typeof path !== 'string') {
       throw new Error('type not supported');
@@ -156,13 +163,15 @@ export default class FigmaFsUI implements NodeishFilesystem {
     this.fsStatsCache.set(normalizedPath, fileStats);
     this.fileContentCache.set(normalizedPath, fileContent);
 
-
-    if (normalizedPath === '/.git/objects/pack/pack-ee366b1cbd33c57026e4dc15e59d1533670d6b99.idx/') {
-      console.log('CONTENT OF READ /.git/objects/pack/pack-ee366b1cbd33c57026e4dc15e59d1533670d6b99.idx');
+    if (
+      normalizedPath === '/.git/objects/pack/pack-ee366b1cbd33c57026e4dc15e59d1533670d6b99.idx/'
+    ) {
+      console.log(
+        'CONTENT OF READ /.git/objects/pack/pack-ee366b1cbd33c57026e4dc15e59d1533670d6b99.idx',
+      );
       console.log(fileContent);
       console.log(encoder.encode(fileContent));
     }
-
 
     if (options?.encoding || typeof options === 'string') {
       return fileContent;
@@ -174,11 +183,14 @@ export default class FigmaFsUI implements NodeishFilesystem {
     return this.sandboxFs.readdir(path);
   }
 
-  async mkdir(path: string, options?: { recursive: boolean; } | undefined): Promise<string | undefined> {
+  async mkdir(
+    path: string,
+    options?: { recursive: boolean } | undefined,
+  ): Promise<string | undefined> {
     return this.sandboxFs.mkdir(path, options);
   }
 
-  async rm(path: string, options?: { recursive: boolean; } | undefined): Promise<void> {
+  async rm(path: string, options?: { recursive: boolean } | undefined): Promise<void> {
     const normalizedPath = normalPath(path);
 
     this.fsStatsCache.delete(normalizedPath);
@@ -253,9 +265,9 @@ export default class FigmaFsUI implements NodeishFilesystem {
   watch(
     path: string,
     options?: {
-      recursive?: boolean
-      signal?: AbortSignal
-      persistent?: false
+      recursive?: boolean;
+      signal?: AbortSignal;
+      persistent?: false;
     },
     // WatchOptions
   ): AsyncIterable<FileChangeInfo> {
@@ -340,6 +352,6 @@ export default class FigmaFsUI implements NodeishFilesystem {
           });
         }
       }
-    }());
+    })();
   }
 }

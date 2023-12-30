@@ -13,23 +13,31 @@ import { NodeSelection } from '../../../lib/localizedlabels/LocalizedLabelManage
 import GoogleTranslator from '../../../lib/translationprovider/google';
 
 type LocalizedFrameGroupProps = {
-  showMessage: Function,
-  localizedLabels: UILocalizedLabel[],
-  selectedNodes: NodeSelection,
-  figmaRemote: FigmaUtil
-  localizedLabelManager: LocalizedLabelManagerUI
+  showMessage: Function;
+  localizedLabels: UILocalizedLabel[];
+  selectedNodes: NodeSelection;
+  figmaRemote: FigmaUtil;
+  localizedLabelManager: LocalizedLabelManagerUI;
 };
 
 function toLanguageOption(language: string, baseLanguage?: string) {
   let languageNameInCurrentLanguage = 'no name found';
   try {
-    languageNameInCurrentLanguage = new Intl.DisplayNames('en', { type: 'language' }).of(language) ?? languageNameInCurrentLanguage;
-  } catch (e) { /* empty */ }
+    languageNameInCurrentLanguage =
+      new Intl.DisplayNames('en', { type: 'language' }).of(language) ??
+      languageNameInCurrentLanguage;
+  } catch (e) {
+    /* empty */
+  }
 
   let languageNameInForeignLanguage = 'no name found';
   try {
-    languageNameInForeignLanguage = new Intl.DisplayNames(language, { type: 'language' }).of(language) ?? languageNameInForeignLanguage;
-  } catch (e) { /* empty */ }
+    languageNameInForeignLanguage =
+      new Intl.DisplayNames(language, { type: 'language' }).of(language) ??
+      languageNameInForeignLanguage;
+  } catch (e) {
+    /* empty */
+  }
 
   if (baseLanguage && language === baseLanguage) {
     return {
@@ -61,7 +69,12 @@ export default function LocalizedFrameGroup({
 
   const languages = localizedLabelManager.messageStore.getLanugages()!.sort();
 
-  languageOptiones.push(toLanguageOption(localizedLabelManager.messageStore.getRefLanugage()!, localizedLabelManager.messageStore.getRefLanugage()!));
+  languageOptiones.push(
+    toLanguageOption(
+      localizedLabelManager.messageStore.getRefLanugage()!,
+      localizedLabelManager.messageStore.getRefLanugage()!,
+    ),
+  );
 
   for (const language of languages) {
     const currentLanguageOption = toLanguageOption(language);
@@ -73,10 +86,17 @@ export default function LocalizedFrameGroup({
     }
   }
 
-  async function onLanguageSelectionClick(firstLocalizedLabelInFrame: LocalizedLabel, language: Locale) {
+  async function onLanguageSelectionClick(
+    firstLocalizedLabelInFrame: LocalizedLabel,
+    language: Locale,
+  ) {
     const translationProvider = GoogleTranslator.translate;
 
-    localizedLabelManager.setFrameLanguage(firstLocalizedLabelInFrame.rootFrameId, language, translationProvider);
+    localizedLabelManager.setFrameLanguage(
+      firstLocalizedLabelInFrame.rootFrameId,
+      language,
+      translationProvider,
+    );
   }
 
   async function onNodeSelect(nodeId: string) {
@@ -85,57 +105,59 @@ export default function LocalizedFrameGroup({
 
   return (
     <>
-      
-      <div className={`column-1 layer-group-header nodes-parent${selectedNodes[rootFrameId]?.directSelection ? ' selected' : ''}`} onClick={() => { onNodeSelect(rootFrameId); }}>
+      <div
+        className={`column-1 layer-group-header nodes-parent${
+          selectedNodes[rootFrameId]?.directSelection ? ' selected' : ''
+        }`}
+        onClick={() => {
+          onNodeSelect(rootFrameId);
+        }}
+      >
         <div className="spacer" />
         <div className="element-symbol">
           <div className="svg-container number-sign-svg" />
         </div>
-        <div className="element-name font-body-24-bold">
-          {rootFrameName}
-        </div>
-        <div
-          className="row-actions"
-        >
+        <div className="element-name font-body-24-bold">{rootFrameName}</div>
+        <div className="row-actions">
           <Select
             tooltip="Container Frame Langueage"
             placeholder="Select item"
             checkmark
             iconClass="switch-language-svg"
-            onChange={(value) => { onLanguageSelectionClick(firstTranslationState, value.value as Locale); }}
+            onChange={(value) => {
+              onLanguageSelectionClick(firstTranslationState, value.value as Locale);
+            }}
             defaultValue={languageOptiones.find((opt) => opt.value === rootFrameLanguage?.value)}
             getOptions={() => languageOptiones}
           />
-
         </div>
       </div>
       <div className="layer-group-header-sticky-border" />
 
-      {rootFrameLanguage?.value && localizedLabels.map((translationState) => {
-        let selection = 'unselected' as 'unselected' | 'selected' | 'selected-by-parent';
-        if (selectedNodes[translationState.nodeId] !== undefined) {
-          if (selectedNodes[translationState.nodeId].directSelection) {
-            selection = 'selected';
-          } else {
-            selection = 'selected-by-parent';
+      {rootFrameLanguage?.value &&
+        localizedLabels.map((translationState) => {
+          let selection = 'unselected' as 'unselected' | 'selected' | 'selected-by-parent';
+          if (selectedNodes[translationState.nodeId] !== undefined) {
+            if (selectedNodes[translationState.nodeId].directSelection) {
+              selection = 'selected';
+            } else {
+              selection = 'selected-by-parent';
+            }
           }
-        }
 
-        return (
-          <LocalizedLabelListItem
-            showMessage={showMessage}
-            key={translationState.nodeId}
-            figmaRemote={figmaRemote}
-            localizedLabelManager={localizedLabelManager}
-            selected={selection}
-            localizedLabel={translationState}
-          />
-        );
-      })}
+          return (
+            <LocalizedLabelListItem
+              showMessage={showMessage}
+              key={translationState.nodeId}
+              figmaRemote={figmaRemote}
+              localizedLabelManager={localizedLabelManager}
+              selected={selection}
+              localizedLabel={translationState}
+            />
+          );
+        })}
 
-      {rootFrameLanguage?.value === undefined
-              && <div>choose current design language</div>}
-
+      {rootFrameLanguage?.value === undefined && <div>choose current design language</div>}
     </>
   );
 }

@@ -7,16 +7,16 @@ export default class GoogleTranslator {
     if (/^\s*$/.test(text) || text === '') {
       return text;
     }
-    
+
     (async () => {
-      mixpanel.people.increment(`characters_translated_from_${sourceLanguage}`, text.length);
-      mixpanel.people.increment(`characters_translated_to_${targetLanguage}`, text.length);
-      mixpanel.people.increment('characters_translated_total', text.length);
+      mixpanel.people?.increment?.(`characters_translated_from_${sourceLanguage}`, text.length);
+      mixpanel.people?.increment?.(`characters_translated_to_${targetLanguage}`, text.length);
+      mixpanel.people?.increment?.('characters_translated_total', text.length);
     })();
-    
+
     // replace placeholder with numbers to not translate them
 
-    const pattern = /(<ph type="([^"]*)")( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*)<\/ph>)/g;
+    const pattern = /(<ph( type="([^"]*)"=)?( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*))<\/ph>)/g;
 
     const placeholderIndexMapping = [] as string[];
     let currentIndex = 0;
@@ -78,10 +78,12 @@ export default class GoogleTranslator {
           },
         });
       } else {
-        const resultMessage = translationResults[0][0][0];
-        translatedSentences.push(resultMessage.split('{{dot}}').join('.').split('{{route}}').join('#')
-          .split('{{newline}}')
-          .join('\n'));
+        for (let i = 0; i < translationResults[0].length; i += 1) {
+          const resultMessage = translationResults[0][i][0];
+          translatedSentences.push(resultMessage.split('{{dot}}').join('.').split('{{route}}').join('#')
+            .split('{{newline}}')
+            .join('\n'));
+        }
       }
     }
 

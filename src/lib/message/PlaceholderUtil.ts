@@ -34,7 +34,7 @@ export default class PlaceholderHelper {
     return placeholderMatches;
   }
 
-  /// accespts an attributes strig
+  /// accespts an attributes string
   static extractFromRawHtml(name: string, attributeString: string | undefined) {
     const attributeRegex = /(\w+)(?:="([^"]*)")?|(\w+)(?=\s|$)/g;
     const attributes = {} as any;

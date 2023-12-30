@@ -178,14 +178,15 @@ export default function LocalizedLabelsListView({
           <div className="top-border" />
 
           {[...parentIds].map((parentId) => (
-            <div>
+            <div
+              key={parentId} >
               <LocalizedFrameGroup
                 showMessage={showMessage}
                 localizedLabels={localizedLabels.filter((l) => l.rootFrameId === parentId).sort((a, b) => Math.hypot(a.x, a.y * (2) - Math.hypot(b.x, b.y * 2)))}
                 selectedNodes={selection}
                 figmaRemote={figmaRemote}
                 localizedLabelManager={localizedLabelManager}
-                key={parentId}
+                
               />
             </div>
           ))}

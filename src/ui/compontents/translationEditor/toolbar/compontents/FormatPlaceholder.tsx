@@ -74,7 +74,7 @@ export default function FormatPlaceholder({
 
     if (currentPlaceholderName) {
       const parameterName = currentPlaceholderName;
-      const parameterValue = formats[format] && formats[format].name ? parameterValues[formats[format].name].value : editor.getText(range?.index, range?.length!);
+      const parameterValue = formats[format] && formats[format].name ? parameterValues[formats[format].name].value : (editor as any).getText({ index: range?.index, length: range?.length! });
       const parameterType = 'string';
 
       setParameterValue(parameterName, parameterValue, false);

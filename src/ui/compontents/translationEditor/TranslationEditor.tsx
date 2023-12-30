@@ -26,8 +26,6 @@ import TranslationView from './TranslationView';
 import { MessageParameterValues } from '../../../lib/message/MessageParameterValues';
 import { OverlayScrollbarsComponent } from '../overlayscrollbar';
 
-// import ParrotTheme from './quill/QuillTheme';
-// import ParrotToolbar from './quill/Toolbar';
 import PlaceholderBlot from './blots/PlaceholderBlot';
 import BoldBlot from './blots/BoldBlot';
 import { MyListContainer, MyListItem } from './blots/MyList';

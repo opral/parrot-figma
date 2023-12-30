@@ -20,7 +20,6 @@ import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabel
 
 import FEATURES_FLAGS from '../../featuretoggle';
 import Drawer from '../../compontents/drawer/Drawer';
-import TextField from '../../compontents/textfield/TextField';
 import { MessageParameterValues } from '../../../lib/message/MessageParameterValues';
 // import ReactQuill from 'react-quill';
 

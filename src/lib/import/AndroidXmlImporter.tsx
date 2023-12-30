@@ -36,7 +36,7 @@ export default class AndroidXmlImporter {
     if (str.startsWith('"') && str.endsWith('"')) {
       quotWrapped = true;
       str = str.slice(1, -1);
-    } if (str.startsWith('&quot;') && str.endsWith('&quot;')) {
+    } else if (str.startsWith('&quot;') && str.endsWith('&quot;')) {
       quotWrapped = true;
       str = str.slice(6, -6);
     }

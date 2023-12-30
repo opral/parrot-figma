@@ -1,4 +1,4 @@
-import { UserRole } from "./UsageManager";
+import { UserRole } from './UsageManager';
 
 export interface UserRoleRequest {
   time: number;

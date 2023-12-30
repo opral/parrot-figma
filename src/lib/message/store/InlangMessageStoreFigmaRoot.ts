@@ -8,8 +8,8 @@ import { Message } from '@inlang/sdk';
 import { Locale } from '../variants/Locale';
 
 export interface Config {
-  refLanguage?: Locale,
-  enabledLanguages?: Locale[]
+  refLanguage?: Locale;
+  enabledLanguages?: Locale[];
 }
 
 const defaultStringFillinValue = 'Loren Impsum';
@@ -39,12 +39,12 @@ export class InlangMessageStore {
   public static messagePrefix = 'prt_im__';
 
   // contains a map from messageId to message hash
-  messageState = { } as {
-    [messageId: string]: string
+  messageState = {} as {
+    [messageId: string]: string;
   };
 
   messageIdToLabels = {} as {
-    [messageId: string]: Set<string>
+    [messageId: string]: Set<string>;
   };
 
   constructor(asProxy: boolean) {
@@ -56,17 +56,21 @@ export class InlangMessageStore {
   // eslint-disable-next-line class-methods-use-this
   forwardDocumentChanges(event: any) {
     for (const change of event.documentChanges) {
-      if (change.origin === 'LOCAL'
-      || change.type !== 'PROPERTY_CHANGE'
-      || change.node.id !== '0:0'
-      || change.properties.indexOf('pluginData') === -1) {
+      if (
+        change.origin === 'LOCAL' ||
+        change.type !== 'PROPERTY_CHANGE' ||
+        change.node.id !== '0:0' ||
+        change.properties.indexOf('pluginData') === -1
+      ) {
         // eslint-disable-next-line no-continue
         continue;
       }
-      
+
       // TODO #25 CACHING implement for multi user - keep tracK of changes in config as well
       // eslint-disable-next-line default-case
-      const currentFileStorageKeys = figma.root.getPluginDataKeys().filter((value) => value.indexOf(InlangMessageStore.messagePrefix) === 0);
+      const currentFileStorageKeys = figma.root
+        .getPluginDataKeys()
+        .filter((value) => value.indexOf(InlangMessageStore.messagePrefix) === 0);
       let currentCachedMessageIds = Object.keys(this.messageState);
 
       const changedKeys = {
@@ -81,7 +85,10 @@ export class InlangMessageStore {
         if (this.messageState[id] === undefined) {
           changedKeys.added.push(id);
         } else {
-          if (blake.blake2sHex(encoder.encode(figma.root.getPluginData(currentFileStorageKey))) !== this.messageState[id]) {
+          if (
+            blake.blake2sHex(encoder.encode(figma.root.getPluginData(currentFileStorageKey))) !==
+            this.messageState[id]
+          ) {
             changedKeys.updated.push(id);
           }
 
@@ -94,9 +101,11 @@ export class InlangMessageStore {
         delete this.messageState[deletedKey];
       }
 
-      if (changedKeys.deleted.length > 0
-        || changedKeys.added.length > 0
-        || changedKeys.updated.length > 0) {
+      if (
+        changedKeys.deleted.length > 0 ||
+        changedKeys.added.length > 0 ||
+        changedKeys.updated.length > 0
+      ) {
         figma.ui.postMessage({
           target: 'TranslationKeyStore',
           type: 'cacheUpdate',
@@ -116,7 +125,7 @@ export class InlangMessageStore {
       } as Config;
     }
 
-    return (JSON.parse(messageRaw) as Config);
+    return JSON.parse(messageRaw) as Config;
   }
 
   async getConfig() {
@@ -128,7 +137,10 @@ export class InlangMessageStore {
   }
 
   async saveMessage(message: Message): Promise<void> {
-    figma.root.setPluginData(InlangMessageStore.messagePrefix + message.id, JSON.stringify(message));
+    figma.root.setPluginData(
+      InlangMessageStore.messagePrefix + message.id,
+      JSON.stringify(message),
+    );
   }
 
   async deleteMessage(id: string): Promise<void> {

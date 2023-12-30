@@ -8,9 +8,8 @@
 
 // This shows the HTML page in "ui.html".
 
-
 import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
-import MigrationManager from '../lib/migrations/MigrationManager'
+import MigrationManager from '../lib/migrations/MigrationManager';
 
 import FigmaUtil from '../shared/FigmaUtil';
 import FigmaHelper from '../shared/FigmaHelper';
@@ -29,27 +28,32 @@ figma.root.setRelaunchData({ open: 'Let Your Design Speak all Languages' });
 const migrationManager = new MigrationManager(figmaRemote);
 migrationManager.migrate();
 
-WindowManagerSandbox.init({
-  bottomSheet: {
-    height: 200,
+WindowManagerSandbox.init(
+  {
+    bottomSheet: {
+      height: 200,
+    },
+    introWindowSize: {
+      centerHeight: 488,
+      height: 364,
+      width: 415,
+    },
+    windowSize: {
+      width: 800,
+      height: 600,
+    },
+    windowMode: WindowMode.IntroWindow,
   },
-  introWindowSize: {
-    centerHeight: 488,
-    height: 364,
-    width: 415,
+  !fileConfigured || !introShownToUser ? WindowMode.IntroWindow : undefined,
+);
+
+const asyncFunctionProxy = new AsyncFunctionProxy(
+  'SandboxAsyncFunctionProxy',
+  (data: any) => {
+    figma.ui.postMessage(data);
   },
-  windowSize: {
-    width: 800,
-    height: 600,
-  },
-  windowMode: WindowMode.IntroWindow,
-}, (!fileConfigured || !introShownToUser) ? WindowMode.IntroWindow : undefined);
-
-
-
-const asyncFunctionProxy = new AsyncFunctionProxy('SandboxAsyncFunctionProxy', (data: any) => {
-  figma.ui.postMessage(data);
-}, figma.ui);
+  figma.ui,
+);
 
 asyncFunctionProxy.registerInstance(figmaRemote);
 
@@ -66,12 +70,10 @@ const figmaHelper = new FigmaHelper(figma);
 asyncFunctionProxy.registerInstance(figmaHelper);
 
 figma.on('selectionchange', () => {
-  figma.ui.postMessage(
-    {
-      type: 'event',
-      name: 'selectionchange',
-    },
-  );
+  figma.ui.postMessage({
+    type: 'event',
+    name: 'selectionchange',
+  });
 });
 
 // Calls to "parent.postMessage" from within the HTML page will trigger this

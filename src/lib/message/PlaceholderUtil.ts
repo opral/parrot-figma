@@ -1,7 +1,9 @@
 import { Placeholder } from './Placeholder';
 
 export default class PlaceholderHelper {
-  static extractPlaceholdersFromPatterHTML(text: string): { start: number, length: number, placeholder: Placeholder }[] {
+  static extractPlaceholdersFromPatterHTML(
+    text: string,
+  ): { start: number; length: number; placeholder: Placeholder }[] {
     // <ph type="s" format=".3" arg="" unnamed >unnamed_arg</ph>
     const pattern = /<ph([^>])*>([^<]*)<\/ph>/g;
 
@@ -17,12 +19,15 @@ export default class PlaceholderHelper {
     // name, argumentPosition, unnamed, decimalplaces
     //
 
-    const placeholderMatches = [] as { start: number, length: number, placeholder: Placeholder }[];
+    const placeholderMatches = [] as { start: number; length: number; placeholder: Placeholder }[];
 
     let match;
     // eslint-disable-next-line no-cond-assign
     while ((match = pattern.exec(text)) !== null) {
-      const placeholder = this.extractFromRawHtml(match[patternGroups.name], match[patternGroups.attributes]);
+      const placeholder = this.extractFromRawHtml(
+        match[patternGroups.name],
+        match[patternGroups.attributes],
+      );
 
       placeholderMatches.push({
         start: match.index,
@@ -43,7 +48,10 @@ export default class PlaceholderHelper {
 
     let match;
     // eslint-disable-next-line no-cond-assign
-    while (attributeString !== undefined && (match = attributeRegex.exec(attributeString)) !== null) {
+    while (
+      attributeString !== undefined &&
+      (match = attributeRegex.exec(attributeString)) !== null
+    ) {
       const [, attrWithVal, value, attrWithoutVal] = match;
       const attributeName = attrWithVal || attrWithoutVal;
 
@@ -53,7 +61,7 @@ export default class PlaceholderHelper {
         }
         options[attributeName.substring(optionsPrefix.length)] = value!;
       } else {
-      // If the attribute has a value, use it; otherwise, set it to true
+        // If the attribute has a value, use it; otherwise, set it to true
         attributes[attributeName] = value !== undefined ? value : true;
       }
     }
@@ -61,7 +69,8 @@ export default class PlaceholderHelper {
     const foundPlaceholder = {
       name,
       named: attributes.unnamed === undefined || !attributes.unnamed,
-      specifiedArgumentPosition: attributes.arg !== undefined ? parseInt(attributes.arg, 10) : undefined,
+      specifiedArgumentPosition:
+        attributes.arg !== undefined ? parseInt(attributes.arg, 10) : undefined,
       formatFunctionName: attributes.formatFn,
       options,
     } as Placeholder;

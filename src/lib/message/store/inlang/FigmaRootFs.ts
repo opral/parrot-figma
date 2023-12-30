@@ -11,40 +11,40 @@ import TextEncoding from 'text-encoding';
  * Node API reference https://nodejs.org/api/fs.html#fspromisesaccesspath-mode
  */
 type NodeishFilesystem = {
-  writeFile(path: string, data: string | Uint8Array, options?: { mode: number }): Promise<void>
-  readFile(path: string): Promise<Uint8Array>
-  readFile(path: string, options: { encoding: 'utf-8' | 'binary' }): Promise<string>
-  readdir(path: string): Promise<string[]>
+  writeFile(path: string, data: string | Uint8Array, options?: { mode: number }): Promise<void>;
+  readFile(path: string): Promise<Uint8Array>;
+  readFile(path: string, options: { encoding: 'utf-8' | 'binary' }): Promise<string>;
+  readdir(path: string): Promise<string[]>;
   /**
-    * https://nodejs.org/api/fs.html#fspromisesmkdirpath-options
-    *
-    * Upon success, fulfills with undefined if recursive is false, or the first directory path created if recursive is true.
-    */
-  mkdir(path: string, options?: { recursive: boolean }): Promise<string | undefined>
-  rm(path: string, options?: { recursive: boolean }): Promise<void>
-  rmdir(path: string): Promise<void>
-  symlink(target: string, path: string): Promise<void>
-  unlink(path: string): Promise<void>
-  readlink(path: string): Promise<string>
-  stat(path: string): Promise<NodeishStats>
-  lstat(path: string): Promise<NodeishStats>
+   * https://nodejs.org/api/fs.html#fspromisesmkdirpath-options
+   *
+   * Upon success, fulfills with undefined if recursive is false, or the first directory path created if recursive is true.
+   */
+  mkdir(path: string, options?: { recursive: boolean }): Promise<string | undefined>;
+  rm(path: string, options?: { recursive: boolean }): Promise<void>;
+  rmdir(path: string): Promise<void>;
+  symlink(target: string, path: string): Promise<void>;
+  unlink(path: string): Promise<void>;
+  readlink(path: string): Promise<string>;
+  stat(path: string): Promise<NodeishStats>;
+  lstat(path: string): Promise<NodeishStats>;
 };
 
 // type FileData = string | Uint8Array;
 
 export type NodeishStats = {
-  ctimeMs: number
-  mtimeMs: number
-  dev: number
-  ino: number
-  mode: number
-  uid: number
-  gid: number
-  size: number
-  isFile(): boolean
-  isDirectory(): boolean
-  isSymbolicLink(): boolean
-  symlinkTarget?: string
+  ctimeMs: number;
+  mtimeMs: number;
+  dev: number;
+  ino: number;
+  mode: number;
+  uid: number;
+  gid: number;
+  size: number;
+  isFile(): boolean;
+  isDirectory(): boolean;
+  isSymbolicLink(): boolean;
+  symlinkTarget?: string;
 };
 
 class FilesystemError extends Error {
@@ -124,7 +124,7 @@ export function createNodeishMemoryFs(): NodeishFilesystem {
       options?: Parameters<NodeishFilesystem['writeFile']>[2],
     ) {
       const encoder = new TextEncoding.TextEncoder();
-      
+
       path = normalPath(path);
       const parentDir: Inode | undefined = fsMap.get(getDirname(path));
 
@@ -199,7 +199,9 @@ export function createNodeishMemoryFs(): NodeishFilesystem {
       const target: Inode | undefined = fsMap.get(path);
       const parentDir: Inode | undefined = fsMap.get(getDirname(path));
 
-      if (parentDir === undefined || target === undefined) { throw new FilesystemError('ENOENT', path, 'rm'); }
+      if (parentDir === undefined || target === undefined) {
+        throw new FilesystemError('ENOENT', path, 'rm');
+      }
 
       if (parentDir instanceof Uint8Array) throw new FilesystemError('ENOTDIR', path, 'rm');
 
@@ -230,9 +232,11 @@ export function createNodeishMemoryFs(): NodeishFilesystem {
       const target: Inode | undefined = fsMap.get(path);
       const parentDir: Inode | undefined = fsMap.get(getDirname(path));
 
-      if (parentDir === undefined || target === undefined) throw new FilesystemError('ENOENT', path, 'rmdir');
+      if (parentDir === undefined || target === undefined)
+        throw new FilesystemError('ENOENT', path, 'rmdir');
 
-      if (parentDir instanceof Uint8Array || target instanceof Uint8Array) throw new FilesystemError('ENOTDIR', path, 'rmdir');
+      if (parentDir instanceof Uint8Array || target instanceof Uint8Array)
+        throw new FilesystemError('ENOTDIR', path, 'rmdir');
 
       if (target.size) throw new FilesystemError('ENOTEMPTY', path, 'rmdir');
 
@@ -252,9 +256,11 @@ export function createNodeishMemoryFs(): NodeishFilesystem {
 
       if (fsMap.get(path)) throw new FilesystemError('EEXIST', path, 'symlink', target);
 
-      if (parentDir instanceof Uint8Array) throw new FilesystemError('ENOTDIR', path, 'symlink', target);
+      if (parentDir instanceof Uint8Array)
+        throw new FilesystemError('ENOTDIR', path, 'symlink', target);
 
-      if (targetInode === undefined || parentDir === undefined) throw new FilesystemError('ENOENT', path, 'symlink', target);
+      if (targetInode === undefined || parentDir === undefined)
+        throw new FilesystemError('ENOENT', path, 'symlink', target);
 
       parentDir.add(getBasename(path));
       newStatEntry(path, fsStats, 2, 0o777, target);
@@ -267,7 +273,8 @@ export function createNodeishMemoryFs(): NodeishFilesystem {
       const target: Inode | undefined = fsMap.get(path);
       const parentDir: Inode | undefined = fsMap.get(getDirname(path));
 
-      if (parentDir === undefined || target === undefined) throw new FilesystemError('ENOENT', path, 'unlink');
+      if (parentDir === undefined || target === undefined)
+        throw new FilesystemError('ENOENT', path, 'unlink');
 
       if (parentDir instanceof Uint8Array) throw new FilesystemError('ENOTDIR', path, 'unlink');
 
@@ -283,7 +290,8 @@ export function createNodeishMemoryFs(): NodeishFilesystem {
 
       if (linkStats === undefined) throw new FilesystemError('ENOENT', path, 'readlink');
 
-      if (linkStats.symlinkTarget === undefined) throw new FilesystemError('EINVAL', path, 'readlink');
+      if (linkStats.symlinkTarget === undefined)
+        throw new FilesystemError('EINVAL', path, 'readlink');
 
       return linkStats.symlinkTarget;
     },

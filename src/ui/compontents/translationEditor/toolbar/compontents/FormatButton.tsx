@@ -10,9 +10,7 @@ type FormatButtonProps = {
   // onClick: () => void
   formats: any;
 };
-export default function FormatButton({
-  format, value, icon, editor, formats,
-}: FormatButtonProps) {
+export default function FormatButton({ format, value, icon, editor, formats }: FormatButtonProps) {
   let active: boolean;
   if (value === undefined) {
     active = formats[format] !== undefined;
@@ -44,7 +42,9 @@ export default function FormatButton({
 
   return (
     <button className={`ql-button ${active ? ' ql-active' : ''}`} type="button" onClick={onClick}>
-      <div className="close svg-container"><div className={icon} /></div>
+      <div className="close svg-container">
+        <div className={icon} />
+      </div>
     </button>
   );
 }

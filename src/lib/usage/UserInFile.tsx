@@ -1,5 +1,5 @@
-import { Locale } from "../message/variants/Locale";
-import { UserRole } from "./UsageManager";
+import { Locale } from '../message/variants/Locale';
+import { UserRole } from './UsageManager';
 
 export interface UserInFile {
   userId: string;

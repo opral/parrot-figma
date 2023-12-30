@@ -4,7 +4,7 @@ import Emitter from 'quill/core/emitter';
 import { useEffect, useState } from 'react';
 
 type FormatLinkButtonProps = {
-  toolbarActive: boolean,
+  toolbarActive: boolean;
   format: string;
   value?: string;
   icon: string;
@@ -14,14 +14,21 @@ type FormatLinkButtonProps = {
   formats: any;
 };
 export default function FormatLinkButton({
-  format, value, icon, editor, formats, placeholder, toolbarActive,
+  format,
+  value,
+  icon,
+  editor,
+  formats,
+  placeholder,
+  toolbarActive,
 }: FormatLinkButtonProps) {
   const [inputShown, setInputShown] = useState(false);
 
   function fromFormat(form: any) {
     if (form === undefined) {
       return '';
-    } if (typeof form === 'string') {
+    }
+    if (typeof form === 'string') {
       return form;
     }
     return 'Mixed';
@@ -57,7 +64,11 @@ export default function FormatLinkButton({
         return rawValue;
       }
       // invalid mail adress
-    } else if (rawValue.startsWith('http://') || rawValue.startsWith('https://') || rawValue.startsWith('/')) {
+    } else if (
+      rawValue.startsWith('http://') ||
+      rawValue.startsWith('https://') ||
+      rawValue.startsWith('/')
+    ) {
       const urlToCheck = rawValue.startsWith('/') ? `https://helperdomain${rawValue}` : rawValue;
       if (urlRegex.test(urlToCheck)) {
         return rawValue;
@@ -106,11 +117,23 @@ export default function FormatLinkButton({
 
   return (
     <>
-      <button className={`ql-button${formats[format] !== undefined ? ' ql-active' : ''}`} type="button" onClick={onClick}>
-        <div className="close svg-container"><div className={icon} /></div>
+      <button
+        className={`ql-button${formats[format] !== undefined ? ' ql-active' : ''}`}
+        type="button"
+        onClick={onClick}
+      >
+        <div className="close svg-container">
+          <div className={icon} />
+        </div>
       </button>
       <div className="ql-input-overlay" style={{ display: inputShown ? undefined : 'none' }}>
-        <input type="text" placeholder={placeholder} onKeyDown={onkeydown} onChange={handleChange} value={currentValue} />
+        <input
+          type="text"
+          placeholder={placeholder}
+          onKeyDown={onkeydown}
+          onChange={handleChange}
+          value={currentValue}
+        />
       </div>
     </>
   );

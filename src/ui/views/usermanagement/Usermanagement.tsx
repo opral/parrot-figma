@@ -5,12 +5,10 @@ import UserManagerUI from '../../../lib/usage/UsageManagerUI';
 import { PluginUser } from '../../../lib/usage/UsageManager';
 
 type UserManagementProps = {
-  userManager: UserManagerUI
+  userManager: UserManagerUI;
 };
 
-export default function UserManagement({
-  userManager,
-}: UserManagementProps) {
+export default function UserManagement({ userManager }: UserManagementProps) {
   const [users, setUsers] = useState(undefined as PluginUser[] | undefined);
   const [currentUserId, setCurrentUserId] = useState(undefined as string | undefined);
 
@@ -34,22 +32,20 @@ export default function UserManagement({
 
   return (
     <div>
-      { users !== undefined && users.map((user) => (
-        <div key={user.userId}>
-          <div>
-            <img src={user.photoUrl ?? 'nope'} />
-          </div>
-          <div>
+      {users !== undefined &&
+        users.map((user) => (
+          <div key={user.userId}>
             <div>
-              <b>Martin Lysk</b>
-              {' '}
-              { currentUserId === user.userId && <span> (you)</span>}
+              <img src={user.photoUrl ?? 'nope'} />
             </div>
-            <span>{user.userRole}</span>
+            <div>
+              <div>
+                <b>Martin Lysk</b> {currentUserId === user.userId && <span> (you)</span>}
+              </div>
+              <span>{user.userRole}</span>
+            </div>
           </div>
-
-        </div>
-      ))}
+        ))}
     </div>
   );
 }

@@ -11,7 +11,10 @@ export default class AppleDictFileImporter {
     return text; // TODO #8 map all ios placeholders to plugin format
   }
 
-  static toImportObject(filename: string, stringsdictFileContent: string): ImportMessage[] | undefined {
+  static toImportObject(
+    filename: string,
+    stringsdictFileContent: string,
+  ): ImportMessage[] | undefined {
     const fileNameParts = filename.split('.');
     const fileExtension = fileNameParts[fileNameParts.length - 1];
     if (fileExtension !== 'dict') {
@@ -58,7 +61,8 @@ export default class AppleDictFileImporter {
           // the dict element does not contain a plural rule type
           // add the variant to the message with the 'other' plural rule
           const valueElement = dictElement.querySelector('dict > string');
-          const text = valueElement && valueElement.textContent ? valueElement.textContent : undefined;
+          const text =
+            valueElement && valueElement.textContent ? valueElement.textContent : undefined;
           messages.push({
             name: messageName,
             plural: Plural.OTHER,

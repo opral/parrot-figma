@@ -1,8 +1,6 @@
 /* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
 /* eslint-disable jsx-a11y/no-static-element-interactions */
-import React, {
-  useEffect, useState, useRef,
-} from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import OutsideClickHandler from 'react-outside-click-handler';
 import './select.css';
 import { createPortal } from 'react-dom';
@@ -21,9 +19,9 @@ export interface SelectOption {
 
 export interface SelectProps {
   className?: string;
-  iconClass?: string,
-  tooltip?: string,
-  checkmark: boolean,
+  iconClass?: string;
+  tooltip?: string;
+  checkmark: boolean;
   getOptions: () => SelectOption[];
   placeholder: string;
   isDisabled?: boolean;
@@ -77,12 +75,15 @@ export default function Select({
       threshol.push(i);
     }
 
-    const intersectionObserver = new IntersectionObserver((entries: IntersectionObserverEntry[]) => {
-      setViewPortHeight(entries[0].intersectionRect.height);
-    }, {
-      root: null, // default is the viewport
-      threshold: threshol, // percentage of target's visible area. Triggers "onIntersection"
-    });
+    const intersectionObserver = new IntersectionObserver(
+      (entries: IntersectionObserverEntry[]) => {
+        setViewPortHeight(entries[0].intersectionRect.height);
+      },
+      {
+        root: null, // default is the viewport
+        threshold: threshol, // percentage of target's visible area. Triggers "onIntersection"
+      },
+    );
 
     const resizeObserver = new ResizeObserver(() => {
       // reobserve the intersection to get the correct sizing
@@ -113,8 +114,12 @@ export default function Select({
 
   function updateScrollButtons() {
     if (
-      (Math.abs((menuWrapperRef.current!.scrollTop - (menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight))) <= 2)
-    || menuRef.current?.clientHeight === menuWrapperRef.current?.clientHeight) {
+      Math.abs(
+        menuWrapperRef.current!.scrollTop -
+          (menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight),
+      ) <= 2 ||
+      menuRef.current?.clientHeight === menuWrapperRef.current?.clientHeight
+    ) {
       // at bottom
       setCanScrollDown(false);
     } else {
@@ -148,19 +153,28 @@ export default function Select({
       const menuPadding = 8;
       const menuEntryHeight = 24;
       const controlMenuHeightDif = controllHeight - menuEntryHeight;
-      const maxSpaceAbove = rect.top + (controlMenuHeightDif / 2);
-      const maxSpaceBelow = viewPortHeight - rect.top - (controlMenuHeightDif / 2) - menuEntryHeight;
+      const maxSpaceAbove = rect.top + controlMenuHeightDif / 2;
+      const maxSpaceBelow = viewPortHeight - rect.top - controlMenuHeightDif / 2 - menuEntryHeight;
 
-      let menuPositionIndex = options.findIndex((selectOption) => selectedOption !== undefined && selectOption.value === selectedOption?.value);
+      let menuPositionIndex = options.findIndex(
+        (selectOption) =>
+          selectedOption !== undefined && selectOption.value === selectedOption?.value,
+      );
       // if nothing is selected - make it the first element in the list;
       menuPositionIndex = menuPositionIndex >= 0 ? menuPositionIndex : 0;
 
-      const selectedDiv = menuWrapperRef.current!.childNodes[0].childNodes[menuPositionIndex] as HTMLDivElement;
+      const selectedDiv = menuWrapperRef.current!.childNodes[0].childNodes[
+        menuPositionIndex
+      ] as HTMLDivElement;
 
       const spaceNeededOnTop = selectedDiv ? selectedDiv?.offsetTop : 0;
-      const spaceNeededOnBottom = (options.length - menuPositionIndex - 1) * menuEntryHeight + menuPadding;
+      const spaceNeededOnBottom =
+        (options.length - menuPositionIndex - 1) * menuEntryHeight + menuPadding;
 
-      let height = Math.min(maxSpaceAbove, spaceNeededOnTop) + menuEntryHeight + Math.min(maxSpaceBelow, spaceNeededOnBottom);
+      let height =
+        Math.min(maxSpaceAbove, spaceNeededOnTop) +
+        menuEntryHeight +
+        Math.min(maxSpaceBelow, spaceNeededOnBottom);
 
       let top = maxSpaceAbove - spaceNeededOnTop;
 
@@ -175,7 +189,8 @@ export default function Select({
       menuContainerRef.current!.style.top = `${top}px`;
 
       const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-      const isOverlappingRight = menuContainerRef.current!.getBoundingClientRect().right - viewportWidth;
+      const isOverlappingRight =
+        menuContainerRef.current!.getBoundingClientRect().right - viewportWidth;
 
       if (isOverlappingRight > 0) {
         menuContainerRef.current!.style.left = `${rect.left - isOverlappingRight - 8}px`;
@@ -209,24 +224,28 @@ export default function Select({
         top: menuContainerRef.current!.offsetTop,
       };
 
-      const setContainer = (pos: { height: Number, top: Number }) => {
+      const setContainer = (pos: { height: Number; top: Number }) => {
         menuContainerRef.current!.style.top = `${pos.top}px`;
         menuContainerRef.current!.style.height = `${pos.height}px`;
 
         updateScrollButtons();
       };
 
-      if (scrollDiff < 0) { // scroll down (container is at the top of the screen
+      if (scrollDiff < 0) {
+        // scroll down (container is at the top of the screen
         const pxScrolledDown = -scrollDiff;
         // setContainerBox((box) => {
 
         // setContainerBox((box) => {
-        if (box.top - pxScrolledDown < 0 && (box.height + pxScrolledDown) < (wrapperMaxHeight.current)) {
+        if (
+          box.top - pxScrolledDown < 0 &&
+          box.height + pxScrolledDown < wrapperMaxHeight.current
+        ) {
           setContainer({
             height: box.height + pxScrolledDown,
             top: 0,
           });
-        } else if (box.height + pxScrolledDown > (wrapperMaxHeight.current)) {
+        } else if (box.height + pxScrolledDown > wrapperMaxHeight.current) {
           // scrolling should do the trick?
           setContainer({
             height: wrapperMaxHeight.current,
@@ -241,7 +260,8 @@ export default function Select({
           menuWrapperRef.current!.scrollTop = lastScrollPos.current;
         }
         // });
-      } else if (scrollDiff > 0) { // scroll up (container is at the bottom of the screen)
+      } else if (scrollDiff > 0) {
+        // scroll up (container is at the bottom of the screen)
         const pxScrolledUp = scrollDiff;
 
         if (box.top - pxScrolledUp > 0) {
@@ -251,7 +271,7 @@ export default function Select({
             top: box.top - pxScrolledUp,
           });
           menuWrapperRef.current!.scrollTop = lastScrollPos.current;
-        } else if (box.height + pxScrolledUp > (wrapperMaxHeight.current)) {
+        } else if (box.height + pxScrolledUp > wrapperMaxHeight.current) {
           setContainer({
             height: wrapperMaxHeight.current,
             top: 0,
@@ -278,7 +298,9 @@ export default function Select({
       menuWrapperRef.current.addEventListener('scroll', scrollHandler);
     }
 
-    return () => { menuWrapperRef.current?.removeEventListener('scroll', scrollHandler); };
+    return () => {
+      menuWrapperRef.current?.removeEventListener('scroll', scrollHandler);
+    };
   }, [options, isExpanded, viewPortHeight, menuWrapperRef]);
 
   /* useEffect(() => {
@@ -310,9 +332,7 @@ export default function Select({
     onSelectOption(defaultValue);
   }, [defaultValue]);
 
-  useEffect(() => {
-
-  });
+  useEffect(() => {});
 
   useEffect(() => {
     // Handler to call on window resize
@@ -418,40 +438,35 @@ export default function Select({
       onOutsideClick={handleOutsideClick}
       disabled={!isExpanded}
     >
-
       <div
         className={`select-menu ${className}`}
         data-tooltip-content={!isExpanded ? tooltip : undefined}
       >
         <button
           ref={buttonRef}
-          className={`select-menu__button ${expandButtonClass} ${disabledColorClass} ${selectedOption ? '' : 'placeholder'}`}
+          className={`select-menu__button ${expandButtonClass} ${disabledColorClass} ${
+            selectedOption ? '' : 'placeholder'
+          }`}
           onClick={handleExpandClick}
           disabled={isDisabled}
           title={selectedOption?.title}
           type="button"
         >
-          {iconClass !== undefined && (
-            <div className={`svg-container ${iconClass}`} />
-          )}
-          {iconClass === undefined && (
-            <div className="select-menu__label-spacer" />
-          )}
-          <span className="select-menu__label select-menu__label-part1">
-            {labelPart1}
-          </span>
-          <span className="select-menu__label select-menu__label-part2">
-            {labelPart2}
-          </span>
-          { selectedOption?.tag !== undefined && (
-            <div className="select-menu__item-label-tag">{ selectedOption?.tag }</div>
+          {iconClass !== undefined && <div className={`svg-container ${iconClass}`} />}
+          {iconClass === undefined && <div className="select-menu__label-spacer" />}
+          <span className="select-menu__label select-menu__label-part1">{labelPart1}</span>
+          <span className="select-menu__label select-menu__label-part2">{labelPart2}</span>
+          {selectedOption?.tag !== undefined && (
+            <div className="select-menu__item-label-tag">{selectedOption?.tag}</div>
           )}
           <span className="select-menu__caret svg-container caret-svg" />
         </button>
         {createPortal(
           <div
             ref={menuContainerRef}
-            className={`select-menu__menu_container ${isExpanded ? 'select-menu__menu_container-expanded' : ''}`}
+            className={`select-menu__menu_container ${
+              isExpanded ? 'select-menu__menu_container-expanded' : ''
+            }`}
           >
             <div
               ref={scrollUpRef}
@@ -477,55 +492,50 @@ export default function Select({
                 ref={menuRef}
                 className={`select-menu__menu ${expanListClass} ${disabledColorClass}`}
               >
-                {options
-                && options.map(({
-                  value, label: optionLabel, divider, title, icon, tag,
-                }, i) => (divider ? (
-                  // eslint-disable-next-line react/no-array-index-key  -- options are static and dont change - using the index is fine here
-                  <React.Fragment key={`select-option-divider--${i}`}>
-                    {divider !== true && (
-                    <span className="select-menu__divider-label">
-                      {divider}
-                    </span>
-                    )}
-                    <div
-                      className="select-menu__divider"
-                    />
-                  </React.Fragment>
-                ) : (
-                  <li
-                    className={`select-menu__item ${
-                      selectedOption && selectedOption.value === value
-                        ? 'select-menu__item--selected'
-                        : ''
-                    }`}
-                    // eslint-disable-next-line react/no-array-index-key  -- options are static and dont change - using the index is fine here
-                    key={`select-option--${i}`}
-                    title={title}
-                    onMouseUp={() => handleSelectClick(value)}
-                  >
-                    { true && (
-                    <div className="select-menu__item-check">
-                      { selectedOption && selectedOption.value === value && (
-                      <div className="svg-container menu-checkmark-svg" />
-                      )}
-                    </div>
-                    )}
+                {options &&
+                  options.map(({ value, label: optionLabel, divider, title, icon, tag }, i) =>
+                    divider ? (
+                      // eslint-disable-next-line react/no-array-index-key  -- options are static and dont change - using the index is fine here
+                      <React.Fragment key={`select-option-divider--${i}`}>
+                        {divider !== true && (
+                          <span className="select-menu__divider-label">{divider}</span>
+                        )}
+                        <div className="select-menu__divider" />
+                      </React.Fragment>
+                    ) : (
+                      <li
+                        className={`select-menu__item ${
+                          selectedOption && selectedOption.value === value
+                            ? 'select-menu__item--selected'
+                            : ''
+                        }`}
+                        // eslint-disable-next-line react/no-array-index-key  -- options are static and dont change - using the index is fine here
+                        key={`select-option--${i}`}
+                        title={title}
+                        onMouseUp={() => handleSelectClick(value)}
+                      >
+                        {true && (
+                          <div className="select-menu__item-check">
+                            {selectedOption && selectedOption.value === value && (
+                              <div className="svg-container menu-checkmark-svg" />
+                            )}
+                          </div>
+                        )}
 
-                    { icon && (
-                    <div className="select-menu__item-icon">
-                      <div className={`svg-container ${icon}`} />
-                    </div>
-                    )}
-                    <span className="select-menu__item-label">{optionLabel}</span>
-                    { tag !== undefined && (
-                    <div className="select-menu__item-label-tag">{ tag }</div>
-                    )}
-                  </li>
-                )))}
+                        {icon && (
+                          <div className="select-menu__item-icon">
+                            <div className={`svg-container ${icon}`} />
+                          </div>
+                        )}
+                        <span className="select-menu__item-label">{optionLabel}</span>
+                        {tag !== undefined && (
+                          <div className="select-menu__item-label-tag">{tag}</div>
+                        )}
+                      </li>
+                    ),
+                  )}
               </ul>
             </div>
-
           </div>,
           document.body,
         )}

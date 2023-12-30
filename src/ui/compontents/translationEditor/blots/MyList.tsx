@@ -27,9 +27,7 @@ export class MyListContainer extends ListContainer {
 
   checkMerge() {
     // Only merge if the next list is the same type as this one
-    return (
-      super.checkMerge() && this.domNode.tagName === this.next.domNode.tagName
-    );
+    return super.checkMerge() && this.domNode.tagName === this.next.domNode.tagName;
   }
 }
 
@@ -72,22 +70,18 @@ export class MyListItem extends ListItem {
 
   optimize(context: any) {
     if (
-      this.statics.requiredContainer && !(this.parent instanceof this.statics.requiredContainer)
+      this.statics.requiredContainer &&
+      !(this.parent instanceof this.statics.requiredContainer)
     ) {
       // Insert the format value (bullet, ordered) into wrap arguments
-      this.wrap(
-        this.statics.requiredContainer.blotName,
-        MyListItem.formats(this.domNode),
-      );
+      this.wrap(this.statics.requiredContainer.blotName, MyListItem.formats(this.domNode));
     }
     super.optimize(context);
   }
 
   format(name: string, value: string) {
     // If the list type is different, wrap this list item in a new MyListContainer of that type
-    if (
-      name === ListItem.blotName && value !== MyListItem.formats(this.domNode)
-    ) {
+    if (name === ListItem.blotName && value !== MyListItem.formats(this.domNode)) {
       this.wrap(this.statics.requiredContainer.blotName, value);
     }
     super.format(name, value);

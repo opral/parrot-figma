@@ -5,14 +5,11 @@ import PlaceholderBlot from './blots/PlaceholderBlot';
 import PlaceholderHelper from '../../../lib/message/PlaceholderUtil';
 
 type TranslationViewProps = {
-  match: { start: number, length: number } | undefined
-  text: string
+  match: { start: number; length: number } | undefined;
+  text: string;
 };
 
-export default function TranslationView({
-  match,
-  text,
-}: TranslationViewProps) {
+export default function TranslationView({ match, text }: TranslationViewProps) {
   const result = [];
   const placeholderMatches = PlaceholderHelper.extractPlaceholdersFromPatterHTML(text);
   const fixedPosition = 3; // TODO #8 source this from the keys parameters instead
@@ -29,7 +26,6 @@ export default function TranslationView({
           derivedArgumentPosition={fixedPosition}
           fillIn="TODO"
         />
-
       </React.Fragment>
     );
     placeHolderIndex += 1;
@@ -54,19 +50,22 @@ export default function TranslationView({
   //     </>
   //   );
   // }
- 
-  // 
-  // 
+
+  //
+  //
   let htmlRepresentation = text;
   // TODO #23 updating the reder view
-  htmlRepresentation = htmlRepresentation.split('\n').map((content, index, array) => {
-    if (false && index === (array.length - 1) && content === '') {
-      return '';
-    }
-    if (content === '') {
-      return '<p><br></p>';
-    }
-    return '<p>' + content + '</p>'
-  }).join('');
-  return <span dangerouslySetInnerHTML={{__html:htmlRepresentation }}/>;
+  htmlRepresentation = htmlRepresentation
+    .split('\n')
+    .map((content, index, array) => {
+      if (false && index === array.length - 1 && content === '') {
+        return '';
+      }
+      if (content === '') {
+        return '<p><br></p>';
+      }
+      return '<p>' + content + '</p>';
+    })
+    .join('');
+  return <span dangerouslySetInnerHTML={{ __html: htmlRepresentation }} />;
 }

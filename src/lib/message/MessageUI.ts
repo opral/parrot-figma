@@ -2,6 +2,5 @@
 import { Locale } from './variants/Locale';
 
 export interface MessageStoreUI {
-  getBaseLanugage(): Locale | undefined
+  getBaseLanugage(): Locale | undefined;
 }
-

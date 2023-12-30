@@ -19,9 +19,11 @@ export default class ListOptionTypeUnknown extends BaseTextNodeLintRule {
 
     const styleSegments = textNode.getStyledTextSegments(['indentation', 'listOptions']);
     for (const styleSegment of styleSegments) {
-      if (styleSegment.listOptions.type !== 'NONE'
-        && styleSegment.listOptions.type !== 'ORDERED'
-        && styleSegment.listOptions.type !== 'UNORDERED') {
+      if (
+        styleSegment.listOptions.type !== 'NONE' &&
+        styleSegment.listOptions.type !== 'ORDERED' &&
+        styleSegment.listOptions.type !== 'UNORDERED'
+      ) {
         return true;
       }
     }
@@ -33,9 +35,11 @@ export default class ListOptionTypeUnknown extends BaseTextNodeLintRule {
     const styleSegments = textNode.getStyledTextSegments(['indentation', 'listOptions']);
     for (const styleSegment of styleSegments) {
       // change unsupported listoptions type to none
-      if (styleSegment.listOptions.type !== 'NONE'
-        && styleSegment.listOptions.type !== 'ORDERED'
-        && styleSegment.listOptions.type !== 'UNORDERED') {
+      if (
+        styleSegment.listOptions.type !== 'NONE' &&
+        styleSegment.listOptions.type !== 'ORDERED' &&
+        styleSegment.listOptions.type !== 'UNORDERED'
+      ) {
         textNode.setRangeListOptions(styleSegment.start, styleSegment.end, {
           type: 'NONE',
         });

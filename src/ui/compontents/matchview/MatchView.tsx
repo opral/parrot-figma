@@ -1,14 +1,11 @@
 import * as React from 'react';
 
 type MatchViewProps = {
-  match: { start: number, length: number } | undefined
-  text: string
+  match: { start: number; length: number } | undefined;
+  text: string;
 };
 
-export default function MatchView({
-  match,
-  text,
-}: MatchViewProps) {
+export default function MatchView({ match, text }: MatchViewProps) {
   if (match !== undefined) {
     return (
       <>

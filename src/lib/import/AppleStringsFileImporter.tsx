@@ -40,7 +40,11 @@ export default class AppleStringsFileImporter {
     return replacedString;
   }
 
-  static toImportObject(filename: string, stringsFileContent: string, language: Locale): Message[] | undefined {
+  static toImportObject(
+    filename: string,
+    stringsFileContent: string,
+    language: Locale,
+  ): Message[] | undefined {
     const fileNameParts = filename.split('.');
     const fileExtension = fileNameParts[fileNameParts.length - 1];
     if (fileExtension !== 'strings') {

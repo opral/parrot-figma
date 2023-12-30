@@ -1,7 +1,5 @@
-
 export default interface LinksLoadedEvent {
-    target: 'LocalizedLabelManager',
-    type: 'linksLoaded',
-    keys: string[]
-  }
-  
+  target: 'LocalizedLabelManager';
+  type: 'linksLoaded';
+  keys: string[];
+}

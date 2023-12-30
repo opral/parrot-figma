@@ -4,9 +4,9 @@ import { MessageLinkState, LocalizedLabel } from '../lib/localizedlabels/Localiz
 import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowManagerSandbox';
 
 interface MigrationReport {
-  version: string,
-  message: string,
-  reportedToSentry: boolean,
+  version: string;
+  message: string;
+  reportedToSentry: boolean;
 }
 
 /**
@@ -267,10 +267,15 @@ export default class FigmaUtil {
     const zoomMarginBottom = 30;
 
     const normalizedViewportWidth = virtualViewportRect.width * figma.viewport.zoom;
-    const requiredZoomForWidth = normalizedViewportWidth / (nodeRect.width + zoomMarginLeft + zoomMarginRight);
+    const requiredZoomForWidth =
+      normalizedViewportWidth / (nodeRect.width + zoomMarginLeft + zoomMarginRight);
     const normalizedViewportHeight = virtualViewportRect.height * figma.viewport.zoom;
-    const requiredZoomForHeight = normalizedViewportHeight / (nodeRect.height + zoomMarginTop + zoomMarginBottom);
-    const zoomFactor = Math.min(requiredZoomForWidth, Math.min(requiredZoomForHeight, figma.viewport.zoom));
+    const requiredZoomForHeight =
+      normalizedViewportHeight / (nodeRect.height + zoomMarginTop + zoomMarginBottom);
+    const zoomFactor = Math.min(
+      requiredZoomForWidth,
+      Math.min(requiredZoomForHeight, figma.viewport.zoom),
+    );
 
     if (zoomFactor !== figma.viewport.zoom) {
       figma.viewport.zoom = zoomFactor;
@@ -289,7 +294,12 @@ export default class FigmaUtil {
 
     const viewportRect = figma.viewport.bounds;
     const virtualViewportRect = { ...viewportRect };
-    const heightCorrection = WindowManagerSandbox.instance!.currentWindowMode === WindowMode.BottomSheet ? (WindowManagerSandbox.instance!.bottomSheetHeight + WindowManagerSandbox.instance!.titleBarHeight) / figma.viewport.zoom : 0;
+    const heightCorrection =
+      WindowManagerSandbox.instance!.currentWindowMode === WindowMode.BottomSheet
+        ? (WindowManagerSandbox.instance!.bottomSheetHeight +
+            WindowManagerSandbox.instance!.titleBarHeight) /
+          figma.viewport.zoom
+        : 0;
     virtualViewportRect.height -= heightCorrection;
     // console.log(nodeRect);
     // console.log(viewportRect);
@@ -307,18 +317,28 @@ export default class FigmaUtil {
     if (nodeRect) {
       if (nodeRect.x < virtualViewportRect.x) {
         // node left to the viewport
-        center.x = nodeCenterX + virtualViewportRect.width / 2 - nodeRect.width / 2 - zoomMarginLeft;
+        center.x =
+          nodeCenterX + virtualViewportRect.width / 2 - nodeRect.width / 2 - zoomMarginLeft;
       } else if (nodeRect.x + nodeRect.width > virtualViewportRect.x + virtualViewportRect.width) {
         // node right to the viewoport
-        center.x = nodeCenterX - virtualViewportRect.width / 2 + nodeRect.width / 2 + zoomMarginRight;
+        center.x =
+          nodeCenterX - virtualViewportRect.width / 2 + nodeRect.width / 2 + zoomMarginRight;
       }
 
       if (nodeRect.y < virtualViewportRect.y) {
         // node above of the viewport
         center.y = nodeCenterY + viewportRect.height / 2 - nodeRect.height / 2 - zoomMarginTop;
-      } else if (nodeRect.y + nodeRect.height > virtualViewportRect.y + virtualViewportRect.height) {
+      } else if (
+        nodeRect.y + nodeRect.height >
+        virtualViewportRect.y + virtualViewportRect.height
+      ) {
         // node below the viewport
-        center.y = nodeCenterY - viewportRect.height / 2 + nodeRect.height / 2 + zoomMarginBottom + heightCorrection; // + nodeRect.height + zoomMargin + heightCorrection;
+        center.y =
+          nodeCenterY -
+          viewportRect.height / 2 +
+          nodeRect.height / 2 +
+          zoomMarginBottom +
+          heightCorrection; // + nodeRect.height + zoomMargin + heightCorrection;
       }
     }
 
@@ -368,7 +388,9 @@ export default class FigmaUtil {
   }
 
   async loadFontsForNodesWithId(textNodeIds: string[]) {
-    await this.loadFontForTextNodes(textNodeIds.map((textNodeId) => figma.getNodeById(textNodeId)! as TextNode));
+    await this.loadFontForTextNodes(
+      textNodeIds.map((textNodeId) => figma.getNodeById(textNodeId)! as TextNode),
+    );
   }
 
   private async loadFontForTextNodes(textNodes: TextNode[]) {
@@ -385,13 +407,25 @@ export default class FigmaUtil {
 
   private getFonts(textNode: TextNode, fontArray = [] as FontName[]) {
     if (textNode.characters.length === 0) {
-      if (!fontArray.find((font) => font.family === (textNode.fontName as FontName).family && font.style === (textNode.fontName as FontName).style)) {
+      if (
+        !fontArray.find(
+          (font) =>
+            font.family === (textNode.fontName as FontName).family &&
+            font.style === (textNode.fontName as FontName).style,
+        )
+      ) {
         fontArray.push(textNode.fontName as FontName);
       }
     } else {
       const fontsToLoad = textNode.getRangeAllFontNames(0, textNode.characters.length);
       for (const fontToLoad of fontsToLoad) {
-        if (!fontArray.find((font) => font.family === (fontToLoad as FontName).family && font.style === (fontToLoad as FontName).style)) {
+        if (
+          !fontArray.find(
+            (font) =>
+              font.family === (fontToLoad as FontName).family &&
+              font.style === (fontToLoad as FontName).style,
+          )
+        ) {
           fontArray.push(fontToLoad as FontName);
         }
       }

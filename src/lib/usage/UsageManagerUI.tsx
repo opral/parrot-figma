@@ -10,11 +10,11 @@ export default class UserManagerUI extends EventTarget {
     super();
     this.userManagerSandbox = userManagerSandbox;
 
-    window.addEventListener('message', (event : MessageEvent) => {
+    window.addEventListener('message', (event: MessageEvent) => {
       if (event.data.pluginMessage.target === 'UsageManager') {
         (async () => {
           await this.loadUserState();
-          const usersUpdatedEvent = new CustomEvent('usersUpdated', { });
+          const usersUpdatedEvent = new CustomEvent('usersUpdated', {});
           this.dispatchEvent(usersUpdatedEvent);
         })();
         this.trackFileUsageStatistics();
@@ -25,11 +25,13 @@ export default class UserManagerUI extends EventTarget {
   async loadUserState() {
     const freshUserState = await this.userManagerSandbox.getCurrentUser();
     if (this.currentUser !== undefined) {
-      if (freshUserState.userRole !== this.currentUser.userRole
-        || freshUserState.openUserRoleRequest !== this.currentUser.openUserRoleRequest) {
+      if (
+        freshUserState.userRole !== this.currentUser.userRole ||
+        freshUserState.openUserRoleRequest !== this.currentUser.openUserRoleRequest
+      ) {
         this.currentUser = freshUserState;
         console.log(`user updated:${JSON.stringify(this.currentUser)}`);
-        const currentUserUpdatedEvent = new CustomEvent('currentUserUpdated', { });
+        const currentUserUpdatedEvent = new CustomEvent('currentUserUpdated', {});
         this.dispatchEvent(currentUserUpdatedEvent);
       }
     }
@@ -49,7 +51,10 @@ export default class UserManagerUI extends EventTarget {
         userUsedHowToFile = true;
       }
 
-      maximumNumbersOfUsersPerFile = Math.max(Object.keys(usageEntry.usersInFile).length, maximumNumbersOfUsersPerFile);
+      maximumNumbersOfUsersPerFile = Math.max(
+        Object.keys(usageEntry.usersInFile).length,
+        maximumNumbersOfUsersPerFile,
+      );
     }
 
     if (maximumNumbersOfUsersPerFile > 1) {
@@ -66,7 +71,9 @@ export default class UserManagerUI extends EventTarget {
 
   getCurrentUser() {
     if (this.currentUser === undefined) {
-      throw Error('getCurrentUserRole called before loading initail finished - call await initialLoad() before');
+      throw Error(
+        'getCurrentUserRole called before loading initail finished - call await initialLoad() before',
+      );
     }
     return this.currentUser!;
   }
@@ -90,7 +97,9 @@ export default class UserManagerUI extends EventTarget {
 
     setTimeout(() => {
       // eslint-disable-next-line object-shorthand
-      const currentUserUpdatedEvent = new CustomEvent<any>('planUpgradeNeeded', { detail: feature });
+      const currentUserUpdatedEvent = new CustomEvent<any>('planUpgradeNeeded', {
+        detail: feature,
+      });
       this.dispatchEvent(currentUserUpdatedEvent);
     }, 1);
 

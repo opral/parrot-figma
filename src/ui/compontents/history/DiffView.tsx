@@ -53,5 +53,5 @@ export default function StringDiff({
       );
     });
   }, [oldValue, newValue]);
-  return <Component className={className} >{result}</Component>;
+  return <Component className={className}>{result}</Component>;
 }

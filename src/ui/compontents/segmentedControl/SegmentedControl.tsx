@@ -7,14 +7,14 @@ import './SegmentedControl.css';
 
 export interface Segment {
   iconName: string;
-  value: string
+  value: string;
   tooltip?: string;
 }
 
 type SegmentedControlProps<Type> = {
-  selectedSegment: Type,
-  segments: Segment[],
-  onChoose: Function
+  selectedSegment: Type;
+  segments: Segment[];
+  onChoose: Function;
 };
 
 export default function SegmentedControl<Type>({
@@ -39,7 +39,9 @@ export default function SegmentedControl<Type>({
         <div
           data-tooltip-content={segment.tooltip}
           key={segment.value}
-          className={`segmented-control-segment${segment.value === selectedSegmentState ? ' selected' : ''}`}
+          className={`segmented-control-segment${
+            segment.value === selectedSegmentState ? ' selected' : ''
+          }`}
           onClick={() => handleSelectClick(segment.value)}
         >
           <div className={`svg-container ${segment.iconName}`} />

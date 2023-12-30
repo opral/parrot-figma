@@ -2,10 +2,7 @@
 /* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 import { debug } from 'console';
-import React, {
-  useEffect,
-  useState,
-} from 'react';
+import React, { useEffect, useState } from 'react';
 import './tileselect.css';
 
 export interface TileSelectOption<T> {
@@ -16,7 +13,7 @@ export interface TileSelectOption<T> {
   tooltip?: string;
   icon?: string;
   title?: string;
-  forceSelected?: boolean
+  forceSelected?: boolean;
 }
 
 export interface TileSelectProps<T> {
@@ -63,7 +60,12 @@ export default function TileSelect<T>({
       {options.map((option) => (
         <div
           data-tooltip-content={option.tooltip}
-          className={`tile${(selectedOptions.findIndex((v) => v === option.value) !== -1 || option.forceSelected === true) ? ' selected' : ''}`}
+          className={`tile${
+            selectedOptions.findIndex((v) => v === option.value) !== -1 ||
+            option.forceSelected === true
+              ? ' selected'
+              : ''
+          }`}
           key={`${option.value}`}
           onClick={() => toggleOption(option)}
         >

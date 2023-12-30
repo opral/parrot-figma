@@ -5,12 +5,10 @@ import React, { useState, ReactNode } from 'react';
 import './Dropzone.css';
 
 type FileDropZoneProps = {
-  onFilesReceived: Function
+  onFilesReceived: Function;
 };
 
-export default function FileDropZone({
-  onFilesReceived,
-}: FileDropZoneProps) {
+export default function FileDropZone({ onFilesReceived }: FileDropZoneProps) {
   const [showOverlay, setShowOverlay] = useState(false);
 
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
@@ -23,14 +21,16 @@ export default function FileDropZone({
     setShowOverlay(false);
   };
 
-  const handleFiles = async function (files : FileList) {
+  const handleFiles = async function (files: FileList) {
     const filesReceived = {} as any;
 
     const contentPromises = [] as Promise<void>[];
     for (const file of files) {
-      contentPromises.push((async () => {
-        filesReceived[file.name] = await file.text();
-      })());
+      contentPromises.push(
+        (async () => {
+          filesReceived[file.name] = await file.text();
+        })(),
+      );
     }
 
     await Promise.all(contentPromises);
@@ -49,7 +49,7 @@ export default function FileDropZone({
   };
 
   // triggers when file is selected with click
-  const handleChange = (e : React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
     if (e.target.files && e.target.files[0]) {
       handleFiles(e.target.files);
@@ -69,7 +69,6 @@ export default function FileDropZone({
       onDrop={handleDrop}
       style={{ position: 'relative' }}
     >
-
       <div>
         <div className="dropzone-container">
           <div className="dropzone-file-wrapper">
@@ -79,21 +78,9 @@ export default function FileDropZone({
                 <div className="icon icon-import" />
               </div>
               <div className="dropzone-info-msg">
-                <b>
-                  Click or drag &amp; drop to import a .stringsdict, .strings, .xml file
-                </b>
+                <b>Click or drag &amp; drop to import a .stringsdict, .strings, .xml file</b>
                 <br />
-                Supported are Apple's
-                {' '}
-                <b>.stringsdict</b>
-                ,
-                {' '}
-                <b>.strings</b>
-                {' '}
-                and Android's
-                {' '}
-                <b>.xml</b>
-                {' '}
+                Supported are Apple's <b>.stringsdict</b>, <b>.strings</b> and Android's <b>.xml</b>{' '}
                 file.
               </div>
             </div>
@@ -101,8 +88,7 @@ export default function FileDropZone({
         </div>
       </div>
 
-      {showOverlay
-        && (
+      {showOverlay && (
         <div
           onDragOver={handleOverlayDragOver}
           style={{
@@ -120,7 +106,7 @@ export default function FileDropZone({
         >
           <p>Drop files here to import</p>
         </div>
-        )}
+      )}
     </div>
   );
 }

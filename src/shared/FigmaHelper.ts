@@ -1,6 +1,5 @@
 /* eslint-disable -- TODO remove this when most of the class is used again */
 
-
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
 import { MessageLinkState } from '../lib/localizedlabels/LocalizedLabel';
 
@@ -10,7 +9,6 @@ export default class FigmaHelper {
   public proxyClassName = 'FigmaHelper';
 
   figma: PluginAPI | undefined;
-
 
   constructor(figma?: PluginAPI) {
     this.figma = figma;
@@ -38,7 +36,7 @@ export default class FigmaHelper {
   }
 
   // async drawKeyFrame(frameNodeId: string, labelManager: LocalizedLabelManager) {
-    
+
   //       const frame = figma.getNodeById(frameNodeId);
   //       const MARGIN = 50;
 
@@ -73,7 +71,7 @@ export default class FigmaHelper {
   //       let maxRight = 0;
   //       let maxBottom = (frame as FrameNode).height;
   //       let i = 0;
-        
+
   //       for (let nodeWithKey of translatedFrame.localizedLabelsInFrame) {
 
   //           if (nodeWithKey.messageLinkState !== MessageLinkState.Linked) {

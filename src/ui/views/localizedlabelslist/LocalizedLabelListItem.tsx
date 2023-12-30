@@ -7,7 +7,10 @@ import OutsideClickHandler from 'react-outside-click-handler';
 import { Plural } from '../../../lib/message/variants/Plural';
 import { MessageLinkState, LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
 import FigmaUtil from '../../../shared/FigmaUtil';
-import InputSelect, { InputSelectOption, InputSelectionOptionType } from '../../compontents/selectInput/inputselect';
+import InputSelect, {
+  InputSelectOption,
+  InputSelectionOptionType,
+} from '../../compontents/selectInput/inputselect';
 import Select, { SelectOption } from '../../compontents/select/select';
 import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
 import { Locale } from '../../../lib/message/variants/Locale';
@@ -25,11 +28,11 @@ import { FillinToPlaceholder } from '../../../lib/message/MessageExtnesions';
 import { MessageParameterValues } from '../../../lib/message/MessageParameterValues';
 
 type LocalizedLabelListItemProps = {
-  showMessage: Function,
-  localizedLabel: UILocalizedLabel,
-  figmaRemote: FigmaUtil,
-  localizedLabelManager: LocalizedLabelManagerUI,
-  selected: 'selected-by-parent' | 'selected' | 'unselected'
+  showMessage: Function;
+  localizedLabel: UILocalizedLabel;
+  figmaRemote: FigmaUtil;
+  localizedLabelManager: LocalizedLabelManagerUI;
+  selected: 'selected-by-parent' | 'selected' | 'unselected';
 };
 
 export default function LocalizedLabelListItem({
@@ -40,7 +43,10 @@ export default function LocalizedLabelListItem({
   selected,
 }: LocalizedLabelListItemProps) {
   const { messageStore } = localizedLabelManager;
-  const message = localizedLabel.messageLinkState !== MessageLinkState.Unset ? messageStore.getMessage(localizedLabel.messageId!) : undefined;
+  const message =
+    localizedLabel.messageLinkState !== MessageLinkState.Unset
+      ? messageStore.getMessage(localizedLabel.messageId!)
+      : undefined;
 
   const rowRef = React.useRef<HTMLDivElement>(null);
 
@@ -66,10 +72,12 @@ export default function LocalizedLabelListItem({
   }
 
   async function fixLints() {
-    await localizedLabelManager.fixLabelLints(localizedLabel, localizedLabel.matchingLabelLints).catch((e: Error) => {
-      Sentry.captureException(e);
-      figmaRemote.notifyError(e.message);
-    });
+    await localizedLabelManager
+      .fixLabelLints(localizedLabel, localizedLabel.matchingLabelLints)
+      .catch((e: Error) => {
+        Sentry.captureException(e);
+        figmaRemote.notifyError(e.message);
+      });
   }
 
   async function updateToLatestKeyVersion() {
@@ -94,7 +102,8 @@ export default function LocalizedLabelListItem({
   //   }
   // } else {
   pluralsAvailable.push({
-    value: Plural.OTHER, label: Plural.OTHER,
+    value: Plural.OTHER,
+    label: Plural.OTHER,
   });
   // }
 
@@ -122,7 +131,6 @@ export default function LocalizedLabelListItem({
   return (
     <>
       <Drawer
-
         position="top"
         buttons={[
           {
@@ -138,25 +146,27 @@ export default function LocalizedLabelListItem({
             text: 'Use Key',
             key: 'enter',
             callback: () => {
-              const messageToLink = localizedLabelManager.messageStore.getMessage(drawerSelectedKey.current!)!;
+              const messageToLink = localizedLabelManager.messageStore.getMessage(
+                drawerSelectedKey.current!,
+              )!;
 
-              localizedLabelManager.linkMessage(localizedLabel, messageToLink.id, localizedLabel.rootFrameLanguage!).catch((e) => {
-                figmaRemote.notifyError(`could not set message${e.message}`);
-                Sentry.captureException(e);
-              });
+              localizedLabelManager
+                .linkMessage(localizedLabel, messageToLink.id, localizedLabel.rootFrameLanguage!)
+                .catch((e) => {
+                  figmaRemote.notifyError(`could not set message${e.message}`);
+                  Sentry.captureException(e);
+                });
               setMessageSearch(undefined);
             },
             disabled: drawerSelectedKey.current === undefined,
           },
-
         ]}
         shown={messageSearch !== undefined}
       >
         <div className="modal-title" style={{ width: '1000px' }}>
           Select a Message
         </div>
-        { messageSearch !== undefined && (
-
+        {messageSearch !== undefined && (
           <MessageListView
             showSearchBar
             messageStore={messageStore}
@@ -171,7 +181,6 @@ export default function LocalizedLabelListItem({
             highlightSelectedNodes={false}
           />
         )}
-
       </Drawer>
 
       <Drawer
@@ -186,15 +195,13 @@ export default function LocalizedLabelListItem({
               setShowMessageInDrawer(undefined);
             },
           },
-
         ]}
         shown={showMessageInDrawer !== undefined}
       >
         <div className="modal-title" style={{ width: '1000px' }}>
           Edit Message
         </div>
-        { showMessageInDrawer !== undefined && (
-
+        {showMessageInDrawer !== undefined && (
           <MessageListView
             showSearchBar={false}
             messageStore={messageStore}
@@ -209,11 +216,14 @@ export default function LocalizedLabelListItem({
             highlightSelectedNodes={false}
           />
         )}
-
       </Drawer>
 
-      <div className={`layer ${selected} layer-message-state__${localizedLabel.messageLinkState} `} onClick={() => { onNodeSelect(localizedLabel.nodeId); }}>
-
+      <div
+        className={`layer ${selected} layer-message-state__${localizedLabel.messageLinkState} `}
+        onClick={() => {
+          onNodeSelect(localizedLabel.nodeId);
+        }}
+      >
         <div className="layer-name">
           <div className="spacer" />
           <div className="spacer" />
@@ -236,7 +246,11 @@ export default function LocalizedLabelListItem({
           <div className="message-panel">
             <InputSelect
               className="message-select"
-              placeholder={localizedLabel.messageLinkState === MessageLinkState.Unmanaged ? 'Not Localized' : 'Link a Message...'}
+              placeholder={
+                localizedLabel.messageLinkState === MessageLinkState.Unmanaged
+                  ? 'Not Localized'
+                  : 'Link a Message...'
+              }
               isDisabled={localizedLabel.matchingLabelLints.length > 0}
               iconClass={iconClass}
               inputPlaceholder="e.g. home__tagline"
@@ -251,17 +265,27 @@ export default function LocalizedLabelListItem({
                     });
                   } else if (selectedOption.value === 'show-message') {
                     setShowMessageInDrawer(localizedLabel.getMessageName());
-                  } else if (selectedOption.value === 'reset') { // triggered by empty field - option added by the select field it self
+                  } else if (selectedOption.value === 'reset') {
+                    // triggered by empty field - option added by the select field it self
                     reset();
                     await localizedLabelManager.unsetLabel(localizedLabel);
-                  } else if (selectedOption.value === 'text-layer-not-localized') { // triggered by empty field - option added by the select field it self
+                  } else if (selectedOption.value === 'text-layer-not-localized') {
+                    // triggered by empty field - option added by the select field it self
                     reset();
                     await localizedLabelManager.setLabelToUnmanaged(localizedLabel);
                   }
                 } else if (selectedOption.type === InputSelectionOptionType.ADD) {
-                  await localizedLabelManager.linkMessage(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!);
+                  await localizedLabelManager.linkMessage(
+                    localizedLabel,
+                    selectedOption.value,
+                    localizedLabel.rootFrameLanguage!,
+                  );
                 } else if (selectedOption.type === InputSelectionOptionType.SUGGESTION) {
-                  await localizedLabelManager.linkMessage(localizedLabel, selectedOption.value, localizedLabel.rootFrameLanguage!);
+                  await localizedLabelManager.linkMessage(
+                    localizedLabel,
+                    selectedOption.value,
+                    localizedLabel.rootFrameLanguage!,
+                  );
                 }
                 /* if (selectedOption.type === 'action') {
                       if (selectedOption.value === 'no-translation') {
@@ -279,21 +303,29 @@ export default function LocalizedLabelListItem({
                       localizedLabelManager.linkKey(localizedLabel, selectedOption.value as string, selectedOption.language!, selectedOption.plural!);
                     } */
               }}
-              valueReplaceFn={(value) => value.replace(/[ .]/g, (match) => (match === '.' ? '__' : '_'))}
+              valueReplaceFn={(value) =>
+                value.replace(/[ .]/g, (match) => (match === '.' ? '__' : '_'))
+              }
               defaultValue={messageName}
               getOptions={(enteredValue: string) => {
                 let options = [] as InputSelectOption[];
 
                 const keySearch = enteredValue === '' ? '*' : enteredValue;
-                const textMatchQuery = MessageStoreMemory.toQueryObject(`exact_text:true name:${keySearch} ${localizedLabel.characters}`);
-                const {
-                  inText: suggestedKeys,
-                  matchingNames: matchingKeysByName,
-                } = messageStore.findMessages(textMatchQuery);
+                const textMatchQuery = MessageStoreMemory.toQueryObject(
+                  `exact_text:true name:${keySearch} ${localizedLabel.characters}`,
+                );
+                const { inText: suggestedKeys, matchingNames: matchingKeysByName } =
+                  messageStore.findMessages(textMatchQuery);
 
-                const isValidKey = enteredValue.length >= 0 && /^[a-zA-Z0-9]$/.test(enteredValue[enteredValue.length - 1]);
+                const isValidKey =
+                  enteredValue.length >= 0 &&
+                  /^[a-zA-Z0-9]$/.test(enteredValue[enteredValue.length - 1]);
 
-                if (isValidKey && !suggestedKeys.has(enteredValue) && !matchingKeysByName.has(enteredValue)) {
+                if (
+                  isValidKey &&
+                  !suggestedKeys.has(enteredValue) &&
+                  !matchingKeysByName.has(enteredValue)
+                ) {
                   options.push({
                     type: InputSelectionOptionType.ADD,
                     value: enteredValue,
@@ -309,15 +341,17 @@ export default function LocalizedLabelListItem({
                   });
                 }
 
-                options = options.concat([...suggestedKeys].map((key) => {
-                  matchingKeysByName.delete(key);
-                  return {
-                    type: InputSelectionOptionType.SUGGESTION,
-                    icon: 'with-message-svg',
-                    value: messageStore.getMessage(key)!.id,
-                    label: messageStore.getMessage(key)!.id,
-                  };
-                }));
+                options = options.concat(
+                  [...suggestedKeys].map((key) => {
+                    matchingKeysByName.delete(key);
+                    return {
+                      type: InputSelectionOptionType.SUGGESTION,
+                      icon: 'with-message-svg',
+                      value: messageStore.getMessage(key)!.id,
+                      label: messageStore.getMessage(key)!.id,
+                    };
+                  }),
+                );
 
                 if (keySearch.length > 2 && matchingKeysByName.size > 0) {
                   options.push({
@@ -326,12 +360,16 @@ export default function LocalizedLabelListItem({
                     label: 'Messages',
                   });
 
-                  options = options.concat([...matchingKeysByName].filter((matchingKey) => !suggestedKeys.has(matchingKey)).map((key) => ({
-                    type: InputSelectionOptionType.SUGGESTION,
-                    icon: 'with-message-svg',
-                    value: messageStore.getMessage(key)!.id,
-                    label: messageStore.getMessage(key)!.id,
-                  })));
+                  options = options.concat(
+                    [...matchingKeysByName]
+                      .filter((matchingKey) => !suggestedKeys.has(matchingKey))
+                      .map((key) => ({
+                        type: InputSelectionOptionType.SUGGESTION,
+                        icon: 'with-message-svg',
+                        value: messageStore.getMessage(key)!.id,
+                        label: messageStore.getMessage(key)!.id,
+                      })),
+                  );
                 }
 
                 if (options.length > 1) {
@@ -349,7 +387,10 @@ export default function LocalizedLabelListItem({
                   type: InputSelectionOptionType.ACTION,
                 });
 
-                if (localizedLabel.messageLinkState === MessageLinkState.Linked && messageName === enteredValue) {
+                if (
+                  localizedLabel.messageLinkState === MessageLinkState.Linked &&
+                  messageName === enteredValue
+                ) {
                   options.push({
                     label: 'Show linked Message...',
                     icon: 'goto-message-svg',
@@ -380,14 +421,14 @@ export default function LocalizedLabelListItem({
             />
 
             <div className="message-variant">
-
               <div
                 className="message-variant-language"
                 data-tooltip-content="Current Language of this Label"
               >
                 <span className="language">{localizedLabel.language}</span>
-                { localizedLabel.language === localizedLabelManager.messageStore.getRefLanugage() && (
-                <span className="language-tag">ref</span>
+                {localizedLabel.language ===
+                  localizedLabelManager.messageStore.getRefLanugage() && (
+                  <span className="language-tag">ref</span>
                 )}
               </div>
               {/* <div key={localizedLabel.pluralId} className={`keyPluralWrapper ${translatedKey?.plural ? 'onePlural' : ' multiplePlurals'}`}> */}
@@ -400,17 +441,19 @@ export default function LocalizedLabelListItem({
                   onCancel={async () => {
                     localizedLabelManager.commitUndo();
                   }}
-                  onChange={async (patternHtml: string | undefined, parameters: MessageParameterValues, reset: any) => {
+                  onChange={async (
+                    patternHtml: string | undefined,
+                    parameters: MessageParameterValues,
+                    reset: any,
+                  ) => {
                     if (patternHtml !== undefined) {
-                      localizedLabelManager.updateLabelPatternHtml(
-                        localizedLabel,
-                        patternHtml,
-                        parameters,
-                      ).catch((e: Error) => {
-                        Sentry.captureException(e);
-                        figmaRemote.notifyError(e.message);
-                        reset();
-                      });
+                      localizedLabelManager
+                        .updateLabelPatternHtml(localizedLabel, patternHtml, parameters)
+                        .catch((e: Error) => {
+                          Sentry.captureException(e);
+                          figmaRemote.notifyError(e.message);
+                          reset();
+                        });
                     }
                   }}
                   parameterValues={localizedLabel.parameterValues}
@@ -444,37 +487,41 @@ export default function LocalizedLabelListItem({
                         </div>
                       )} */}
               </div>
-              { (localizedLabel.messageLinkState === MessageLinkState.Linked && (labelState.modified || localizedLabel.language !== localizedLabel.rootFrameLanguage)) && ( // allow the user to catch up with the keys version
-              <div
-                className="layerIcon iconWrapper button"
-                data-tooltip-content="Reset all changes"
-                onClick={updateToLatestKeyVersion}
-              >
-                <div className="svg-container update-text-layer-svg" />
-              </div>
-              )}
+              {localizedLabel.messageLinkState === MessageLinkState.Linked &&
+                (labelState.modified ||
+                  localizedLabel.language !== localizedLabel.rootFrameLanguage) && ( // allow the user to catch up with the keys version
+                  <div
+                    className="layerIcon iconWrapper button"
+                    data-tooltip-content="Reset all changes"
+                    onClick={updateToLatestKeyVersion}
+                  >
+                    <div className="svg-container update-text-layer-svg" />
+                  </div>
+                )}
 
-              { ((localizedLabel.messageLinkState === MessageLinkState.Linked && labelState.modified)) && (
-              <div
-                className="layerIcon iconWrapper button"
-                data-tooltip-content="Push changes to Message"
-                onClick={createNewVersionFromDesign}
-              >
-                <div className="svg-container update-message-svg" />
-              </div>
-              )}
+              {localizedLabel.messageLinkState === MessageLinkState.Linked &&
+                labelState.modified && (
+                  <div
+                    className="layerIcon iconWrapper button"
+                    data-tooltip-content="Push changes to Message"
+                    onClick={createNewVersionFromDesign}
+                  >
+                    <div className="svg-container update-message-svg" />
+                  </div>
+                )}
 
-              { ((localizedLabel.matchingLabelLints.length > 0)) && (
-              <div
-                className="layerIcon iconWrapper button"
-                data-tooltip-content={`Label contains unsupported inline styles: ${localizedLabel.matchingLabelLints.join(', ')}`}
-                onClick={fixLints}
-              >
-                <div className="svg-container warning-svg" />
-              </div>
+              {localizedLabel.matchingLabelLints.length > 0 && (
+                <div
+                  className="layerIcon iconWrapper button"
+                  data-tooltip-content={`Label contains unsupported inline styles: ${localizedLabel.matchingLabelLints.join(
+                    ', ',
+                  )}`}
+                  onClick={fixLints}
+                >
+                  <div className="svg-container warning-svg" />
+                </div>
               )}
             </div>
-
           </div>
         </div>
 

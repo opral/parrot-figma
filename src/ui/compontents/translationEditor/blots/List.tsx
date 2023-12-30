@@ -110,10 +110,13 @@ class List extends Container {
   optimize(context: any) {
     super.optimize(context);
     const { next } = this;
-    if (next != null && next.prev === this
-        && next.statics.blotName === this.statics.blotName
-        && next.domNode.tagName === this.domNode.tagName
-        && next.domNode.getAttribute('data-checked') === this.domNode.getAttribute('data-checked')) {
+    if (
+      next != null &&
+      next.prev === this &&
+      next.statics.blotName === this.statics.blotName &&
+      next.domNode.tagName === this.domNode.tagName &&
+      next.domNode.getAttribute('data-checked') === this.domNode.getAttribute('data-checked')
+    ) {
       next.moveChildren(this);
       next.remove();
     }

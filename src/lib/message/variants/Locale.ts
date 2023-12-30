@@ -153,5 +153,5 @@ export const SupportedLanguages = [
   Language.SK,
   Language.SL, */
   Locale.SV,
-  // Language.ZH, 
+  // Language.ZH,
 ];

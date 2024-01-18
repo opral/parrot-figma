@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import * as Sentry from '@sentry/react';
 
 import '../../localization/i18n';
+import { Message } from '@inlang/sdk';
 import { Locale } from '../../../lib/message/variants/Locale';
 
 import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
@@ -71,7 +72,7 @@ export default function TranslationKeyListItem({
   const [messageNameHovered, setMessageNameHoverd] = useState(false);
 
   const [focusedMessageVariant, setFocusedMessageVariant] = useState<
-    undefined | { messageId: string; locale?: Locale; match?: string[] }
+  undefined | { messageId: string; locale?: Locale; match?: string[] }
   >(undefined);
 
   // const [history, setHistory] = useState<undefined | VersionEntry[]>(undefined);
@@ -83,15 +84,12 @@ export default function TranslationKeyListItem({
   const rowRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messageStore.inlangProject?.query.messages.get.subscribe(
-      { where: { id: messageId } },
-      (updatedMessage) => {
-        if (updatedMessage !== undefined) {
-          // skip deleted
-          setMessage(updatedMessage);
-        }
-      },
-    );
+    messageStore.subscribeMessage(messageId, (updatedMessage) => {
+      if (updatedMessage !== undefined) {
+        // skip deleted
+        setMessage(updatedMessage);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -311,19 +309,31 @@ export default function TranslationKeyListItem({
         shown={messageIdToDelete !== undefined}
       >
         <div className="modal-drawer-header">
-          Delete {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id}
+          Delete
+          {' '}
+          {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id}
         </div>
         <div className="modal-drawer-body">
           {keyToDeleteReferences !== undefined && keyToDeleteReferences > 0 && (
             <>
-              Deletion of the Message{' '}
-              {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id} will unlink{' '}
-              {keyToDeleteReferences} referencing text layers.
+              Deletion of the Message
+              {' '}
+              {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id}
+              {' '}
+              will unlink
+              {' '}
+              {keyToDeleteReferences}
+              {' '}
+              referencing text layers.
             </>
           )}
           {keyToDeleteReferences === 0 && (
             <>
-              Key {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id} is not
+              Key
+              {' '}
+              {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id}
+              {' '}
+              is not
               refrenced by a label
             </>
           )}

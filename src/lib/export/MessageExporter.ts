@@ -15,7 +15,7 @@ export default class MessageExporter {
     // prepare the data needed by the templates
 
     const dataToPass = {
-      messages: messageStore.inlangProject!.query.messages.getAll(),
+      messages: messageStore.getAllMessages(),
       locale: language,
       getVariant,
       patternToHtml: MessageStoreMemory.patternToHtml,

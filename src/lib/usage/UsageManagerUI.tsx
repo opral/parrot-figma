@@ -1,5 +1,5 @@
 import { setUserData } from '../../ui/utils/analytics';
-import UserManager, { PluginUser, UserRole } from './UsageManager';
+import UserManager, { PluginUser, UserFileRole } from './UsageManager';
 
 export default class UserManagerUI extends EventTarget {
   userManagerSandbox: UserManager;
@@ -78,7 +78,7 @@ export default class UserManagerUI extends EventTarget {
     return this.currentUser!;
   }
 
-  async requestUserRole(userRole: UserRole): Promise<PluginUser> {
+  async requestUserRole(userRole: UserFileRole): Promise<PluginUser> {
     const updatedUser = await this.userManagerSandbox.requestUserRoleForCurrentUser(userRole);
     return updatedUser;
   }

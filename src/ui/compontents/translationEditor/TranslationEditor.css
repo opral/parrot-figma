@@ -3,16 +3,6 @@
   
 }
 
-.translation-editor-text {
-  display: grid;
-  grid-template-columns: 1fr;
-  position: relative;
-  border: 1px solid transparent;
-  margin-top: 1px;
-  margin-left: 2px;
-  margin-bottom: 1px;
-  margin-right: 2px;
-}
 
 .translation-editor-text .translation-editor-scrollbar-overlay .ql-container p,
 .translation-editor-text .translation-editor-scrollbar-overlay .ql-container ol,
@@ -88,20 +78,35 @@
 .translation-editor-text.editing .translation {
   visibility: hidden;
 }
+/* 
 
+.translation-editor-text {
+  display: grid;
+  grid-template-columns: 1fr;
+  position: relative;
+  border: 1px solid transparent;
+  margin-top: 1px;
+  margin-left: 2px;
+  margin-bottom: 1px;
+  margin-right: 2px;
+} */
 
 
 .translation-editor-text {
+  position: relative;
   min-height: 18px;
   border-radius: 2px;
   border: 1px solid transparent;
   outline: none;
+
   padding-left: 8px;
   padding-top: 5px;
-  padding-bottom: 3px;
+  padding-bottom: 5px;
   padding-right: 5px;
   margin-right: 2px;
-  margin-top: 2px;
+  margin-top: 1px;
+  margin-left: 2px;
+  margin-bottom: 1px;
 }
 
 .translation-editor-text:hover {

@@ -26,16 +26,16 @@ export interface ILocalizedLabelManagerUI {
     changedProperties: {
       labelName?: string;
       messageState?:
-        | {
-            type: 'linked';
-            messageId: string;
-            parameterValues: MessageParameterValues;
-            variantPatternHTML?: string;
-          }
-        | { type: 'unlinked'; unlinkedMessage: Message; parameterValues: MessageParameterValues }
-        | { type: 'unmanaged'; unmanaged: boolean }
-        | { type: 'unset' }
-        | undefined;
+      | {
+        type: 'linked';
+        messageId: string;
+        parameterValues: MessageParameterValues;
+        variantPatternHTML?: string;
+      }
+      | { type: 'unlinked'; unlinkedMessage: Message; parameterValues: MessageParameterValues }
+      | { type: 'unmanaged'; unmanaged: boolean }
+      | { type: 'unset' }
+      | undefined;
       language?: Locale;
     },
   ): Promise<void>;
@@ -182,8 +182,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     }
 
     const deltaOps = [] as DeltaOperation[];
-    const lastTwoCharsBreaks =
-      text.length > 1 && text[text.length - 1] === '\n' && text[text.length - 2] === '\n';
+    const lastTwoCharsBreaks = text.length > 1 && text[text.length - 1] === '\n' && text[text.length - 2] === '\n';
 
     // allways add an additional line break at the end
     if (ops.length > 0) {
@@ -310,8 +309,8 @@ export class UILocalizedLabel implements LocalizedLabel {
     let removeLastCR = false;
 
     if (
-      htmlWithFilledPlaceholders.endsWith('</ol>') ||
-      htmlWithFilledPlaceholders.endsWith('</ul>')
+      htmlWithFilledPlaceholders.endsWith('</ol>')
+      || htmlWithFilledPlaceholders.endsWith('</ul>')
     ) {
       removeLastCR = true;
     }
@@ -385,7 +384,7 @@ export class UILocalizedLabel implements LocalizedLabel {
       ]);
       state.modified = variantPatternHtml !== this.currentPatternHTML;
       if (variantPatternHtml !== this.currentPatternHTML) {
-        //debugger;
+        // debugger;
       }
     }
 
@@ -455,9 +454,22 @@ export class UILocalizedLabel implements LocalizedLabel {
   ) {
     const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
     const toRefLanguage = targetLanguage === refLanguage;
+
     const { unlinkedMessage } = this;
 
-    let hasVariantInTargetLanguage = MessageStoreMemory.hasVariant(
+    if (toRefLanguage) {
+      // we never translate to the ref language and even if that variant doesn't exist we always skip to it to allow to set it
+      return this.manager.updateLabelProperties(this.nodeId, {
+        messageState: {
+          type: 'unlinked',
+          unlinkedMessage,
+          parameterValues: this.parameterValues,
+        },
+        language: targetLanguage,
+      });
+    }
+
+    let hasVariantTranslationInTargetLanguage = MessageStoreMemory.hasTranslationInVariant(
       unlinkedMessage,
       targetLanguage,
       [],
@@ -465,26 +477,26 @@ export class UILocalizedLabel implements LocalizedLabel {
     // let isVariantsTranslationOutdated = await MessageStoreMemory.isVariantsTranslationOutdated(unlinkedMessage, refLanguage, targetLanguage, {});
 
     let eventuallyUpdatedMessage = this.unlinkedMessage;
-
-    // if (isVariantsTranslationOutdated) {
-    try {
-      eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(
-        missingTranslationProvider,
-        unlinkedMessage,
-        refLanguage,
-        targetLanguage,
-        [],
-      );
-      hasVariantInTargetLanguage = true;
-    } catch (e) {
-      // we handle the error using isVariantsTranslationOutdated flag
+    if (!hasVariantTranslationInTargetLanguage) {
+      try {
+        eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(
+          missingTranslationProvider,
+          unlinkedMessage,
+          refLanguage,
+          targetLanguage,
+          [],
+        );
+        hasVariantTranslationInTargetLanguage = true;
+      } catch (e) {
+        // we handle the error using isVariantsTranslationOutdated flag
+      }
     }
     // if (!isVariantsTranslationOutdated) {
     //   hasVariantInTargetLanguage = true;
     // }
     // }
 
-    if (hasVariantInTargetLanguage) {
+    // if (hasVariantInTargetLanguage) {
       await this.manager.updateLabelProperties(this.nodeId, {
         messageState: {
           type: 'unlinked',
@@ -493,9 +505,9 @@ export class UILocalizedLabel implements LocalizedLabel {
         },
         language: targetLanguage,
       });
-    } else {
-      await this.manager.updateLabelProperties(this.nodeId, {});
-    }
+    // } else {
+    //   await this.manager.updateLabelProperties(this.nodeId, {});
+    // }
   }
 
   async setLanguageOnLinkedLabel(
@@ -509,9 +521,10 @@ export class UILocalizedLabel implements LocalizedLabel {
     const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
     const toRefLanguage = targetLanguage === refLanguage;
     const message = this.manager.messageStore.getMessage(this.messageId)!;
-    const hasVariantInTargetLanguage = MessageStoreMemory.hasVariant(message, targetLanguage, []);
+    // const hasVariantInTargetLanguage = MessageStoreMemory.hasVariant(message, targetLanguage, []);
+    const hasVariantTranslationInTargetLanguage = MessageStoreMemory.hasTranslationInVariant(message, targetLanguage, []);
     // updating message
-    if (!hasVariantInTargetLanguage) {
+    if (!hasVariantTranslationInTargetLanguage) {
       if (!toRefLanguage) {
         try {
           const eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(

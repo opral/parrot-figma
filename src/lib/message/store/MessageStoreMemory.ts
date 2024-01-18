@@ -99,6 +99,18 @@ export default class MessageStoreMemory extends EventTarget {
     */
   }
 
+  subscribeMessage(messageId: string, cb: (message: Message) => void) {
+    this.inlangProject?.query.messages.get.subscribe(
+      { where: { id: messageId } },
+      (updatedMessage) => {
+        if (updatedMessage !== undefined) {
+          // skip deleted
+          cb(updatedMessage);
+        }
+      },
+    );
+  }
+
   static UPDATE_EVENT = 'updated';
 
   private async processCacheUpdate(changedMessages: {
@@ -512,6 +524,10 @@ export default class MessageStoreMemory extends EventTarget {
     return results;
   }
 
+  getAllMessages() {
+    return this.inlangProject?.query.messages.getAll();
+  }
+
   async createTag() {
     /* TODO #17 versioning we skip this in inlang for now
     // TODO #18 we update the messages here - shouldn't we wait for the messaage bus instead?
@@ -632,7 +648,13 @@ export default class MessageStoreMemory extends EventTarget {
   // wrapper methods to centralize the integration of inlang in case of api changes
 
   static hasVariant(message: Message, targetLanguage: Locale, match?: string[]) {
-    return getVariant(message, { where: { languageTag: targetLanguage, match } }) !== undefined;
+    const variant = getVariant(message, { where: { languageTag: targetLanguage, match } })
+    return variant !== undefined;
+  }
+
+  static hasTranslationInVariant(message: Message, targetLanguage: Locale, match?: string[]) {
+    const variant = getVariant(message, { where: { languageTag: targetLanguage, match } })
+    return variant !== undefined && variant.pattern.length > 0;
   }
 
   // static isVariantsTranslationOutdated(
@@ -689,6 +711,10 @@ export default class MessageStoreMemory extends EventTarget {
     return messageClone;
   }
 
+  static ongoingTranslationPromises = {} as {
+    [messageId: string]: Promise<void>
+  };
+
   static async upsertUsingAutoTranslateMessage(
     translationProvider: (
       input: string,
@@ -700,6 +726,10 @@ export default class MessageStoreMemory extends EventTarget {
     targetLanguage: Locale,
     match: string[],
   ) {
+    // we combine multiple translaition promises of the same message that happen in a batch
+    if (MessageStoreMemory.ongoingTranslationPromises[message.id] !== undefined) {
+      return MessageStoreMemory.ongoingTranslationPromises;
+    }
     //
     const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(
       message,
@@ -716,6 +746,7 @@ export default class MessageStoreMemory extends EventTarget {
       targetLanguage,
     );
 
+    delete MessageStoreMemory.ongoingTranslationPromises[message.id];
     return this.upsertVariantPatternHtml(
       message,
       sourceLanguage,

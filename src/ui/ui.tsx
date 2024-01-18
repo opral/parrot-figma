@@ -36,7 +36,7 @@ import Export from './views/export/Export';
 import FEATURES_FLAGS from './featuretoggle';
 import SetupView from './views/setup/SetupView';
 import * as pjs from '../../package.json';
-import UserManager, { PluginUser, UserRole } from '../lib/usage/UsageManager';
+import UserManager, { PluginUser, UserFileRole } from '../lib/usage/UsageManager';
 import UserManagerUI from '../lib/usage/UsageManagerUI';
 import UserManagement from './views/usermanagement/Usermanagement';
 import Drawer from './compontents/drawer/Drawer';
@@ -224,10 +224,10 @@ function App() {
       userStateManagerUi.trackFileUsageStatistics();
 
       if (windowMode === WindowMode.DevPanel) {
-        const updatedUser = await userStateManagerUi.requestUserRole(UserRole.developer);
+        const updatedUser = await userStateManagerUi.requestUserRole(UserFileRole.developer);
         setUser(updatedUser);
       } else {
-        const updatedUser = await userStateManagerUi.requestUserRole(UserRole.designer);
+        const updatedUser = await userStateManagerUi.requestUserRole(UserFileRole.designer);
         setUser(updatedUser);
       }
     })();
@@ -315,7 +315,7 @@ function App() {
     );
   }
 
-  if (user.userRole !== UserRole.designer && user.userRole !== UserRole.owner) {
+  if (user.userRole !== UserFileRole.designer && user.userRole !== UserFileRole.owner) {
     return (
       <>
         Not the permission to view{' '}
@@ -455,7 +455,7 @@ function App() {
           >
             Setup
           </div>
-          {/* <div className={`tab ${appScreen === 'users' ? 'active' : ''}`} onClick={() => setAppScreen('users')}>Users</div> */}
+          <div className={`tab ${appScreen === 'users' ? 'active' : ''}`} onClick={() => setAppScreen('users')}>Users</div>
         </div>
 
         <div

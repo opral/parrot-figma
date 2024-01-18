@@ -122,7 +122,7 @@ export default function MessageListView({
     }
   }, [highlightSelection]);
 
-  const allMessages = messageStore.inlangProject?.query.messages.getAll() ?? [];
+  const allMessages = messageStore.getAllMessages() ?? [];
 
   const fileHasMessages = allMessages.length > 0;
   if (!fileHasMessages) {

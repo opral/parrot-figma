@@ -7,7 +7,7 @@ parserOptions:
   - tsconfig.json
 globals:
   figma: 'readable'
-  __html__: 'readable',
+  __html__: 'readable'
 rules:
   no-restricted-syntax:
   - error

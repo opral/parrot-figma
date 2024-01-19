@@ -573,7 +573,7 @@ export default class MessageStoreMemory extends EventTarget {
 
     // opening the project file and loading the plugin
     this.inlangProject = await loadProject({
-      nodeishFs: fs,
+      nodeishFs: fs as any,
       settingsFilePath: '/project.inlang.json',
       // simulate the import function that the SDK uses
       // to inject the plugin into the project

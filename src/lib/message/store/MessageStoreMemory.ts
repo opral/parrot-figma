@@ -20,6 +20,7 @@ import { createNodeishMemoryFs } from './inlang/FigmaRootFs';
 import { Config, InlangMessageStore } from './InlangMessageStoreFigmaRoot';
 import { MessageParameterValues } from '../MessageParameterValues';
 import PlaceholderHelper from '../PlaceholderUtil';
+import TranslatorMachine from '../../translationprovider/TranslatorMachine';
 
 export type SearchQuery = {
   selected?: 'FRAME' | 'LABEL' | undefined;
@@ -589,7 +590,7 @@ export default class MessageStoreMemory extends EventTarget {
 
     // opening the project file and loading the plugin
     this.inlangProject = await loadProject({
-      nodeishFs: fs,
+      nodeishFs: fs as any,
       settingsFilePath: '/project.inlang.json',
       // simulate the import function that the SDK uses
       // to inject the plugin into the project
@@ -712,15 +713,29 @@ export default class MessageStoreMemory extends EventTarget {
   }
 
   static ongoingTranslationPromises = {} as {
-    [messageId: string]: Promise<void>
+    [messageId: string]: Promise<Message>
   };
 
+  static canTranslate(message: Message, sourceLanguage: Locale, targetLanguage: Locale, match: string[]) {
+    // reasons:
+
+    // TODO #29 target language not supported
+    // TODO #29 source language not supported
+
+    // source language not set in Message 
+    const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(
+      message,
+      sourceLanguage,
+      match,
+    );
+    if (sourceVariantPatternHTML === undefined || sourceVariantPatternHTML === '') {
+      return false;
+    }
+    return true;
+  }
+
   static async upsertUsingAutoTranslateMessage(
-    translationProvider: (
-      input: string,
-      sourceLanguage: string,
-      targetLanguage: string,
-    ) => Promise<string | null>,
+    translator: TranslatorMachine,
     message: Message,
     sourceLanguage: Locale,
     targetLanguage: Locale,
@@ -728,7 +743,7 @@ export default class MessageStoreMemory extends EventTarget {
   ) {
     // we combine multiple translaition promises of the same message that happen in a batch
     if (MessageStoreMemory.ongoingTranslationPromises[message.id] !== undefined) {
-      return MessageStoreMemory.ongoingTranslationPromises;
+      return MessageStoreMemory.ongoingTranslationPromises[message.id];
     }
     //
     const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(
@@ -740,9 +755,9 @@ export default class MessageStoreMemory extends EventTarget {
       throw new Error(`Pattern did not exist for source language: ${sourceLanguage}`);
     }
 
-    const translatedPattern = await translationProvider(
+    const translatedPattern = await translator.translate(
       sourceVariantPatternHTML,
-      sourceLanguage as string,
+      sourceLanguage as Locale,
       targetLanguage,
     );
 

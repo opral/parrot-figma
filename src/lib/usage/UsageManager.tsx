@@ -1,5 +1,5 @@
 /* eslint-disable max-classes-per-file */
-// TODO use the local storage for now - information will be sourced by the backend later
+// TODO #32 use the local storage for now - information will be sourced by the backend later
 
 import { FileUsage } from './FileUsage';
 import { UserRoleRequest } from './UserRoleRequest';
@@ -15,13 +15,13 @@ export interface PluginUser {
   // permissions
 }
 
-// TODO #29 
+// TODO #32
 
 export enum UserFileRole {
   owner = 'owner',
   designer = 'designer',
   developer = 'developer',
-  inactive = 'inactive', // TODO #29 remove inactive and introduce seat property it with parrot seat (Free/Collab)
+  inactive = 'inactive', // TODO #32 remove inactive and introduce seat property it with parrot seat (Free/Collab)
   none = 'none',
 }
 
@@ -240,7 +240,7 @@ export default class UserManager {
       };
     }
 
-    // TODO check if role is available now
+    // TODO #32 check if role is available now
     this.state.usersInFile[forUser].userStates[Date.now()] = {
       type: userRole,
       actorId: forUser,
@@ -259,7 +259,7 @@ export default class UserManager {
   }
 
   async setUserRole(userRole: UserFileRole, forUser: string, actor: string): Promise<boolean> {
-    // TODO check user limit
+    // TODO #32 check user limit
     console.log(`setting user role to ${userRole}`);
     this.state.usersInFile[forUser].userStates[Date.now()] = {
       type: userRole,
@@ -445,8 +445,8 @@ syncState(user) {
     if (user !== currentUser) {
         // throw
     }
-    // TODO meger states and store it in the user and in the file
-    // TODO merge usage for the current file and store it in the user and in the file
-    // TODO uverride users role with the one found in the file
+    // TODO #32  meger states and store it in the user and in the file
+    // TODO #32 merge usage for the current file and store it in the user and in the file
+    // TODO #32 uverride users role with the one found in the file
 }
 */

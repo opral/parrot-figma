@@ -11,6 +11,7 @@ import { Locale } from '../../../lib/message/variants/Locale';
 import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
 import { NodeSelection } from '../../../lib/localizedlabels/LocalizedLabelManager';
 import GoogleTranslator from '../../../lib/translationprovider/google';
+import TranslatorMachine from '../../../lib/translationprovider/TranslatorMachine';
 
 type LocalizedFrameGroupProps = {
   showMessage: Function;
@@ -90,7 +91,7 @@ export default function LocalizedFrameGroup({
     firstLocalizedLabelInFrame: LocalizedLabel,
     language: Locale,
   ) {
-    const translationProvider = GoogleTranslator.translate;
+    const translationProvider = TranslatorMachine.instance;
 
     localizedLabelManager.setFrameLanguage(
       firstLocalizedLabelInFrame.rootFrameId,

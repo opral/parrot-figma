@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/anchor-is-valid */
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
@@ -8,6 +9,8 @@ import LocalizedFrameGroup from './LocalizedFrameGroup';
 import './LocalizedLabelsListView.css';
 import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
 import { NodeSelection } from '../../../lib/localizedlabels/LocalizedLabelManager';
+import UpsellOverlay from '../../compontents/upselloverlay/UpsellOverlay';
+import MessageUpsellOverlay from '../../compontents/upselloverlay/MessageUpsellOverlay';
 
 declare global {
   interface Element {
@@ -30,31 +33,27 @@ if (!Element.prototype.scrollIntoViewIfNeeded) {
       parentComputedStyle.getPropertyValue('border-left-width'),
     );
     const overTop = this.offsetTop - parent.offsetTop < parent.scrollTop;
-    const overBottom =
-      this.offsetTop - parent.offsetTop + this.clientHeight - parentBorderTopWidth >
-      parent.scrollTop + parent.clientHeight;
+    const overBottom = this.offsetTop - parent.offsetTop + this.clientHeight - parentBorderTopWidth
+      > parent.scrollTop + parent.clientHeight;
     const overLeft = this.offsetLeft - parent.offsetLeft < parent.scrollLeft;
-    const overRight =
-      this.offsetLeft - parent.offsetLeft + this.clientWidth - parentBorderLeftWidth >
-      parent.scrollLeft + parent.clientWidth;
+    const overRight = this.offsetLeft - parent.offsetLeft + this.clientWidth - parentBorderLeftWidth
+      > parent.scrollLeft + parent.clientWidth;
     const alignWithTop = overTop && !overBottom;
 
     if ((overTop || overBottom) && centerIfNeeded) {
-      parent.scrollTop =
-        this.offsetTop -
-        parent.offsetTop -
-        parent.clientHeight / 2 -
-        parentBorderTopWidth +
-        this.clientHeight / 2;
+      parent.scrollTop = this.offsetTop
+        - parent.offsetTop
+        - parent.clientHeight / 2
+        - parentBorderTopWidth
+        + this.clientHeight / 2;
     }
 
     if ((overLeft || overRight) && centerIfNeeded) {
-      parent.scrollLeft =
-        this.offsetLeft -
-        parent.offsetLeft -
-        parent.clientWidth / 2 -
-        parentBorderLeftWidth +
-        this.clientWidth / 2;
+      parent.scrollLeft = this.offsetLeft
+        - parent.offsetLeft
+        - parent.clientWidth / 2
+        - parentBorderLeftWidth
+        + this.clientWidth / 2;
     }
 
     if ((overTop || overBottom || overLeft || overRight) && !centerIfNeeded) {
@@ -81,6 +80,8 @@ export default function LocalizedLabelsListView({
   const [selection, setSelection] = useState({} as NodeSelection);
 
   const [parentIds, setParentIds] = useState(new Set<string>());
+
+  const freeTier = true;
 
   async function refreshSelection() {
     const selectedNodes = await localizedLabelManager.getSelection();
@@ -189,6 +190,10 @@ export default function LocalizedLabelsListView({
           </div>
         </div>
       )}
+
+      <MessageUpsellOverlay
+        onclick={() => { }}
+      />
     </>
   );
 }

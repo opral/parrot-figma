@@ -17,6 +17,9 @@ import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowMan
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager'; // TODO change this to a config when implemented
 import { InlangMessageStore } from '../lib/message/store/InlangMessageStoreFigmaRoot';
 import UserManager from '../lib/usage/UsageManager';
+import TranslatorMachine from '../lib/translationprovider/TranslatorMachine';
+import ParrotApi from '../lib/api/Parrot';
+
 
 const figmaRemote = new FigmaUtil();
 
@@ -56,6 +59,11 @@ const asyncFunctionProxy = new AsyncFunctionProxy(
 );
 
 asyncFunctionProxy.registerInstance(figmaRemote);
+
+const parrotApi = new ParrotApi(process.env.PARROT_API_KEY as string);
+
+const translationMaschine = new TranslatorMachine(parrotApi);
+asyncFunctionProxy.registerInstance(translationMaschine);
 
 const usageManager = new UserManager(false);
 asyncFunctionProxy.registerInstance(usageManager);

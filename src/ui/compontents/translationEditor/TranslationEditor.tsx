@@ -16,6 +16,7 @@ import Quill, { DeltaStatic, Sources, Delta as DeltaType } from 'quill';
 import Emitter from 'quill/core/emitter';
 import { createPortal } from 'react-dom';
 
+import { disable } from 'mixpanel-figma';
 import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
 import TranslationView from './TranslationView';
 
@@ -29,7 +30,7 @@ import ItalicBlot from './blots/ItalicBlot';
 import LinkBlot from './blots/LinkBlot';
 import TextDecorationBlot from './blots/TextDecorationBlot';
 import TooltipToolbar from './toolbar/TooltipToolbar';
-import { disable } from 'mixpanel-figma';
+import { Locale } from '../../../lib/message/variants/Locale';
 
 Quill.register(MyListItem, true);
 Quill.register(LinkBlot, true);
@@ -49,6 +50,8 @@ const saveOnEnter = true;
 const Delta = Quill.import('delta') as typeof DeltaType;
 
 type TranslationEditorProps = {
+  language: Locale;
+  refLanguage: Locale;
   variantHTML?: string;
   parameterValues: MessageParameterValues;
   /**
@@ -73,12 +76,17 @@ type TranslationEditorProps = {
   isDisabled: false | true;
   editable: boolean;
   messageStore: MessageStoreMemory;
+  children?: React.ReactNode
 };
+
+// TODO #29 tab gets inserted insted of focus next...
 
 // We use this view in two ocations:
 //  - key editor placeholders no fillins
 //  - label editor - text should contain the placeholders but the editor needs to know the fillins?
 export default function TranslationEditor({
+  language,
+  refLanguage,
   variantHTML,
   isDisabled,
   parameterValues,
@@ -90,6 +98,7 @@ export default function TranslationEditor({
   editable = true,
   messageStore,
   onChange,
+  children,
 }: TranslationEditorProps) {
   const [textState, setTextState] = useState(variantHTML);
   const textRef = useRef(variantHTML);
@@ -192,7 +201,59 @@ export default function TranslationEditor({
                 );
               },
             },
-            custom: {
+            indent: {
+              key: 'Tab',
+              handler() {
+                return false;
+              },
+            },
+            outdent: {
+              key: 'Tab',
+              shiftKey: true,
+              handler() {
+                return false;
+              },
+            },
+            tab: {
+              key: 'Tab',
+              handler() {
+                return false;
+              },
+            },
+            'remove tab': {
+              key: 'Tab',
+              shiftKey: true,
+              collapsed: true,
+              prefix: /\t$/,
+              handler() {
+                return false;
+              },
+            },
+            // indent: {
+            //   // highlight tab or tab at beginning of list, indent or blockquote
+            //   key: 'Tab',
+            //   format: ['blockquote', 'indent', 'list'],
+            //   handler() {
+            //     // don't handle tabs any more
+            //     return true;
+            //   },
+            // },
+            // tabKey: {
+            //   key: 'Tab',
+            //   handle() {
+            //     return false;
+            //   }
+            // },
+            // 'remove tab': {
+            //   key: 'Tab',
+            //   shiftKey: true,
+            //   collapsed: true,
+            //   prefix: /\t$/,
+            //   handler: function() {
+            //     // do nothing
+            //   }
+            // },
+            enterKey: {
               key: 'Enter',
               shiftKey: false,
               handler() {
@@ -219,15 +280,13 @@ export default function TranslationEditor({
             ],
             [
               'S',
-              (node: HTMLElement, delta: any) =>
-                delta.compose(
-                  new Delta().retain(delta.length(), { textDecoration: 'STRIKETHROUGH' }),
-                ),
+              (node: HTMLElement, delta: any) => delta.compose(
+                new Delta().retain(delta.length(), { textDecoration: 'STRIKETHROUGH' }),
+              ),
             ],
             [
               'U',
-              (node: HTMLElement, delta: any) =>
-                delta.compose(new Delta().retain(delta.length(), { textDecoration: 'UNDERLINE' })),
+              (node: HTMLElement, delta: any) => delta.compose(new Delta().retain(delta.length(), { textDecoration: 'UNDERLINE' })),
             ],
           ],
         },
@@ -235,6 +294,7 @@ export default function TranslationEditor({
       readOnly: true,
     });
     editor.root.setAttribute('spellcheck', 'false');
+    delete (editor as any).getModule('keyboard').bindings['9'];
     return editor;
   }
 
@@ -335,6 +395,14 @@ export default function TranslationEditor({
         setEditingState(false);
         handleSave();
       }
+      if (e.key === 'Tab' && !e.shiftKey && saveOnEnter) {
+        e.preventDefault(); // Prevent the default behavior
+        e.stopPropagation(); // Stop event bubbling
+        quillEditor.current?.blur();
+        console.log('setEditingState false key down return');
+        setEditingState(false);
+        handleSave();
+      }
     };
 
     const onClick = (e: any) => {
@@ -397,15 +465,16 @@ export default function TranslationEditor({
     textRef.current = variantHTML;
   }, [variantHTML]);
 
-  // todo we might use this to listen to changes regardig parameter Values from the parrent (deep clone?)
+  // TODO #34 we might use this to listen to changes regardig parameter Values from the parrent (deep clone?)
   // useEffect(() => {
   //   parameterValuesRef.current = parameterValues;
   // }, [parameterValues]);
 
   let textToUse;
-
+  let missingTranslation = false;
   if (textState === undefined || textState === '') {
-    textToUse = 'no translation';
+    textToUse = language === refLanguage ? `Enter Reference Message Text (${refLanguage})...` : `Enter Translation for ${language}...`;
+    missingTranslation = true;
     // } else if (textState.charAt(textState.length - 1) === '\n') {
     //   textToUse = `${textState}\n`;
   } else {
@@ -419,7 +488,7 @@ export default function TranslationEditor({
       display="contents"
     >
       <div
-        className={`translation-editor${editingState ? ' editing' : ''} ${
+        className={`translation-editor ${editingState ? ' editing' : ''} ${
           isDisabled ? ' translation-editor-disabled' : ''
         }`}
       >
@@ -430,79 +499,84 @@ export default function TranslationEditor({
           onMouseLeave={() => {
             setMouseOver(false);
           }}
-          className={`translation-editor-text${editingState ? ' editing' : ''}`}
+          className={`translation-editor-text ${editingState ? ' editing' : ''}`}
         >
-          <div
-            style={{
-              visibility: !isDisabled && (isMouseOver || editingState) ? 'hidden' : 'unset',
-              pointerEvents: !isDisabled && (isMouseOver || editingState) ? 'none' : 'unset',
-            }}
-            className={`translation${editingState ? ' editing ' : ''}${
-              textState === undefined ? ' missing ' : ''
-            }`}
-            onClick={() => {
-              if (!editingState && editable) {
-                console.log('editin state set to' + !editingState);
-                setEditingState(!editingState);
-              }
-            }}
-          >
-            <TranslationView match={match} text={textToUse} />
-          </div>
-
-          <div
-            style={{
-              position: 'absolute',
-              display: !isDisabled && (isMouseOver || editingState) ? 'unset' : 'none',
-              zIndex: 1,
-              top: 0,
-              bottom: 0,
-              left: 0,
-              right: 0,
-            }}
-            ref={scrollContainer}
-          >
-            <OverlayScrollbarsComponent
-              className="translation-editor-scrollbar-overlay"
-              options={{
-                scrollbars: {
-                  clickScroll: true,
-                },
+          <div className={`translation-editor-input-wrapper ${editingState ? ' editing' : ''}`}>
+            <div
+              style={{
+                visibility: !isDisabled && ((isMouseOver && !missingTranslation) || editingState) ? 'hidden' : 'unset',
+                pointerEvents: !isDisabled && (isMouseOver || editingState) ? 'none' : 'unset',
               }}
-              defer
+              className={`translation${editingState ? ' editing ' : ''}${
+                missingTranslation ? ' missing ' : ''
+              }`}
+              onClick={() => {
+                if (!editingState && editable) {
+                  console.log(`editin state set to${!editingState}`);
+                  setEditingState(!editingState);
+                }
+              }}
             >
-              <pre ref={editorPreRef} />
-              {quillEditor.current &&
-                scrollContainer.current &&
-                !isDisabled &&
-                editingState &&
-                createPortal(
-                  <div style={{ display: 'contents' }} ref={tooltipContainerRef}>
-                    <TooltipToolbar
-                      editorScrollContainer={scrollContainer.current}
-                      editor={quillEditor.current}
-                      rootView={document.body}
-                      parameterValues={parameterValues}
-                      // eslint-disable-next-line react/jsx-no-bind
-                      setParameterValue={(
-                        name: string,
-                        value: string,
-                        propagate: boolean,
-                      ): void => {
-                        // eslint-disable-next-line no-param-reassign -- TODO check if this acutally works
-                        parameterValues[name] = {
-                          type: 'string',
-                          value,
-                        };
-                        if (propagate) {
-                          onChange?.(textRef.current, parameterValues);
-                        }
-                      }}
-                    />
-                  </div>,
-                  document.body,
-                )}
-            </OverlayScrollbarsComponent>
+              <TranslationView match={match} text={textToUse} />
+            </div>
+
+            <div
+              style={{
+                position: 'absolute',
+                display: !isDisabled && (isMouseOver || editingState) ? 'unset' : 'none',
+                zIndex: 1,
+                top: 0,
+                bottom: 0,
+                left: 0,
+                right: 0,
+              }}
+              ref={scrollContainer}
+            >
+              <OverlayScrollbarsComponent
+                className="translation-editor-scrollbar-overlay"
+                options={{
+                  scrollbars: {
+                    clickScroll: true,
+                  },
+                }}
+                defer
+              >
+                <pre ref={editorPreRef} />
+                {quillEditor.current
+                  && scrollContainer.current
+                  && !isDisabled
+                  && editingState
+                  && createPortal(
+                    <div style={{ display: 'contents' }} ref={tooltipContainerRef}>
+                      <TooltipToolbar
+                        editorScrollContainer={scrollContainer.current}
+                        editor={quillEditor.current}
+                        rootView={document.body}
+                        parameterValues={parameterValues}
+                        // eslint-disable-next-line react/jsx-no-bind
+                        setParameterValue={(
+                          name: string,
+                          value: string,
+                          propagate: boolean,
+                        ): void => {
+                          // eslint-disable-next-line no-param-reassign -- TODO #34 check if this acutally works
+                          parameterValues[name] = {
+                            type: 'string',
+                            value,
+                          };
+                          if (propagate) {
+                            onChange?.(textRef.current, parameterValues);
+                          }
+                        }}
+                      />
+                    </div>,
+                    document.body,
+                  )}
+              </OverlayScrollbarsComponent>
+            </div>
+          </div>
+          <div className="translation-editor-text-button-group">
+            {children}
           </div>
         </div>
       </div>

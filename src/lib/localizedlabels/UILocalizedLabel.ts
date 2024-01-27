@@ -1,6 +1,7 @@
 import Quill, { Delta as DeltaType, DeltaOperation } from 'quill';
 import blake from 'blakejs';
 import { Message } from '@inlang/message';
+import { unset } from 'lodash';
 import { Locale } from '../message/variants/Locale';
 import { MessageLinkState, LabelStyle, LocalizedLabel } from './LocalizedLabel';
 
@@ -16,6 +17,7 @@ import PlaceholderBlot from '../../ui/compontents/translationEditor/blots/Placeh
 import { MessageParameterValues } from '../message/MessageParameterValues';
 import { Placeholder } from '../message/Placeholder';
 import PlaceholderUtil from '../message/PlaceholderUtil';
+import TranslatorMachine from '../translationprovider/TranslatorMachine';
 
 const Delta = Quill.import('delta') as typeof DeltaType;
 
@@ -391,66 +393,89 @@ export class UILocalizedLabel implements LocalizedLabel {
     return state;
   }
 
-  async setLanguageOnUnsetLabel(
-    targetLanguage: Locale,
-    missingTranslationProvider: (
-      input: string,
-      sourceLanguage: string,
-      targetLanguage: string,
-    ) => Promise<string | null>,
-  ) {
-    const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
-    const toRefLanguage = targetLanguage === refLanguage;
-
-    if (toRefLanguage) {
-      // keep the label untouched if we just switch to the ref language
-      await this.manager.updateLabelProperties(this.nodeId, {});
-      return;
+  isTranslatable() {
+    debugger;
+    const refLanguage = this.manager.messageStore.getRefLanugage();
+    if (!refLanguage) {
+      return false;
     }
 
+    if (this.language !== this.manager.messageStore.getRefLanugage()) {
+      if (this.messageLinkState === MessageLinkState.Unlinked) {
+        const { unlinkedMessage } = this;
+        return MessageStoreMemory.canTranslate(unlinkedMessage, refLanguage, this.language, []);
+      }
+
+      if (this.messageLinkState === MessageLinkState.Linked) {
+        const message = this.manager.messageStore.getMessage(this.messageId);
+        if (!message) {
+          return false;
+        }
+        return MessageStoreMemory.canTranslate(message, refLanguage, this.language, []);
+      }
+    }
+
+    return false;
+  }
+
+  async setLanguageOnUnsetLabel(
+    targetLanguage: Locale,
+    translator: TranslatorMachine
+  ) {
+    const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
+    const fromRefLanguage = this.language === refLanguage;
+    
     // eslint-disable-next-line no-case-declarations
-    const unlinkedMessage = {
+    let unlinkedMessage: Message = {
       id: '____unlinked',
       // we start with no pattern - unlinked messages cannot have variants other than language - for more complex messages a linked message is required
       selectors: [],
       variants: [
         {
-          languageTag: refLanguage,
+          languageTag: this.language,
           match: [],
           pattern: MessageStoreMemory.patternHtmlToPattern(this.currentPatternHTML),
         },
       ],
     };
 
-    // eslint-disable-next-line no-case-declarations
-    try {
-      const updatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(
-        missingTranslationProvider,
+    // make the lable a unlinked label with the current language
+    await this.manager.updateLabelProperties(this.nodeId, {
+      messageState: {
+        type: 'unlinked',
         unlinkedMessage,
-        refLanguage,
-        targetLanguage,
-        [],
-      );
-      await this.manager.updateLabelProperties(this.nodeId, {
-        language: targetLanguage,
-        messageState: {
-          type: 'unlinked',
-          unlinkedMessage: updatedMessage,
-          parameterValues: this.parameterValues,
-        },
-      });
-    } catch {
-      await this.manager.updateLabelProperties(this.nodeId, {});
+        parameterValues: this.parameterValues,
+      },
+    });
+
+    if (fromRefLanguage) {
+      try {
+        unlinkedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(
+          translator,
+          unlinkedMessage,
+          refLanguage,
+          targetLanguage,
+          [],
+        );
+      } catch (e) {
+        // TODO #29 we need to separate exeception from the api and the avaialble translations and communicate it to the outsite
+      }
     }
+
+    await this.manager.updateLabelProperties(this.nodeId, {
+      language: targetLanguage,
+      messageState: {
+        type: 'unlinked',
+        unlinkedMessage,
+        parameterValues: this.parameterValues,
+      },
+    });
   }
 
   async setLanguageOnUnlinkedLabel(
     targetLanguage: Locale,
-    missingTranslationProvider: (
-      input: string,
-      sourceLanguage: string,
-      targetLanguage: string,
-    ) => Promise<string | null>,
+    translator: TranslatorMachine,
+    enforceTranslation: boolean,
   ) {
     const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
     const toRefLanguage = targetLanguage === refLanguage;
@@ -477,10 +502,10 @@ export class UILocalizedLabel implements LocalizedLabel {
     // let isVariantsTranslationOutdated = await MessageStoreMemory.isVariantsTranslationOutdated(unlinkedMessage, refLanguage, targetLanguage, {});
 
     let eventuallyUpdatedMessage = this.unlinkedMessage;
-    if (!hasVariantTranslationInTargetLanguage) {
+    if (!hasVariantTranslationInTargetLanguage || enforceTranslation) {
       try {
         eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(
-          missingTranslationProvider,
+          translator,
           unlinkedMessage,
           refLanguage,
           targetLanguage,
@@ -497,14 +522,14 @@ export class UILocalizedLabel implements LocalizedLabel {
     // }
 
     // if (hasVariantInTargetLanguage) {
-      await this.manager.updateLabelProperties(this.nodeId, {
-        messageState: {
-          type: 'unlinked',
-          unlinkedMessage: eventuallyUpdatedMessage,
-          parameterValues: this.parameterValues,
-        },
-        language: targetLanguage,
-      });
+    await this.manager.updateLabelProperties(this.nodeId, {
+      messageState: {
+        type: 'unlinked',
+        unlinkedMessage: eventuallyUpdatedMessage,
+        parameterValues: this.parameterValues,
+      },
+      language: targetLanguage,
+    });
     // } else {
     //   await this.manager.updateLabelProperties(this.nodeId, {});
     // }
@@ -512,11 +537,8 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   async setLanguageOnLinkedLabel(
     targetLanguage: Locale,
-    missingTranslationProvider: (
-      input: string,
-      sourceLanguage: string,
-      targetLanguage: string,
-    ) => Promise<string | null>,
+    translator: TranslatorMachine,
+    enforceTranslation: boolean,
   ) {
     const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
     const toRefLanguage = targetLanguage === refLanguage;
@@ -524,20 +546,20 @@ export class UILocalizedLabel implements LocalizedLabel {
     // const hasVariantInTargetLanguage = MessageStoreMemory.hasVariant(message, targetLanguage, []);
     const hasVariantTranslationInTargetLanguage = MessageStoreMemory.hasTranslationInVariant(message, targetLanguage, []);
     // updating message
-    if (!hasVariantTranslationInTargetLanguage) {
+    if (!hasVariantTranslationInTargetLanguage || enforceTranslation) {
       if (!toRefLanguage) {
         try {
           const eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(
-            missingTranslationProvider,
+            translator,
             message,
             refLanguage,
             targetLanguage,
             [],
           );
           await this.manager.updateMessage(eventuallyUpdatedMessage, {});
-          return;
         } catch (e) {
-          /* empty */
+          console.log("setLanguageOnLinkedLabel failed")
+          console.log(e);
         }
       }
       // TODO #3 think about fall back mechanism:
@@ -557,14 +579,34 @@ export class UILocalizedLabel implements LocalizedLabel {
     });
   }
 
+  /**
+   * When we set the language on a labele there are various cases that we need to take care of:
+   *
+   * Missing Message - the message thats referenced by the label does not exist (anymore)
+   * - don't change the state of the label at all
+   *
+   * UnManaged
+   * - don't do anything with it
+   *
+   * Unset
+   * - this label becomes an unlinked label with an anonymouse message
+   *   - option 1) current language is nonRefLanguage
+   *
+   *
+   * Unlinked
+   * - Check if the
+   *
+   *
+   *
+   * @param targetLanguage
+   * @param missingTranslationProvider
+   * @returns
+   */
   async setLanguage(
     targetLanguage: Locale,
     // NOTE we dont support versioning for now version: number | undefined,
-    missingTranslationProvider: (
-      input: string,
-      sourceLanguage: string,
-      targetLanguage: string,
-    ) => Promise<string | null>,
+    translator: TranslatorMachine,
+    enforceTranslation: boolean
   ) {
     switch (this.messageLinkState) {
       case MessageLinkState.MissingMessage:
@@ -579,14 +621,14 @@ export class UILocalizedLabel implements LocalizedLabel {
         return;
 
       case MessageLinkState.Unset:
-        await this.setLanguageOnUnsetLabel(targetLanguage, missingTranslationProvider);
+        await this.setLanguageOnUnsetLabel(targetLanguage, translator);
         break;
 
       case MessageLinkState.Unlinked:
-        await this.setLanguageOnUnlinkedLabel(targetLanguage, missingTranslationProvider);
+        await this.setLanguageOnUnlinkedLabel(targetLanguage, translator, enforceTranslation);
         break;
       case MessageLinkState.Linked:
-        await this.setLanguageOnLinkedLabel(targetLanguage, missingTranslationProvider);
+        await this.setLanguageOnLinkedLabel(targetLanguage, translator, enforceTranslation);
         break;
       default:
         throw new Error(`unhandled Linksstate ${this.messageLinkState}`);
@@ -597,7 +639,7 @@ export class UILocalizedLabel implements LocalizedLabel {
   async setLabelPattern(patternHtml: string, parameterValues: MessageParameterValues) {
     const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
     if (this.messageLinkState === MessageLinkState.Unset) {
-      // TODO in unset - create message
+      // TODO #29 in unset - create message ?
       // eslint-disable-next-line no-case-declarations
       const unlinkedMessage = {
         id: '____unlinked',

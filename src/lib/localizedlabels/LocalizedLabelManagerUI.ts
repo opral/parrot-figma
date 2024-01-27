@@ -15,6 +15,7 @@ import { Gender } from '../message/variants/Gender';
 import { FillinToPlaceholder, MessageExtension, Parameter } from '../message/MessageExtnesions';
 import { MessageParameterValues } from '../message/MessageParameterValues';
 import MessageImporter from '../import/MessageImporter';
+import TranslatorMachine from '../translationprovider/TranslatorMachine';
 
 export default class LocalizedLabelManagerUI
   extends EventTarget
@@ -59,6 +60,7 @@ export default class LocalizedLabelManagerUI
    * @returns true if a refresh was needed
    */
   private refreshCachedLabel(labelToCache: LocalizedLabel, force = false) {
+    
     const label = new UILocalizedLabel(this, labelToCache);
 
     // flag that signals if the parents of a node have changed (it was moved to another parent for example)
@@ -298,11 +300,7 @@ export default class LocalizedLabelManagerUI
   async setFrameLanguage(
     frameId: string,
     targetLanguage: Locale,
-    missingTranslationProvider: (
-      input: string,
-      sourceLanguage: string,
-      targetLanguage: string,
-    ) => Promise<string | null>,
+    translator: TranslatorMachine,
   ) {
     const version = undefined as undefined | number; // todo fill with fixed version of the frame if set
 
@@ -312,8 +310,9 @@ export default class LocalizedLabelManagerUI
 
     for (const localizedLabelId of this.cachedFrames[frameId].localizedLabelIds) {
       const localizedLabel = this.cachedLocalisedLabels[localizedLabelId]!;
+      
       // eslint-disable-next-line no-await-in-loop
-      await this.setLabelLanguage(localizedLabel, targetLanguage, missingTranslationProvider);
+      await this.setLabelLanguage(localizedLabel, targetLanguage, translator, false);
     }
 
     // await this.localizedLabelMangerSandbox.updateFrameById(frameId);
@@ -330,13 +329,10 @@ export default class LocalizedLabelManagerUI
     targetLanguage: Locale,
     // TODO #17 versioning
     // version: number | undefined,
-    missingTranslationProvider: (
-      input: string,
-      sourceLanguage: string,
-      targetLanguage: string,
-    ) => Promise<string | null>,
+    translator: TranslatorMachine,
+    enforceTranslation: boolean,
   ) {
-    new UILocalizedLabel(this, cachedLabel).setLanguage(targetLanguage, missingTranslationProvider);
+    new UILocalizedLabel(this, cachedLabel).setLanguage(targetLanguage, translator, enforceTranslation);
   }
 
   async createNewVersionFromLabelState(localizedLabel: UILocalizedLabel) {
@@ -532,9 +528,9 @@ export default class LocalizedLabelManagerUI
     if (localizedLabel.messageLinkState === MessageLinkState.Linked) {
       // update only the patternHTML on the label - updating the message is an explicit action
     } else if (localizedLabel.messageLinkState === MessageLinkState.Unset) {
-      // TODO create unlinked message
+      // TODO #29 create unlinked message ?
     } else if (localizedLabel.messageLinkState === MessageLinkState.Unlinked) {
-      // TODO update unlinked message in place
+      // TODO #29 update unlinked message in place ?
     }
   }
 
@@ -635,26 +631,15 @@ export default class LocalizedLabelManagerUI
     } else if (changedProperties.messageState?.type === 'unlinked') {
       const updatedMessage = changedProperties.messageState.unlinkedMessage;
 
-      const bestMatchingVariant = MessageStoreMemory.getBestExistingVariant(
-        updatedMessage!,
-        language,
-        this.messageStore.getLanugages()!,
-        [],
-      );
+      const variantHTML = MessageStoreMemory.htmlForPattern(updatedMessage!, language, []) ?? '';
 
-      if (bestMatchingVariant === undefined) {
-        throw new Error('The given message has no variant at all');
-      }
-
-      const variantHTML = MessageStoreMemory.patternToHtml(bestMatchingVariant.pattern);
       textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(
         variantHTML,
         changedProperties.messageState.parameterValues,
       );
-
       variantPatternHTMLHash = blake.blake2sHex(variantHTML);
       // eslint-disable-next-line no-param-reassign
-      changedProperties.language = bestMatchingVariant.languageTag as Locale;
+      changedProperties.language = language;
     }
     // unset will be passed automatically
 

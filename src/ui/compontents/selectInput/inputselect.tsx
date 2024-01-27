@@ -603,7 +603,7 @@ export default function InputSelect({
                     default:
                       console.log(keyName);
                       resetHighlight();
-                      // TODO check in on change illigal characters in keys and remove them
+                      // TODO #33 check in on change illigal characters in keys and remove them
                       break;
                   }
                 }}

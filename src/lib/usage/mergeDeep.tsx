@@ -1,6 +1,3 @@
-// TODO translated characters:
-// this thing is tricky because it will need to calculate based on different files
-// if a user a uses file a and user b uses file b i cant know the amount of characters translated
 /**
  * Performs a deep merge of `source` into `target`.
  * Mutates `target` only but not its objects and arrays.

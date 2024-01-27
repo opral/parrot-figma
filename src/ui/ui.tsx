@@ -45,6 +45,7 @@ import ComparisonChart from './compontents/plans/ComparisonChart';
 import { InlangMessageStore } from '../lib/message/store/InlangMessageStoreFigmaRoot';
 import 'overlayscrollbars/overlayscrollbars.css';
 import { OverlayScrollbarsComponent } from './compontents/overlayscrollbar';
+import TranslatorMachine from '../lib/translationprovider/TranslatorMachine';
 
 console.log(`Starting Figma UI - Version ${pjs.version}`);
 
@@ -80,9 +81,9 @@ document.addEventListener(
   (e) => {
     // Handle Select All, Undo and Redo in the desktop app
     if (
-      e.keyCode === 65 /* A */ &&
-      e.metaKey &&
-      !(e.target! as any).classList.contains('cm-content')
+      e.keyCode === 65
+      && /* A */ e.metaKey
+      && !(e.target! as any).classList.contains('cm-content')
     ) {
       document.execCommand('selectAll');
     } else if (e.keyCode === 90 /* Z */ && e.metaKey) {
@@ -98,10 +99,10 @@ document.addEventListener(
 
 window.addEventListener('keydown', (e) => {
   if (
-    e.key === 'z' &&
-    !e.shiftKey &&
-    !e.altKey &&
-    !(e.target! as any).classList.contains('cm-content')
+    e.key === 'z'
+    && !e.shiftKey
+    && !e.altKey
+    && !(e.target! as any).classList.contains('cm-content')
   ) {
     // Undo the action in Figma
     const isMac = navigator.userAgent.indexOf('Macintosh') >= 0;
@@ -166,6 +167,9 @@ figmaRemote.getUserId().then((userId) => {
     Sentry.setUser({ id: userId! });
   }
 });
+
+const translationMachine = new TranslatorMachine();
+asyncFunctionProxy.proxyAsyncMethods(translationMachine);
 
 const checkVersion = async () => {
   const minVersionRequest = await fetch('https://parrot-global.github.io/parrot/min-version.json', {
@@ -303,7 +307,9 @@ function App() {
         <Tooltip contentAttribute="data-tooltip-content" />
         <div className="view dev-panel">
           <div className="comming-soon">
-            Parrot´s Dev Mode version is comming soon... <br />
+            Parrot´s Dev Mode version is comming soon...
+            {' '}
+            <br />
             <br />
             Translate your Designs with Parrot in Design Mode in the meantime!
             <br />
@@ -318,7 +324,8 @@ function App() {
   if (user.userRole !== UserFileRole.designer && user.userRole !== UserFileRole.owner) {
     return (
       <>
-        Not the permission to view{' '}
+        Not the permission to view
+        {' '}
         {user.openUserRoleRequest !== undefined ? `${user.openUserRoleRequest} requested` : ' -'}
       </>
     );
@@ -418,7 +425,7 @@ function App() {
   }
 
   function upgradePlan() {
-    console.log('TODO UPGRADE PLAN!');
+    console.log('TODO #29 UPGRADE PLAN!');
   }
 
   return (
@@ -516,12 +523,11 @@ function App() {
       <Drawer
         shown={consumptionPayWallFeature !== undefined}
         beforeShow={async () => {
-          const waitOneFrame = () =>
-            new Promise<void>((resolve) => {
-              setTimeout(() => {
-                resolve();
-              }, 30);
-            });
+          const waitOneFrame = () => new Promise<void>((resolve) => {
+            setTimeout(() => {
+              resolve();
+            }, 30);
+          });
           WindowManagerUi.instance?.requestWindowMode(WindowMode.Fullscreen, false);
           return waitOneFrame();
         }}
@@ -542,12 +548,11 @@ function App() {
       <Drawer
         shown={showAllFeatures}
         beforeShow={async () => {
-          const waitOneFrame = () =>
-            new Promise<void>((resolve) => {
-              setTimeout(() => {
-                resolve();
-              }, 30);
-            });
+          const waitOneFrame = () => new Promise<void>((resolve) => {
+            setTimeout(() => {
+              resolve();
+            }, 30);
+          });
           WindowManagerUi.instance?.requestWindowMode(WindowMode.Fullscreen, false);
           return waitOneFrame();
         }}

@@ -1,0 +1,269 @@
+/* eslint-disable no-restricted-syntax */
+/* eslint-disable no-labels */
+import ParrotApi, { TranslationCredit, TranslationCreditUsage } from '../api/Parrot';
+import { Locale } from '../message/variants/Locale';
+import getKey from './TranslationCredit';
+
+import GoogleTranslator from './google';
+
+const translationsCreditUsageLocalStorageKey = 'prrt_utc';
+const translationCreditsLocalStorageKey = 'prrt_tc';
+
+const includedBatteries = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJjaWQiOiJpbmNsdWRlZC1iYXR0ZXJpZXMtMiIsIm1zZ2MiOjEwMCwibXNndSI6MH0.TlhzfZYn7qRb54hWr9NqM4ZI0ujRmHaQGchDcX3vhtb-I1TiC4Y4N-ySPgGRfNoRqYNaTxsJEjPd5Xe9pTyAA4KGXK-SJ1wVBimUbgifIOHVZ03wLjAslacGfNsik9psKjMt1pXCh4E8K9_GA_DaeUeHYbIEopj4m4kZU1neE5jzYtzMVFPCcgspkWtjM53s5bCKoD5GredG3LvTQ9bpv8aJAjEYakd7DVhX0TUnN-z6qUgyItXu9uVCuN0djTnHQQKmgWv33WTiiCbIxRp_AqG8VC72DcAMnlu7O-d8jlfMyFCsBhlsU6W_AvIE-5oHF4PSVb8RDl5ZhG-GUljBkg';
+
+type UsageState = {
+  translationsCreditUsage: TranslationCreditUsage[],
+  translationCredits: TranslationCredit[]
+};
+
+function getCurrentCredits(translationCredits: TranslationCredit[], ownerId: string, currentTime: number) {
+  return translationCredits.filter(
+    // only those with the same owner and within the time span or no timespan and those with free messages are relevant
+    (credit) => credit.co === ownerId
+        && (credit.nbf === undefined || credit.exp === undefined || (credit.nbf <= currentTime && currentTime <= credit.exp))
+        && credit.msgc - credit.msgu > 0,
+  ).sort((a, b) => {
+    // Sort by start time (nbf), with those having nbf as null placed last
+    if (a.nbf === undefined) return 1;
+    if (b.nbf === undefined) return -1;
+    return a.nbf - b.nbf;
+  });
+}
+
+// calculates the available messages by
+// 1. reducing the available messages by translations that have not been sychronised
+// 2. only sum credits valid for the current time
+function calculateAvailableMessages(usageState: UsageState, ownerId: string, currentTime: number): number {
+  const { translationsCreditUsage, translationCredits } = usageState;
+
+  // Clone the credits array to avoid modifying the original array
+  const sortedCredits = (JSON.parse(JSON.stringify(translationCredits)) as TranslationCredit[]).sort((a, b) => {
+    // Sort by start time (nbf), with those having nbf as null placed last
+    if (a.nbf === undefined) return 1;
+    if (b.nbf === undefined) return -1;
+    return a.nbf - b.nbf;
+  });
+
+  // add usages - not known by the server yet
+  for (const usage of translationsCreditUsage.sort((a, b) => a.time - b.time)) {
+    for (const credit of sortedCredits) {
+      // credits are sorted and credits with a time bound come first -> get the usage applied to first
+      if (
+        credit.co === ownerId
+        && (credit.nbf === undefined || credit.exp === undefined || (credit.nbf <= usage.time && usage.time <= credit.exp))
+        && credit.msgc - credit.msgu > 0
+      ) {
+        // Use the credit if it has a matching timespan and available messages
+        credit.msgu += 1;
+        break;
+      }
+    }
+  }
+
+  return sortedCredits.reduce((sum, credit) => {
+    if (credit.co === ownerId
+      && (credit.nbf === undefined || credit.exp === undefined || (credit.nbf <= currentTime && currentTime <= credit.exp))) {
+      return sum + (credit.msgc - credit.msgu);
+    }
+    return sum;
+  }, 0);
+}
+
+export default class TranslatorMachine {
+  public proxyClassName = 'TranslatorMachine';
+
+  ensureStateLoaded: Promise<void>;
+
+  state: UsageState | null = null;
+
+  parrotApi: ParrotApi | undefined;
+
+  constructor(parrotApi?: ParrotApi) {
+    // if its a proxy we don't have an api key
+    if (!parrotApi) {
+      console.log('INIT TranslatorMachine as proxy');
+      const promise = async () => {};
+      this.ensureStateLoaded = promise();
+      TranslatorMachine.instance = this;
+      return;
+    }
+
+    this.parrotApi = parrotApi;
+
+    console.log('INIT TranslatorMachine in sandbox');
+    // load available translations from parrot backend - fall back to local storage
+    const ensureStateLoadedPromise = async () => {
+      console.log('INIT TranslatorMachine in sandbox - ensureStateLoadedPromise called');
+      const usedTranslationsCredits = await figma.clientStorage.getAsync(translationsCreditUsageLocalStorageKey);
+      const translationCredits = await figma.clientStorage.getAsync(translationCreditsLocalStorageKey);
+
+      this.state = {
+        translationCredits: typeof translationCredits === 'object' ? translationCredits as TranslationCredit[] : [{
+          cid: 'included-batteries-1',
+          co: figma.currentUser!.id!,
+          msgc: 100,
+          msgu: 0,
+          jwt: includedBatteries,
+        }],
+        translationsCreditUsage: typeof usedTranslationsCredits === 'object' ? usedTranslationsCredits as TranslationCreditUsage[] : [],
+      };
+
+      // remove sent flags - since this is a new run...
+      for (const usage of this.state.translationsCreditUsage) {
+        usage.send = false;
+      }
+
+      console.log('INIT TranslatorMachine in sandbox - ensureStateLoadedPromise called - awaiting sync');
+      console.log(this.state);
+      await this.syncTranslations(true);
+      console.log('INIT DONE');
+    };
+    this.ensureStateLoaded = ensureStateLoadedPromise();
+  }
+
+  static instance: TranslatorMachine;
+
+  async addTranslationCreditUse(ownerId: string, nCharacters: number) {
+    const usageTime = new Date().getTime();
+    calculateAvailableMessages(this.state!, ownerId, usageTime);
+
+    await this.ensureStateLoaded;
+    // When we start with collaboration we just need to
+    this.state!.translationsCreditUsage.push({
+      ownerId,
+      messages: 1,
+      acknowledged: false,
+      send: false,
+      time: usageTime,
+      characters: nCharacters,
+    });
+    this.fireCreditsUpdateEvent();
+    // lets not await the call to the server
+    this.syncTranslations();
+  }
+
+  async syncTranslations(init?: boolean) {
+    if (!init) {
+      console.log('awaiting ensureStateLoaded');
+      console.log(this.ensureStateLoaded);
+      await this.ensureStateLoaded;
+      console.log('awaiting ensureStateLoaded done');
+    }
+
+    const usageToSend = [];
+    const currentFigmaUserId = figma.currentUser!.id!;
+    const currentFigmaFileOwnerId = currentFigmaUserId; // we change this to the real owner when we introduce collaboration
+
+    for (const creditUsage of this.state!.translationsCreditUsage) {
+      if (!creditUsage.send && (creditUsage.ownerId === currentFigmaUserId || creditUsage.ownerId === currentFigmaFileOwnerId)) {
+        usageToSend.push(creditUsage);
+        creditUsage.send = true;
+      }
+    }
+
+    await figma.clientStorage.setAsync(translationsCreditUsageLocalStorageKey, this.state!.translationsCreditUsage);
+
+    try {
+      const updatedCredits = await this.updateInBackend(currentFigmaUserId, currentFigmaFileOwnerId, usageToSend, this.state!.translationCredits);
+
+      // remove all credits of the current user of of the owner of the current file and those (the updated once) comming from the server.
+      this.state!.translationCredits = this.state!.translationCredits.filter((credit) => credit.co !== currentFigmaUserId && credit.co !== currentFigmaFileOwnerId).concat(updatedCredits);
+
+      for (const successfulSend of usageToSend) {
+        const indexOfSuccessfullSend = this.state!.translationsCreditUsage.indexOf(successfulSend);
+        this.state!.translationsCreditUsage.splice(indexOfSuccessfullSend, 1);
+      }
+
+      // update local storage state
+      figma.clientStorage.setAsync(translationCreditsLocalStorageKey, this.state!.translationCredits);
+      figma.clientStorage.setAsync(translationsCreditUsageLocalStorageKey, this.state!.translationsCreditUsage);
+
+      this.fireCreditsUpdateEvent();
+    } catch (e) {
+      // ok we ignore errors here for now - only send them to sentry?
+      for (const failedToSend of usageToSend) {
+        failedToSend.send = false;
+      }
+    }
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  async updateInBackend(
+    figmaUserId: string,
+    figmaFileOwnerId: string,
+    translationsCreditUsage: TranslationCreditUsage[],
+    translationCredits: TranslationCredit[],
+  ) {
+    const result = await this.parrotApi!.synchronizeCredits(figmaUserId, figmaFileOwnerId, translationCredits.map((c) => c.jwt), translationsCreditUsage);
+    console.log(`home answered: ${JSON.stringify(result)}`);
+    return result;
+    // for (const usage of translationsCreditUsage) {
+    //   const credit = getCurrentCredit(translationCredits, usage.ownerId, usage.time);
+    //   if (credit) {
+    //     credit.msgu += 1;
+    //   }
+    // }
+    // return translationCredits;
+  }
+
+  async translate(text: string, sourceLange: Locale, targetLanguage: Locale) {
+    console.log('startin translation');
+    // make sure the state is loaded from the local storage
+    await this.ensureStateLoaded;
+
+    // For now don't use the owner of the file
+    const userId = figma.currentUser!.id!;
+
+    const availableTranslations = calculateAvailableMessages(this.state!, userId, new Date().getTime());
+    console.log(`availableTranslations: ${availableTranslations}`);
+    if (availableTranslations <= 0) {
+      // TODO #29 activate again
+      // throw new Error('No Machine Translations left');
+    }
+
+    let translation: string | null = null;
+
+    // call google translate
+    try {
+      translation = await GoogleTranslator.translate(text, sourceLange, targetLanguage);
+    } catch (e) {
+      // lets report to sentry about the error but we don't fail
+      // if google tanslate fails - call parrot translate - will fail if no more tanslations are left but will also not increase the number
+    }
+
+    // lets not wait for the results here ;-)
+    await this.addTranslationCreditUse(userId, text.length);
+    return translation;
+  }
+
+  async getCreditStateAsync() {
+    return this.getCreditState();
+  }
+
+  getCreditState() {
+    const userId = figma.currentUser!.id!;
+    return {
+      credits: getCurrentCredits(this.state!.translationCredits, userId, new Date().getTime()),
+      availableMessages: this.getAvailableMessages(),
+    };
+  }
+
+  getAvailableMessages() {
+    // For now don't use the owner of the file
+    const userId = figma.currentUser!.id!;
+    const availableTranslations = calculateAvailableMessages(this.state!, userId, new Date().getTime());
+    return availableTranslations;
+  }
+
+  fireCreditsUpdateEvent() {
+    const message = {
+      target: 'TranslatorMaschine',
+      type: 'creditUpdate',
+      data: this.getCreditState(),
+    } as any;
+
+    // console.log('keys changed');
+    // console.log(keysChanged);
+    figma.ui.postMessage(message);
+  }
+}

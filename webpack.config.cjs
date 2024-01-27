@@ -78,22 +78,22 @@ module.exports = (env, argv) => {
     plugins: [
       new webpack.DefinePlugin({
         global: {}, // Fix missing symbol error when running in developer VM
-        process: '(' +JSON.stringify({
-          env: {
-            ENVIRONMENT: argv.mode,
-            
-            // provide sentry process env variables
-            SENTRY_ORG: process.env.SENTRY_ORG,
-            SENTRY_PROJECT: process.env.SENTRY_PROJECT,
-            SENTRY_DSN: process.env.SENTRY_DSN,
-            
-            // mixed panel key must be added to the client :-(
-            MIXPANEL_ACCESS_TOKEN: process.env.MIXPANEL_ACCESS_TOKEN,
-          }
-        }) + ')',
+        process: {},
+        'process.env': {},
+        'process.env.ENVIRONMENT': JSON.stringify(argv.mode),
+        'process.env.MIXPANEL_ACCESS_TOKEN':  JSON.stringify(process.env.MIXPANEL_ACCESS_TOKEN),
+        'process.env.PARROT_API_KEY': JSON.stringify(process.env.PARROT_API_KEY),
+        'process.env.SENTRY_ORG': JSON.stringify(process.env.SENTRY_ORG),
+        'process.env.SENTRY_PROJECT': JSON.stringify(process.env.SENTRY_PROJECT),
+        'process.env.SENTRY_DSN': JSON.stringify(process.env.SENTRY_DSN),
+        'process.env.SENTRY_SAMPLING': JSON.stringify(undefined),
+        'process.env.SENTRY_PROFILE_SAMPLING': JSON.stringify(undefined),
+        'process.env.SENTRY_REPLAY_SAMPLING': JSON.stringify(undefined),
+        
+
       }),
       
-      // TODO fail build if we are in a release build and the token is missing!
+      // TODO #29 check if sentry and mixedpanel are still working!
       process.env.SENTRY_AUTH_TOKEN ?
         sentryWebpackPlugin({
           org: process.env.SENTRY_ORG,

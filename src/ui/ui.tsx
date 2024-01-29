@@ -40,12 +40,16 @@ import UserManager, { PluginUser, UserFileRole } from '../lib/usage/UsageManager
 import UserManagerUI from '../lib/usage/UsageManagerUI';
 import UserManagement from './views/usermanagement/Usermanagement';
 import Drawer from './compontents/drawer/Drawer';
-import ConsumptionPaywall from './compontents/plans/ConsumptionPaywall';
+
 import ComparisonChart from './compontents/plans/ComparisonChart';
 import { InlangMessageStore } from '../lib/message/store/InlangMessageStoreFigmaRoot';
 import 'overlayscrollbars/overlayscrollbars.css';
 import { OverlayScrollbarsComponent } from './compontents/overlayscrollbar';
 import TranslatorMachine from '../lib/translationprovider/TranslatorMachine';
+import MessageUpsellOverlay from './compontents/upselloverlay/MessageUpsellOverlay';
+import MessagesConsumptionPaywall from './compontents/plans/MessagesConsumptionPaywall';
+import ParrotApi from '../lib/api/Parrot';
+import TextField from './compontents/textfield/TextField';
 
 console.log(`Starting Figma UI - Version ${pjs.version}`);
 
@@ -208,12 +212,25 @@ const localizedLabelManager = new LocalizedLabelManagerUI(
   memoryTranslationKeyStore,
 );
 
+enum LicenseState {
+  unvalidated,
+  validating,
+  valid,
+  activatedAlready,
+  used,
+  invalid,
+}
+
 function App() {
   // initial app screen is startup until we initialy loaded the data
   const [appScreen, setAppScreen] = useState(undefined as String | undefined);
   const [consumptionPayWallFeature, setCunsumptionPayWallFeature] = useState(
     undefined as String | undefined,
   );
+
+  const [enteredLicenseKey, setEnteredLicenseKey] = useState(undefined as string | undefined);
+
+  const [licenseKeyState, setLicenseKeyState] = useState<LicenseState>(LicenseState.unvalidated);
   const [showAllFeatures, setShowAllFeatures] = useState(false);
 
   const [user, setUser] = useState(undefined as PluginUser | undefined);
@@ -388,18 +405,38 @@ function App() {
       );
     case 'messages':
       view = (
-        <MessageListView
-          showSearchBar={false}
-          initialSearchQuery={keyQuery}
-          messageStore={memoryTranslationKeyStore}
-          localizedLabelManager={localizedLabelManager}
-          figmaRemote={figmaRemote}
-          highlightSelectedNodes
-        />
+        <>
+          <MessageListView
+            showSearchBar={false}
+            initialSearchQuery={keyQuery}
+            messageStore={memoryTranslationKeyStore}
+            localizedLabelManager={localizedLabelManager}
+            figmaRemote={figmaRemote}
+            highlightSelectedNodes
+          />
+          <MessageUpsellOverlay
+            hideInfo
+            onclick={() => {
+              setCunsumptionPayWallFeature('test');
+            }}
+          />
+        </>
+
       );
       break;
     case 'settings':
-      view = <SetupView labelManager={localizedLabelManager} />;
+      view = (
+        <>
+          <SetupView labelManager={localizedLabelManager} />
+{/*           TODO #29 add to show the upsell overlay to all users
+          <MessageUpsellOverlay
+            hideInfo={false}
+            onclick={() => {
+              setCunsumptionPayWallFeature('test');
+            }}
+          /> */}
+        </>
+      );
       break;
 
     case 'export':
@@ -407,14 +444,23 @@ function App() {
       break;
     case 'design':
       view = (
-        <LocalizedLabelsListView
-          showMessage={(messageName: string) => {
-            setKeyQuery(MessageStoreMemory.toQueryObject(`name:${messageName}`));
-            setAppScreen('messages');
-          }}
-          localizedLabelManager={localizedLabelManager}
-          figmaRemote={figmaRemote}
-        />
+        <>
+          <LocalizedLabelsListView
+            showMessage={(messageName: string) => {
+              setKeyQuery(MessageStoreMemory.toQueryObject(`name:${messageName}`));
+              setAppScreen('messages');
+            }}
+            localizedLabelManager={localizedLabelManager}
+            figmaRemote={figmaRemote}
+          />
+          <MessageUpsellOverlay
+            hideInfo
+            onclick={() => {
+              setCunsumptionPayWallFeature('test');
+            }}
+          />
+        </>
+
       );
       break;
     case 'users':
@@ -521,6 +567,90 @@ function App() {
       </OverlayScrollbarsComponent>
       <a id="focusHelper" href="" />
       <Drawer
+        position="top"
+        shown={enteredLicenseKey !== undefined}
+        buttons={[
+          {
+            type: 'secondary',
+            text: 'Cancel',
+            key: 'escape',
+            callback: () => {
+              // setEnteredLicenseKey(undefined);
+              setLicenseKeyState(LicenseState.unvalidated);
+            },
+          },
+          {
+            type: 'primary',
+            text: licenseKeyState === LicenseState.validating ? 'Validating...' : 'Use License Key',
+            key: 'enter',
+            disabled: (enteredLicenseKey !== undefined && enteredLicenseKey.length < 10) || licenseKeyState === LicenseState.validating || licenseKeyState === LicenseState.invalid,
+            callback: () => {
+              // setEnteredLicenseKey(undefined);
+              setLicenseKeyState(LicenseState.validating);
+              // call backend
+              translationMachine.activateLicenseAsync(enteredLicenseKey!).then((result) => {
+                if (result.activated || result.success) {
+                  // {activated: true, error: null, license_key: {…}, instance: {…}, meta: {…}}
+                  if (result.activated) {
+                    translationMachine.syncTranslations().then(() => {
+                      setLicenseKeyState(LicenseState.valid);
+                      setEnteredLicenseKey(undefined);
+                    });
+                  } else {
+                    setLicenseKeyState(LicenseState.valid);
+                    setEnteredLicenseKey(undefined);
+                  }
+                } else if (result.error) {
+                  setLicenseKeyState(LicenseState.invalid);
+                  // TODO #29 show the error
+                }
+                // check result!
+                // TODO #29 handle success - reload translations!
+              }).catch((e) => {
+                // TODO #29 handle network eerror
+                //
+              });
+            },
+          },
+        ]}
+      >
+        {/* TODO #29 Make field big enough for 0BD2D0FC-52F3-44BA-BF02-7AB2B9A67259 */}
+        <>
+          <div className="modal-dialog-title-bar">
+            <div className="modal-dialog-title-text">Activate your License</div>
+            <div className="modal-dialog-title-close button">
+              <div className="svg-container cross-svg" />
+            </div>
+          </div>
+          <div className="modal-dialog-body">
+            <div className="modal-dialog-text">Enter your License Key:</div>
+            <TextField
+              singleClick
+              onSave={() => {}}
+              placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXXX"
+              // onKeyDown={(e) => {
+              //   if (e.key === 'Enter') {
+              //   // TODO #29 ux
+              //   } else if (e.key === 'Escape') {
+              //   // TODO #29 ux
+              //   }
+              // }}
+              onChange={(value: string) => {
+                setLicenseKeyState(LicenseState.unvalidated);
+                setEnteredLicenseKey(value);
+              }}
+              text={enteredLicenseKey || ''}
+            />
+            <div className="modal-dialog-error-text">
+              {licenseKeyState === LicenseState.used && '* License Key in use'}
+              {licenseKeyState === LicenseState.invalid && '* Not valid'}
+            </div>
+          </div>
+
+        </>
+      </Drawer>
+
+      <Drawer
         shown={consumptionPayWallFeature !== undefined}
         beforeShow={async () => {
           const waitOneFrame = () => new Promise<void>((resolve) => {
@@ -532,16 +662,23 @@ function App() {
           return waitOneFrame();
         }}
         buttons={[]}
+        onCancel={() => {
+          setCunsumptionPayWallFeature(undefined);
+        }}
         position="top"
       >
-        <ConsumptionPaywall
-          showAllFeatures={() => {
+        <MessagesConsumptionPaywall
+          closeClick={() => {
             setCunsumptionPayWallFeature(undefined);
-            setShowAllFeatures(true);
           }}
-          upgradePlan={() => {
+          buyClick={() => {
+            window.open('https://parrot.lemonsqueezy.com/checkout/buy/088b77d7-5286-466b-bf22-945ab61af46f?discount=0', 'blank');
             setCunsumptionPayWallFeature(undefined);
-            upgradePlan();
+            setEnteredLicenseKey('');
+          }}
+          gotLicencesClick={() => {
+            setCunsumptionPayWallFeature(undefined);
+            setEnteredLicenseKey('');
           }}
         />
       </Drawer>

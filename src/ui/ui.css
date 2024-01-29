@@ -520,3 +520,55 @@ div:hover>.os-scrollbar.os-scrollbar-vertical {
 .height-resize-container::-webkit-scrollbar {
   cursor: pointer;
 }
+
+.modal-dialog-title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* border-bottom: 1px solid; */
+  height: 32px;
+  /* border-color: var(--figma-color-border); */
+}
+
+.modal-dialog-title-text {
+  font-weight: 600;
+  margin-left: 16px;
+}
+
+.modal-dialog-title-close {
+  margin-right: 8px;
+}
+
+.modal-dialog-body {
+  margin-left: 16px;
+  margin-right: 16px;
+  margin-top: 16px;
+}
+
+.modal-dialog-body .text-field {
+  width: 270px;
+}
+
+.modal-dialog-body .text-field-text {
+  border-color: var(--figma-color-border);
+}
+
+.modal-dialog-body .text-field-text.editing {
+  border-color: var(--figma-color-border-brand-strong);
+}
+
+.modal-dialog-body input {
+
+}
+
+.modal-dialog-error-text {
+  text-align: right;
+  color: var(--figma-color-text-danger);
+  padding-top: 8px;
+}
+
+.modal-dialog-text {
+  padding-bottom: 8px;
+}
+
+

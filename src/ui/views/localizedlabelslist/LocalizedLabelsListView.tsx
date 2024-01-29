@@ -9,7 +9,6 @@ import LocalizedFrameGroup from './LocalizedFrameGroup';
 import './LocalizedLabelsListView.css';
 import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
 import { NodeSelection } from '../../../lib/localizedlabels/LocalizedLabelManager';
-import UpsellOverlay from '../../compontents/upselloverlay/UpsellOverlay';
 import MessageUpsellOverlay from '../../compontents/upselloverlay/MessageUpsellOverlay';
 
 declare global {
@@ -190,10 +189,6 @@ export default function LocalizedLabelsListView({
           </div>
         </div>
       )}
-
-      <MessageUpsellOverlay
-        onclick={() => { }}
-      />
     </>
   );
 }

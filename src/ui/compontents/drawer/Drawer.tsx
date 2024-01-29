@@ -1,7 +1,9 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-plusplus */
 /* eslint-disable no-continue */
-import React, { ReactNode, useRef, useEffect, useState } from 'react';
+import React, {
+  ReactNode, useRef, useEffect, useState,
+} from 'react';
 import OutsideClickHandler from 'react-outside-click-handler';
 import './Drawer.css';
 
@@ -23,6 +25,27 @@ type DrawerProps = {
   position: 'top' | 'left' | 'right';
 };
 
+// Custom sorting function
+function sortButtons(a: ButtonConfig, b: ButtonConfig) {
+  // If both are 'primary', maintain original order
+  if (a.type === 'primary' && b.type === 'primary') {
+    return 0;
+  }
+
+  // If only a is 'primary', move it to the end
+  if (a.type === 'primary') {
+    return 1;
+  }
+
+  // If only b is 'primary', keep it where it is
+  if (b.type === 'primary') {
+    return -1;
+  }
+
+  // For non-'primary' types, maintain original order
+  return 0;
+}
+
 export default function Drawer({
   buttons,
   className,
@@ -37,10 +60,12 @@ export default function Drawer({
 
   const [isShown, setIsShown] = useState(false);
 
+  const sortedButtons = buttons.sort(sortButtons);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        for (const button of buttons) {
+        for (const button of sortedButtons) {
           if (button.key === 'escape') {
             button.callback();
             break;
@@ -48,7 +73,7 @@ export default function Drawer({
         }
         onCancel?.();
       } else if (event.key === 'Enter') {
-        for (const button of buttons) {
+        for (const button of sortedButtons) {
           if (button.key === 'enter') {
             button.callback();
             break;
@@ -67,7 +92,7 @@ export default function Drawer({
         divElement.removeEventListener('keydown', handleKeyDown);
       }
     };
-  }, [buttons]);
+  }, [sortedButtons]);
 
   useEffect(() => {
     if (isShown) {
@@ -97,7 +122,7 @@ export default function Drawer({
   return (
     <OutsideClickHandler
       onOutsideClick={() => {
-        for (const button of buttons) {
+        for (const button of sortedButtons) {
           if (button.key === 'escape') {
             button.callback();
             break;
@@ -113,22 +138,27 @@ export default function Drawer({
         className={`${position}-drawer${isShown ? ' open' : ' '} ${className ?? ''}`}
       >
         {children}
-        <div className="buttonGroup buttonGroup-reversed">
-          {buttons.reverse().map((button, index) => (
-            <button
+        {
+          sortedButtons.length > 0 && (
+          <div className="buttonGroup buttonGroup-reversed">
+            {sortedButtons.reverse().map((button, index) => (
+              <button
               // eslint-disable-next-line react/no-array-index-key -- buttons should not be updated dynamically here
-              key={index}
-              className={`button button-${button.type}`}
-              type="button"
-              onClick={() => {
-                button.callback();
-              }}
-              disabled={button.disabled}
-            >
-              <span data-tooltip-type="text">{button.text}</span>
-            </button>
-          ))}
-        </div>
+                key={index}
+                className={`button button-${button.type}`}
+                type="button"
+                onClick={() => {
+                  button.callback();
+                }}
+                disabled={button.disabled}
+              >
+                <span data-tooltip-type="text">{button.text}</span>
+              </button>
+            ))}
+          </div>
+          )
+        }
+
       </div>
     </OutsideClickHandler>
   );

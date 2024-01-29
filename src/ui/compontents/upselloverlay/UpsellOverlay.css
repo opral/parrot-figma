@@ -4,9 +4,9 @@
 
 .upsell-overlay-container {
     position: fixed;
-    right: 5px;
-    bottom: 5px;
-
+    right: 8px;
+    bottom: 16px;
+    z-index: 100    ;
     background-color: var(--figma-color-bg-secondary);
     border-radius: 4px 4px 6px 6px;
 }

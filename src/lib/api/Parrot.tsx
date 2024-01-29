@@ -53,4 +53,21 @@ export default class ParrotApi {
 
     return result.json();
   }
+
+  async activateLicense(userId: string, name: string, licenseKey: string) {
+    const url = `${baseUrl}v1/user/${userId}/activate-licence`;
+
+    const rawBody = JSON.stringify({
+      licenseKey,
+      name,
+    });
+
+    const result = await fetch(url, { method: 'POST', headers: this.baseHeaders, body: rawBody });
+    if (!result.ok) {
+      return null; // TODO #29 check error handling
+    }
+
+    const resultJson = await result.json()
+    return resultJson
+  }
 }

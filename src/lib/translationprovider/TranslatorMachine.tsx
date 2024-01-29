@@ -9,7 +9,7 @@ import GoogleTranslator from './google';
 const translationsCreditUsageLocalStorageKey = 'prrt_utc';
 const translationCreditsLocalStorageKey = 'prrt_tc';
 
-const includedBatteries = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJjaWQiOiJpbmNsdWRlZC1iYXR0ZXJpZXMtMiIsIm1zZ2MiOjEwMCwibXNndSI6MH0.TlhzfZYn7qRb54hWr9NqM4ZI0ujRmHaQGchDcX3vhtb-I1TiC4Y4N-ySPgGRfNoRqYNaTxsJEjPd5Xe9pTyAA4KGXK-SJ1wVBimUbgifIOHVZ03wLjAslacGfNsik9psKjMt1pXCh4E8K9_GA_DaeUeHYbIEopj4m4kZU1neE5jzYtzMVFPCcgspkWtjM53s5bCKoD5GredG3LvTQ9bpv8aJAjEYakd7DVhX0TUnN-z6qUgyItXu9uVCuN0djTnHQQKmgWv33WTiiCbIxRp_AqG8VC72DcAMnlu7O-d8jlfMyFCsBhlsU6W_AvIE-5oHF4PSVb8RDl5ZhG-GUljBkg';
+const includedBatteries = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJjaWQiOiJpbmNsdWRlZC1iYXR0ZXJpZXMtMyIsImNpcyI6InBhcnJvdCIsImN0Ijoidm91Y2hlciIsIm1zZ2MiOjEwMCwibXNndSI6MH0.QBUCrDcUHYKM9zoYc3xHNvqTUNdr1GdrZzapEkH1tAxforYj1IQsm2B6a40_qLf6p2t4jWUFIz_efMEAXlnUBBqBSVSZJUQMPOgXtagjTSJKHZNqWieP9SZ91aC7uJitL_U4odljlj61wBb6Pa7LhWl9_yf8ycLykbFMK9oXcn2yLFbwA3kLwf0qkkOxpL0z0hPAofzUZc2I90StLeHHgkHC2HE4Sk9HVNkDyyGOxfXOXmfrGxPOzDZKZhcxgRY9BMXgVuR2gXYuIgBzk6naaAOiswC6kPTcy148Jmlc1T5jylWwKNl-JEpRIGBfPM23nTiiWqwT7wuW1Syb62PzLQ';
 
 type UsageState = {
   translationsCreditUsage: TranslationCreditUsage[],
@@ -98,7 +98,7 @@ export default class TranslatorMachine {
       const translationCredits = await figma.clientStorage.getAsync(translationCreditsLocalStorageKey);
 
       this.state = {
-        translationCredits: typeof translationCredits === 'object' ? translationCredits as TranslationCredit[] : [{
+        translationCredits: typeof translationCredits === 'object' ? translationCredits as TranslationCredit[]: [{
           cid: 'included-batteries-1',
           co: figma.currentUser!.id!,
           msgc: 100,
@@ -122,6 +122,10 @@ export default class TranslatorMachine {
   }
 
   static instance: TranslatorMachine;
+  
+  async activateLicenseAsync(licenseKey: string) {
+    return this.parrotApi?.activateLicense(figma.currentUser!.id!, figma.currentUser!.name, licenseKey);
+  }
 
   async addTranslationCreditUse(ownerId: string, nCharacters: number) {
     const usageTime = new Date().getTime();
@@ -218,7 +222,7 @@ export default class TranslatorMachine {
     console.log(`availableTranslations: ${availableTranslations}`);
     if (availableTranslations <= 0) {
       // TODO #29 activate again
-      // throw new Error('No Machine Translations left');
+      throw new Error('No Machine Translations left');
     }
 
     let translation: string | null = null;
@@ -232,7 +236,9 @@ export default class TranslatorMachine {
     }
 
     // lets not wait for the results here ;-)
-    await this.addTranslationCreditUse(userId, text.length);
+    if (figma.currentUser && figma.currentUser.id === '1175524760316632413') { // TODO #29 remove user filter
+      await this.addTranslationCreditUse(userId, text.length);
+    }
     return translation;
   }
 

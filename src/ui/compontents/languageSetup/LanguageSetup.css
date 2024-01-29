@@ -68,11 +68,11 @@
 }
 
 .choosen-language-change {
-    
+    line-height: 16px;
     margin-right: 15px;
     padding: 8px;
     color: var(--figma-color-text-brand);
-    margin-left: auto;
+    
 }
 .language-import-action  {
     

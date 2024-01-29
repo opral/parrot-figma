@@ -45,6 +45,10 @@
   margin-inline-end: inherit;
 }
 
+.text-field-text p.placeholder {
+  color: var(--figma-color-text-disabled);
+}
+
 .text-field-text input {
   position:absolute;
   padding-left: 5px;

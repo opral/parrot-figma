@@ -4,7 +4,8 @@ import UpsellOverlay from './UpsellOverlay';
 import TranslatorMachine from '../../../lib/translationprovider/TranslatorMachine';
 import { TranslationCredit } from '../../../lib/api/Parrot';
 
-export default function MessageUpsellOverlay({ onclick }: {
+export default function MessageUpsellOverlay({ onclick, hideInfo }: {
+  hideInfo: boolean,
   onclick: () => void,
 }) {
   const [availableTranslations, setAvailableTranslations] = useState(0);
@@ -56,7 +57,7 @@ export default function MessageUpsellOverlay({ onclick }: {
     };
   }, []);
 
-  if (availableTranslations > 50) {
+  if (availableTranslations > 30) {
     upsellType = 'info';
   } else if (availableTranslations <= 50 && availableTranslations > 0) {
     upsellType = 'warning';
@@ -82,9 +83,9 @@ export default function MessageUpsellOverlay({ onclick }: {
       type={upsellType}
       msg={message}
       progress={progress}
-      cta="Get unlimited pages &amp; more"
+      cta="Get more maschine translations"
       onclick={onclick}
-      hidden={!loaded}
+      hidden={!loaded || (hideInfo && upsellType === 'info')}
     />
   );
 }

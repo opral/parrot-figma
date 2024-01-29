@@ -473,7 +473,7 @@ export default function TranslationEditor({
   let textToUse;
   let missingTranslation = false;
   if (textState === undefined || textState === '') {
-    textToUse = language === refLanguage ? `Enter Reference Message Text (${refLanguage})...` : `Enter Translation for ${language}...`;
+    textToUse = language === refLanguage ? `Enter reference message text (${refLanguage})...` : `Enter translation for ${language}...`;
     missingTranslation = true;
     // } else if (textState.charAt(textState.length - 1) === '\n') {
     //   textToUse = `${textState}\n`;

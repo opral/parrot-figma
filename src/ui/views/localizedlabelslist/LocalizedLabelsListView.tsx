@@ -9,7 +9,6 @@ import LocalizedFrameGroup from './LocalizedFrameGroup';
 import './LocalizedLabelsListView.css';
 import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
 import { NodeSelection } from '../../../lib/localizedlabels/LocalizedLabelManager';
-import MessageUpsellOverlay from '../../compontents/upselloverlay/MessageUpsellOverlay';
 
 declare global {
   interface Element {

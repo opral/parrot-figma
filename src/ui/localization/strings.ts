@@ -96,7 +96,7 @@ const Strings = {
       key_title_name: 'welcome_title',
       key_view__search_hint: 'Search',
       keys__empty_list_detail_msg: 'Localized Keys\nwill show up here.',
-      keys__empty_list_msg: 'No Messages yet',
+      keys__empty_list_msg: 'No messages yet',
       keys__search_placeholder: 'Search',
       keys__search_result_hint: '{{count}} results',
       keys__version__reuse_button: 'Reuse',

@@ -93,7 +93,7 @@ module.exports = (env, argv) => {
 
       }),
       
-      // TODO #29 check if sentry and mixedpanel are still working!
+      // TODO #29 check if sentry and mixedpanel are still working! - test
       process.env.SENTRY_AUTH_TOKEN ?
         sentryWebpackPlugin({
           org: process.env.SENTRY_ORG,

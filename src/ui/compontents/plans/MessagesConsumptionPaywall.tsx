@@ -38,20 +38,23 @@ export default function MessagessConsumptionPaywall({
         
       </button>
       <p className="consumption_paywall_modals--largeModalSubtitle">
-        Parrot comes with 100 maschine translations, but getting more is easy.
+        Parrot comes with 100 machine translations, but getting more is easy.
       </p>
       <div className="consumption_paywall_modals--planBoxContainer">
         <div className="consumption_paywall_modals--planBox">
           <div>
-            <p className="consumption_paywall_modals--planName">
-              Translation Refill
-              {/* <span data-tooltip-offset-x="0" className="badge--badgeLarge">
-                Current plan
-              </span> */}
-            </p>
+            <div style={{ display: 'flex' }}>
+              <p className="consumption_paywall_modals--planName">
+                Translation refill
+                {/* <span data-tooltip-offset-x="0" className="badge--badgeLarge">
+                  Current plan
+                </span> */}
+              </p>
+              <p className="consumption_paywall_modals--planName" style={{ marginLeft: 'auto' }}>25 €</p>
+            </div>
             <div style={{ height: '20px' }}>
               <p className="consumption_paywall_modals--planDescription">
-                Boost your localization workflow with 1000 additional Maschine Translations
+                Boost your localization workflow with 1.000 additional machine translations
               </p>
             </div>
             <div className="consumption_paywall_modals--planBoxDivider" />
@@ -59,25 +62,25 @@ export default function MessagessConsumptionPaywall({
               <div className="consumption_paywall_modals--planFeatureParent">
                 <span>
                   <span>✓ &nbsp;</span>
-                  <span className="">Use in Unlimited files</span>
+                  <span className="">Use in unlimited files</span>
                 </span>
               </div>
               <div className="consumption_paywall_modals--planFeatureParent">
                 <span>
                   <span>✓ &nbsp;</span>
-                  <span className="">1.000 additional Messages</span>
+                  <span className="">1.000 additional machine translations</span>
                 </span>
               </div>
               <div className="consumption_paywall_modals--planFeatureParent">
                 <span>
                   <span>✓ &nbsp;</span>
-                  <span className="">no Subscription</span>
+                  <span className="">No subscription</span>
                 </span>
               </div>
               <div className="consumption_paywall_modals--planFeatureParent">
                 <span>
                   <span>✓ &nbsp;</span>
-                  <span className="">secure payment via lemonsqueeze</span>
+                  <span className="">No additional account needed - secure payment via lemonsqueeze </span>
                 </span>
               </div>
               <div style={{ height: 16 }} />
@@ -91,7 +94,7 @@ export default function MessagessConsumptionPaywall({
           >
             Get a Refill
           </button>
-          <p><a className="consumption_paywall_modals--licenseKey" onClick={gotLicencesClick}>I have a License key already</a></p>
+          <p><a className="consumption_paywall_modals--licenseKey" onClick={gotLicencesClick}>I have a license key already</a></p>
         </div>
 
       </div>

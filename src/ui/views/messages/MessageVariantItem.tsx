@@ -81,7 +81,7 @@ export default function MessageVariatItem({
             isDisabled={false}
             match={searchMatch?.textMatches[language]?.['*']}
             onChange={(value: string | undefined) => {
-                console.log('on change ' + value);
+              console.log(`on change ${value}`);
               setEmpty(value === '' || value === undefined);
             }}
             onSave={async (text: string | undefined, parameters: MessageParameterValues) => {
@@ -115,7 +115,7 @@ export default function MessageVariatItem({
                     type="button"
                     disabled={refVariantHtml === undefined}
                     onClick={async () => {
-                      const translation = await TranslatorMachine.instance.translate(refVariantHtml!, refLanguage, language);
+                      const translation = await TranslatorMachine.instance.translate(refVariantHtml!, refLanguage, language, true);
 
                       if (translation) {
                         const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(
@@ -127,27 +127,11 @@ export default function MessageVariatItem({
                         );
                         await localizedLabelManager.updateMessage(updatedMessage, parameterValues);
                         setEmpty(false);
-                      } else {
-                        // TODO #29 report problem
                       }
-                      // const translationProvider = TranslatorMachine.instance;
-
-                      // try {
-                      //   localizedLabelManager.setLabelLanguage(
-                      //     localizedLabel,
-                      //     localizedLabel.language,
-                      //     translationProvider,
-                      //     true,
-                      //   );
-                      // } catch (e: any) {
-                      //   if (e.ranOutOfMaschineTranslations) {
-                      //     alert('no more maschine translations');
-                      //   }
-                      // }
                     }}
                     data-tooltip-content={refVariantHtml !== undefined
-                      ? 'Use Maschine translation to translate this message'
-                      : 'Cant Maschine translate - no reference text set'}
+                      ? 'Translate this message using machine translation.'
+                      : 'Can`t machine translate - reference text missing'}
                   >
                     Translate
 

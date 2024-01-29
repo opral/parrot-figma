@@ -54,7 +54,7 @@ export default function ConsumptionPaywall({
         </span>
       </button>
       <p className="consumption_paywall_modals--largeModalSubtitle">
-        Parrot comes with 100 maschine translations, but getting more is easy.
+        Parrot comes with 100 machine translations, but getting more is easy.
       </p>
       <div className="consumption_paywall_modals--planBoxContainer">
         <div className="consumption_paywall_modals--planBox">
@@ -67,7 +67,7 @@ export default function ConsumptionPaywall({
             </p>
             <div style={{ height: '20px' }}>
               <p className="consumption_paywall_modals--planDescription">
-                Boost your localization workflow with 1000 additional Maschine Translations
+                Boost your localization workflow with 1000 additional machine Translations
               </p>
             </div>
             <div className="consumption_paywall_modals--planBoxDivider" />

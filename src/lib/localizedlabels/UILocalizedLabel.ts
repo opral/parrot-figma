@@ -394,7 +394,7 @@ export class UILocalizedLabel implements LocalizedLabel {
   }
 
   isTranslatable() {
-    debugger;
+    
     const refLanguage = this.manager.messageStore.getRefLanugage();
     if (!refLanguage) {
       return false;
@@ -420,7 +420,8 @@ export class UILocalizedLabel implements LocalizedLabel {
 
   async setLanguageOnUnsetLabel(
     targetLanguage: Locale,
-    translator: TranslatorMachine
+    translator: TranslatorMachine,
+    triggersCTA: boolean,
   ) {
     const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
     const fromRefLanguage = this.language === refLanguage;
@@ -456,6 +457,7 @@ export class UILocalizedLabel implements LocalizedLabel {
           refLanguage,
           targetLanguage,
           [],
+          triggersCTA,
         );
       } catch (e) {
         // TODO #29 we need to separate exeception from the api and the avaialble translations and communicate it to the outsite
@@ -476,6 +478,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     targetLanguage: Locale,
     translator: TranslatorMachine,
     enforceTranslation: boolean,
+    triggersCTA: boolean,
   ) {
     const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
     const toRefLanguage = targetLanguage === refLanguage;
@@ -510,6 +513,7 @@ export class UILocalizedLabel implements LocalizedLabel {
           refLanguage,
           targetLanguage,
           [],
+          triggersCTA,
         );
         hasVariantTranslationInTargetLanguage = true;
       } catch (e) {
@@ -539,6 +543,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     targetLanguage: Locale,
     translator: TranslatorMachine,
     enforceTranslation: boolean,
+    triggersCTA: boolean,
   ) {
     const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
     const toRefLanguage = targetLanguage === refLanguage;
@@ -555,6 +560,7 @@ export class UILocalizedLabel implements LocalizedLabel {
             refLanguage,
             targetLanguage,
             [],
+            triggersCTA,
           );
           await this.manager.updateMessage(eventuallyUpdatedMessage, {});
         } catch (e) {
@@ -606,7 +612,8 @@ export class UILocalizedLabel implements LocalizedLabel {
     targetLanguage: Locale,
     // NOTE we dont support versioning for now version: number | undefined,
     translator: TranslatorMachine,
-    enforceTranslation: boolean
+    enforceTranslation: boolean,
+    triggersCTA: boolean,
   ) {
     switch (this.messageLinkState) {
       case MessageLinkState.MissingMessage:
@@ -621,14 +628,14 @@ export class UILocalizedLabel implements LocalizedLabel {
         return;
 
       case MessageLinkState.Unset:
-        await this.setLanguageOnUnsetLabel(targetLanguage, translator);
+        await this.setLanguageOnUnsetLabel(targetLanguage, translator, triggersCTA);
         break;
 
       case MessageLinkState.Unlinked:
-        await this.setLanguageOnUnlinkedLabel(targetLanguage, translator, enforceTranslation);
+        await this.setLanguageOnUnlinkedLabel(targetLanguage, translator, enforceTranslation, triggersCTA);
         break;
       case MessageLinkState.Linked:
-        await this.setLanguageOnLinkedLabel(targetLanguage, translator, enforceTranslation);
+        await this.setLanguageOnLinkedLabel(targetLanguage, translator, enforceTranslation, triggersCTA);
         break;
       default:
         throw new Error(`unhandled Linksstate ${this.messageLinkState}`);

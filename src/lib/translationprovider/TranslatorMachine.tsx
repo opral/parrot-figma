@@ -1,5 +1,6 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-labels */
+import { stat } from 'fs';
 import ParrotApi, { TranslationCredit, TranslationCreditUsage } from '../api/Parrot';
 import { Locale } from '../message/variants/Locale';
 import getKey from './TranslationCredit';
@@ -20,8 +21,7 @@ function getCurrentCredits(translationCredits: TranslationCredit[], ownerId: str
   return translationCredits.filter(
     // only those with the same owner and within the time span or no timespan and those with free messages are relevant
     (credit) => credit.co === ownerId
-        && (credit.nbf === undefined || credit.exp === undefined || (credit.nbf <= currentTime && currentTime <= credit.exp))
-        && credit.msgc - credit.msgu > 0,
+        && (credit.nbf === undefined || credit.exp === undefined || (credit.nbf <= currentTime && currentTime <= credit.exp)),
   ).sort((a, b) => {
     // Sort by start time (nbf), with those having nbf as null placed last
     if (a.nbf === undefined) return 1;
@@ -98,7 +98,7 @@ export default class TranslatorMachine {
       const translationCredits = await figma.clientStorage.getAsync(translationCreditsLocalStorageKey);
 
       this.state = {
-        translationCredits: typeof translationCredits === 'object' ? translationCredits as TranslationCredit[]: [{
+        translationCredits: typeof translationCredits === 'object' ? translationCredits as TranslationCredit[] : [{
           cid: 'included-batteries-1',
           co: figma.currentUser!.id!,
           msgc: 100,
@@ -122,14 +122,14 @@ export default class TranslatorMachine {
   }
 
   static instance: TranslatorMachine;
-  
+
   async activateLicenseAsync(licenseKey: string) {
     return this.parrotApi?.activateLicense(figma.currentUser!.id!, figma.currentUser!.name, licenseKey);
   }
 
-  async addTranslationCreditUse(ownerId: string, nCharacters: number) {
+  async addTranslationCreditUse(ownerId: string, nCharacters: number, triggersCTA: boolean) {
     const usageTime = new Date().getTime();
-    calculateAvailableMessages(this.state!, ownerId, usageTime);
+    //
 
     await this.ensureStateLoaded;
     // When we start with collaboration we just need to
@@ -141,7 +141,18 @@ export default class TranslatorMachine {
       time: usageTime,
       characters: nCharacters,
     });
-    this.fireCreditsUpdateEvent();
+
+    const availableTranslations = calculateAvailableMessages(this.state!, ownerId, usageTime);
+    let requestShowUpsellCTA = false;
+    if (availableTranslations > 0) {
+      // we just blindly reset the flag whenever we have more than 0 translations
+      await this.setUpsellCTAShownFlag(false);
+    } else if (!await this.getUpsellCTAShownFlag() || triggersCTA) {
+      await this.setUpsellCTAShownFlag(true);
+      requestShowUpsellCTA = true;
+    }
+
+    this.fireCreditsUpdateEvent(requestShowUpsellCTA);
     // lets not await the call to the server
     this.syncTranslations();
   }
@@ -182,7 +193,7 @@ export default class TranslatorMachine {
       figma.clientStorage.setAsync(translationCreditsLocalStorageKey, this.state!.translationCredits);
       figma.clientStorage.setAsync(translationsCreditUsageLocalStorageKey, this.state!.translationsCreditUsage);
 
-      this.fireCreditsUpdateEvent();
+      this.fireCreditsUpdateEvent(false);
     } catch (e) {
       // ok we ignore errors here for now - only send them to sentry?
       for (const failedToSend of usageToSend) {
@@ -210,7 +221,7 @@ export default class TranslatorMachine {
     // return translationCredits;
   }
 
-  async translate(text: string, sourceLange: Locale, targetLanguage: Locale) {
+  async translate(text: string, sourceLange: Locale, targetLanguage: Locale, triggersCTA: boolean) {
     console.log('startin translation');
     // make sure the state is loaded from the local storage
     await this.ensureStateLoaded;
@@ -219,8 +230,11 @@ export default class TranslatorMachine {
     const userId = figma.currentUser!.id!;
 
     const availableTranslations = calculateAvailableMessages(this.state!, userId, new Date().getTime());
-    console.log(`availableTranslations: ${availableTranslations}`);
-    if (availableTranslations <= 0) {
+    
+    if (availableTranslations <= 0 && figma.currentUser?.id === '1175524760316632413') { // TODO #29 remove user filter
+      if (triggersCTA) {
+        await this.fireCreditsUpdateEvent(true);
+      }
       // TODO #29 activate again
       throw new Error('No Machine Translations left');
     }
@@ -237,7 +251,7 @@ export default class TranslatorMachine {
 
     // lets not wait for the results here ;-)
     if (figma.currentUser && figma.currentUser.id === '1175524760316632413') { // TODO #29 remove user filter
-      await this.addTranslationCreditUse(userId, text.length);
+      await this.addTranslationCreditUse(userId, text.length, triggersCTA);
     }
     return translation;
   }
@@ -254,6 +268,20 @@ export default class TranslatorMachine {
     };
   }
 
+  // eslint-disable-next-line class-methods-use-this
+  async setUpsellCTAShownFlag(state: boolean) {
+    await figma.clientStorage.setAsync('parrot_upsell_cta_shown', state);
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  async getUpsellCTAShownFlag() {
+    const ctaShown = await figma.clientStorage.getAsync('parrot_upsell_cta_shown');
+    if (ctaShown === undefined) {
+      return false;
+    }
+    return ctaShown;
+  }
+
   getAvailableMessages() {
     // For now don't use the owner of the file
     const userId = figma.currentUser!.id!;
@@ -261,11 +289,12 @@ export default class TranslatorMachine {
     return availableTranslations;
   }
 
-  fireCreditsUpdateEvent() {
+  fireCreditsUpdateEvent(requestShowUpsellCTA: boolean) {
     const message = {
-      target: 'TranslatorMaschine',
+      target: 'TranslatorMachine',
       type: 'creditUpdate',
       data: this.getCreditState(),
+      requestShowUpsellCTA,
     } as any;
 
     // console.log('keys changed');

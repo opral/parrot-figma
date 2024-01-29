@@ -144,7 +144,7 @@ export default function LocalizedLabelListItem({
           },
           {
             type: 'primary',
-            text: 'Use Key',
+            text: 'Use message',
             key: 'enter',
             callback: () => {
               const messageToLink = localizedLabelManager.messageStore.getMessage(
@@ -249,8 +249,8 @@ export default function LocalizedLabelListItem({
               className="message-select"
               placeholder={
                 localizedLabel.messageLinkState === MessageLinkState.Unmanaged
-                  ? 'Not Localized'
-                  : 'Link a Message...'
+                  ? 'not localized'
+                  : 'Link a message...'
               }
               isDisabled={localizedLabel.matchingLabelLints.length > 0}
               iconClass={iconClass}
@@ -398,7 +398,7 @@ export default function LocalizedLabelListItem({
 
                 if (localizedLabel.messageLinkState === MessageLinkState.Unmanaged) {
                   options.push({
-                    label: 'Enable Translation...',
+                    label: 'Enable translation...',
                     icon: 'with-message-svg',
                     value: 'reset',
                     type: InputSelectionOptionType.ACTION,
@@ -478,16 +478,17 @@ export default function LocalizedLabelListItem({
                             localizedLabel.language,
                             translationProvider,
                             true,
+                            true,
                           );
                         } catch (e: any) {
-                          if (e.ranOutOfMaschineTranslations) {
-                            alert('no more maschine translations');
+                          if (e.ranOutOfMachineTranslations) {
+                            alert('no more machine translations');
                           }
                         }
                       }}
                       data-tooltip-content={localizedLabel.isTranslatable()
-                        ? 'Use Maschine translation to translate this message'
-                        : 'Cant Maschine translate - no reference text set'}
+                        ? 'Translate this message using machine translation.' 
+                        : 'Can`t machine translate - reference text missing'}
                     >
                       Translate
 

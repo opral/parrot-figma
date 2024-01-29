@@ -19,7 +19,7 @@ import { InlangMessageStore } from '../lib/message/store/InlangMessageStoreFigma
 import UserManager from '../lib/usage/UsageManager';
 import TranslatorMachine from '../lib/translationprovider/TranslatorMachine';
 import ParrotApi from '../lib/api/Parrot';
-
+import Monitoring from '../lib/monitoring/MonitoringProxy';
 
 const figmaRemote = new FigmaUtil();
 
@@ -62,8 +62,8 @@ asyncFunctionProxy.registerInstance(figmaRemote);
 
 const parrotApi = new ParrotApi(process.env.PARROT_API_KEY as string);
 
-const translationMaschine = new TranslatorMachine(parrotApi);
-asyncFunctionProxy.registerInstance(translationMaschine);
+const translationMachine = new TranslatorMachine(parrotApi);
+asyncFunctionProxy.registerInstance(translationMachine);
 
 const usageManager = new UserManager(false);
 asyncFunctionProxy.registerInstance(usageManager);
@@ -76,6 +76,10 @@ asyncFunctionProxy.registerInstance(remoteLocalizedLabelManager);
 
 const figmaHelper = new FigmaHelper(figma);
 asyncFunctionProxy.registerInstance(figmaHelper);
+
+
+const monitoring = new Monitoring();
+asyncFunctionProxy.proxyAsyncMethods(monitoring);
 
 figma.on('selectionchange', () => {
   figma.ui.postMessage({

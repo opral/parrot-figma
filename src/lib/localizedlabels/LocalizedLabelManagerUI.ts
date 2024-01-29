@@ -312,7 +312,7 @@ export default class LocalizedLabelManagerUI
       const localizedLabel = this.cachedLocalisedLabels[localizedLabelId]!;
       
       // eslint-disable-next-line no-await-in-loop
-      await this.setLabelLanguage(localizedLabel, targetLanguage, translator, false);
+      await this.setLabelLanguage(localizedLabel, targetLanguage, translator, false, false /** CTA is triggered not every time */);
     }
 
     // await this.localizedLabelMangerSandbox.updateFrameById(frameId);
@@ -331,8 +331,9 @@ export default class LocalizedLabelManagerUI
     // version: number | undefined,
     translator: TranslatorMachine,
     enforceTranslation: boolean,
+    triggersCTA: boolean,
   ) {
-    new UILocalizedLabel(this, cachedLabel).setLanguage(targetLanguage, translator, enforceTranslation);
+    new UILocalizedLabel(this, cachedLabel).setLanguage(targetLanguage, translator, enforceTranslation, triggersCTA);
   }
 
   async createNewVersionFromLabelState(localizedLabel: UILocalizedLabel) {

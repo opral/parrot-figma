@@ -17,7 +17,7 @@ export default function MessageUpsellOverlay({ onclick, hideInfo }: {
 
   let progress = 1;
   let upsellType: 'info' | 'warning' | 'error' = 'info';
-  let message = `${availableTranslations} Machine Translations left`;
+  let message = `${availableTranslations} machine translations left`;
 
   function syncState(stateData: {
     credits: TranslationCredit[],
@@ -42,7 +42,7 @@ export default function MessageUpsellOverlay({ onclick, hideInfo }: {
 
   useEffect(() => {
     const creditUpdateHandler = (event: MessageEvent) => {
-      if (event.data.pluginMessage.target === 'TranslatorMaschine') {
+      if (event.data.pluginMessage.target === 'TranslatorMachine') {
         if (event.data.pluginMessage.type === 'creditUpdate') {
           syncState(event.data.pluginMessage.data);
         }
@@ -50,7 +50,7 @@ export default function MessageUpsellOverlay({ onclick, hideInfo }: {
     };
 
     window.addEventListener('message', creditUpdateHandler);
-    // TODO listen to events from translatorMaschine
+    // TODO listen to events from translatorMachine
 
     return () => {
       window.removeEventListener('message', creditUpdateHandler);
@@ -63,18 +63,18 @@ export default function MessageUpsellOverlay({ onclick, hideInfo }: {
     upsellType = 'warning';
     if (freeTier) {
       progress = 1 - (availableTranslations / 70);
-      message = `${availableTranslations} Free Machine Translations left`;
+      message = `${availableTranslations} free machine translations left`;
     } else {
       // 10 of 1000 will not show change on the progress bar - use 50 as baseline...
       progress = 1 - (availableTranslations / 70); // messageCreditsTotal;
-      message = `${availableTranslations} Machine Translations left`;
+      message = `${availableTranslations} machine translations left`;
     }
   } else {
     upsellType = 'error';
     if (freeTier) {
-      message = `All ${messageCreditsTotal} Free Machine Translations used`;
+      message = `All ${messagesCreditsUsed} free machine translations used.`;
     } else {
-      message = 'All Machine Translations used.';
+      message = 'All machine translations used.';
     }
   }
 
@@ -83,7 +83,7 @@ export default function MessageUpsellOverlay({ onclick, hideInfo }: {
       type={upsellType}
       msg={message}
       progress={progress}
-      cta="Get more maschine translations"
+      cta="Get additional machine translations"
       onclick={onclick}
       hidden={!loaded || (hideInfo && upsellType === 'info')}
     />

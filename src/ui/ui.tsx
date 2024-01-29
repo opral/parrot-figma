@@ -9,6 +9,7 @@ import * as ReactDOM from 'react-dom';
 import TimeAgo from 'javascript-time-ago';
 import en from 'javascript-time-ago/locale/en.json';
 import * as Sentry from '@sentry/react';
+import * as mixpanel from 'mixpanel-figma';
 
 import { initializeSentry } from './utils/sentry';
 import { initializeAnalytics, track, identify } from './utils/analytics';
@@ -48,8 +49,8 @@ import { OverlayScrollbarsComponent } from './compontents/overlayscrollbar';
 import TranslatorMachine from '../lib/translationprovider/TranslatorMachine';
 import MessageUpsellOverlay from './compontents/upselloverlay/MessageUpsellOverlay';
 import MessagesConsumptionPaywall from './compontents/plans/MessagesConsumptionPaywall';
-import ParrotApi from '../lib/api/Parrot';
 import TextField from './compontents/textfield/TextField';
+import Monitoring from '../lib/monitoring/MonitoringProxy';
 
 console.log(`Starting Figma UI - Version ${pjs.version}`);
 
@@ -145,6 +146,9 @@ const asyncFunctionProxy = new AsyncFunctionProxy(
   },
   window,
 );
+
+const monitoring = new Monitoring(Sentry, mixpanel);
+asyncFunctionProxy.registerInstance(monitoring);
 
 const figmaRemote = new FigmaUtil();
 asyncFunctionProxy.proxyAsyncMethods(figmaRemote);
@@ -272,6 +276,23 @@ function App() {
       userStateManagerUi.removeEventListener('usersUpdated', onUsersUpdated);
       userStateManagerUi.removeEventListener('currentUserUpdated', onCurrentUserUpdated);
       userStateManagerUi.removeEventListener('planUpgradeNeeded', onPlanUpgradeNeeded);
+    };
+  }, []);
+
+  useEffect(() => {
+    const creditUpdateHandler = (event: MessageEvent) => {
+      if (event.data.pluginMessage.target === 'TranslatorMachine') {
+        if (event.data.pluginMessage.type === 'creditUpdate' && event.data.pluginMessage.requestShowUpsellCTA) {
+          setCunsumptionPayWallFeature('message');
+        }
+      }
+    };
+
+    window.addEventListener('message', creditUpdateHandler);
+    // TODO listen to events from translatorMachine
+
+    return () => {
+      window.removeEventListener('message', creditUpdateHandler);
     };
   }, []);
 
@@ -414,12 +435,13 @@ function App() {
             figmaRemote={figmaRemote}
             highlightSelectedNodes
           />
-          <MessageUpsellOverlay
+          {/* TODO #29 add to show the upsell overlay to all users
+           <MessageUpsellOverlay
             hideInfo
             onclick={() => {
               setCunsumptionPayWallFeature('test');
             }}
-          />
+          /> */}
         </>
 
       );
@@ -428,7 +450,7 @@ function App() {
       view = (
         <>
           <SetupView labelManager={localizedLabelManager} />
-{/*           TODO #29 add to show the upsell overlay to all users
+          {/* TODO #29 add to show the upsell overlay to all users
           <MessageUpsellOverlay
             hideInfo={false}
             onclick={() => {
@@ -453,12 +475,13 @@ function App() {
             localizedLabelManager={localizedLabelManager}
             figmaRemote={figmaRemote}
           />
-          <MessageUpsellOverlay
+          {/* TODO #29 add to show the upsell overlay to all users
+           <MessageUpsellOverlay
             hideInfo
             onclick={() => {
               setCunsumptionPayWallFeature('test');
             }}
-          />
+          /> */}
         </>
 
       );
@@ -575,7 +598,7 @@ function App() {
             text: 'Cancel',
             key: 'escape',
             callback: () => {
-              // setEnteredLicenseKey(undefined);
+              setEnteredLicenseKey(undefined);
               setLicenseKeyState(LicenseState.unvalidated);
             },
           },
@@ -618,7 +641,12 @@ function App() {
         <>
           <div className="modal-dialog-title-bar">
             <div className="modal-dialog-title-text">Activate your License</div>
-            <div className="modal-dialog-title-close button">
+            <div
+              className="modal-dialog-title-close button"
+              onClick={() => {
+                setEnteredLicenseKey(undefined);
+              }}
+            >
               <div className="svg-container cross-svg" />
             </div>
           </div>
@@ -628,13 +656,6 @@ function App() {
               singleClick
               onSave={() => {}}
               placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXXX"
-              // onKeyDown={(e) => {
-              //   if (e.key === 'Enter') {
-              //   // TODO #29 ux
-              //   } else if (e.key === 'Escape') {
-              //   // TODO #29 ux
-              //   }
-              // }}
               onChange={(value: string) => {
                 setLicenseKeyState(LicenseState.unvalidated);
                 setEnteredLicenseKey(value);

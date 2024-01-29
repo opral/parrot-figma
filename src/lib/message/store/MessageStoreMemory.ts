@@ -740,6 +740,7 @@ export default class MessageStoreMemory extends EventTarget {
     sourceLanguage: Locale,
     targetLanguage: Locale,
     match: string[],
+    triggersCTA: boolean,
   ) {
     // we combine multiple translaition promises of the same message that happen in a batch
     if (MessageStoreMemory.ongoingTranslationPromises[message.id] !== undefined) {
@@ -759,6 +760,7 @@ export default class MessageStoreMemory extends EventTarget {
       sourceVariantPatternHTML,
       sourceLanguage as Locale,
       targetLanguage,
+      triggersCTA,
     );
 
     delete MessageStoreMemory.ongoingTranslationPromises[message.id];

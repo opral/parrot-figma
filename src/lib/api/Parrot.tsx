@@ -62,7 +62,7 @@ export default class ParrotApi {
       return await result.json();
     } catch (e: any) {
       await Monitoring.instance?.sentryCaptureException(e, {});
-      return e;
+      throw e;
     }
   }
 

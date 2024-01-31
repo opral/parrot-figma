@@ -107,25 +107,30 @@ export default class TranslatorMachine {
       const usedTranslationsCredits = await figma.clientStorage.getAsync(translationsCreditUsageLocalStorageKey);
       const translationCredits = await figma.clientStorage.getAsync(translationCreditsLocalStorageKey);
 
-      this.state = {
-        translationCredits: /*typeof translationCredits === 'object' ? translationCredits as TranslationCredit[] :*/ [{
-          cid: 'included-batteries-1',
-          co: figma.currentUser!.id!,
-          msgc: 100,
-          msgu: 0,
-          jwt: includedBatteries,
-        }],
-        translationsCreditUsage: typeof usedTranslationsCredits === 'object' ? usedTranslationsCredits as TranslationCreditUsage[] : [],
-      };
+      if (FeatureFlags.features.payment) {
+        this.state = {
+          translationCredits: typeof translationCredits === 'object' ? translationCredits as TranslationCredit[] : [{
+            cid: 'included-batteries-1',
+            ct: 'voucher',
+            co: figma.currentUser!.id!,
+            msgc: 100,
+            msgu: 0,
+            jwt: includedBatteries,
+          }],
+          translationsCreditUsage: typeof usedTranslationsCredits === 'object' ? usedTranslationsCredits as TranslationCreditUsage[] : [],
+        };
 
-      // remove sent flags - since this is a new run...
-      for (const usage of this.state.translationsCreditUsage) {
-        usage.send = false;
+        // remove sent flags - since this is a new run...
+        for (const usage of this.state!.translationsCreditUsage) {
+          usage.send = false;
+        }
+
+        console.log('INIT TranslatorMachine in sandbox - ensureStateLoadedPromise called - awaiting sync');
+        console.log(this.state);
+        
+        await this.syncTranslations(true);
       }
-
-      console.log('INIT TranslatorMachine in sandbox - ensureStateLoadedPromise called - awaiting sync');
-      console.log(this.state);
-      await this.syncTranslations(true);
+      
       console.log('INIT DONE');
     };
     this.ensureStateLoaded = ensureStateLoadedPromise();
@@ -219,8 +224,8 @@ export default class TranslatorMachine {
     translationsCreditUsage: TranslationCreditUsage[],
     translationCredits: TranslationCredit[],
   ) {
+    debugger;
     const result = await this.parrotApi!.synchronizeCredits(figmaUserId, figmaFileOwnerId, translationCredits.map((c) => c.jwt), translationsCreditUsage);
-    console.log(`home answered: ${JSON.stringify(result)}`);
     return result;
     // for (const usage of translationsCreditUsage) {
     //   const credit = getCurrentCredit(translationCredits, usage.ownerId, usage.time);

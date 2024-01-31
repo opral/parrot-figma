@@ -24,9 +24,8 @@ import FeatureFlags from '../lib/featureflags/FeatureFlags';
 
 const figmaRemote = new FigmaUtil();
 
-if (figma.currentUser?.id) {
-  FeatureFlags.setUser(figma.currentUser?.id);
-}
+const featureFlags = figmaRemote.getFeatureFlagsSync();
+FeatureFlags.setFeatureflags(featureFlags);
 
 const fileConfigured = figmaRemote.getRootPluginDataSync('fileSetupCompleted') !== '';
 const introShownToUser = true;

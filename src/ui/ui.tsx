@@ -52,6 +52,7 @@ import MessagesConsumptionPaywall from './compontents/plans/MessagesConsumptionP
 import TextField from './compontents/textfield/TextField';
 import Monitoring from '../lib/monitoring/MonitoringProxy';
 import FeatureFlags from '../lib/featureflags/FeatureFlags';
+import { TranslationCredit } from '../lib/api/Parrot';
 
 console.log(`Starting Figma UI - Version ${pjs.version}`);
 
@@ -170,10 +171,13 @@ asyncFunctionProxy.proxyAsyncMethods(figmaRemote);
   }
 })();
 
+figmaRemote.getFeatureFlags().then((featureFlags) => {
+  FeatureFlags.setFeatureflags(featureFlags);
+});
+
 figmaRemote.getUserId().then((userId) => {
   identify(userId!);
   if (userId) {
-    FeatureFlags.setUser(userId);
     Sentry.setUser({ id: userId! });
   }
 });
@@ -286,6 +290,19 @@ function App() {
       if (event.data.pluginMessage.target === 'TranslatorMachine') {
         if (event.data.pluginMessage.type === 'creditUpdate' && event.data.pluginMessage.requestShowUpsellCTA) {
           setCunsumptionPayWallFeature('message');
+
+          const state = event.data.pluginMessage.data as {
+            credits: TranslationCredit[],
+            availableMessages: number,
+          };
+
+          const usageSum = state.credits.reduce((acc, obj) => acc + obj.msgu, 0);
+          const creditTypes = state.credits.map((credit) => credit.ct);
+          mixpanel.people.set('translationsUsed', usageSum);
+          mixpanel.people.set('translationsAvailable', state.availableMessages);
+          for (const creditType of creditTypes) {
+            mixpanel.people.set(`creditType_${creditType}`, true);
+          }
         }
       }
     };
@@ -539,7 +556,7 @@ function App() {
           >
             Setup
           </div>
-          <div className={`tab ${appScreen === 'users' ? 'active' : ''}`} onClick={() => setAppScreen('users')}>Users</div>
+          {/* <div className={`tab ${appScreen === 'users' ? 'active' : ''}`} onClick={() => setAppScreen('users')}>Users</div> */}
         </div>
 
         <div
@@ -616,6 +633,8 @@ function App() {
             key: 'enter',
             disabled: (enteredLicenseKey !== undefined && enteredLicenseKey.length < 10) || licenseKeyState === LicenseState.validating || licenseKeyState === LicenseState.invalid,
             callback: () => {
+              mixpanel.track('activateLicenseClicked');
+
               // setEnteredLicenseKey(undefined);
               setLicenseKeyState(LicenseState.validating);
               // call backend
@@ -623,6 +642,7 @@ function App() {
                 if (result.activated || result.success) {
                   // {activated: true, error: null, license_key: {…}, instance: {…}, meta: {…}}
                   if (result.activated) {
+                    mixpanel.track('licenseActivated');
                     translationMachine.syncTranslations().then(() => {
                       setLicenseKeyState(LicenseState.valid);
                       setEnteredLicenseKey(undefined);
@@ -682,6 +702,7 @@ function App() {
       <Drawer
         shown={consumptionPayWallFeature !== undefined}
         beforeShow={async () => {
+          mixpanel.track('consumptionPaywallTranslationsShown');
           const waitOneFrame = () => new Promise<void>((resolve) => {
             setTimeout(() => {
               resolve();
@@ -701,6 +722,7 @@ function App() {
             setCunsumptionPayWallFeature(undefined);
           }}
           buyClick={() => {
+            mixpanel.track('consumptionPaywallTranslationsCheckoutClicked');
             window.open('https://parrot.lemonsqueezy.com/checkout/buy/088b77d7-5286-466b-bf22-945ab61af46f?discount=0', 'blank');
             setCunsumptionPayWallFeature(undefined);
             setEnteredLicenseKey('');

@@ -9,6 +9,7 @@ import * as ReactDOM from 'react-dom';
 import TimeAgo from 'javascript-time-ago';
 import en from 'javascript-time-ago/locale/en.json';
 import * as Sentry from '@sentry/react';
+import * as mixpanel from 'mixpanel-figma';
 
 import { initializeSentry } from './utils/sentry';
 import { initializeAnalytics, track, identify } from './utils/analytics';
@@ -36,15 +37,21 @@ import Export from './views/export/Export';
 import FEATURES_FLAGS from './featuretoggle';
 import SetupView from './views/setup/SetupView';
 import * as pjs from '../../package.json';
-import UserManager, { PluginUser, UserRole } from '../lib/usage/UsageManager';
+import UserManager, { PluginUser, UserFileRole } from '../lib/usage/UsageManager';
 import UserManagerUI from '../lib/usage/UsageManagerUI';
 import UserManagement from './views/usermanagement/Usermanagement';
 import Drawer from './compontents/drawer/Drawer';
-import ConsumptionPaywall from './compontents/plans/ConsumptionPaywall';
+
 import ComparisonChart from './compontents/plans/ComparisonChart';
 import { InlangMessageStore } from '../lib/message/store/InlangMessageStoreFigmaRoot';
 import 'overlayscrollbars/overlayscrollbars.css';
 import { OverlayScrollbarsComponent } from './compontents/overlayscrollbar';
+import TranslatorMachine from '../lib/translationprovider/TranslatorMachine';
+import MessageUpsellOverlay from './compontents/upselloverlay/MessageUpsellOverlay';
+import MessagesConsumptionPaywall from './compontents/plans/MessagesConsumptionPaywall';
+import TextField from './compontents/textfield/TextField';
+import Monitoring from '../lib/monitoring/MonitoringProxy';
+import FeatureFlags from '../lib/featureflags/FeatureFlags';
 
 console.log(`Starting Figma UI - Version ${pjs.version}`);
 
@@ -80,9 +87,9 @@ document.addEventListener(
   (e) => {
     // Handle Select All, Undo and Redo in the desktop app
     if (
-      e.keyCode === 65 /* A */ &&
-      e.metaKey &&
-      !(e.target! as any).classList.contains('cm-content')
+      e.keyCode === 65
+      && /* A */ e.metaKey
+      && !(e.target! as any).classList.contains('cm-content')
     ) {
       document.execCommand('selectAll');
     } else if (e.keyCode === 90 /* Z */ && e.metaKey) {
@@ -98,10 +105,10 @@ document.addEventListener(
 
 window.addEventListener('keydown', (e) => {
   if (
-    e.key === 'z' &&
-    !e.shiftKey &&
-    !e.altKey &&
-    !(e.target! as any).classList.contains('cm-content')
+    e.key === 'z'
+    && !e.shiftKey
+    && !e.altKey
+    && !(e.target! as any).classList.contains('cm-content')
   ) {
     // Undo the action in Figma
     const isMac = navigator.userAgent.indexOf('Macintosh') >= 0;
@@ -141,6 +148,9 @@ const asyncFunctionProxy = new AsyncFunctionProxy(
   window,
 );
 
+const monitoring = new Monitoring(Sentry, mixpanel);
+asyncFunctionProxy.registerInstance(monitoring);
+
 const figmaRemote = new FigmaUtil();
 asyncFunctionProxy.proxyAsyncMethods(figmaRemote);
 
@@ -163,9 +173,13 @@ asyncFunctionProxy.proxyAsyncMethods(figmaRemote);
 figmaRemote.getUserId().then((userId) => {
   identify(userId!);
   if (userId) {
+    FeatureFlags.setUser(userId);
     Sentry.setUser({ id: userId! });
   }
 });
+
+const translationMachine = new TranslatorMachine();
+asyncFunctionProxy.proxyAsyncMethods(translationMachine);
 
 const checkVersion = async () => {
   const minVersionRequest = await fetch('https://parrot-global.github.io/parrot/min-version.json', {
@@ -204,12 +218,25 @@ const localizedLabelManager = new LocalizedLabelManagerUI(
   memoryTranslationKeyStore,
 );
 
+enum LicenseState {
+  unvalidated,
+  validating,
+  valid,
+  activatedAlready,
+  used,
+  invalid,
+}
+
 function App() {
   // initial app screen is startup until we initialy loaded the data
   const [appScreen, setAppScreen] = useState(undefined as String | undefined);
   const [consumptionPayWallFeature, setCunsumptionPayWallFeature] = useState(
     undefined as String | undefined,
   );
+
+  const [enteredLicenseKey, setEnteredLicenseKey] = useState(undefined as string | undefined);
+
+  const [licenseKeyState, setLicenseKeyState] = useState<LicenseState>(LicenseState.unvalidated);
   const [showAllFeatures, setShowAllFeatures] = useState(false);
 
   const [user, setUser] = useState(undefined as PluginUser | undefined);
@@ -224,10 +251,10 @@ function App() {
       userStateManagerUi.trackFileUsageStatistics();
 
       if (windowMode === WindowMode.DevPanel) {
-        const updatedUser = await userStateManagerUi.requestUserRole(UserRole.developer);
+        const updatedUser = await userStateManagerUi.requestUserRole(UserFileRole.developer);
         setUser(updatedUser);
       } else {
-        const updatedUser = await userStateManagerUi.requestUserRole(UserRole.designer);
+        const updatedUser = await userStateManagerUi.requestUserRole(UserFileRole.designer);
         setUser(updatedUser);
       }
     })();
@@ -251,6 +278,23 @@ function App() {
       userStateManagerUi.removeEventListener('usersUpdated', onUsersUpdated);
       userStateManagerUi.removeEventListener('currentUserUpdated', onCurrentUserUpdated);
       userStateManagerUi.removeEventListener('planUpgradeNeeded', onPlanUpgradeNeeded);
+    };
+  }, []);
+
+  useEffect(() => {
+    const creditUpdateHandler = (event: MessageEvent) => {
+      if (event.data.pluginMessage.target === 'TranslatorMachine') {
+        if (event.data.pluginMessage.type === 'creditUpdate' && event.data.pluginMessage.requestShowUpsellCTA) {
+          setCunsumptionPayWallFeature('message');
+        }
+      }
+    };
+
+    window.addEventListener('message', creditUpdateHandler);
+    // TODO listen to events from translatorMachine
+
+    return () => {
+      window.removeEventListener('message', creditUpdateHandler);
     };
   }, []);
 
@@ -303,7 +347,9 @@ function App() {
         <Tooltip contentAttribute="data-tooltip-content" />
         <div className="view dev-panel">
           <div className="comming-soon">
-            Parrot´s Dev Mode version is comming soon... <br />
+            Parrot´s Dev Mode version is comming soon...
+            {' '}
+            <br />
             <br />
             Translate your Designs with Parrot in Design Mode in the meantime!
             <br />
@@ -315,10 +361,11 @@ function App() {
     );
   }
 
-  if (user.userRole !== UserRole.designer && user.userRole !== UserRole.owner) {
+  if (user.userRole !== UserFileRole.designer && user.userRole !== UserFileRole.owner) {
     return (
       <>
-        Not the permission to view{' '}
+        Not the permission to view
+        {' '}
         {user.openUserRoleRequest !== undefined ? `${user.openUserRoleRequest} requested` : ' -'}
       </>
     );
@@ -381,18 +428,43 @@ function App() {
       );
     case 'messages':
       view = (
-        <MessageListView
-          showSearchBar={false}
-          initialSearchQuery={keyQuery}
-          messageStore={memoryTranslationKeyStore}
-          localizedLabelManager={localizedLabelManager}
-          figmaRemote={figmaRemote}
-          highlightSelectedNodes
-        />
+        <>
+          <MessageListView
+            showSearchBar={false}
+            initialSearchQuery={keyQuery}
+            messageStore={memoryTranslationKeyStore}
+            localizedLabelManager={localizedLabelManager}
+            figmaRemote={figmaRemote}
+            highlightSelectedNodes
+          />
+          { FeatureFlags.features.payment
+           && (
+           <MessageUpsellOverlay
+             hideInfo
+             onclick={() => {
+               setCunsumptionPayWallFeature('test');
+             }}
+           />
+           )}
+        </>
+
       );
       break;
     case 'settings':
-      view = <SetupView labelManager={localizedLabelManager} />;
+      view = (
+        <>
+          <SetupView labelManager={localizedLabelManager} />
+          { FeatureFlags.features.payment
+          && (
+          <MessageUpsellOverlay
+            hideInfo={false}
+            onclick={() => {
+              setCunsumptionPayWallFeature('test');
+            }}
+          />
+          )}
+        </>
+      );
       break;
 
     case 'export':
@@ -400,14 +472,26 @@ function App() {
       break;
     case 'design':
       view = (
-        <LocalizedLabelsListView
-          showMessage={(messageName: string) => {
-            setKeyQuery(MessageStoreMemory.toQueryObject(`name:${messageName}`));
-            setAppScreen('messages');
-          }}
-          localizedLabelManager={localizedLabelManager}
-          figmaRemote={figmaRemote}
-        />
+        <>
+          <LocalizedLabelsListView
+            showMessage={(messageName: string) => {
+              setKeyQuery(MessageStoreMemory.toQueryObject(`name:${messageName}`));
+              setAppScreen('messages');
+            }}
+            localizedLabelManager={localizedLabelManager}
+            figmaRemote={figmaRemote}
+          />
+          { FeatureFlags.features.payment
+          && (
+          <MessageUpsellOverlay
+            hideInfo
+            onclick={() => {
+              setCunsumptionPayWallFeature('test');
+            }}
+          />
+          )}
+        </>
+
       );
       break;
     case 'users':
@@ -418,7 +502,7 @@ function App() {
   }
 
   function upgradePlan() {
-    console.log('TODO UPGRADE PLAN!');
+    console.log('TODO #29 UPGRADE PLAN!');
   }
 
   return (
@@ -455,7 +539,7 @@ function App() {
           >
             Setup
           </div>
-          {/* <div className={`tab ${appScreen === 'users' ? 'active' : ''}`} onClick={() => setAppScreen('users')}>Users</div> */}
+          <div className={`tab ${appScreen === 'users' ? 'active' : ''}`} onClick={() => setAppScreen('users')}>Users</div>
         </div>
 
         <div
@@ -514,40 +598,127 @@ function App() {
       </OverlayScrollbarsComponent>
       <a id="focusHelper" href="" />
       <Drawer
+        position="top"
+        shown={enteredLicenseKey !== undefined}
+        buttons={[
+          {
+            type: 'secondary',
+            text: 'Cancel',
+            key: 'escape',
+            callback: () => {
+              setEnteredLicenseKey(undefined);
+              setLicenseKeyState(LicenseState.unvalidated);
+            },
+          },
+          {
+            type: 'primary',
+            text: licenseKeyState === LicenseState.validating ? 'Validating...' : 'Use License Key',
+            key: 'enter',
+            disabled: (enteredLicenseKey !== undefined && enteredLicenseKey.length < 10) || licenseKeyState === LicenseState.validating || licenseKeyState === LicenseState.invalid,
+            callback: () => {
+              // setEnteredLicenseKey(undefined);
+              setLicenseKeyState(LicenseState.validating);
+              // call backend
+              translationMachine.activateLicenseAsync(enteredLicenseKey!).then((result) => {
+                if (result.activated || result.success) {
+                  // {activated: true, error: null, license_key: {…}, instance: {…}, meta: {…}}
+                  if (result.activated) {
+                    translationMachine.syncTranslations().then(() => {
+                      setLicenseKeyState(LicenseState.valid);
+                      setEnteredLicenseKey(undefined);
+                    });
+                  } else {
+                    setLicenseKeyState(LicenseState.valid);
+                    setEnteredLicenseKey(undefined);
+                  }
+                } else if (result.error) {
+                  // currently only
+                  setLicenseKeyState(LicenseState.invalid);
+                  figmaRemote.notifyError('License key not accepted.');
+                  Sentry.captureException(new Error(result.error));
+                }
+              }).catch((e) => {
+                setLicenseKeyState(LicenseState.unvalidated);
+                figmaRemote.notifyError('Networking issue. Couldn\'t validate the license key.');
+                Sentry.captureException(e);
+              });
+            },
+          },
+        ]}
+      >
+        <>
+          <div className="modal-dialog-title-bar">
+            <div className="modal-dialog-title-text">Activate your License</div>
+            <div
+              className="modal-dialog-title-close button"
+              onClick={() => {
+                setEnteredLicenseKey(undefined);
+              }}
+            >
+              <div className="svg-container cross-svg" />
+            </div>
+          </div>
+          <div className="modal-dialog-body">
+            <div className="modal-dialog-text">Enter your License Key:</div>
+            <TextField
+              singleClick
+              onSave={() => {}}
+              placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXXX"
+              onChange={(value: string) => {
+                setLicenseKeyState(LicenseState.unvalidated);
+                setEnteredLicenseKey(value);
+              }}
+              text={enteredLicenseKey || ''}
+            />
+            <div className="modal-dialog-error-text">
+              {licenseKeyState === LicenseState.used && '* License Key in use'}
+              {licenseKeyState === LicenseState.invalid && '* Not valid'}
+            </div>
+          </div>
+
+        </>
+      </Drawer>
+
+      <Drawer
         shown={consumptionPayWallFeature !== undefined}
         beforeShow={async () => {
-          const waitOneFrame = () =>
-            new Promise<void>((resolve) => {
-              setTimeout(() => {
-                resolve();
-              }, 30);
-            });
+          const waitOneFrame = () => new Promise<void>((resolve) => {
+            setTimeout(() => {
+              resolve();
+            }, 30);
+          });
           WindowManagerUi.instance?.requestWindowMode(WindowMode.Fullscreen, false);
           return waitOneFrame();
         }}
         buttons={[]}
+        onCancel={() => {
+          setCunsumptionPayWallFeature(undefined);
+        }}
         position="top"
       >
-        <ConsumptionPaywall
-          showAllFeatures={() => {
+        <MessagesConsumptionPaywall
+          closeClick={() => {
             setCunsumptionPayWallFeature(undefined);
-            setShowAllFeatures(true);
           }}
-          upgradePlan={() => {
+          buyClick={() => {
+            window.open('https://parrot.lemonsqueezy.com/checkout/buy/088b77d7-5286-466b-bf22-945ab61af46f?discount=0', 'blank');
             setCunsumptionPayWallFeature(undefined);
-            upgradePlan();
+            setEnteredLicenseKey('');
+          }}
+          gotLicencesClick={() => {
+            setCunsumptionPayWallFeature(undefined);
+            setEnteredLicenseKey('');
           }}
         />
       </Drawer>
       <Drawer
         shown={showAllFeatures}
         beforeShow={async () => {
-          const waitOneFrame = () =>
-            new Promise<void>((resolve) => {
-              setTimeout(() => {
-                resolve();
-              }, 30);
-            });
+          const waitOneFrame = () => new Promise<void>((resolve) => {
+            setTimeout(() => {
+              resolve();
+            }, 30);
+          });
           WindowManagerUi.instance?.requestWindowMode(WindowMode.Fullscreen, false);
           return waitOneFrame();
         }}

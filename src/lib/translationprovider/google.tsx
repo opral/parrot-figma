@@ -1,23 +1,27 @@
-import * as Sentry from '@sentry/browser';
-import * as mixpanel from 'mixpanel-figma';
+
+
+// use polyfill in sandbox https://forum.figma.com/t/sandbox-not-support-urlsearchparams/41676
+import URLSearchParams from '@ungap/url-search-params';
+import Monitoring from '../monitoring/MonitoringProxy';
 
 export default class GoogleTranslator {
+
   static async translate(text: string, sourceLanguage: string, targetLanguage: string) {
     // if the text only contains whitespaces - uses the orignal one
     if (/^\s*$/.test(text) || text === '') {
       return text;
     }
 
+    // TODO #29 fix this before we release - TEST
     (async () => {
-      mixpanel.people?.increment?.(`characters_translated_from_${sourceLanguage}`, text.length);
-      mixpanel.people?.increment?.(`characters_translated_to_${targetLanguage}`, text.length);
-      mixpanel.people?.increment?.('characters_translated_total', text.length);
+      await Monitoring.instance?.mixedPanelPeopleIncrement(`characters_translated_from_${sourceLanguage}`, text.length);
+      await Monitoring.instance?.mixedPanelPeopleIncrement(`characters_translated_to_${targetLanguage}`, text.length);
+      await Monitoring.instance?.mixedPanelPeopleIncrement('characters_translated_total', text.length);
     })();
 
     // replace placeholder with numbers to not translate them
 
-    const pattern =
-      /(<ph( type="([^"]*)"=)?( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*))<\/ph>)/g;
+    const pattern = /(<ph( type="([^"]*)"=)?( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*))<\/ph>)/g;
 
     const placeholderIndexMapping = [] as string[];
     let currentIndex = 0;
@@ -84,7 +88,8 @@ export default class GoogleTranslator {
       );
 
       if (!result.ok) {
-        Sentry.captureMessage(`Translation of ${text} failed. Status code (${result.status}).`);
+        // TODO #29 fix this before we release - test
+        Monitoring.instance?.sentryCaptureMesage(`Translation of ${text} failed. Status code (${result.status}).`);
         return null;
       }
       // eslint-disable-next-line no-await-in-loop
@@ -92,7 +97,8 @@ export default class GoogleTranslator {
 
       if (!translationResults[0] || !translationResults[0][0] || !translationResults[0][0][0]) {
         const error = new Error('Expected a translation within [0][0][0] not found');
-        Sentry.captureException(error, {
+        // TODO #29 fix this before we release - test
+        Monitoring.instance?.sentryCaptureException(error, {
           extra: {
             sourceLanguage,
             targetLanguage,
@@ -126,8 +132,7 @@ export default class GoogleTranslator {
 
     const translationWithoutPlaceholders = translationWithMaskedPlaceholders.replace(
       patternMaskedPlaceholders,
-      (match, placeholderIndex, _argumentPosition) =>
-        `${placeholderIndexMapping[placeholderIndex]}`,
+      (match, placeholderIndex, _argumentPosition) => `${placeholderIndexMapping[placeholderIndex]}`,
     );
 
     return translationWithoutPlaceholders;

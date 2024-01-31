@@ -15,6 +15,8 @@ type TextFieldProps = {
   icon?: string;
   onSearchClick?: Function;
   onNoKeyClick?: Function;
+  onChange?: Function;
+  
   text?: string;
   onSave: Function;
 };
@@ -24,6 +26,7 @@ export default function TextField({
   editingTrigger,
   placeholder,
   icon,
+  onChange,
   onSearchClick,
   onNoKeyClick,
   text,
@@ -38,6 +41,7 @@ export default function TextField({
   const handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
     const val = evt.target?.value;
     setTextState(val);
+    onChange?.(val);
   };
 
   const doSave = () => {
@@ -111,7 +115,7 @@ export default function TextField({
           />
 
           <p
-            className={`translation${isEditing ? ' editing' : ''}`}
+            className={`translation${isEditing ? ' editing' : ''}${textState === undefined || textState === '' ? ' placeholder' : ''}`}
             onDoubleClick={() => {
               if (!isEditing && !singleClick) {
                 setEditingState(!isEditing);

@@ -73,3 +73,14 @@
 .buttonGroup-reversed {
     flex-direction: row-reverse;
 }
+
+
+.top-drawer.open {
+    box-shadow: 1px 0px 7px rgba(48, 43, 43, 0.5);
+    transform: translateY(0);
+    transition: box-shadow 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.figma-dark .top-drawer.open {
+    box-shadow: 0px 10px 24px rgba(0, 0, 0, .45), 0px 3px 5px rgba(0, 0, 0, .35), inset 0px .5px 0px rgba(255, 255, 255, .08), inset 0px 0px .5px rgba(255, 255, 255, .35);
+}

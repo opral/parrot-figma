@@ -1,8 +1,8 @@
-import { UserRole } from './UsageManager';
+import { UserFileRole } from './UsageManager';
 
 export interface UserRoleRequest {
   time: number;
-  type: UserRole;
+  type: UserFileRole;
   actorId: string;
   entryType: 'request' | 'set' | 'reject';
 }

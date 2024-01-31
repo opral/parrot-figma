@@ -442,7 +442,7 @@ export class WindowManagerSandbox {
           ),
         };
       case WindowMode.Window:
-        // TODO center window on switch to window mode - there is no way to save the window position at the moment
+        // center window on switch to window mode - there is no way to save the window position at the moment
         return {
           width: Math.floor(this.windowModeSize.width),
           height: Math.floor(this.windowModeSize.height),

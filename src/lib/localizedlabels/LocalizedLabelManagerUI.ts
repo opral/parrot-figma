@@ -1,6 +1,8 @@
 import blake from 'blakejs';
-
-import { Message, createVariant, getVariant, updateVariantPattern } from '@inlang/sdk';
+import * as Sentry from '@sentry/react';
+import {
+  Message, createVariant, getVariant, updateVariantPattern,
+} from '@inlang/sdk';
 import { MessageLinkState, LocalizedLabel } from './LocalizedLabel';
 import { Plural } from '../message/variants/Plural';
 import LocalizedLabelManager, { SandboxUpdateLabelProperties } from './LocalizedLabelManager';
@@ -15,11 +17,11 @@ import { Gender } from '../message/variants/Gender';
 import { FillinToPlaceholder, MessageExtension, Parameter } from '../message/MessageExtnesions';
 import { MessageParameterValues } from '../message/MessageParameterValues';
 import MessageImporter from '../import/MessageImporter';
+import TranslatorMachine from '../translationprovider/TranslatorMachine';
 
 export default class LocalizedLabelManagerUI
   extends EventTarget
-  implements ILocalizedLabelManagerUI
-{
+  implements ILocalizedLabelManagerUI {
   // mapping from nodeId to localizied label instance
   private cachedLocalisedLabels = {} as {
     [labelId: string]: UILocalizedLabel;
@@ -88,32 +90,32 @@ export default class LocalizedLabelManagerUI
       if (rootFrameDiffers) {
         this.removeCachedLabel(label.nodeId);
       } else if (
-        !force &&
-        !stateDiffers &&
-        cachedLabel.derivedKey === label.derivedKey &&
-        cachedLabel.height === label.height &&
-        cachedLabel.messageId === label.messageId &&
-        cachedLabel.messageLinkState === label.messageLinkState &&
-        cachedLabel.language === label.language &&
-        cachedLabel.name === label.name &&
-        cachedLabel.nodeId === label.nodeId &&
-        cachedLabel.pageId === label.pageId &&
-        cachedLabel.pageName === label.pageName &&
-        cachedLabel.rootFrameId === label.rootFrameId &&
-        cachedLabel.rootFrameLanguage === label.rootFrameLanguage &&
-        cachedLabel.rootFrameName === label.rootFrameName &&
-        cachedLabel.characters === label.characters &&
-        cachedLabel.width === label.width &&
-        cachedLabel.labelStyle.bold === label.labelStyle.bold &&
-        cachedLabel.labelStyle.fontFamily === label.labelStyle.fontFamily &&
-        cachedLabel.labelStyle.italic === label.labelStyle.italic &&
-        cachedLabel.labelStyle.textDecoration === label.labelStyle.textDecoration &&
-        JSON.stringify(cachedLabel.ops) === JSON.stringify(label.ops) &&
-        JSON.stringify(cachedLabel.parameterValues) === JSON.stringify(label.parameterValues) &&
-        JSON.stringify(cachedLabel.matchingLabelLints) ===
-          JSON.stringify(label.matchingLabelLints) &&
-        cachedLabel.x === label.x &&
-        cachedLabel.y === label.y
+        !force
+        && !stateDiffers
+        && cachedLabel.derivedKey === label.derivedKey
+        && cachedLabel.height === label.height
+        && cachedLabel.messageId === label.messageId
+        && cachedLabel.messageLinkState === label.messageLinkState
+        && cachedLabel.language === label.language
+        && cachedLabel.name === label.name
+        && cachedLabel.nodeId === label.nodeId
+        && cachedLabel.pageId === label.pageId
+        && cachedLabel.pageName === label.pageName
+        && cachedLabel.rootFrameId === label.rootFrameId
+        && cachedLabel.rootFrameLanguage === label.rootFrameLanguage
+        && cachedLabel.rootFrameName === label.rootFrameName
+        && cachedLabel.characters === label.characters
+        && cachedLabel.width === label.width
+        && cachedLabel.labelStyle.bold === label.labelStyle.bold
+        && cachedLabel.labelStyle.fontFamily === label.labelStyle.fontFamily
+        && cachedLabel.labelStyle.italic === label.labelStyle.italic
+        && cachedLabel.labelStyle.textDecoration === label.labelStyle.textDecoration
+        && JSON.stringify(cachedLabel.ops) === JSON.stringify(label.ops)
+        && JSON.stringify(cachedLabel.parameterValues) === JSON.stringify(label.parameterValues)
+        && JSON.stringify(cachedLabel.matchingLabelLints)
+          === JSON.stringify(label.matchingLabelLints)
+        && cachedLabel.x === label.x
+        && cachedLabel.y === label.y
       ) {
         return false;
       }
@@ -298,11 +300,7 @@ export default class LocalizedLabelManagerUI
   async setFrameLanguage(
     frameId: string,
     targetLanguage: Locale,
-    missingTranslationProvider: (
-      input: string,
-      sourceLanguage: string,
-      targetLanguage: string,
-    ) => Promise<string | null>,
+    translator: TranslatorMachine,
   ) {
     const version = undefined as undefined | number; // todo fill with fixed version of the frame if set
 
@@ -310,12 +308,22 @@ export default class LocalizedLabelManagerUI
       language: targetLanguage,
     });
 
+    let lastError: undefined | Error;
+
     for (const localizedLabelId of this.cachedFrames[frameId].localizedLabelIds) {
       const localizedLabel = this.cachedLocalisedLabels[localizedLabelId]!;
+
       // eslint-disable-next-line no-await-in-loop
-      await this.setLabelLanguage(localizedLabel, targetLanguage, missingTranslationProvider);
+      try {
+        await this.setLabelLanguage(localizedLabel, targetLanguage, translator, false, false /** CTA is triggered not every time */);
+      } catch (e: any) {
+        lastError = e;
+      }
     }
 
+    if (lastError) {
+      throw lastError;
+    }
     // await this.localizedLabelMangerSandbox.updateFrameById(frameId);
   }
 
@@ -330,13 +338,11 @@ export default class LocalizedLabelManagerUI
     targetLanguage: Locale,
     // TODO #17 versioning
     // version: number | undefined,
-    missingTranslationProvider: (
-      input: string,
-      sourceLanguage: string,
-      targetLanguage: string,
-    ) => Promise<string | null>,
+    translator: TranslatorMachine,
+    enforceTranslation: boolean,
+    triggersCTA: boolean,
   ) {
-    new UILocalizedLabel(this, cachedLabel).setLanguage(targetLanguage, missingTranslationProvider);
+    return (new UILocalizedLabel(this, cachedLabel)).setLanguage(targetLanguage, translator, enforceTranslation, triggersCTA);
   }
 
   async createNewVersionFromLabelState(localizedLabel: UILocalizedLabel) {
@@ -387,11 +393,11 @@ export default class LocalizedLabelManagerUI
   }
 
   async deleteMessage(messageId: string) {
-    console.log('DELETING ' + messageId);
+    console.log(`DELETING ${messageId}`);
     await this.messageStore.deleteMessage(messageId);
-    console.log('unlinking message ' + messageId);
+    console.log(`unlinking message ${messageId}`);
     await this.unlinkLabelsWithMessage(messageId);
-    console.log('DELETING done ' + messageId);
+    console.log(`DELETING done ${messageId}`);
 
     await this.localizedLabelMangerSandbox.commitUndo();
   }
@@ -520,8 +526,8 @@ export default class LocalizedLabelManagerUI
     parameterValues: MessageParameterValues,
   ) {
     if (
-      localizedLabel.messageLinkState === MessageLinkState.Unmanaged ||
-      localizedLabel.messageLinkState === MessageLinkState.MissingMessage
+      localizedLabel.messageLinkState === MessageLinkState.Unmanaged
+      || localizedLabel.messageLinkState === MessageLinkState.MissingMessage
     ) {
       // ignore field should be disabled
       return;
@@ -532,9 +538,9 @@ export default class LocalizedLabelManagerUI
     if (localizedLabel.messageLinkState === MessageLinkState.Linked) {
       // update only the patternHTML on the label - updating the message is an explicit action
     } else if (localizedLabel.messageLinkState === MessageLinkState.Unset) {
-      // TODO create unlinked message
+      // TODO #29 create unlinked message ?
     } else if (localizedLabel.messageLinkState === MessageLinkState.Unlinked) {
-      // TODO update unlinked message in place
+      // TODO #29 update unlinked message in place ?
     }
   }
 
@@ -548,16 +554,16 @@ export default class LocalizedLabelManagerUI
     changedProperties: {
       labelName?: string;
       messageState?:
-        | {
-            type: 'linked';
-            messageId: string;
-            parameterValues: MessageParameterValues;
-            variantPatternHTML?: string;
-          }
-        | { type: 'unlinked'; unlinkedMessage: Message; parameterValues: MessageParameterValues }
-        | { type: 'unmanaged'; unmanaged: boolean }
-        | { type: 'unset' }
-        | undefined;
+      | {
+        type: 'linked';
+        messageId: string;
+        parameterValues: MessageParameterValues;
+        variantPatternHTML?: string;
+      }
+      | { type: 'unlinked'; unlinkedMessage: Message; parameterValues: MessageParameterValues }
+      | { type: 'unmanaged'; unmanaged: boolean }
+      | { type: 'unset' }
+      | undefined;
       language?: Locale;
     },
   ) {
@@ -566,12 +572,12 @@ export default class LocalizedLabelManagerUI
     const language = changedProperties.language ?? localizedLabelCached.language;
 
     let textOpsAndFillinsToPlaceholders:
-      | {
-          ops: any[];
-          characters: string;
-          fillinsToPlaceholder: FillinToPlaceholder | null | undefined;
-        }
-      | undefined;
+    | {
+      ops: any[];
+      characters: string;
+      fillinsToPlaceholder: FillinToPlaceholder | null | undefined;
+    }
+    | undefined;
 
     let variantPatternHTMLHash: string | undefined;
     if (changedProperties.messageState?.type === 'linked') {
@@ -610,7 +616,7 @@ export default class LocalizedLabelManagerUI
           changedProperties.messageState.messageId,
         );
 
-        const bestMatchingVariant = MessageStoreMemory.getBestExistingVariant(
+        /* const bestMatchingVariant = MessageStoreMemory.getBestExistingVariant(
           updatedMessage!,
           language,
           this.messageStore.getLanugages()!,
@@ -622,6 +628,8 @@ export default class LocalizedLabelManagerUI
         }
 
         variantHTML = MessageStoreMemory.patternToHtml(bestMatchingVariant.pattern);
+        */
+        variantHTML = MessageStoreMemory.htmlForPattern(updatedMessage!, language, []) ?? '';
         textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(
           variantHTML,
           changedProperties.messageState.parameterValues,
@@ -629,32 +637,21 @@ export default class LocalizedLabelManagerUI
         variantPatternHTMLHash = blake.blake2sHex(variantHTML);
 
         // eslint-disable-next-line no-param-reassign
-        changedProperties.language = bestMatchingVariant.languageTag as Locale;
+        changedProperties.language = language; // bestMatchingVariant.languageTag as Locale;
       }
       // the variant pattern in the label have changed
     } else if (changedProperties.messageState?.type === 'unlinked') {
       const updatedMessage = changedProperties.messageState.unlinkedMessage;
 
-      const bestMatchingVariant = MessageStoreMemory.getBestExistingVariant(
-        updatedMessage!,
-        language,
-        this.messageStore.getLanugages()!,
-        [],
-      );
+      const variantHTML = MessageStoreMemory.htmlForPattern(updatedMessage!, language, []) ?? '';
 
-      if (bestMatchingVariant === undefined) {
-        throw new Error('The given message has no variant at all');
-      }
-
-      const variantHTML = MessageStoreMemory.patternToHtml(bestMatchingVariant.pattern);
       textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(
         variantHTML,
         changedProperties.messageState.parameterValues,
       );
-
       variantPatternHTMLHash = blake.blake2sHex(variantHTML);
       // eslint-disable-next-line no-param-reassign
-      changedProperties.language = bestMatchingVariant.languageTag as Locale;
+      changedProperties.language = language;
     }
     // unset will be passed automatically
 

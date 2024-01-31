@@ -25,7 +25,8 @@ export default function SetupView({ labelManager }: SetupViewProps) {
           await labelManager.messageStore.setLanguages(activeLanguages);
         }}
       />
-      <div
+     
+      {/* <div
         className="start-staging-ui"
         onClick={() => {
           // @ts-expect-error
@@ -33,7 +34,7 @@ export default function SetupView({ labelManager }: SetupViewProps) {
         }}
       >
         stagin-ui
-      </div>
+      </div> */}
     </>
   );
 }

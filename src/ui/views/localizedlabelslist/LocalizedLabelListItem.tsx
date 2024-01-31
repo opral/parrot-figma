@@ -26,6 +26,9 @@ import Drawer from '../../compontents/drawer/Drawer';
 import { Gender } from '../../../lib/message/variants/Gender';
 import { FillinToPlaceholder } from '../../../lib/message/MessageExtnesions';
 import { MessageParameterValues } from '../../../lib/message/MessageParameterValues';
+import GoogleTranslator from '../../../lib/translationprovider/google';
+import TranslatorMachine, { NoMoreTranslationsLeftError } from '../../../lib/translationprovider/TranslatorMachine';
+import FeatureFlags from '../../../lib/featureflags/FeatureFlags';
 
 type LocalizedLabelListItemProps = {
   showMessage: Function;
@@ -43,10 +46,9 @@ export default function LocalizedLabelListItem({
   selected,
 }: LocalizedLabelListItemProps) {
   const { messageStore } = localizedLabelManager;
-  const message =
-    localizedLabel.messageLinkState !== MessageLinkState.Unset
-      ? messageStore.getMessage(localizedLabel.messageId!)
-      : undefined;
+  const message = localizedLabel.messageLinkState !== MessageLinkState.Unset
+    ? messageStore.getMessage(localizedLabel.messageId!)
+    : undefined;
 
   const rowRef = React.useRef<HTMLDivElement>(null);
 
@@ -143,7 +145,7 @@ export default function LocalizedLabelListItem({
           },
           {
             type: 'primary',
-            text: 'Use Key',
+            text: 'Use message',
             key: 'enter',
             callback: () => {
               const messageToLink = localizedLabelManager.messageStore.getMessage(
@@ -248,8 +250,8 @@ export default function LocalizedLabelListItem({
               className="message-select"
               placeholder={
                 localizedLabel.messageLinkState === MessageLinkState.Unmanaged
-                  ? 'Not Localized'
-                  : 'Link a Message...'
+                  ? 'not localized'
+                  : 'Link a message...'
               }
               isDisabled={localizedLabel.matchingLabelLints.length > 0}
               iconClass={iconClass}
@@ -303,9 +305,7 @@ export default function LocalizedLabelListItem({
                       localizedLabelManager.linkKey(localizedLabel, selectedOption.value as string, selectedOption.language!, selectedOption.plural!);
                     } */
               }}
-              valueReplaceFn={(value) =>
-                value.replace(/[ .]/g, (match) => (match === '.' ? '__' : '_'))
-              }
+              valueReplaceFn={(value) => value.replace(/[ .]/g, (match) => (match === '.' ? '__' : '_'))}
               defaultValue={messageName}
               getOptions={(enteredValue: string) => {
                 let options = [] as InputSelectOption[];
@@ -314,17 +314,15 @@ export default function LocalizedLabelListItem({
                 const textMatchQuery = MessageStoreMemory.toQueryObject(
                   `exact_text:true name:${keySearch} ${localizedLabel.characters}`,
                 );
-                const { inText: suggestedKeys, matchingNames: matchingKeysByName } =
-                  messageStore.findMessages(textMatchQuery);
+                const { inText: suggestedKeys, matchingNames: matchingKeysByName } = messageStore.findMessages(textMatchQuery);
 
-                const isValidKey =
-                  enteredValue.length >= 0 &&
-                  /^[a-zA-Z0-9]$/.test(enteredValue[enteredValue.length - 1]);
+                const isValidKey = enteredValue.length >= 0
+                  && /^[a-zA-Z0-9]$/.test(enteredValue[enteredValue.length - 1]);
 
                 if (
-                  isValidKey &&
-                  !suggestedKeys.has(enteredValue) &&
-                  !matchingKeysByName.has(enteredValue)
+                  isValidKey
+                  && !suggestedKeys.has(enteredValue)
+                  && !matchingKeysByName.has(enteredValue)
                 ) {
                   options.push({
                     type: InputSelectionOptionType.ADD,
@@ -388,8 +386,8 @@ export default function LocalizedLabelListItem({
                 });
 
                 if (
-                  localizedLabel.messageLinkState === MessageLinkState.Linked &&
-                  messageName === enteredValue
+                  localizedLabel.messageLinkState === MessageLinkState.Linked
+                  && messageName === enteredValue
                 ) {
                   options.push({
                     label: 'Show linked Message...',
@@ -401,7 +399,7 @@ export default function LocalizedLabelListItem({
 
                 if (localizedLabel.messageLinkState === MessageLinkState.Unmanaged) {
                   options.push({
-                    label: 'Enable Translation...',
+                    label: 'Enable translation...',
                     icon: 'with-message-svg',
                     value: 'reset',
                     type: InputSelectionOptionType.ACTION,
@@ -426,8 +424,8 @@ export default function LocalizedLabelListItem({
                 data-tooltip-content="Current Language of this Label"
               >
                 <span className="language">{localizedLabel.language}</span>
-                {localizedLabel.language ===
-                  localizedLabelManager.messageStore.getRefLanugage() && (
+                {localizedLabel.language
+                  === localizedLabelManager.messageStore.getRefLanugage() && (
                   <span className="language-tag">ref</span>
                 )}
               </div>
@@ -435,6 +433,9 @@ export default function LocalizedLabelListItem({
 
               <div className="grid-item-translation translation-container">
                 <TranslationEditor
+                  language={localizedLabel.language}
+                  refLanguage={localizedLabelManager.messageStore.getRefLanugage()!}
+
                   editable
                   isDisabled={localizedLabel.matchingLabelLints.length > 0}
                   match={undefined}
@@ -459,7 +460,84 @@ export default function LocalizedLabelListItem({
                   parameterValues={localizedLabel.parameterValues}
                   variantHTML={localizedLabel.currentPatternHTML}
                   messageStore={messageStore}
-                />
+
+                >
+
+                  {(localizedLabel.language
+                    !== localizedLabelManager.messageStore.getRefLanugage()
+                    && (localizedLabel.currentPatternHTML === undefined || localizedLabel.currentPatternHTML === ''))
+                    && FeatureFlags.features.payment
+                    && (
+                    <button
+                      type="button"
+                      disabled={!localizedLabel.isTranslatable()}
+                      onClick={() => {
+                        const translationProvider = TranslatorMachine.instance;
+
+                        try {
+                          localizedLabelManager.setLabelLanguage(
+                            localizedLabel,
+                            localizedLabel.language,
+                            translationProvider,
+                            true,
+                            true,
+                          );
+                        } catch (e: any) {
+                          if (!(e instanceof NoMoreTranslationsLeftError)) {
+                            figmaRemote.notify(`Something went wrong with translation - ${e.message}`);
+                            Sentry.captureException(e);
+                          }
+                        }
+                      }}
+                      data-tooltip-content={localizedLabel.isTranslatable()
+                        ? 'Translate this message using machine translation.'
+                        : 'Can`t machine translate - reference text missing'}
+                    >
+                      Translate
+
+                    </button>
+                    )}
+
+                  {localizedLabel.messageLinkState === MessageLinkState.Linked
+                && (labelState.modified
+                  || localizedLabel.language !== localizedLabel.rootFrameLanguage) && ( // allow the user to catch up with the keys version
+                  <button
+                    type="button"
+                    data-tooltip-content="Reset to text from Message"
+                    onClick={updateToLatestKeyVersion}
+                  >
+                    Revert
+
+                  </button>
+
+                  )}
+
+                  {localizedLabel.messageLinkState === MessageLinkState.Linked
+                && labelState.modified && (
+                  <button
+                    type="button"
+                    onClick={createNewVersionFromDesign}
+                    data-tooltip-content="Use Text in Message"
+                  >
+                    Use
+
+                  </button>
+
+                  )}
+
+                  {localizedLabel.matchingLabelLints.length > 0 && (
+                    <div
+                      className="layerIcon iconWrapper button"
+                      data-tooltip-content={`Label contains unsupported inline styles: ${localizedLabel.matchingLabelLints.join(
+                        ', ',
+                      )}`}
+                      onClick={fixLints}
+                    >
+                      <div className="svg-container warning-svg" />
+                    </div>
+                  ) }
+
+                </TranslationEditor>
                 {/* TODO #18 make paramter editable again when we have selectors in place - variables only used as selectors can't be accesed otherwise
                       { selected !== 'unselected' && (
                         <div className="placeholder-view-grid" style={{ display: Object.keys(localizedLabel.parameterValues).length > 0 ? undefined : 'none' }}>
@@ -487,40 +565,7 @@ export default function LocalizedLabelListItem({
                         </div>
                       )} */}
               </div>
-              {localizedLabel.messageLinkState === MessageLinkState.Linked &&
-                (labelState.modified ||
-                  localizedLabel.language !== localizedLabel.rootFrameLanguage) && ( // allow the user to catch up with the keys version
-                  <div
-                    className="layerIcon iconWrapper button"
-                    data-tooltip-content="Reset all changes"
-                    onClick={updateToLatestKeyVersion}
-                  >
-                    <div className="svg-container update-text-layer-svg" />
-                  </div>
-                )}
 
-              {localizedLabel.messageLinkState === MessageLinkState.Linked &&
-                labelState.modified && (
-                  <div
-                    className="layerIcon iconWrapper button"
-                    data-tooltip-content="Push changes to Message"
-                    onClick={createNewVersionFromDesign}
-                  >
-                    <div className="svg-container update-message-svg" />
-                  </div>
-                )}
-
-              {localizedLabel.matchingLabelLints.length > 0 && (
-                <div
-                  className="layerIcon iconWrapper button"
-                  data-tooltip-content={`Label contains unsupported inline styles: ${localizedLabel.matchingLabelLints.join(
-                    ', ',
-                  )}`}
-                  onClick={fixLints}
-                >
-                  <div className="svg-container warning-svg" />
-                </div>
-              )}
             </div>
           </div>
         </div>

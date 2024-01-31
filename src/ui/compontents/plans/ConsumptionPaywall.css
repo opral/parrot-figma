@@ -31,7 +31,6 @@
 }
 
 .consumption_paywall_modals--closeButton {
-  margin-top: -8px;
     margin-right: -8px;
     position: absolute;
     right: 15px;
@@ -53,6 +52,10 @@
     background-color: transparent;
 }
 
+.consumption_paywall_modals--closeButton span {
+  background-color: unset;
+}
+
 .consumption_paywall_modals--largeModalSubtitle {
   margin-bottom: 16px;
   font-size: 13px;
@@ -71,7 +74,7 @@
 }
 
 .consumption_paywall_modals--planBox {
-  margin-right: 12px;
+  
   flex: 1;
     padding: 24px;
     border: 1px solid var(--color-border, #e5e5e5);
@@ -207,4 +210,13 @@
   -moz-user-select: auto;
   -ms-user-select: auto;
   user-select: auto;
+}
+
+.consumption_paywall_modals--licenseKey {
+  
+    color: var(--figma-color-text-brand);
+    cursor: pointer;
+    -webkit-user-select: auto;
+    user-select: auto;
+
 }

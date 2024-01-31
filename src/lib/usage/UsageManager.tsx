@@ -1,5 +1,5 @@
 /* eslint-disable max-classes-per-file */
-// TODO use the local storage for now - information will be sourced by the backend later
+// TODO #32 use the local storage for now - information will be sourced by the backend later
 
 import { FileUsage } from './FileUsage';
 import { UserRoleRequest } from './UserRoleRequest';
@@ -10,50 +10,52 @@ export interface PluginUser {
   userId: string;
   name: string;
   photoUrl: string | null;
-  userRole: UserRole;
+  userRole: UserFileRole;
   openUserRoleRequest: UserRoleRequest | undefined;
   // permissions
 }
 
-export enum UserRole {
+// TODO #32
+
+export enum UserFileRole {
   owner = 'owner',
   designer = 'designer',
   developer = 'developer',
-  inactive = 'inactive',
+  inactive = 'inactive', // TODO #32 remove inactive and introduce seat property it with parrot seat (Free/Collab)
   none = 'none',
 }
 
 const UserRoleUtils = {
-  compare: (type: UserRole | undefined, comparetToType: UserRole | undefined): 1 | 0 | -1 => {
+  compare: (type: UserFileRole | undefined, comparetToType: UserFileRole | undefined): 1 | 0 | -1 => {
     if (type === comparetToType) {
       return 0;
     }
     switch (type) {
-      case UserRole.owner:
+      case UserFileRole.owner:
         if (
-          comparetToType === UserRole.designer ||
-          comparetToType === UserRole.developer ||
-          comparetToType === UserRole.inactive ||
+          comparetToType === UserFileRole.designer ||
+          comparetToType === UserFileRole.developer ||
+          comparetToType === UserFileRole.inactive ||
           comparetToType === undefined
         ) {
           return 1;
         }
         break;
-      case UserRole.designer:
+      case UserFileRole.designer:
         if (
-          comparetToType === UserRole.developer ||
-          comparetToType === UserRole.inactive ||
+          comparetToType === UserFileRole.developer ||
+          comparetToType === UserFileRole.inactive ||
           comparetToType === undefined
         ) {
           return 1;
         }
         break;
-      case UserRole.developer:
-        if (comparetToType === UserRole.inactive || comparetToType === undefined) {
+      case UserFileRole.developer:
+        if (comparetToType === UserFileRole.inactive || comparetToType === undefined) {
           return 1;
         }
         break;
-      case UserRole.inactive:
+      case UserFileRole.inactive:
         if (comparetToType === undefined) {
           return 1;
         }
@@ -185,14 +187,14 @@ export default class UserManager {
     await figma.clientStorage.setAsync(clientStorageKeyPrefix + this.state.fileId, this.state);
   }
 
-  async requestUserRoleForCurrentUser(userRole: UserRole): Promise<PluginUser> {
+  async requestUserRoleForCurrentUser(userRole: UserFileRole): Promise<PluginUser> {
     this.requestUserRole(userRole, this.currentUserId);
     return this.getCurrentUser();
   }
 
-  requestUserRole(userRole: UserRole, forUser: string): PluginUser | undefined {
+  requestUserRole(userRole: UserFileRole, forUser: string): PluginUser | undefined {
     if (Object.keys(this.state.usersInFile).length === 0) {
-      if (userRole === UserRole.designer) {
+      if (userRole === UserFileRole.designer) {
         // the first desinger becomse the owner of the file
         this.state.usersInFile[forUser] = {
           userId: forUser,
@@ -201,7 +203,7 @@ export default class UserManager {
 
           userStates: {
             [Date.now()]: {
-              type: UserRole.owner,
+              type: UserFileRole.owner,
               actorId: forUser,
               entryType: 'set',
             },
@@ -238,7 +240,7 @@ export default class UserManager {
       };
     }
 
-    // TODO check if role is available now
+    // TODO #32 check if role is available now
     this.state.usersInFile[forUser].userStates[Date.now()] = {
       type: userRole,
       actorId: forUser,
@@ -247,7 +249,7 @@ export default class UserManager {
     this.propagateState();
 
     if (
-      userRole !== UserRole.owner &&
+      userRole !== UserFileRole.owner &&
       this.autoApplyUserRole /* in the beta we auto apply requested roles */
     ) {
       setTimeout(() => this.setUserRole(userRole, forUser, 'plugin'), 1);
@@ -256,8 +258,8 @@ export default class UserManager {
     return this.getUser(forUser);
   }
 
-  async setUserRole(userRole: UserRole, forUser: string, actor: string): Promise<boolean> {
-    // TODO check user limit
+  async setUserRole(userRole: UserFileRole, forUser: string, actor: string): Promise<boolean> {
+    // TODO #32 check user limit
     console.log(`setting user role to ${userRole}`);
     this.state.usersInFile[forUser].userStates[Date.now()] = {
       type: userRole,
@@ -281,7 +283,7 @@ export default class UserManager {
       userId: this.currentUserId,
       name: figma.currentUser!.name,
       photoUrl: figma.currentUser!.photoUrl!,
-      userRole: this.getUserRole(this.currentUserId) ?? UserRole.none,
+      userRole: this.getUserRole(this.currentUserId) ?? UserFileRole.none,
       openUserRoleRequest: this.getOpenUserRoleRequest(this.currentUserId),
     };
   }
@@ -296,7 +298,7 @@ export default class UserManager {
       userId: userObj.userId,
       name: userObj.userName,
       photoUrl: userObj.photoUrl,
-      userRole: this.getUserRole(userId) ?? UserRole.none,
+      userRole: this.getUserRole(userId) ?? UserFileRole.none,
       openUserRoleRequest: this.getOpenUserRoleRequest(userId),
     };
   }
@@ -340,7 +342,7 @@ export default class UserManager {
         userId,
         name: userObj.userName,
         photoUrl: userObj.photoUrl,
-        userRole: this.getUserRole(userId) ?? UserRole.none,
+        userRole: this.getUserRole(userId) ?? UserFileRole.none,
         openUserRoleRequest: this.getOpenUserRoleRequest(userId),
       });
     }
@@ -443,8 +445,8 @@ syncState(user) {
     if (user !== currentUser) {
         // throw
     }
-    // TODO meger states and store it in the user and in the file
-    // TODO merge usage for the current file and store it in the user and in the file
-    // TODO uverride users role with the one found in the file
+    // TODO #32  meger states and store it in the user and in the file
+    // TODO #32 merge usage for the current file and store it in the user and in the file
+    // TODO #32 uverride users role with the one found in the file
 }
 */

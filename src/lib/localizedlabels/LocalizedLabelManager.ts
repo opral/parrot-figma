@@ -1272,11 +1272,6 @@ export default class LocalizedLabelManager {
 
     // get plugin 1192ms -> 938ms
 
-    // if no plural id is specified than we fall back to "other" - the default plural
-    const language =
-      node.getPluginData(this.languageDataKey) === ''
-        ? this.messageStore?.getConfigSync()!.refLanguage!
-        : (node.getPluginData(this.languageDataKey) as Locale);
     const unmanaged = node.getPluginData(this.messageUnmanagedKey) === 'true';
     const messageId =
       node.getPluginData(this.messageNameDataKey) === ''
@@ -1286,6 +1281,11 @@ export default class LocalizedLabelManager {
       rootFrame.getPluginData(this.languageDataKey) === ''
         ? this.messageStore?.getConfigSync()!.refLanguage!
         : (rootFrame.getPluginData(this.languageDataKey) as Locale);
+
+    const language =
+        node.getPluginData(this.languageDataKey) === ''
+          ? rootFrameLanguage
+          : (node.getPluginData(this.languageDataKey) as Locale);
 
     const variantPatternHTMLHash =
       node.getPluginData(this.variantPatternHTMLHashDataKey) !== ''

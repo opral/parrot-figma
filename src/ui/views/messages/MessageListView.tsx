@@ -122,13 +122,13 @@ export default function MessageListView({
     }
   }, [highlightSelection]);
 
-  const allMessages = messageStore.inlangProject?.query.messages.getAll() ?? [];
+  const allMessages = messageStore.getAllMessages() ?? [];
 
   const fileHasMessages = allMessages.length > 0;
   if (!fileHasMessages) {
     return (
       <div className="emptyState">
-        <div className="emptyStateTitle">No Messages yet</div>
+        <div className="emptyStateTitle">No messages yet</div>
         <div className="emptyStateSubtitle">
           <div>
             Messages will show up here.
@@ -194,7 +194,7 @@ export default function MessageListView({
         />
         {[...filteredKeys.matchingNames].length === 0 && (
           <div className="emptyState">
-            <div className="emptyStateTitle">No Messages matched your search.</div>
+            <div className="emptyStateTitle">No messages matched your search.</div>
             <div className="emptyStateSubtitle">
               <div>Please remove some filters to get more matches.</div>
             </div>

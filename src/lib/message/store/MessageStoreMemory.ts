@@ -20,6 +20,7 @@ import { createNodeishMemoryFs } from './inlang/FigmaRootFs';
 import { Config, InlangMessageStore } from './InlangMessageStoreFigmaRoot';
 import { MessageParameterValues } from '../MessageParameterValues';
 import PlaceholderHelper from '../PlaceholderUtil';
+import TranslatorMachine from '../../translationprovider/TranslatorMachine';
 
 export type SearchQuery = {
   selected?: 'FRAME' | 'LABEL' | undefined;
@@ -97,6 +98,18 @@ export default class MessageStoreMemory extends EventTarget {
     const event = new CustomEvent<any>(MessageStoreMemory.updateEventName, { detail: changes });
     this.dispatchEvent(event);
     */
+  }
+
+  subscribeMessage(messageId: string, cb: (message: Message) => void) {
+    this.inlangProject?.query.messages.get.subscribe(
+      { where: { id: messageId } },
+      (updatedMessage) => {
+        if (updatedMessage !== undefined) {
+          // skip deleted
+          cb(updatedMessage);
+        }
+      },
+    );
   }
 
   static UPDATE_EVENT = 'updated';
@@ -512,6 +525,10 @@ export default class MessageStoreMemory extends EventTarget {
     return results;
   }
 
+  getAllMessages() {
+    return this.inlangProject?.query.messages.getAll();
+  }
+
   async createTag() {
     /* TODO #17 versioning we skip this in inlang for now
     // TODO #18 we update the messages here - shouldn't we wait for the messaage bus instead?
@@ -632,7 +649,13 @@ export default class MessageStoreMemory extends EventTarget {
   // wrapper methods to centralize the integration of inlang in case of api changes
 
   static hasVariant(message: Message, targetLanguage: Locale, match?: string[]) {
-    return getVariant(message, { where: { languageTag: targetLanguage, match } }) !== undefined;
+    const variant = getVariant(message, { where: { languageTag: targetLanguage, match } })
+    return variant !== undefined;
+  }
+
+  static hasTranslationInVariant(message: Message, targetLanguage: Locale, match?: string[]) {
+    const variant = getVariant(message, { where: { languageTag: targetLanguage, match } })
+    return variant !== undefined && variant.pattern.length > 0;
   }
 
   // static isVariantsTranslationOutdated(
@@ -689,17 +712,40 @@ export default class MessageStoreMemory extends EventTarget {
     return messageClone;
   }
 
+  static ongoingTranslationPromises = {} as {
+    [messageId: string]: Promise<Message>
+  };
+
+  static canTranslate(message: Message, sourceLanguage: Locale, targetLanguage: Locale, match: string[]) {
+    // reasons:
+
+    // TODO #35 target language not supported
+    // TODO #35 source language not supported
+
+    // source language not set in Message 
+    const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(
+      message,
+      sourceLanguage,
+      match,
+    );
+    if (sourceVariantPatternHTML === undefined || sourceVariantPatternHTML === '') {
+      return false;
+    }
+    return true;
+  }
+
   static async upsertUsingAutoTranslateMessage(
-    translationProvider: (
-      input: string,
-      sourceLanguage: string,
-      targetLanguage: string,
-    ) => Promise<string | null>,
+    translator: TranslatorMachine,
     message: Message,
     sourceLanguage: Locale,
     targetLanguage: Locale,
     match: string[],
+    triggersCTA: boolean,
   ) {
+    // // we combine multiple translaition promises of the same message that happen in a batch
+    // if (MessageStoreMemory.ongoingTranslationPromises[message.id] !== undefined) {
+    //   return MessageStoreMemory.ongoingTranslationPromises[message.id];
+    // }
     //
     const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(
       message,
@@ -710,12 +756,14 @@ export default class MessageStoreMemory extends EventTarget {
       throw new Error(`Pattern did not exist for source language: ${sourceLanguage}`);
     }
 
-    const translatedPattern = await translationProvider(
+    const translatedPattern = await translator.translate(
       sourceVariantPatternHTML,
-      sourceLanguage as string,
+      sourceLanguage as Locale,
       targetLanguage,
+      triggersCTA,
     );
 
+    // delete MessageStoreMemory.ongoingTranslationPromises[message.id];
     return this.upsertVariantPatternHtml(
       message,
       sourceLanguage,

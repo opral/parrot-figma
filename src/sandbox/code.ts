@@ -17,8 +17,16 @@ import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowMan
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager'; // TODO change this to a config when implemented
 import { InlangMessageStore } from '../lib/message/store/InlangMessageStoreFigmaRoot';
 import UserManager from '../lib/usage/UsageManager';
+import TranslatorMachine from '../lib/translationprovider/TranslatorMachine';
+import ParrotApi from '../lib/api/Parrot';
+import Monitoring from '../lib/monitoring/MonitoringProxy';
+import FeatureFlags from '../lib/featureflags/FeatureFlags';
 
 const figmaRemote = new FigmaUtil();
+
+if (figma.currentUser?.id) {
+  FeatureFlags.setUser(figma.currentUser?.id);
+}
 
 const fileConfigured = figmaRemote.getRootPluginDataSync('fileSetupCompleted') !== '';
 const introShownToUser = true;
@@ -57,6 +65,11 @@ const asyncFunctionProxy = new AsyncFunctionProxy(
 
 asyncFunctionProxy.registerInstance(figmaRemote);
 
+const parrotApi = new ParrotApi(process.env.PARROT_API_KEY as string);
+
+const translationMachine = new TranslatorMachine(parrotApi);
+asyncFunctionProxy.registerInstance(translationMachine);
+
 const usageManager = new UserManager(false);
 asyncFunctionProxy.registerInstance(usageManager);
 
@@ -68,6 +81,10 @@ asyncFunctionProxy.registerInstance(remoteLocalizedLabelManager);
 
 const figmaHelper = new FigmaHelper(figma);
 asyncFunctionProxy.registerInstance(figmaHelper);
+
+
+const monitoring = new Monitoring();
+asyncFunctionProxy.proxyAsyncMethods(monitoring);
 
 figma.on('selectionchange', () => {
   figma.ui.postMessage({

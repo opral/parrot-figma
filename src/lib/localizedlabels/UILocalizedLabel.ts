@@ -561,7 +561,6 @@ export class UILocalizedLabel implements LocalizedLabel {
     enforceTranslation: boolean,
     triggersCTA: boolean,
   ) {
-    debugger;
     const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
     const toRefLanguage = targetLanguage === refLanguage;
     const message = this.manager.messageStore.getMessage(this.messageId)!;

@@ -20,7 +20,6 @@ export default class Monitoring {
   }
 
   async mixedPanelPeopleIncrement(property: string, value: number) {
-    debugger;
     this.mixpanel?.people?.increment?.(property, value);
   }
 

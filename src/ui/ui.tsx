@@ -518,10 +518,6 @@ function App() {
       break;
   }
 
-  function upgradePlan() {
-    console.log('TODO #29 UPGRADE PLAN!');
-  }
-
   return (
     <>
       <Tooltip contentAttribute="data-tooltip-content" />
@@ -753,7 +749,7 @@ function App() {
         <ComparisonChart
           upgradePlan={() => {
             setCunsumptionPayWallFeature(undefined);
-            upgradePlan();
+            // upgradePlan();
           }}
         />
       </Drawer>

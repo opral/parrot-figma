@@ -220,15 +220,15 @@ export default class WindowManagerUi extends EventTarget {
 
           this.windowMode = mode;
           if (this.openRequest && mode !== this.openRequest) {
-            console.log(
-              `WARNING: requested mode ${this.requestWindowMode} differs from received ${mode}`,
-            );
+            // console.log(
+            //   `WARNING: requested mode ${this.requestWindowMode} differs from received ${mode}`,
+            // );
           }
           this.openRequest = undefined;
           const changeEvent = new CustomEvent<any>('changed');
           this.dispatchEvent(changeEvent);
         } else if (event.data.pluginMessage.viewportBounds) {
-          console.log('viewportBounds viewportBounds viewportBounds viewportBounds ');
+          // console.log('viewportBounds viewportBounds viewportBounds viewportBounds ');
           this.viewportBounds = event.data.pluginMessage.viewportBounds;
           this.updateDragContainer();
         }
@@ -253,8 +253,8 @@ export default class WindowManagerUi extends EventTarget {
     const { height } = computedStyle;
     const windowHeight = parseInt(height, 10) - 5;
 
-    console.log('updating drag container using view bounds');
-    console.log(this.viewportBounds);
+    // console.log('updating drag container using view bounds');
+    // console.log(this.viewportBounds);
 
     // make the content three times as height as window + viewport to be able to scroll up and down in an visible area of the window height
     this.heightResizeScrollContentEl.style.height = `${

@@ -182,7 +182,7 @@ export class WindowManagerSandbox {
 
       // @ts-ignore -- figmas ui type does not expose the reposition atm
       figma.ui.reposition(windowRect.x, windowRect.y);
-      console.log('calling show');
+      // console.log('calling show');
 
       figma.ui.show();
 
@@ -253,7 +253,7 @@ export class WindowManagerSandbox {
       (previousWidth !== figma.viewport.bounds.width ||
         previousHeight !== figma.viewport.bounds.height)
     ) {
-      console.log(`[WM] resize deteceted from ${fromCheckInterval ? 'interval' : 'drag'}`);
+      // console.log(`[WM] resize deteceted from ${fromCheckInterval ? 'interval' : 'drag'}`);
       this.onViewPortResize();
       return true;
     }
@@ -262,14 +262,14 @@ export class WindowManagerSandbox {
 
   private onWindowOverlapChanged() {
     if (this.reshowing) {
-      console.log('[WM] skipping becaus reshowing');
+      // console.log('[WM] skipping becaus reshowing');
       return;
     }
     if (!this.viewPortResizing && !this.checkForViewPortResize()) {
       // drag detected! forces reshow
       this.wasDragged = true;
       if (this.currentWindowMode === WindowMode.BottomSheet) {
-        console.log('[WM] overlap changed - changing to window');
+        // console.log('[WM] overlap changed - changing to window');
         // in case of the bottom sheet we always keep the windows size equal to the viewport size
         const width = Math.ceil(figma.viewport.bounds.width * figma.viewport.zoom);
         const height = this.bottomSheetHeight;
@@ -288,12 +288,12 @@ export class WindowManagerSandbox {
         this.setWindowMode(WindowMode.Window, this.windowModeSize);
       } */
     } else {
-      console.log('[WM] overlap changed - viewport resize');
+      // console.log('[WM] overlap changed - viewport resize');
     }
   }
 
   private onViewPortResize() {
-    console.log(`[WM] viewport resize ${this.currentWindowMode}`);
+    // console.log(`[WM] viewport resize ${this.currentWindowMode}`);
     this.viewPortResizing = true;
 
     // While viewport resizing is happening we don't accept window mode requests to not interferre with movement detection
@@ -319,7 +319,7 @@ export class WindowManagerSandbox {
     ) {
       const windowRect = this.calculateWindowRect(this.currentWindowMode);
 
-      console.log(`[WM] viewport resize updating rect: ${JSON.stringify(windowRect)}`);
+      // console.log(`[WM] viewport resize updating rect: ${JSON.stringify(windowRect)}`);
       this.updateWindowRect(windowRect);
     }
   }
@@ -338,7 +338,7 @@ export class WindowManagerSandbox {
 
     this.currentWindowMode = targetWindowMode;
     figma.clientStorage.setAsync('windowMode', targetWindowMode);
-    console.log(`[WM] WINDOW MODE SET TO ${this.currentWindowMode}`);
+    // console.log(`[WM] WINDOW MODE SET TO ${this.currentWindowMode}`);
     figma.ui.postMessage({
       target: 'WindowManager',
       windowMode: this.currentWindowMode,
@@ -387,7 +387,7 @@ export class WindowManagerSandbox {
           this.introModeSize.height = message.size.height;
         }
 
-        console.log(`updating intor window size to ${JSON.stringify(this.introModeSize)}`);
+        // console.log(`updating intor window size to ${JSON.stringify(this.introModeSize)}`);
         this.updateWindowRect(this.introModeSize);
         break;
       default:

@@ -91,7 +91,6 @@ export default class TranslatorMachine {
   constructor(parrotApi?: ParrotApi) {
     // if its a proxy we don't have an api key
     if (!parrotApi) {
-      console.log('INIT TranslatorMachine as proxy');
       const promise = async () => {};
       this.ensureStateLoaded = promise();
       TranslatorMachine.instance = this;
@@ -100,10 +99,8 @@ export default class TranslatorMachine {
 
     this.parrotApi = parrotApi;
 
-    console.log('INIT TranslatorMachine in sandbox');
     // load available translations from parrot backend - fall back to local storage
     const ensureStateLoadedPromise = async () => {
-      console.log('INIT TranslatorMachine in sandbox - ensureStateLoadedPromise called');
       const usedTranslationsCredits = await figma.clientStorage.getAsync(translationsCreditUsageLocalStorageKey);
       const translationCredits = await figma.clientStorage.getAsync(translationCreditsLocalStorageKey);
 
@@ -125,13 +122,8 @@ export default class TranslatorMachine {
           usage.send = false;
         }
 
-        console.log('INIT TranslatorMachine in sandbox - ensureStateLoadedPromise called - awaiting sync');
-        console.log(this.state);
-        
         await this.syncTranslations(true);
       }
-      
-      console.log('INIT DONE');
     };
     this.ensureStateLoaded = ensureStateLoadedPromise();
   }
@@ -174,10 +166,7 @@ export default class TranslatorMachine {
 
   async syncTranslations(init?: boolean) {
     if (!init) {
-      console.log('awaiting ensureStateLoaded');
-      console.log(this.ensureStateLoaded);
       await this.ensureStateLoaded;
-      console.log('awaiting ensureStateLoaded done');
     }
 
     const usageToSend = [];
@@ -224,7 +213,6 @@ export default class TranslatorMachine {
     translationsCreditUsage: TranslationCreditUsage[],
     translationCredits: TranslationCredit[],
   ) {
-    debugger;
     const result = await this.parrotApi!.synchronizeCredits(figmaUserId, figmaFileOwnerId, translationCredits.map((c) => c.jwt), translationsCreditUsage);
     return result;
     // for (const usage of translationsCreditUsage) {

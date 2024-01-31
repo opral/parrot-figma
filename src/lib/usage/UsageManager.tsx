@@ -130,7 +130,7 @@ export default class UserManager {
       return rootFileState;
     }
     const newFileId = generateGUID();
-    console.log(`File seen by the plugin the first time - returngin with new ID ${newFileId}`);
+    console.log(`File seen by the plugin the first time - returning with new ID ${newFileId}`);
     return {
       fileId: generateGUID(),
       usersInFile: {},

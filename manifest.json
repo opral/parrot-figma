@@ -8,7 +8,7 @@
   ],
   "capabilities": ["inspect"],
   "networkAccess": {
-    "allowedDomains": ["https://translate.googleapis.com", "https://api-eu.mixpanel.com/", "https://parrot-global.github.io", "https://sentry.io", "https://api.parrot.global"],
+    "allowedDomains": ["https://translate.googleapis.com", "https://api-eu.mixpanel.com/", "https://parrot-global.github.io", "https://*.ingest.sentry.io", "https://*.sentry.io", "https://api.parrot.global"],
     "devAllowedDomains": [
       "http://localhost:8080"
     ],

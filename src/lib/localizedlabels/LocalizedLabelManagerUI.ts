@@ -304,10 +304,6 @@ export default class LocalizedLabelManagerUI
   ) {
     const version = undefined as undefined | number; // todo fill with fixed version of the frame if set
 
-    await this.localizedLabelMangerSandbox.updateFrameProperties(frameId, {
-      language: targetLanguage,
-    });
-
     let lastError: undefined | Error;
 
     for (const localizedLabelId of this.cachedFrames[frameId].localizedLabelIds) {
@@ -320,6 +316,10 @@ export default class LocalizedLabelManagerUI
         lastError = e;
       }
     }
+
+    await this.localizedLabelMangerSandbox.updateFrameProperties(frameId, {
+      language: targetLanguage,
+    });
 
     if (lastError) {
       throw lastError;

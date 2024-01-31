@@ -1,3 +1,4 @@
+/* eslint-disable max-classes-per-file */
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-labels */
 import { stat } from 'fs';
@@ -6,6 +7,8 @@ import { Locale } from '../message/variants/Locale';
 import getKey from './TranslationCredit';
 
 import GoogleTranslator from './google';
+import FeatureFlags from '../featureflags/FeatureFlags';
+import Monitoring from '../monitoring/MonitoringProxy';
 
 const translationsCreditUsageLocalStorageKey = 'prrt_utc';
 const translationCreditsLocalStorageKey = 'prrt_tc';
@@ -69,6 +72,13 @@ function calculateAvailableMessages(usageState: UsageState, ownerId: string, cur
   }, 0);
 }
 
+export class NoMoreTranslationsLeftError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NoMoreTranslationsLeftError';
+  }
+}
+
 export default class TranslatorMachine {
   public proxyClassName = 'TranslatorMachine';
 
@@ -98,7 +108,7 @@ export default class TranslatorMachine {
       const translationCredits = await figma.clientStorage.getAsync(translationCreditsLocalStorageKey);
 
       this.state = {
-        translationCredits: typeof translationCredits === 'object' ? translationCredits as TranslationCredit[] : [{
+        translationCredits: /*typeof translationCredits === 'object' ? translationCredits as TranslationCredit[] :*/ [{
           cid: 'included-batteries-1',
           co: figma.currentUser!.id!,
           msgc: 100,
@@ -222,7 +232,6 @@ export default class TranslatorMachine {
   }
 
   async translate(text: string, sourceLange: Locale, targetLanguage: Locale, triggersCTA: boolean) {
-    console.log('startin translation');
     // make sure the state is loaded from the local storage
     await this.ensureStateLoaded;
 
@@ -230,28 +239,28 @@ export default class TranslatorMachine {
     const userId = figma.currentUser!.id!;
 
     const availableTranslations = calculateAvailableMessages(this.state!, userId, new Date().getTime());
-    
-    if (availableTranslations <= 0 && figma.currentUser?.id === '1175524760316632413') { // TODO #29 remove user filter
+
+    if (availableTranslations <= 0 && FeatureFlags.features.payment) {
       if (triggersCTA) {
         await this.fireCreditsUpdateEvent(true);
       }
       // TODO #29 activate again
-      throw new Error('No Machine Translations left');
+      throw new NoMoreTranslationsLeftError('No Machine Translations left');
     }
 
     let translation: string | null = null;
 
     // call google translate
-    try {
-      translation = await GoogleTranslator.translate(text, sourceLange, targetLanguage);
-    } catch (e) {
-      // lets report to sentry about the error but we don't fail
-      // if google tanslate fails - call parrot translate - will fail if no more tanslations are left but will also not increase the number
-    }
+    translation = await GoogleTranslator.translate(text, sourceLange, targetLanguage);
 
     // lets not wait for the results here ;-)
-    if (figma.currentUser && figma.currentUser.id === '1175524760316632413') { // TODO #29 remove user filter
-      await this.addTranslationCreditUse(userId, text.length, triggersCTA);
+    if (figma.currentUser && FeatureFlags.features.payment) {
+      try {
+        await this.addTranslationCreditUse(userId, text.length, triggersCTA);
+      } catch (e: any) {
+        // we won't fail if the backend is down...
+        await Monitoring.instance?.sentryCaptureException(e, {});
+      }
     }
     return translation;
   }

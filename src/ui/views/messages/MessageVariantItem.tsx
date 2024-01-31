@@ -9,6 +9,7 @@ import { MessageParameterValues } from '../../../lib/message/MessageParameterVal
 import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import TranslatorMachine from '../../../lib/translationprovider/TranslatorMachine';
+import FeatureFlags from '../../../lib/featureflags/FeatureFlags';
 
 type MessageVariatItemProps = {
   language: Locale;
@@ -110,11 +111,13 @@ export default function MessageVariatItem({
           >
             {(language !== refLanguage
                   && (isEmpty))
+                  && FeatureFlags.features.payment
                   && (
                   <button
                     type="button"
                     disabled={refVariantHtml === undefined}
                     onClick={async () => {
+                      // TODO #29 check if we apply the ne message to all text layers as we do for manual input
                       const translation = await TranslatorMachine.instance.translate(refVariantHtml!, refLanguage, language, true);
 
                       if (translation) {

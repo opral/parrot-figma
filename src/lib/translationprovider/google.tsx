@@ -12,7 +12,7 @@ export default class GoogleTranslator {
       return text;
     }
 
-    // TODO #29 fix this before we release -TEST
+    // TODO #29 fix this before we release - TEST
     (async () => {
       await Monitoring.instance?.mixedPanelPeopleIncrement(`characters_translated_from_${sourceLanguage}`, text.length);
       await Monitoring.instance?.mixedPanelPeopleIncrement(`characters_translated_to_${targetLanguage}`, text.length);

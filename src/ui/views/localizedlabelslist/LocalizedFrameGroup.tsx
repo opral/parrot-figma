@@ -1,6 +1,7 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 import * as React from 'react';
+import * as Sentry from '@sentry/react';
 import { LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
 import LocalizedLabelListItem from './LocalizedLabelListItem';
 import Select, { SelectOption } from '../../compontents/select/select';
@@ -11,7 +12,7 @@ import { Locale } from '../../../lib/message/variants/Locale';
 import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
 import { NodeSelection } from '../../../lib/localizedlabels/LocalizedLabelManager';
 import GoogleTranslator from '../../../lib/translationprovider/google';
-import TranslatorMachine from '../../../lib/translationprovider/TranslatorMachine';
+import TranslatorMachine, { NoMoreTranslationsLeftError } from '../../../lib/translationprovider/TranslatorMachine';
 
 type LocalizedFrameGroupProps = {
   showMessage: Function;
@@ -93,11 +94,19 @@ export default function LocalizedFrameGroup({
   ) {
     const translationProvider = TranslatorMachine.instance;
 
-    localizedLabelManager.setFrameLanguage(
-      firstLocalizedLabelInFrame.rootFrameId,
-      language,
-      translationProvider,
-    );
+    try {
+      await localizedLabelManager.setFrameLanguage(
+        firstLocalizedLabelInFrame.rootFrameId,
+        language,
+        translationProvider,
+      );
+
+    } catch (e: any) {
+      if (!(e instanceof NoMoreTranslationsLeftError)) {
+        figmaRemote.notify(`Something went wrong with translation - ${e.message}`);
+        Sentry.captureException(e);
+      }
+    }
   }
 
   async function onNodeSelect(nodeId: string) {

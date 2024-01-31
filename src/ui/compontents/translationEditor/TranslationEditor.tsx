@@ -79,8 +79,6 @@ type TranslationEditorProps = {
   children?: React.ReactNode
 };
 
-// TODO #29 tab gets inserted insted of focus next...
-
 // We use this view in two ocations:
 //  - key editor placeholders no fillins
 //  - label editor - text should contain the placeholders but the editor needs to know the fillins?

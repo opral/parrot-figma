@@ -27,7 +27,8 @@ import { Gender } from '../../../lib/message/variants/Gender';
 import { FillinToPlaceholder } from '../../../lib/message/MessageExtnesions';
 import { MessageParameterValues } from '../../../lib/message/MessageParameterValues';
 import GoogleTranslator from '../../../lib/translationprovider/google';
-import TranslatorMachine from '../../../lib/translationprovider/TranslatorMachine';
+import TranslatorMachine, { NoMoreTranslationsLeftError } from '../../../lib/translationprovider/TranslatorMachine';
+import FeatureFlags from '../../../lib/featureflags/FeatureFlags';
 
 type LocalizedLabelListItemProps = {
   showMessage: Function;
@@ -465,6 +466,7 @@ export default function LocalizedLabelListItem({
                   {(localizedLabel.language
                     !== localizedLabelManager.messageStore.getRefLanugage()
                     && (localizedLabel.currentPatternHTML === undefined || localizedLabel.currentPatternHTML === ''))
+                    && FeatureFlags.features.payment
                     && (
                     <button
                       type="button"
@@ -481,13 +483,14 @@ export default function LocalizedLabelListItem({
                             true,
                           );
                         } catch (e: any) {
-                          if (e.ranOutOfMachineTranslations) {
-                            alert('no more machine translations');
+                          if (!(e instanceof NoMoreTranslationsLeftError)) {
+                            figmaRemote.notify(`Something went wrong with translation - ${e.message}`);
+                            Sentry.captureException(e);
                           }
                         }
                       }}
                       data-tooltip-content={localizedLabel.isTranslatable()
-                        ? 'Translate this message using machine translation.' 
+                        ? 'Translate this message using machine translation.'
                         : 'Can`t machine translate - reference text missing'}
                     >
                       Translate

@@ -425,7 +425,6 @@ export class UILocalizedLabel implements LocalizedLabel {
   ) {
     const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
     const fromRefLanguage = this.language === refLanguage;
-    
     // eslint-disable-next-line no-case-declarations
     let unlinkedMessage: Message = {
       id: '____unlinked',
@@ -460,7 +459,15 @@ export class UILocalizedLabel implements LocalizedLabel {
           triggersCTA,
         );
       } catch (e) {
-        // TODO #29 we need to separate exeception from the api and the avaialble translations and communicate it to the outsite
+        await this.manager.updateLabelProperties(this.nodeId, {
+          language: targetLanguage,
+          messageState: {
+            type: 'unlinked',
+            unlinkedMessage,
+            parameterValues: this.parameterValues,
+          },
+        });
+        throw e;
       }
     }
 
@@ -504,10 +511,10 @@ export class UILocalizedLabel implements LocalizedLabel {
     );
     // let isVariantsTranslationOutdated = await MessageStoreMemory.isVariantsTranslationOutdated(unlinkedMessage, refLanguage, targetLanguage, {});
 
-    let eventuallyUpdatedMessage = this.unlinkedMessage;
+    let possiblyUpdatedMessage = this.unlinkedMessage;
     if (!hasVariantTranslationInTargetLanguage || enforceTranslation) {
       try {
-        eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(
+        possiblyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(
           translator,
           unlinkedMessage,
           refLanguage,
@@ -518,6 +525,15 @@ export class UILocalizedLabel implements LocalizedLabel {
         hasVariantTranslationInTargetLanguage = true;
       } catch (e) {
         // we handle the error using isVariantsTranslationOutdated flag
+        await this.manager.updateLabelProperties(this.nodeId, {
+          messageState: {
+            type: 'unlinked',
+            unlinkedMessage: possiblyUpdatedMessage,
+            parameterValues: this.parameterValues,
+          },
+          language: targetLanguage,
+        });
+        throw e;
       }
     }
     // if (!isVariantsTranslationOutdated) {
@@ -529,7 +545,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     await this.manager.updateLabelProperties(this.nodeId, {
       messageState: {
         type: 'unlinked',
-        unlinkedMessage: eventuallyUpdatedMessage,
+        unlinkedMessage: possiblyUpdatedMessage,
         parameterValues: this.parameterValues,
       },
       language: targetLanguage,
@@ -545,6 +561,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     enforceTranslation: boolean,
     triggersCTA: boolean,
   ) {
+    debugger;
     const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
     const toRefLanguage = targetLanguage === refLanguage;
     const message = this.manager.messageStore.getMessage(this.messageId)!;
@@ -564,8 +581,15 @@ export class UILocalizedLabel implements LocalizedLabel {
           );
           await this.manager.updateMessage(eventuallyUpdatedMessage, {});
         } catch (e) {
-          console.log("setLanguageOnLinkedLabel failed")
-          console.log(e);
+          await this.manager.updateLabelProperties(this.nodeId, {
+            messageState: {
+              type: 'linked',
+              messageId: this.messageId!,
+              parameterValues: this.parameterValues,
+            },
+            language: targetLanguage,
+          });
+          throw e;
         }
       }
       // TODO #3 think about fall back mechanism:

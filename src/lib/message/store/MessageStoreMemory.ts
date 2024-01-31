@@ -719,8 +719,8 @@ export default class MessageStoreMemory extends EventTarget {
   static canTranslate(message: Message, sourceLanguage: Locale, targetLanguage: Locale, match: string[]) {
     // reasons:
 
-    // TODO #29 target language not supported
-    // TODO #29 source language not supported
+    // TODO #35 target language not supported
+    // TODO #35 source language not supported
 
     // source language not set in Message 
     const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(
@@ -742,10 +742,10 @@ export default class MessageStoreMemory extends EventTarget {
     match: string[],
     triggersCTA: boolean,
   ) {
-    // we combine multiple translaition promises of the same message that happen in a batch
-    if (MessageStoreMemory.ongoingTranslationPromises[message.id] !== undefined) {
-      return MessageStoreMemory.ongoingTranslationPromises[message.id];
-    }
+    // // we combine multiple translaition promises of the same message that happen in a batch
+    // if (MessageStoreMemory.ongoingTranslationPromises[message.id] !== undefined) {
+    //   return MessageStoreMemory.ongoingTranslationPromises[message.id];
+    // }
     //
     const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(
       message,
@@ -763,7 +763,7 @@ export default class MessageStoreMemory extends EventTarget {
       triggersCTA,
     );
 
-    delete MessageStoreMemory.ongoingTranslationPromises[message.id];
+    // delete MessageStoreMemory.ongoingTranslationPromises[message.id];
     return this.upsertVariantPatternHtml(
       message,
       sourceLanguage,

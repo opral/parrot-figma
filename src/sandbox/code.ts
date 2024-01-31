@@ -20,8 +20,13 @@ import UserManager from '../lib/usage/UsageManager';
 import TranslatorMachine from '../lib/translationprovider/TranslatorMachine';
 import ParrotApi from '../lib/api/Parrot';
 import Monitoring from '../lib/monitoring/MonitoringProxy';
+import FeatureFlags from '../lib/featureflags/FeatureFlags';
 
 const figmaRemote = new FigmaUtil();
+
+if (figma.currentUser?.id) {
+  FeatureFlags.setUser(figma.currentUser?.id);
+}
 
 const fileConfigured = figmaRemote.getRootPluginDataSync('fileSetupCompleted') !== '';
 const introShownToUser = true;

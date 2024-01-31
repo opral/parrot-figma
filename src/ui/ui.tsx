@@ -51,6 +51,7 @@ import MessageUpsellOverlay from './compontents/upselloverlay/MessageUpsellOverl
 import MessagesConsumptionPaywall from './compontents/plans/MessagesConsumptionPaywall';
 import TextField from './compontents/textfield/TextField';
 import Monitoring from '../lib/monitoring/MonitoringProxy';
+import FeatureFlags from '../lib/featureflags/FeatureFlags';
 
 console.log(`Starting Figma UI - Version ${pjs.version}`);
 
@@ -172,6 +173,7 @@ asyncFunctionProxy.proxyAsyncMethods(figmaRemote);
 figmaRemote.getUserId().then((userId) => {
   identify(userId!);
   if (userId) {
+    FeatureFlags.setUser(userId);
     Sentry.setUser({ id: userId! });
   }
 });
@@ -435,13 +437,15 @@ function App() {
             figmaRemote={figmaRemote}
             highlightSelectedNodes
           />
-          {/* TODO #29 add to show the upsell overlay to all users
+          { FeatureFlags.features.payment
+           && (
            <MessageUpsellOverlay
-            hideInfo
-            onclick={() => {
-              setCunsumptionPayWallFeature('test');
-            }}
-          /> */}
+             hideInfo
+             onclick={() => {
+               setCunsumptionPayWallFeature('test');
+             }}
+           />
+           )}
         </>
 
       );
@@ -450,13 +454,15 @@ function App() {
       view = (
         <>
           <SetupView labelManager={localizedLabelManager} />
-          {/* TODO #29 add to show the upsell overlay to all users
+          { FeatureFlags.features.payment
+          && (
           <MessageUpsellOverlay
             hideInfo={false}
             onclick={() => {
               setCunsumptionPayWallFeature('test');
             }}
-          /> */}
+          />
+          )}
         </>
       );
       break;
@@ -475,13 +481,15 @@ function App() {
             localizedLabelManager={localizedLabelManager}
             figmaRemote={figmaRemote}
           />
-          {/* TODO #29 add to show the upsell overlay to all users
-           <MessageUpsellOverlay
+          { FeatureFlags.features.payment
+          && (
+          <MessageUpsellOverlay
             hideInfo
             onclick={() => {
               setCunsumptionPayWallFeature('test');
             }}
-          /> */}
+          />
+          )}
         </>
 
       );
@@ -624,20 +632,20 @@ function App() {
                     setEnteredLicenseKey(undefined);
                   }
                 } else if (result.error) {
+                  // currently only
                   setLicenseKeyState(LicenseState.invalid);
-                  // TODO #29 show the error
+                  figmaRemote.notifyError('License key not accepted.');
+                  Sentry.captureException(new Error(result.error));
                 }
-                // check result!
-                // TODO #29 handle success - reload translations!
               }).catch((e) => {
-                // TODO #29 handle network eerror
-                //
+                setLicenseKeyState(LicenseState.unvalidated);
+                figmaRemote.notifyError('Networking issue. Couldn\'t validate the license key.');
+                Sentry.captureException(e);
               });
             },
           },
         ]}
       >
-        {/* TODO #29 Make field big enough for 0BD2D0FC-52F3-44BA-BF02-7AB2B9A67259 */}
         <>
           <div className="modal-dialog-title-bar">
             <div className="modal-dialog-title-text">Activate your License</div>

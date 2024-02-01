@@ -231,14 +231,16 @@ export default class TranslatorMachine {
     // For now don't use the owner of the file
     const userId = figma.currentUser!.id!;
 
-    const availableTranslations = calculateAvailableMessages(this.state!, userId, new Date().getTime());
+    if (FeatureFlags.features.payment) {
+      const availableTranslations = calculateAvailableMessages(this.state!, userId, new Date().getTime());
 
-    if (availableTranslations <= 0 && FeatureFlags.features.payment) {
-      if (triggersCTA) {
-        await this.fireCreditsUpdateEvent(true);
+      if (availableTranslations <= 0 && FeatureFlags.features.payment) {
+        if (triggersCTA) {
+          await this.fireCreditsUpdateEvent(true);
+        }
+        // TODO #29 activate again
+        throw new NoMoreTranslationsLeftError('No Machine Translations left');
       }
-      // TODO #29 activate again
-      throw new NoMoreTranslationsLeftError('No Machine Translations left');
     }
 
     let translation: string | null = null;

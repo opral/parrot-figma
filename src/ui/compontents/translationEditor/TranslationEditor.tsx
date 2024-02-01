@@ -129,7 +129,7 @@ export default function TranslationEditor({
 
     textRef.current = value;
 
-    console.log(`propagating change${value}`);
+    // console.log(`propagating change${value}`);
   };
 
   const onEditorChange = (

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-loop-func */
 /* eslint-disable max-classes-per-file */
 export class AsyncMessageBus {
   static invocationResult = 'invocationResult';
@@ -60,19 +61,34 @@ export class AsyncFunctionProxy {
     const instancePrototype = Object.getPrototypeOf(instance);
     for (const memberName of Object.getOwnPropertyNames(instancePrototype)) {
       if (
-        memberName !== 'constructor' &&
-        instancePrototype[memberName].constructor &&
-        instancePrototype[memberName].constructor.name === 'Function'
+        memberName !== 'constructor'
+        && instancePrototype[memberName].constructor
+        && instancePrototype[memberName].constructor.name === 'Function'
       ) {
         const proxy = this;
         // eslint-disable-next-line func-names -- we store this function anonymous in an array and there is no way to dynamically name it for better - thats fine
         instancePrototype[memberName] = async function () {
+          let thrownError: undefined | any;
           // console.log(proxy.name + ' request invocation of: ' + instanceClassName + '.' + memberName);
           // eslint-disable-next-line prefer-rest-params -- proxy here we want just forward the arguments
-          return proxy.invoke(
-            `${instanceClassName}.${memberName}`,
-            Array.prototype.slice.call(arguments),
-          );
+          try {
+            const remoteResult = await proxy.invoke(
+              `${instanceClassName}.${memberName}`,
+              Array.prototype.slice.call(arguments),
+            );
+            return remoteResult;
+          } catch (e: any) {
+            thrownError = e;
+          }
+
+          if (thrownError) {
+            try {
+              throw new Error(`stacktrace helper error - ${memberName}`);
+            } catch (error: any) {
+              thrownError.stack += error.stack;
+            }
+            throw thrownError;
+          }
         };
       }
     }
@@ -86,9 +102,9 @@ export class AsyncFunctionProxy {
     const instancePrototype = Object.getPrototypeOf(instance);
     for (const memberName of Object.getOwnPropertyNames(instancePrototype)) {
       if (
-        memberName !== 'constructor' &&
-        instancePrototype[memberName].constructor &&
-        instancePrototype[memberName].constructor.name === 'Function'
+        memberName !== 'constructor'
+        && instancePrototype[memberName].constructor
+        && instancePrototype[memberName].constructor.name === 'Function'
       ) {
         // console.log(this.name+ ' proxy class!' + instanceClassName + '.' + memberName);
         this.registerInvocationHandler(

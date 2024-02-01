@@ -51,5 +51,5 @@ button.button--buttonPrimary:disabled {
     display: flex;
     height: 100%;
     flex-direction: column;
-    overflow: scroll;
+    /* overflow: scroll; */
 }

@@ -629,7 +629,6 @@ function App() {
             key: 'enter',
             disabled: (enteredLicenseKey !== undefined && enteredLicenseKey.length < 10) || licenseKeyState === LicenseState.validating || licenseKeyState === LicenseState.invalid,
             callback: () => {
-              debugger;
               Monitoring.instance?.mixpanel_track('activateLicenseClicked');
 
               // setEnteredLicenseKey(undefined);
@@ -720,7 +719,7 @@ function App() {
           }}
           buyClick={() => {
             Monitoring.instance?.mixpanel_track('consumptionPaywallTranslationsCheckoutClicked');
-            window.open('https://parrot.lemonsqueezy.com/checkout/buy/088b77d7-5286-466b-bf22-945ab61af46f?discount=0', 'blank');
+            window.open('https://parrot.lemonsqueezy.com/checkout/buy/9a667dcf-2039-462b-8809-5fd977859fee', 'blank');
             setCunsumptionPayWallFeature(undefined);
             setEnteredLicenseKey('');
           }}

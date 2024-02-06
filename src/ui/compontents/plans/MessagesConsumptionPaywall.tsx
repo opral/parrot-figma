@@ -50,7 +50,7 @@ export default function MessagessConsumptionPaywall({
                   Current plan
                 </span> */}
               </p>
-              <p className="consumption_paywall_modals--planName" style={{ marginLeft: 'auto' }}>23 €</p>
+              <p className="consumption_paywall_modals--planName" style={{ marginLeft: 'auto' }}></p>
             </div>
             <div style={{ height: '20px' }}>
               <p className="consumption_paywall_modals--planDescription">

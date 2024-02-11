@@ -240,6 +240,10 @@ function App() {
 
   const [enteredLicenseKey, setEnteredLicenseKey] = useState(undefined as string | undefined);
 
+  const [didntbuyReason, setDidntBuyReason] = useState(undefined as string | undefined);
+
+  const [refillClicked, setRefillClicked] = useState(false);
+
   const [licenseKeyState, setLicenseKeyState] = useState<LicenseState>(LicenseState.unvalidated);
   const [showAllFeatures, setShowAllFeatures] = useState(false);
 
@@ -288,8 +292,10 @@ function App() {
   useEffect(() => {
     const creditUpdateHandler = (event: MessageEvent) => {
       if (event.data.pluginMessage.target === 'TranslatorMachine') {
-        if (event.data.pluginMessage.type === 'creditUpdate' && event.data.pluginMessage.requestShowUpsellCTA) {
-          setCunsumptionPayWallFeature('message');
+        if (event.data.pluginMessage.type === 'creditUpdate') {
+          if (event.data.pluginMessage.requestShowUpsellCTA) {
+            setCunsumptionPayWallFeature('message');
+          }
 
           const state = event.data.pluginMessage.data as {
             credits: TranslationCredit[],
@@ -612,6 +618,59 @@ function App() {
       <a id="focusHelper" href="" />
       <Drawer
         position="top"
+        shown={didntbuyReason !== undefined}
+        buttons={[
+          {
+            type: 'primary',
+            text: 'Submit feedback',
+            key: undefined,
+            disabled: (didntbuyReason !== undefined && didntbuyReason.length < 1),
+            callback: () => {
+              const reason = didntbuyReason;
+              Monitoring.instance?.mixpanel_people_set('didntRefillReason', reason);
+              setDidntBuyReason(undefined);
+              figmaRemote.notify('Thank you for your feedback!');
+            },
+          },
+          {
+            type: 'secondary',
+            text: 'Cancel',
+            key: 'escape',
+            callback: () => {
+              setDidntBuyReason(undefined);
+            },
+          },
+        ]}
+      >
+        <>
+          <div className="modal-dialog-title-bar">
+            <div className="modal-dialog-title-text">Refill Purchase Feedback</div>
+            <div
+              className="modal-dialog-title-close button"
+              onClick={() => {
+                setEnteredLicenseKey(undefined);
+              }}
+            />
+          </div>
+          <div className="modal-dialog-body refill-feedback">
+            <div className="modal-dialog-text ">Could you please share any specific reasons or concerns that influenced your decision not to purchase a refill?</div>
+            <textarea
+              rows={5}
+              cols={35}
+              wrap="off"
+              maxLength={400}
+              value={didntbuyReason}
+              onChange={(e) => { setDidntBuyReason(e.target.value); }}
+              placeholder="Add your feedback"
+            />
+
+          </div>
+
+        </>
+      </Drawer>
+
+      <Drawer
+        position="top"
         shown={enteredLicenseKey !== undefined}
         buttons={[
           {
@@ -619,6 +678,10 @@ function App() {
             text: 'Cancel',
             key: 'escape',
             callback: () => {
+              if (refillClicked) {
+                setDidntBuyReason('');
+                Monitoring.instance?.mixpanel_track('consumptionPaywallTranslationsDidntBuy');
+              }
               setEnteredLicenseKey(undefined);
               setLicenseKeyState(LicenseState.unvalidated);
             },
@@ -638,12 +701,15 @@ function App() {
                 if (result.activated || result.success) {
                   // {activated: true, error: null, license_key: {…}, instance: {…}, meta: {…}}
                   if (result.activated) {
+                    figmaRemote.notify('🎉🎉 Licence Key was activated 🎉🎉');
+
                     Monitoring.instance?.mixpanel_track('licenseActivated');
                     translationMachine.syncTranslations().then(() => {
                       setLicenseKeyState(LicenseState.valid);
                       setEnteredLicenseKey(undefined);
                     });
                   } else {
+                    figmaRemote.notify('Licence Key is active already');
                     setLicenseKeyState(LicenseState.valid);
                     setEnteredLicenseKey(undefined);
                   }
@@ -716,16 +782,19 @@ function App() {
         <MessagesConsumptionPaywall
           closeClick={() => {
             setCunsumptionPayWallFeature(undefined);
+            setRefillClicked(false);
           }}
           buyClick={() => {
             Monitoring.instance?.mixpanel_track('consumptionPaywallTranslationsCheckoutClicked');
             window.open('https://parrot.lemonsqueezy.com/checkout/buy/9a667dcf-2039-462b-8809-5fd977859fee', 'blank');
             setCunsumptionPayWallFeature(undefined);
             setEnteredLicenseKey('');
+            setRefillClicked(true);
           }}
           gotLicencesClick={() => {
             setCunsumptionPayWallFeature(undefined);
             setEnteredLicenseKey('');
+            setRefillClicked(false);
           }}
         />
       </Drawer>

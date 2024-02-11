@@ -46,9 +46,9 @@ export default function MessagessConsumptionPaywall({
             <div style={{ display: 'flex' }}>
               <p className="consumption_paywall_modals--planName">
                 Translation refill
-                {/* <span data-tooltip-offset-x="0" className="badge--badgeLarge">
-                  Current plan
-                </span> */}
+                {/* {<span data-tooltip-offset-x="0" className="badge--badgeLarge">
+                  20% off using FLUEGGE
+                </span>} */}
               </p>
               <p className="consumption_paywall_modals--planName" style={{ marginLeft: 'auto' }}></p>
             </div>

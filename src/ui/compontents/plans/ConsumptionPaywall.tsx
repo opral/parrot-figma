@@ -67,7 +67,7 @@ export default function ConsumptionPaywall({
             </p>
             <div style={{ height: '20px' }}>
               <p className="consumption_paywall_modals--planDescription">
-                Boost your localization workflow with 1000 additional machine Translations
+                Boost your localization workflow with 1000 additional machine translations
               </p>
             </div>
             <div className="consumption_paywall_modals--planBoxDivider" />
@@ -75,19 +75,19 @@ export default function ConsumptionPaywall({
               <div className="consumption_paywall_modals--planFeatureParent">
                 <span>
                   <span>✓ &nbsp;</span>
-                  <span className="">Use in Unlimited files</span>
+                  <span className="">Use in unlimited files</span>
                 </span>
               </div>
               <div className="consumption_paywall_modals--planFeatureParent">
                 <span>
                   <span>✓ &nbsp;</span>
-                  <span className="">1.000 additional Messages</span>
+                  <span className="">1.000 additional messages</span>
                 </span>
               </div>
               <div className="consumption_paywall_modals--planFeatureParent">
                 <span>
                   <span>✓ &nbsp;</span>
-                  <span className="">no Subscription</span>
+                  <span className="">no subscription</span>
                 </span>
               </div>
               <div className="consumption_paywall_modals--planFeatureParent">
@@ -105,7 +105,7 @@ export default function ConsumptionPaywall({
               upgradePlan();
             }}
           >
-            Get a Refill
+            Get a Refill (20% off in February!)
           </button>
           <p><a className="consumption_paywall_modals--licenseKey">I have a License key already</a></p>
           

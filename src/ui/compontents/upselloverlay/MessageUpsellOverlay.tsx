@@ -61,20 +61,23 @@ export default function MessageUpsellOverlay({ onclick, hideInfo }: {
     upsellType = 'info';
   } else if (availableTranslations <= 50 && availableTranslations > 0) {
     upsellType = 'warning';
+    if (availableTranslations < 13) {
+      upsellType = 'error';
+    }
     if (freeTier) {
-      progress = 1 - (availableTranslations / 70);
-      message = `${availableTranslations} free machine translations left`;
+      progress = (availableTranslations / 70);
+      message = `${availableTranslations} free translations left`;
     } else {
       // 10 of 1000 will not show change on the progress bar - use 50 as baseline...
-      progress = 1 - (availableTranslations / 70); // messageCreditsTotal;
-      message = `${availableTranslations} machine translations left`;
+      progress = (availableTranslations / 70); // messageCreditsTotal;
+      message = `${availableTranslations} translations left`;
     }
   } else {
     upsellType = 'error';
     if (freeTier) {
-      message = `All ${messagesCreditsUsed} free machine translations used.`;
+      message = `All ${messagesCreditsUsed} free translations used.`;
     } else {
-      message = 'All machine translations used.';
+      message = 'All translations used.';
     }
   }
 
@@ -83,7 +86,7 @@ export default function MessageUpsellOverlay({ onclick, hideInfo }: {
       type={upsellType}
       msg={message}
       progress={progress}
-      cta="Get additional machine translations"
+      cta="Get additional translations"
       onclick={onclick}
       hidden={!loaded || (hideInfo && upsellType === 'info')}
     />

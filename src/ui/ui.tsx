@@ -534,11 +534,10 @@ function App() {
       <Tooltip contentAttribute="data-tooltip-content" />
       { !boughtCredit && (
       <div className="discountBanner">
-        🎉🎉🎉 Use the code EARLYPARROT for a 40% discount on additional
-        {' '}
-        <a href="Thttps://parrot.lemonsqueezy.com/checkout/buy/9a667dcf-2039-462b-8809-5fd977859fee" target="_blank" rel="noreferrer">Translations</a>
-        {' '}
-        until end of February! 🎉🎉🎉
+        <span onClick={() => { Monitoring.instance?.mixpanel_track('consumptionPaywallTranslationsCheckoutClicked'); setCunsumptionPayWallFeature('.'); return false; }}>🎉🎉🎉 Unlock a 40% discount on additional
+        translations
+        
+        until the end of February with the exclusive code: </span> EARLYPARROT 🎉🎉🎉
       </div>
       )}
       <div className="toolbar">

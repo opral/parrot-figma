@@ -177,7 +177,7 @@ export class WindowManagerSandbox {
         width: windowRect.width,
         height: Math.max(50, windowRect.height),
         visible: false,
-        title: 'Parrot (Free Beta)',
+        title: 'Parrot',
       });
 
       // @ts-ignore -- figmas ui type does not expose the reposition atm

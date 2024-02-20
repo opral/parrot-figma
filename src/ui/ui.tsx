@@ -252,11 +252,16 @@ function App() {
   const [windowMode, setWindowMode] = useState(WindowManagerUi.instance!.windowMode);
   const [keyQuery, setKeyQuery] = useState(MessageStoreMemory.toQueryObject(''));
 
+  const [boughtCredit, setBoughtCredit] = useState(true);
+
   useEffect(() => {
     // asynchronous fetch the state from figma helper
     (async () => {
       await userStateManagerUi.loadUserState();
       userStateManagerUi.trackFileUsageStatistics();
+
+      const state = TranslatorMachine.instance.getCreditStateAsync();
+      setBoughtCredit((await state).credits.length > 1);
 
       if (windowMode === WindowMode.DevPanel) {
         const updatedUser = await userStateManagerUi.requestUserRole(UserFileRole.developer);
@@ -527,6 +532,15 @@ function App() {
   return (
     <>
       <Tooltip contentAttribute="data-tooltip-content" />
+      { !boughtCredit && (
+      <div className="discountBanner">
+        🎉🎉🎉 Use the code EARLYPARROT for a 40% discount on additional
+        {' '}
+        <a href="Thttps://parrot.lemonsqueezy.com/checkout/buy/9a667dcf-2039-462b-8809-5fd977859fee" target="_blank" rel="noreferrer">Translations</a>
+        {' '}
+        until end of February! 🎉🎉🎉
+      </div>
+      )}
       <div className="toolbar">
         <div className="tabHeader">
           <div

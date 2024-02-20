@@ -203,13 +203,27 @@ body {
   .variable-svg.active {
     background-color: red;
   }
+
+  .discountBanner {
+    text-align: center;
+    padding: 8px;
+    font-weight: 600;
+    color: var(--figma-color-text-ondanger-secondary);
+    background-color: var(--figma-color-bg-danger);
+    user-select: text;
+  }
   
+  .discountBanner a {
+    color: var(--color-text-brand);
+  } 
+
   .toolbar {
     /* border-bottom: 1px solid var(--figma-color-border); */
     flex-direction: row;
     display: flex;
     user-select: none;
   }
+
   
   .dropdown {
     display: flex;

@@ -534,7 +534,7 @@ function App() {
       <Tooltip contentAttribute="data-tooltip-content" />
       { !boughtCredit && (
       <div className="discountBanner">
-        <span onClick={() => { Monitoring.instance?.mixpanel_track('consumptionPaywallTranslationsCheckoutClicked'); setCunsumptionPayWallFeature('.'); return false; }}>🎉🎉🎉 Unlock a 40% discount on additional
+        <span onClick={() => { Monitoring.instance?.mixpanel_track('consumptionDiscountClicked'); setCunsumptionPayWallFeature('.'); return false; }}>🎉🎉🎉 Unlock a 40% discount on additional
         translations
         
         until the end of February with the exclusive code: </span> EARLYPARROT 🎉🎉🎉

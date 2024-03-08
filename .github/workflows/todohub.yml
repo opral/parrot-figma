@@ -1,0 +1,16 @@
+on:
+  #pull_request:
+  push:
+    # branches:
+    #   - main
+
+permissions:
+  contents: read
+  issues: write
+
+test-action:
+  name: GitHub Actions Test
+  runs-on: ubuntu-latest
+
+  steps:  
+    - uses: nigeisel/todohub@main

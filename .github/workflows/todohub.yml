@@ -7,10 +7,11 @@ on:
 permissions:
   contents: read
   issues: write
+  pull-requests: write
 
 test-action:
   name: GitHub Actions Test
   runs-on: ubuntu-latest
 
   steps:  
-    - uses: nigeisel/todohub@main
+    - uses: todos-in/todohub@main

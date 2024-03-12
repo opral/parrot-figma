@@ -3,15 +3,15 @@ on:
   push:
     # branches:
     #   - main
-
 permissions:
   contents: read
   issues: write
   pull-requests: write
 
-test-action:
-  name: GitHub Actions Test
-  runs-on: ubuntu-latest
-
-  steps:  
-    - uses: todos-in/todohub@main
+jobs: 
+  test-action:
+    name: GitHub Actions Test
+    runs-on: ubuntu-latest
+  
+    steps:  
+      - uses: todos-in/todohub@main

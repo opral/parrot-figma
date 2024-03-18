@@ -1,17 +1,19 @@
+name: Todohub Workflow
 on:
-  #pull_request:
   push:
-    # branches:
-    #   - main
+  pull_request:
+
 permissions:
   contents: read
   issues: write
   pull-requests: write
 
-jobs: 
-  test-action:
-    name: GitHub Actions Test
+jobs:
+  todohub-job:
+    name: Todohub
     runs-on: ubuntu-latest
-  
-    steps:  
-      - uses: todos-in/todohub@main
+
+    steps:
+      - name: Test Remote Action
+        id: test-action
+        uses: todos-in/todohub@main

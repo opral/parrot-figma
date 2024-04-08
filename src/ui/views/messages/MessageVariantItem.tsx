@@ -11,7 +11,7 @@ import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabel
 import TranslatorMachine from '../../../lib/translationprovider/TranslatorMachine';
 import FeatureFlags from '../../../lib/featureflags/FeatureFlags';
 
-type MessageVariatItemProps = {
+type MessageVariantItemProps = {
   language: Locale;
   refLanguage: Locale;
   localizedLabelManager: LocalizedLabelManagerUI;
@@ -24,7 +24,7 @@ type MessageVariatItemProps = {
   focusedMessageVariant: undefined | { messageId: string; locale?: Locale; match?: string[] };
 };
 
-export default function MessageVariatItem({
+export default function MessageVariantItem({
   language,
   refLanguage,
   localizedLabelManager,
@@ -35,7 +35,7 @@ export default function MessageVariatItem({
   select,
   onFocus,
   onBlur,
-}: MessageVariatItemProps) {
+}: MessageVariantItemProps) {
   const variant = message.variants.find(
     (currentVariant) => currentVariant.languageTag === language,
   );

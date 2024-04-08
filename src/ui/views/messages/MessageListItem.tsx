@@ -22,7 +22,7 @@ import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabel
 import FEATURES_FLAGS from '../../featuretoggle';
 import Drawer from '../../compontents/drawer/Drawer';
 import { MessageParameterValues } from '../../../lib/message/MessageParameterValues';
-import MessageVariatItem from './MessageVariantItem';
+import MessageVariantItem from './MessageVariantItem';
 // import ReactQuill from 'react-quill';
 
 type TranslationKeyListItemProps = {
@@ -184,7 +184,8 @@ export default function TranslationKeyListItem({
       <div className="message-group-header-sticky-border">test</div>
 
       {languages.map((language, i, allLanguages) => (
-        <MessageVariatItem
+        <MessageVariantItem
+          key={language}
           language={language}
           refLanguage={refLanguage!}
           localizedLabelManager={localizedLabelManager}

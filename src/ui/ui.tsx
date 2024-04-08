@@ -260,8 +260,10 @@ function App() {
       await userStateManagerUi.loadUserState();
       userStateManagerUi.trackFileUsageStatistics();
 
-      const state = TranslatorMachine.instance.getCreditStateAsync();
-      setBoughtCredit((await state).credits.length > 1);
+      if (FeatureFlags.features.payment) {
+        const state = TranslatorMachine.instance.getCreditStateAsync();
+        setBoughtCredit((await state).credits.length > 1);
+      }
 
       if (windowMode === WindowMode.DevPanel) {
         const updatedUser = await userStateManagerUi.requestUserRole(UserFileRole.developer);

@@ -4,7 +4,7 @@ interface Features {
 
 export default class FeatureFlags {
   static features: Features = {
-    payment: true,
+    payment: false,
   };
 
   static setFeatureflags(fileFeatureFlags: any) {

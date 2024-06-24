@@ -32,17 +32,15 @@ export default function UserManagement({ userManager }: UserManagementProps) {
 
   return (
     <div>
-      {users !== undefined &&
-        users.map((user) => (
+      {users !== undefined
+        && users.map((user) => (
           <div key={user.userId}>
             <div>
-              <img src={user.photoUrl ?? 'nope'} />
+              <img src={user.photoUrl ?? 'nope'} style={{ width: '48px', height: '48px' }} />
             </div>
             <div>
-              <div>
-                <b>Martin Lysk</b> {currentUserId === user.userId && <span> (you)</span>}
-              </div>
-              <span>{user.userRole}</span>
+              <div>{user.name}</div>
+              <div>{user.userRole}</div>
             </div>
           </div>
         ))}

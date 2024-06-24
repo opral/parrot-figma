@@ -539,7 +539,7 @@ function App() {
           >
             Setup
           </div>
-          <div className={`tab ${appScreen === 'users' ? 'active' : ''}`} onClick={() => setAppScreen('users')}>Users</div>
+          {/* <div className={`tab ${appScreen === 'users' ? 'active' : ''}`} onClick={() => setAppScreen('users')}>Users</div> */}
         </div>
 
         <div

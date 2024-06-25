@@ -1,6 +1,7 @@
 /* eslint-disable class-methods-use-this -- this class gets proxied using the async proxy - this doesn't work with static methods for now :-/ */
 
 import { MessageLinkState, LocalizedLabel } from '../lib/localizedlabels/LocalizedLabel';
+import generateGUID from '../lib/usage/generateGUID';
 import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowManagerSandbox';
 
 interface MigrationReport {
@@ -81,6 +82,16 @@ export default class FigmaUtil {
 
   async getUserId() {
     return figma.currentUser?.id;
+  }
+
+  async getInlangFileId() {
+    const fileId = figma.root.getPluginData('inlang-file-id');
+    if (fileId !== '') {
+      return fileId;
+    }
+    const newFileId = generateGUID();
+    figma.root.setPluginData('inlang-file-id', newFileId);
+    return newFileId;
   }
 
   async getImageFromFrame(nodeId: string, settings: ExportSettings) {

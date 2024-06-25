@@ -12,7 +12,12 @@ import * as Sentry from '@sentry/react';
 import * as mixpanel from 'mixpanel-figma';
 
 import { initializeSentry } from './utils/sentry';
-import { initializeAnalytics, track, identify } from './utils/analytics';
+import {
+  initializeAnalytics,
+  track,
+  identify,
+  identifyProject,
+} from './utils/analytics';
 
 import LocalizedLabelsListView from './views/localizedlabelslist/LocalizedLabelsListView';
 import FigmaUtil from '../shared/FigmaUtil';
@@ -175,6 +180,13 @@ figmaRemote.getUserId().then((userId) => {
   if (userId) {
     FeatureFlags.setUser(userId);
     Sentry.setUser({ id: userId! });
+  }
+});
+
+Promise.all([figmaRemote.getInlangFileId(), figmaRemote.getUserId()]).then(([fileId, userId]) => {
+  if (fileId) {
+    track('file_opened', { fileId });
+    identifyProject({ projectId: fileId, properties: { name: userId } });
   }
 });
 

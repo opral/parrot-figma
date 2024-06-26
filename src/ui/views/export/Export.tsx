@@ -284,7 +284,6 @@ export default function Export({ labelManager, userManager }: ExportProps) {
                       type="button"
                       onClick={() => {
                         doExport(languageOption.value as Locale, exportTarget!);
-                        console.log(keySummary);
                         posthog.capture('PARROT export messages', {
                           exportResult: {
                             format: exportTarget,

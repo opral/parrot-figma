@@ -14,6 +14,7 @@ import MessageExporter from '../../../lib/export/MessageExporter';
 import FEATURES_FLAGS from '../../featuretoggle';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import UserManagerUI from '../../../lib/usage/UsageManagerUI';
+import posthog from 'posthog-js';
 
 function toLanguageOption(language: string, baseLanguage?: string) {
   let languageNameInCurrentLanguage = 'no name found';
@@ -239,6 +240,13 @@ export default function Export({ labelManager, userManager }: ExportProps) {
                   type="button"
                   onClick={() => {
                     doExport(selectedBaseLanguage.value as Locale, exportTarget!);
+                    posthog.capture('PARROT export messages', {
+                      exportResult: {
+                        format: exportTarget,
+                        language: selectedBaseLanguage.value,
+                        numberOfMessages: keySummary.matchingNames.size,
+                      },
+                    });
                   }}
                 >
                   <span data-tooltip-type="text">Export</span>
@@ -276,6 +284,16 @@ export default function Export({ labelManager, userManager }: ExportProps) {
                       type="button"
                       onClick={() => {
                         doExport(languageOption.value as Locale, exportTarget!);
+                        console.log(keySummary);
+                        posthog.capture('PARROT export messages', {
+                          exportResult: {
+                            format: exportTarget,
+                            language: selectedBaseLanguage.value,
+                            // TODO: fix reactivity to show correct number of exported messages https://github.com/opral/inlang-parrot/issues/16
+                            // numberOfMessages: keySummary.matchingNames.size - (keySummary.withMissingVariantsPerLanguage[languageOption.value as Locale]
+                            //   ?.size ?? 0),
+                          },
+                        });
                       }}
                     >
                       <span data-tooltip-type="text">Export</span>

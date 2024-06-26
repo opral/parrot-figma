@@ -75,10 +75,10 @@ export function captureLoadProjectEvent(inlangProject: InlangProject) {
       projectId,
       properties: {
         appId: 'app.parrot.figmaPlugin',
-        settings: inlangProject?.settings,
+        settings: inlangProject?.settings(),
         // TODO: fix for v2Persistence
         // https://github.com/opral/inlang-message-sdk/issues/78
-        numberOfMessages: inlangProject?.query.messages.includedMessageIds.length,
+        numberOfMessages: inlangProject?.query.messages.includedMessageIds().length,
       },
     });
   }

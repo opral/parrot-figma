@@ -16,6 +16,7 @@ import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabel
 import { ImportMessage } from '../../../lib/import/ImportMessage';
 import Drawer from '../drawer/Drawer';
 import { Message, Variant } from '@inlang/sdk';
+import posthog from 'posthog-js';
 
 function Option(props: any) {
   return (
@@ -202,6 +203,13 @@ export default function LanguageSetup({
               labelManager.import(importResult!.messages!, importResult!.language);
               setImportResult(undefined);
               setimportKeysByState(undefined);
+              posthog.capture('PARROT import messages', {
+                importResults: {
+                  format: importResult?.type,
+                  language: importResult?.language,
+                  numberOfMessages: importResult?.messages?.length,
+                },
+              });
             },
           },
         ]}

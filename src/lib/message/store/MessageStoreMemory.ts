@@ -21,6 +21,7 @@ import { Config, InlangMessageStore } from './InlangMessageStoreFigmaRoot';
 import { MessageParameterValues } from '../MessageParameterValues';
 import PlaceholderHelper from '../PlaceholderUtil';
 import TranslatorMachine from '../../translationprovider/TranslatorMachine';
+import { captureLoadProjectEvent } from '../../../ui/utils/analytics';
 
 export type SearchQuery = {
   selected?: 'FRAME' | 'LABEL' | undefined;
@@ -633,6 +634,7 @@ export default class MessageStoreMemory extends EventTarget {
         // return import('./inlang/FigmaPlugin');
       },
     });
+    captureLoadProjectEvent(this.inlangProject);
   }
 
   async load(): Promise<Readonly<Message[]>> {

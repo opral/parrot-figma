@@ -27,6 +27,20 @@ export default class FigmaUtil {
     return fileKey;
   }
 
+  public async getFeatureFlags() {
+    return this.getFeatureFlagsSync();
+  }
+
+  public getFeatureFlagsSync() {
+    
+    const featureFlagsRaw = this.getRootPluginDataSync('prt_ftf');
+    if (featureFlagsRaw) {
+      const featureFlags = JSON.parse(featureFlagsRaw);
+      return featureFlags;
+    }
+    return {};
+  }
+
   public async setRootPluginData(key: string, value: string) {
     this.setRootPluginDataSync(key, value);
   }

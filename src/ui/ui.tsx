@@ -57,6 +57,7 @@ import MessagesConsumptionPaywall from './compontents/plans/MessagesConsumptionP
 import TextField from './compontents/textfield/TextField';
 import Monitoring from '../lib/monitoring/MonitoringProxy';
 import FeatureFlags from '../lib/featureflags/FeatureFlags';
+import { TranslationCredit } from '../lib/api/Parrot';
 
 console.log(`Starting Figma UI - Version ${pjs.version}`);
 
@@ -175,10 +176,13 @@ asyncFunctionProxy.proxyAsyncMethods(figmaRemote);
   }
 })();
 
+figmaRemote.getFeatureFlags().then((featureFlags) => {
+  FeatureFlags.setFeatureflags(featureFlags);
+});
+
 figmaRemote.getUserId().then((userId) => {
   identify(userId!);
   if (userId) {
-    FeatureFlags.setUser(userId);
     Sentry.setUser({ id: userId! });
   }
 });
@@ -248,6 +252,10 @@ function App() {
 
   const [enteredLicenseKey, setEnteredLicenseKey] = useState(undefined as string | undefined);
 
+  const [didntbuyReason, setDidntBuyReason] = useState(undefined as string | undefined);
+
+  const [refillClicked, setRefillClicked] = useState(false);
+
   const [licenseKeyState, setLicenseKeyState] = useState<LicenseState>(LicenseState.unvalidated);
   const [showAllFeatures, setShowAllFeatures] = useState(false);
 
@@ -256,11 +264,18 @@ function App() {
   const [windowMode, setWindowMode] = useState(WindowManagerUi.instance!.windowMode);
   const [keyQuery, setKeyQuery] = useState(MessageStoreMemory.toQueryObject(''));
 
+  const [boughtCredit, setBoughtCredit] = useState(true);
+
   useEffect(() => {
     // asynchronous fetch the state from figma helper
     (async () => {
       await userStateManagerUi.loadUserState();
       userStateManagerUi.trackFileUsageStatistics();
+
+      if (FeatureFlags.features.payment) {
+        const state = TranslatorMachine.instance.getCreditStateAsync();
+        setBoughtCredit((await state).credits.length > 1);
+      }
 
       if (windowMode === WindowMode.DevPanel) {
         const updatedUser = await userStateManagerUi.requestUserRole(UserFileRole.developer);
@@ -296,8 +311,23 @@ function App() {
   useEffect(() => {
     const creditUpdateHandler = (event: MessageEvent) => {
       if (event.data.pluginMessage.target === 'TranslatorMachine') {
-        if (event.data.pluginMessage.type === 'creditUpdate' && event.data.pluginMessage.requestShowUpsellCTA) {
-          setCunsumptionPayWallFeature('message');
+        if (event.data.pluginMessage.type === 'creditUpdate') {
+          if (event.data.pluginMessage.requestShowUpsellCTA) {
+            setCunsumptionPayWallFeature('message');
+          }
+
+          const state = event.data.pluginMessage.data as {
+            credits: TranslationCredit[],
+            availableMessages: number,
+          };
+
+          const usageSum = state.credits.reduce((acc, obj) => acc + obj.msgu, 0);
+          const creditTypes = state.credits.map((credit) => credit.ct);
+          Monitoring.instance?.mixpanel_people_set('translationsUsed', usageSum);
+          Monitoring.instance?.mixpanel_people_set('translationsAvailable', state.availableMessages);
+          for (const creditType of creditTypes) {
+            Monitoring.instance?.mixpanel_people_set(`creditType_${creditType}`, true);
+          }
         }
       }
     };
@@ -513,13 +543,17 @@ function App() {
       break;
   }
 
-  function upgradePlan() {
-    console.log('TODO #29 UPGRADE PLAN!');
-  }
-
   return (
     <>
       <Tooltip contentAttribute="data-tooltip-content" />
+      { !boughtCredit && (
+      <div className="discountBanner">
+        <span onClick={() => { Monitoring.instance?.mixpanel_track('consumptionDiscountClicked'); setCunsumptionPayWallFeature('.'); return false; }}>🎉🎉🎉 Unlock a 40% discount on additional
+        translations
+        
+        until the end of February with the exclusive code: </span> EARLYPARROT 🎉🎉🎉
+      </div>
+      )}
       <div className="toolbar">
         <div className="tabHeader">
           <div
@@ -611,6 +645,59 @@ function App() {
       <a id="focusHelper" href="" />
       <Drawer
         position="top"
+        shown={didntbuyReason !== undefined}
+        buttons={[
+          {
+            type: 'primary',
+            text: 'Submit feedback',
+            key: undefined,
+            disabled: (didntbuyReason !== undefined && didntbuyReason.length < 1),
+            callback: () => {
+              const reason = didntbuyReason;
+              Monitoring.instance?.mixpanel_people_set('didntRefillReason', reason);
+              setDidntBuyReason(undefined);
+              figmaRemote.notify('Thank you for your feedback!');
+            },
+          },
+          {
+            type: 'secondary',
+            text: 'Cancel',
+            key: 'escape',
+            callback: () => {
+              setDidntBuyReason(undefined);
+            },
+          },
+        ]}
+      >
+        <>
+          <div className="modal-dialog-title-bar">
+            <div className="modal-dialog-title-text">Refill Purchase Feedback</div>
+            <div
+              className="modal-dialog-title-close button"
+              onClick={() => {
+                setEnteredLicenseKey(undefined);
+              }}
+            />
+          </div>
+          <div className="modal-dialog-body refill-feedback">
+            <div className="modal-dialog-text ">Could you please share any specific reasons or concerns that influenced your decision not to purchase a refill?</div>
+            <textarea
+              rows={5}
+              cols={35}
+              wrap="off"
+              maxLength={400}
+              value={didntbuyReason}
+              onChange={(e) => { setDidntBuyReason(e.target.value); }}
+              placeholder="Add your feedback"
+            />
+
+          </div>
+
+        </>
+      </Drawer>
+
+      <Drawer
+        position="top"
         shown={enteredLicenseKey !== undefined}
         buttons={[
           {
@@ -618,6 +705,10 @@ function App() {
             text: 'Cancel',
             key: 'escape',
             callback: () => {
+              if (refillClicked) {
+                setDidntBuyReason('');
+                Monitoring.instance?.mixpanel_track('consumptionPaywallTranslationsDidntBuy');
+              }
               setEnteredLicenseKey(undefined);
               setLicenseKeyState(LicenseState.unvalidated);
             },
@@ -628,6 +719,8 @@ function App() {
             key: 'enter',
             disabled: (enteredLicenseKey !== undefined && enteredLicenseKey.length < 10) || licenseKeyState === LicenseState.validating || licenseKeyState === LicenseState.invalid,
             callback: () => {
+              Monitoring.instance?.mixpanel_track('activateLicenseClicked');
+
               // setEnteredLicenseKey(undefined);
               setLicenseKeyState(LicenseState.validating);
               // call backend
@@ -635,11 +728,15 @@ function App() {
                 if (result.activated || result.success) {
                   // {activated: true, error: null, license_key: {…}, instance: {…}, meta: {…}}
                   if (result.activated) {
+                    figmaRemote.notify('🎉🎉 Licence Key was activated 🎉🎉');
+
+                    Monitoring.instance?.mixpanel_track('licenseActivated');
                     translationMachine.syncTranslations().then(() => {
                       setLicenseKeyState(LicenseState.valid);
                       setEnteredLicenseKey(undefined);
                     });
                   } else {
+                    figmaRemote.notify('Licence Key is active already');
                     setLicenseKeyState(LicenseState.valid);
                     setEnteredLicenseKey(undefined);
                   }
@@ -694,6 +791,7 @@ function App() {
       <Drawer
         shown={consumptionPayWallFeature !== undefined}
         beforeShow={async () => {
+          Monitoring.instance?.mixpanel_track('consumptionPaywallTranslationsShown');
           const waitOneFrame = () => new Promise<void>((resolve) => {
             setTimeout(() => {
               resolve();
@@ -711,15 +809,19 @@ function App() {
         <MessagesConsumptionPaywall
           closeClick={() => {
             setCunsumptionPayWallFeature(undefined);
+            setRefillClicked(false);
           }}
           buyClick={() => {
-            window.open('https://parrot.lemonsqueezy.com/checkout/buy/088b77d7-5286-466b-bf22-945ab61af46f?discount=0', 'blank');
+            Monitoring.instance?.mixpanel_track('consumptionPaywallTranslationsCheckoutClicked');
+            window.open('https://parrot.lemonsqueezy.com/checkout/buy/9a667dcf-2039-462b-8809-5fd977859fee', 'blank');
             setCunsumptionPayWallFeature(undefined);
             setEnteredLicenseKey('');
+            setRefillClicked(true);
           }}
           gotLicencesClick={() => {
             setCunsumptionPayWallFeature(undefined);
             setEnteredLicenseKey('');
+            setRefillClicked(false);
           }}
         />
       </Drawer>
@@ -743,7 +845,7 @@ function App() {
         <ComparisonChart
           upgradePlan={() => {
             setCunsumptionPayWallFeature(undefined);
-            upgradePlan();
+            // upgradePlan();
           }}
         />
       </Drawer>

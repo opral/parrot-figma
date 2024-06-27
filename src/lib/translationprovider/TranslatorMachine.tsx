@@ -91,7 +91,6 @@ export default class TranslatorMachine {
   constructor(parrotApi?: ParrotApi) {
     // if its a proxy we don't have an api key
     if (!parrotApi) {
-      console.log('INIT TranslatorMachine as proxy');
       const promise = async () => {};
       this.ensureStateLoaded = promise();
       TranslatorMachine.instance = this;
@@ -100,33 +99,31 @@ export default class TranslatorMachine {
 
     this.parrotApi = parrotApi;
 
-    console.log('INIT TranslatorMachine in sandbox');
     // load available translations from parrot backend - fall back to local storage
     const ensureStateLoadedPromise = async () => {
-      console.log('INIT TranslatorMachine in sandbox - ensureStateLoadedPromise called');
       const usedTranslationsCredits = await figma.clientStorage.getAsync(translationsCreditUsageLocalStorageKey);
       const translationCredits = await figma.clientStorage.getAsync(translationCreditsLocalStorageKey);
 
-      this.state = {
-        translationCredits: /*typeof translationCredits === 'object' ? translationCredits as TranslationCredit[] :*/ [{
-          cid: 'included-batteries-1',
-          co: figma.currentUser!.id!,
-          msgc: 100,
-          msgu: 0,
-          jwt: includedBatteries,
-        }],
-        translationsCreditUsage: typeof usedTranslationsCredits === 'object' ? usedTranslationsCredits as TranslationCreditUsage[] : [],
-      };
+      if (FeatureFlags.features.payment) {
+        this.state = {
+          translationCredits: typeof translationCredits === 'object' ? translationCredits as TranslationCredit[] : [{
+            cid: 'included-batteries-1',
+            ct: 'voucher',
+            co: figma.currentUser!.id!,
+            msgc: 100,
+            msgu: 0,
+            jwt: includedBatteries,
+          }],
+          translationsCreditUsage: typeof usedTranslationsCredits === 'object' ? usedTranslationsCredits as TranslationCreditUsage[] : [],
+        };
 
-      // remove sent flags - since this is a new run...
-      for (const usage of this.state.translationsCreditUsage) {
-        usage.send = false;
+        // remove sent flags - since this is a new run...
+        for (const usage of this.state!.translationsCreditUsage) {
+          usage.send = false;
+        }
+
+        await this.syncTranslations(true);
       }
-
-      console.log('INIT TranslatorMachine in sandbox - ensureStateLoadedPromise called - awaiting sync');
-      console.log(this.state);
-      await this.syncTranslations(true);
-      console.log('INIT DONE');
     };
     this.ensureStateLoaded = ensureStateLoadedPromise();
   }
@@ -169,10 +166,7 @@ export default class TranslatorMachine {
 
   async syncTranslations(init?: boolean) {
     if (!init) {
-      console.log('awaiting ensureStateLoaded');
-      console.log(this.ensureStateLoaded);
       await this.ensureStateLoaded;
-      console.log('awaiting ensureStateLoaded done');
     }
 
     const usageToSend = [];
@@ -220,7 +214,6 @@ export default class TranslatorMachine {
     translationCredits: TranslationCredit[],
   ) {
     const result = await this.parrotApi!.synchronizeCredits(figmaUserId, figmaFileOwnerId, translationCredits.map((c) => c.jwt), translationsCreditUsage);
-    console.log(`home answered: ${JSON.stringify(result)}`);
     return result;
     // for (const usage of translationsCreditUsage) {
     //   const credit = getCurrentCredit(translationCredits, usage.ownerId, usage.time);
@@ -238,14 +231,16 @@ export default class TranslatorMachine {
     // For now don't use the owner of the file
     const userId = figma.currentUser!.id!;
 
-    const availableTranslations = calculateAvailableMessages(this.state!, userId, new Date().getTime());
+    if (FeatureFlags.features.payment) {
+      const availableTranslations = calculateAvailableMessages(this.state!, userId, new Date().getTime());
 
-    if (availableTranslations <= 0 && FeatureFlags.features.payment) {
-      if (triggersCTA) {
-        await this.fireCreditsUpdateEvent(true);
+      if (availableTranslations <= 0 && FeatureFlags.features.payment) {
+        if (triggersCTA) {
+          await this.fireCreditsUpdateEvent(true);
+        }
+        // TODO #29 activate again
+        throw new NoMoreTranslationsLeftError('No Machine Translations left');
       }
-      // TODO #29 activate again
-      throw new NoMoreTranslationsLeftError('No Machine Translations left');
     }
 
     let translation: string | null = null;

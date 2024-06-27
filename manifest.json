@@ -8,7 +8,7 @@
   ],
   "capabilities": ["inspect"],
   "networkAccess": {
-    "allowedDomains": ["https://translate.googleapis.com", "https://telemetry.inlang.com/", "https://parrot-global.github.io", "https://sentry.io", "https://api.parrot.global", "https://s3-alpha.figma.com"],
+    "allowedDomains": ["https://translate.googleapis.com", "https://telemetry.inlang.com/", "https://parrot-global.github.io", "https://*.ingest.sentry.io", "https://*.sentry.io", "https://api.parrot.global", "https://s3-alpha.figma.com"],
     "devAllowedDomains": [
       "http://localhost:8080",
       "http://localhost:4006"

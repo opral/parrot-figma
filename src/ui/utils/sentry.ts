@@ -29,18 +29,18 @@ export const initializeSentry = () => {
     case 'alpha':
     case 'beta':
     case 'production':
-      Sentry.addTracingExtensions();
-      Sentry.init({
-        dsn: process.env.SENTRY_DSN,
-        release: `parrot@${pjs.version}`,
-        environment: process.env.ENVIRONMENT,
-        tracesSampleRate: SAMPLING,
-        profilesSampleRate: PROFILE_RATE,
-        replaysSessionSampleRate: REPLAY_RATE,
-        // We always want to replay errors
-        replaysOnErrorSampleRate: 1.0,
-        integrations: [],
-      });
+      // Sentry.addTracingExtensions();
+      // Sentry.init({
+      //   dsn: process.env.SENTRY_DSN,
+      //   release: `parrot@${pjs.version}`,
+      //   environment: process.env.ENVIRONMENT,
+      //   tracesSampleRate: SAMPLING,
+      //   profilesSampleRate: PROFILE_RATE,
+      //   replaysSessionSampleRate: REPLAY_RATE,
+      //   // We always want to replay errors
+      //   replaysOnErrorSampleRate: 1.0,
+      //   integrations: [],
+      // });
       break;
     default:
       break;

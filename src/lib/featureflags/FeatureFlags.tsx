@@ -7,9 +7,11 @@ export default class FeatureFlags {
     payment: false,
   };
 
-  static setUser(userId: string) {
-    if (userId === '1175524760316632413') {
-      FeatureFlags.features.payment = true;
+  static setFeatureflags(fileFeatureFlags: any) {
+    for (const key of Object.keys(FeatureFlags.features)) {
+      if (fileFeatureFlags[key]) {
+        (FeatureFlags.features as any)[key] = fileFeatureFlags[key] as boolean;
+      }
     }
   }
 }

@@ -2,7 +2,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const InlineChunkHtmlPlugin = require('react-dev-utils/InlineChunkHtmlPlugin');
 
 const path = require('path');
-const { sentryWebpackPlugin } = require("@sentry/webpack-plugin");
+const { sentryWebpackPlugin } = require('@sentry/webpack-plugin');
 const webpack = require('webpack');
 require('dotenv').config();
 

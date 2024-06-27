@@ -16,7 +16,6 @@ import Quill, { DeltaStatic, Sources, Delta as DeltaType } from 'quill';
 import Emitter from 'quill/core/emitter';
 import { createPortal } from 'react-dom';
 
-import { disable } from 'mixpanel-figma';
 import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
 import TranslationView from './TranslationView';
 
@@ -130,7 +129,7 @@ export default function TranslationEditor({
 
     textRef.current = value;
 
-    console.log(`propagating change${value}`);
+    // console.log(`propagating change${value}`);
   };
 
   const onEditorChange = (

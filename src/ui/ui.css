@@ -203,13 +203,27 @@ body {
   .variable-svg.active {
     background-color: red;
   }
+
+  .discountBanner {
+    text-align: center;
+    padding: 8px;
+    font-weight: 600;
+    color: var(--figma-color-text-ondanger-secondary);
+    background-color: var(--figma-color-bg-danger);
+    user-select: text;
+  }
   
+  .discountBanner span {
+    cursor: pointer;
+  } 
+
   .toolbar {
     /* border-bottom: 1px solid var(--figma-color-border); */
     flex-direction: row;
     display: flex;
     user-select: none;
   }
+
   
   .dropdown {
     display: flex;
@@ -387,8 +401,8 @@ button:focus:not(:disabled), .basic_form--btn--t7Y67:active:not(:disabled) {
 #version-outdated.visible div {
   flex: 0 0 150px;  
   text-align: center;
-  background-color: white;
-  border: solid 16px white;
+  background-color: var(--figma-color-bg);
+  border: solid 16px var(--figma-color-bg);
   border-radius: 5px;
 }
 #version-outdated.gone {
@@ -548,6 +562,13 @@ div:hover>.os-scrollbar.os-scrollbar-vertical {
 .modal-dialog-body .text-field {
   width: 270px;
 }
+
+.modal-dialog-body.refill-feedback textarea {
+  width: 100%;
+    background-color: var(--figma-color-bg);
+    color: var(--figma-color-text);
+}
+
 
 .modal-dialog-body .text-field-text {
   border-color: var(--figma-color-border);

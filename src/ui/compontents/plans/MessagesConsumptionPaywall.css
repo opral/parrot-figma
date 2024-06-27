@@ -93,17 +93,19 @@
 
 .badge--badgeLarge {
   margin-left: 8px;
-  background-color: var(--figma-color-bg-tertiary, #f0f0f0);
-  color: var(--figma-color-text-tertiary, rgba(0, 0, 0, .3));
+  background-color: var(--figma-color-bg-danger, #f0f0f0);
+  color: var(--figma-color-text-onwarning, rgba(0, 0, 0, .3));
   padding: 2px 8px;
     border-radius: 4px;
     font-weight: 500;
     display: inline-block;
     user-select: none;
     font-size: 11px;
-    line-height: 16px;
+    line-height: 22px;
     letter-spacing: calc(.005px + var(--text-tracking-pos, 0)*11px);
     font-family: Inter,sans-serif;
+    right: 60px;
+    position: absolute;
 }
 
 .consumption_paywall_modals--planDescription {

@@ -15,6 +15,8 @@ export type TranslationCredit = {
   cid: string,
   // credit owner - if the jwt doesn't contain this property - it gets set to the current user
   co?: string
+  // type of the credit
+  ct: string,
   // not before (nbf) and expiration time (exp) allows to bind tokens to a time window
   nbf?: number,
   exp?: number,
@@ -22,6 +24,7 @@ export type TranslationCredit = {
   msgc: number,
   // number of message credits used: msgc-msgu represent the available messages
   msgu: number,
+  
   // the signed jwt representing this token - used to send back
   jwt: string,
 };
@@ -59,7 +62,7 @@ export default class ParrotApi {
       return await result.json();
     } catch (e: any) {
       await Monitoring.instance?.sentryCaptureException(e, {});
-      return e;
+      throw e;
     }
   }
 

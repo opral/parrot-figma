@@ -1,7 +1,7 @@
 import * as mixpanel from 'mixpanel-figma';
 import posthog from 'posthog-js';
-import * as pjs from '../../../package.json';
 import { InlangProject } from '@inlang/sdk';
+import * as pjs from '../../../package.json';
 
 let projectId: string | undefined;
 
@@ -31,14 +31,8 @@ export function identifyProject(args: {
   if (typeof process.env.PUBLIC_POSTHOG_TOKEN === 'undefined') return;
   projectId = args.projectId;
   try {
-    // Capture the $groupidentify event
-    posthog.capture('$groupidentify', {
-      distinct_id: 'unknown', // Use 'unknown' if no user information is available
-      $group_type: 'project',
-      $group_key: args.projectId,
-      $group_set: {
-        ...args.properties,
-      },
+    posthog.group('project', args.projectId, {
+      name: args.projectId,
     });
   } catch (e) {
     // TODO implement sentry logging
@@ -73,13 +67,11 @@ export function captureLoadProjectEvent(inlangProject: InlangProject) {
   if (projectId) {
     posthog.capture('SDK loaded project', {
       projectId,
-      properties: {
-        appId: 'app.parrot.figmaPlugin',
-        settings: inlangProject?.settings(),
-        // TODO: fix for v2Persistence
-        // https://github.com/opral/inlang-message-sdk/issues/78
-        numberOfMessages: inlangProject?.query.messages.includedMessageIds().length,
-      },
+      appId: 'app.parrot.figmaPlugin',
+      settings: inlangProject?.settings(),
+      // TODO: fix for v2Persistence
+      // https://github.com/opral/inlang-message-sdk/issues/78
+      numberOfMessages: inlangProject?.query.messages.includedMessageIds().length,
     });
   }
 }

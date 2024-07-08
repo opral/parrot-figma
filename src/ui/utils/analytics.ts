@@ -6,11 +6,7 @@ import * as pjs from '../../../package.json';
 let projectId: string | undefined;
 
 export function track(name: string, opts = {}) {
-  if (process.env.MIXPANEL_ACCESS_TOKEN) {
-    posthog.capture(`parrot-${name}`, opts);
-  } else {
-    console.log(`tracking: ${name} ${JSON.stringify(opts)}`);
-  }
+  posthog.capture(`PARROT ${name}`, opts);
 }
 
 export function identify(figmaUserId: string) {

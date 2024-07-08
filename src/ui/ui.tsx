@@ -189,7 +189,7 @@ figmaRemote.getUserId().then((userId) => {
 
 Promise.all([figmaRemote.getInlangFileId()]).then(([fileId]) => {
   if (fileId) {
-    track('file_opened', { fileId });
+    track('file opened', { fileId });
     identifyProject({ projectId: fileId, properties: { name: fileId } });
   }
 });

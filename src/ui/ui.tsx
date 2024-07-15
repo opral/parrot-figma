@@ -461,7 +461,7 @@ function App() {
             labelManager={localizedLabelManager}
             onFinishSetup={async () => {
               await figmaRemote.setRootPluginData('fileSetupCompleted', 'true');
-              WindowManagerUi.instance?.requestWindowMode(WindowMode.BottomSheet, false);
+              WindowManagerUi.instance?.requestWindowMode(WindowMode.Window, false);
               await memoryTranslationKeyStore.load();
               setAppScreen('design');
             }}
@@ -594,7 +594,7 @@ function App() {
           style={{
             pointerEvents: 'none',
             flexGrow: 1,
-            display: windowMode === WindowMode.BottomSheet ? 'flex' : 'none',
+            display: 'none',
           }}
         >
           <div className="svg-container resize-height" />
@@ -607,11 +607,11 @@ function App() {
               iconName: 'window-mode-minimized-svg',
               value: WindowMode.Minimized,
               tooltip: 'Minimize',
-            }, */ {
+            }, *//* {
                 iconName: 'window-mode-bottom-attached-svg',
                 value: WindowMode.BottomSheet,
                 tooltip: 'Dock to bottom',
-              },
+              }, */
               {
                 iconName: 'window-mode-window-svg',
                 value: WindowMode.Window,

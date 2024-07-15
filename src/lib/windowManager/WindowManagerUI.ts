@@ -130,7 +130,7 @@ export default class WindowManagerUi extends EventTarget {
 
     let lastCall = Date.now();
     this.heightResizeScrollContainerEl.onscroll = (e) => {
-      if (!this.isResizing || !this.viewportBounds || this.windowMode !== WindowMode.BottomSheet) {
+      if (!this.isResizing || !this.viewportBounds) {
         return;
       }
 
@@ -206,9 +206,6 @@ export default class WindowManagerUi extends EventTarget {
       if (event.data.pluginMessage.target === 'WindowManager') {
         if (event.data.pluginMessage.windowMode) {
           const mode = event.data.pluginMessage.windowMode as WindowMode;
-          if (mode === WindowMode.BottomSheet) {
-            this.ratioChangedOnce = false;
-          }
           this.resizeHandelEl.classList.remove(...this.resizeHandelEl.classList);
           this.resizeHandelEl.classList.add(mode);
 
@@ -246,8 +243,6 @@ export default class WindowManagerUi extends EventTarget {
     if (!this.viewportBounds) {
       return;
     }
-
-    const titleBarHeight = 42;
 
     const computedStyle = getComputedStyle(this.sizeWrapper);
     const { height } = computedStyle;

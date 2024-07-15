@@ -320,9 +320,9 @@ export default class FigmaUtil {
     const viewportRect = figma.viewport.bounds;
     const virtualViewportRect = { ...viewportRect };
     const heightCorrection =
-      WindowManagerSandbox.instance!.currentWindowMode === WindowMode.BottomSheet
+      WindowManagerSandbox.instance!.currentWindowMode === WindowMode.Window
         ? (WindowManagerSandbox.instance!.bottomSheetHeight +
-            WindowManagerSandbox.instance!.titleBarHeight) /
+            WindowManagerSandbox.instance!.toolbarHeight) /
           figma.viewport.zoom
         : 0;
     virtualViewportRect.height -= heightCorrection;

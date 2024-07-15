@@ -50,7 +50,7 @@ export class WindowManagerSandbox {
     height: number;
   };
 
-  titleBarHeight = 40;
+  toolbarHeight = 56;
 
   // ### bottom sheet
 
@@ -63,13 +63,20 @@ export class WindowManagerSandbox {
 
   // #### fullscreen
 
-  fullscreenMarginRight = 35;
+  fullscreenMarginRight = 26;
 
-  fullscreenMarginLeft = 35;
+  fullscreenMarginLeft = 26;
 
-  fullscreenMarginTop = 35;
+  fullscreenMarginTop = 56;
 
-  fullscreenMarginBottom = 35;
+  fullscreenMarginBottom = 10;
+
+  // ### initial window size
+  initialWindowHeight = 300;
+
+  leftPanelWidth = 240;
+
+  rightPanelWidth = 240;
 
   viewportResizeCheckInterval: any;
 
@@ -268,7 +275,7 @@ export class WindowManagerSandbox {
     if (!this.viewPortResizing && !this.checkForViewPortResize()) {
       // drag detected! forces reshow
       this.wasDragged = true;
-      if (this.currentWindowMode === WindowMode.BottomSheet) {
+      /* if (this.currentWindowMode === WindowMode.BottomSheet) {
         // console.log('[WM] overlap changed - changing to window');
         // in case of the bottom sheet we always keep the windows size equal to the viewport size
         const width = Math.ceil(figma.viewport.bounds.width * figma.viewport.zoom);
@@ -313,7 +320,6 @@ export class WindowManagerSandbox {
     });
 
     if (
-      this.currentWindowMode === WindowMode.BottomSheet ||
       // || this.currentWindowMode === WindowMode.Minimized
       this.currentWindowMode === WindowMode.Fullscreen
     ) {
@@ -327,7 +333,6 @@ export class WindowManagerSandbox {
   private async setWindowMode(targetWindowMode: WindowMode, windowRect?: WindowRect) {
     const newWindowRect = windowRect ?? this.calculateWindowRect(targetWindowMode);
     if (
-      this.currentWindowMode !== WindowMode.BottomSheet &&
       // && this.currentWindowMode !== WindowMode.Minimized
       this.currentWindowMode !== WindowMode.Fullscreen
     ) {
@@ -345,7 +350,6 @@ export class WindowManagerSandbox {
     });
     if (
       !(
-        this.currentWindowMode !== WindowMode.BottomSheet &&
         // && this.currentWindowMode !== WindowMode.Minimized
         this.currentWindowMode !== WindowMode.Fullscreen
       )
@@ -357,20 +361,12 @@ export class WindowManagerSandbox {
 
   private handleSizeMessage(message: any) {
     switch (this.currentWindowMode) {
-      case WindowMode.BottomSheet:
-        // apply the new height to the window and recalculate the new window rect
-        this.bottomSheetHeight = Math.floor(message.size.height);
-        // eslint-disable-next-line no-case-declarations
-        const windowRect = this.calculateWindowRect(WindowMode.BottomSheet);
-        figma.clientStorage.setAsync('windowBottomSheetHeight', this.bottomSheetHeight);
-        this.updateWindowRect(windowRect);
-        break;
       case WindowMode.Window:
         if (message.size.width === undefined) {
-          throw new Error('width not provided handleSizeMessage for window mode');
+          message.size.width = Math.floor((figma.viewport.bounds.width - (this.leftPanelWidth + this.rightPanelWidth + 26)) * figma.viewport.zoom);
         }
         if (message.size.height === undefined) {
-          throw new Error('height not provided handleSizeMessage for window mode');
+          message.size.height = this.initialWindowHeight;
         }
         this.windowModeSize = {
           width: Math.floor(message.size.width),
@@ -396,13 +392,10 @@ export class WindowManagerSandbox {
   }
 
   private calculateWindowRect(windowMode: WindowMode): WindowRect {
-    const leftPanelWidth = 240;
-    const rightPanelWidth = 240;
-
     switch (windowMode) {
       case WindowMode.DevPanel:
         return {
-          width: Math.floor(rightPanelWidth),
+          width: 240,
           height: 100,
           x: 0,
           y: 0,
@@ -410,36 +403,16 @@ export class WindowManagerSandbox {
       case WindowMode.Fullscreen:
         return {
           width: Math.floor(
-            figma.viewport.bounds.width * figma.viewport.zoom +
-              leftPanelWidth +
-              rightPanelWidth -
+            figma.viewport.bounds.width * figma.viewport.zoom -
               (this.fullscreenMarginLeft + this.fullscreenMarginRight),
           ),
           height: Math.floor(
             figma.viewport.bounds.height * figma.viewport.zoom -
-              (this.titleBarHeight + this.fullscreenMarginTop + this.fullscreenMarginBottom),
+              (this.toolbarHeight + this.fullscreenMarginTop + this.fullscreenMarginBottom),
           ),
           x: Math.floor(
-            figma.viewport.bounds.x -
-              leftPanelWidth / figma.viewport.zoom +
-              this.fullscreenMarginLeft / figma.viewport.zoom,
-          ),
+            figma.viewport.bounds.x + this.fullscreenMarginLeft / figma.viewport.zoom),
           y: Math.floor(figma.viewport.bounds.y + this.fullscreenMarginTop / figma.viewport.zoom),
-        };
-      case WindowMode.BottomSheet:
-        return {
-          width: Math.floor(
-            figma.viewport.bounds.width * figma.viewport.zoom -
-              (this.bottomSheetMarginLeft + this.bottomSheetMarginRight),
-          ),
-          height: Math.floor(this.bottomSheetHeight), // in case of the bottom sheet we always keep the windows size equal to the viewport size
-          x: Math.floor(figma.viewport.bounds.x + this.bottomSheetMarginLeft / figma.viewport.zoom),
-          y: Math.floor(
-            figma.viewport.bounds.y +
-              figma.viewport.bounds.height -
-              (this.bottomSheetHeight + this.titleBarHeight - RESIZEDETECTION_OVERLAP_PX) /
-                figma.viewport.zoom,
-          ),
         };
       case WindowMode.Window:
         // center window on switch to window mode - there is no way to save the window position at the moment
@@ -453,8 +426,8 @@ export class WindowManagerSandbox {
           ),
           y: Math.floor(
             figma.viewport.bounds.y +
-              (figma.viewport.bounds.height / 2 -
-                (this.windowModeSize.height + this.titleBarHeight) / 2 / figma.viewport.zoom),
+              ((figma.viewport.bounds.height - this.windowModeSize.height - 2 * this.toolbarHeight)
+                / figma.viewport.zoom),
           ),
         };
       case WindowMode.Minimized:
@@ -467,7 +440,7 @@ export class WindowManagerSandbox {
           y: Math.floor(
             figma.viewport.bounds.y +
               figma.viewport.bounds.height -
-              (minimizedViewHeight + this.titleBarHeight - RESIZEDETECTION_OVERLAP_PX) /
+              (minimizedViewHeight - RESIZEDETECTION_OVERLAP_PX) /
                 figma.viewport.zoom,
           ),
         };
@@ -485,7 +458,7 @@ export class WindowManagerSandbox {
           y: Math.floor(
             figma.viewport.bounds.y +
               (figma.viewport.bounds.height / 2 -
-                (centerHeight + this.titleBarHeight) / 2 / figma.viewport.zoom),
+                centerHeight / 2 / figma.viewport.zoom),
           ),
         };
       default:

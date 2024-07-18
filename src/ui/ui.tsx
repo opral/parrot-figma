@@ -17,6 +17,7 @@ import {
   track,
   identify,
   identifyProject,
+  captureLoadProjectEvent,
 } from './utils/analytics';
 
 import LocalizedLabelsListView from './views/localizedlabelslist/LocalizedLabelsListView';
@@ -190,7 +191,7 @@ figmaRemote.getUserId().then((userId) => {
 Promise.all([figmaRemote.getInlangFileId()]).then(([fileId]) => {
   if (fileId) {
     track('file opened', { fileId });
-    identifyProject({ projectId: fileId, properties: { name: fileId } });
+    identifyProject({ projectId: fileId, properties: { name: fileId }, figmaRemote });
   }
 });
 
@@ -225,7 +226,7 @@ const userStateManagerUi = new UserManagerUI(userStateManagerSandbox);
 const figmaFileTranslationKeyStore = new InlangMessageStore(true);
 
 asyncFunctionProxy.proxyAsyncMethods(figmaFileTranslationKeyStore);
-const memoryTranslationKeyStore = new MessageStoreMemory(figmaFileTranslationKeyStore);
+const memoryTranslationKeyStore = new MessageStoreMemory(figmaFileTranslationKeyStore, figmaRemote);
 
 const remoteLocalizedLabelManager = new LocalizedLabelManager();
 asyncFunctionProxy.proxyAsyncMethods(remoteLocalizedLabelManager);
@@ -349,7 +350,9 @@ function App() {
 
       await localizedLabelManager.prepare();
       await memoryTranslationKeyStore.load();
-      localizedLabelManager.startFillupCache();
+      localizedLabelManager.startFillupCache().then(() => {
+        captureLoadProjectEvent(figmaRemote);
+      });
 
       let initialScreen = (await figmaRemote.getLocalFileConfig('lastView')) ?? 'design';
       if (fileSetupCompleted === undefined || fileSetupCompleted === '') {

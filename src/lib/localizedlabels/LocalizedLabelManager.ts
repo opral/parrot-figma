@@ -474,7 +474,7 @@ export default class LocalizedLabelManager {
   async fillUpCache() {
     let start = Date.now();
     const containers = [];
-    let textNodesToPrcoess = [] as TextNode[];
+    let textNodesToProcess = [] as TextNode[];
     console.log(`fillUpCache - enter ${Date.now() - start}`);
     await new Promise((resolve) => setTimeout(resolve, 2));
 
@@ -484,7 +484,7 @@ export default class LocalizedLabelManager {
       for (const pageChild of page.children) {
         // console.log('fillUpCache - pageChilde...' + pageChild.name);
         if (pageChild.type === 'TEXT') {
-          textNodesToPrcoess.push(pageChild);
+          textNodesToProcess.push(pageChild);
         } else if (
           pageChild.type === 'COMPONENT' ||
           pageChild.type === 'COMPONENT_SET' ||
@@ -503,7 +503,7 @@ export default class LocalizedLabelManager {
             for (const sectionChild of pageChild.children) {
               // console.log('fillUpCache - sectionChild...' + sectionChild.name);
               if (sectionChild.type === 'TEXT') {
-                textNodesToPrcoess.push(sectionChild);
+                textNodesToProcess.push(sectionChild);
               } else if (
                 sectionChild.type === 'COMPONENT' ||
                 sectionChild.type === 'COMPONENT_SET' ||
@@ -540,7 +540,7 @@ export default class LocalizedLabelManager {
       if (foundtextNodes.filter((node) => node.id.indexOf(';') !== -1).length > 0) {
         // debugger;
       }
-      textNodesToPrcoess = textNodesToPrcoess.concat(foundtextNodes as TextNode[]);
+      textNodesToProcess = textNodesToProcess.concat(foundtextNodes as TextNode[]);
 
       const blockedExecutionTime = Date.now() - lastInterception;
       if (blockedExecutionTime > 30) {
@@ -560,7 +560,7 @@ export default class LocalizedLabelManager {
 
     const keysLoaded = new Set<string>();
 
-    for (const textNode of textNodesToPrcoess) {
+    for (const textNode of textNodesToProcess) {
       if (this.firstTextnodeInViewport === undefined && textNode.absoluteBoundingBox) {
         if (
           textNode.absoluteBoundingBox.x > figma.viewport.bounds.x &&
@@ -587,6 +587,7 @@ export default class LocalizedLabelManager {
         keysLoaded.add(messageId);
       }
     }
+    figma.root.setPluginData('numberOfMessages', textNodesToProcess.length.toString());
 
     console.log(
       `fillUpCache - creating localizedLabels took ${Date.now() - innerStart}ms for ${

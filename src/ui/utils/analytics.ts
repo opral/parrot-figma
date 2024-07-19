@@ -60,16 +60,16 @@ export function initializeAnalytics() {
 export async function captureLoadProjectEvent(figmaRemote: FigmaUtil) {
   const projectId = await figmaRemote.getRootPluginData('projectId');
   const inlangProjectSettings = await figmaRemote.getRootPluginData('inlangProjectSettings');
-  const numberOfMessagesWithKeys = await figmaRemote.getRootPluginData('numberOfMessagesWithKeys');
+  const numberOfLinkedMessages = await figmaRemote.getRootPluginData('numberOfLinkedMessages');
   const numberOfMessages = await figmaRemote.getRootPluginData('numberOfMessages');
 
-  if (projectId && inlangProjectSettings && numberOfMessagesWithKeys) {
+  if (projectId && inlangProjectSettings && numberOfLinkedMessages) {
     posthog.capture('SDK loaded project', {
       projectId,
       appId: 'app.parrot.figmaPlugin',
       settings: JSON.parse(inlangProjectSettings),
       numberOfMessages: Number(numberOfMessages),
-      numberOfMessagesWithKeys: Number(numberOfMessagesWithKeys),
+      numberOfLinkedMessages: Number(numberOfLinkedMessages),
     });
   }
 }

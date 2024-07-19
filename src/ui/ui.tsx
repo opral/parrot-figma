@@ -215,10 +215,10 @@ const checkVersion = async () => {
 
 const versionCheckInterval = 1000 * 40;
 // we use any here since NodeJS.Timout - the suggested type by the ide is not correct
-checkVersion().catch(console.log);
-setInterval(() => {
-  checkVersion().catch(console.log);
-}, versionCheckInterval);
+// checkVersion().catch(console.log);
+// setInterval(() => {
+//   checkVersion().catch(console.log);
+// }, versionCheckInterval);
 
 const userStateManagerSandbox = new UserManager(true);
 asyncFunctionProxy.proxyAsyncMethods(userStateManagerSandbox);

@@ -271,11 +271,11 @@ export default function Export({ labelManager, userManager }: ExportProps) {
                     </div>
                   </div>
                   <div className="language-summary">
-                    <div>
+                    {/* <div>
                       {keySummary.withMissingVariantsPerLanguage[languageOption.value as Locale]
                         ?.size ?? 0}{' '}
                       Missing Translations
-                    </div>
+                    </div> */}
                   </div>
                   <div className="language-export-action">
                     <button

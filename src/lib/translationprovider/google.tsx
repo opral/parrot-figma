@@ -12,13 +12,6 @@ export default class GoogleTranslator {
       return text;
     }
 
-    // TODO #29 fix this before we release - TEST
-    (async () => {
-      await Monitoring.instance?.mixpanel_people_increment(`characters_translated_from_${sourceLanguage}`, text.length);
-      await Monitoring.instance?.mixpanel_people_increment(`characters_translated_to_${targetLanguage}`, text.length);
-      await Monitoring.instance?.mixpanel_people_increment('characters_translated_total', text.length);
-    })();
-
     // replace placeholder with numbers to not translate them
 
     const pattern = /(<ph( type="([^"]*)"=)?( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*))<\/ph>)/g;

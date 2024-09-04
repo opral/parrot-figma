@@ -13,7 +13,7 @@ export class VirtualTreeNode {
   constructor(baseNode: BaseNode, nodeId: string) {
     this.id = nodeId;
     this.type = baseNode.type;
-    this.cacheRelevant = baseNode.type === 'TEXT';
+    this.cacheRelevant = this.type === 'TEXT';
     this.parent = null;
     this.children = [];
   }

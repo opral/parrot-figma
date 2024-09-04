@@ -15,7 +15,7 @@ export default class FigmaHelper {
   }
 
   async toggleKeyFrame(frameNodeId: string) {
-    const frame = figma.getNodeById(frameNodeId);
+    const frame = await figma.getNodeByIdAsync(frameNodeId);
     if (!frame) {
       return;
     }

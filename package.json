@@ -16,7 +16,7 @@
   "author": "Martin Lysk",
   "license": "",
   "devDependencies": {
-    "@figma/plugin-typings": "1.75.0",
+    "@figma/plugin-typings": "1.99.0",
     "@sentry/webpack-plugin": "^2.4.0",
     "@types/lodash": "^4.14.195",
     "@types/node": "^16.7.1",

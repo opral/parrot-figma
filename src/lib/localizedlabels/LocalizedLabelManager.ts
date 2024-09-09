@@ -472,109 +472,110 @@ export default class LocalizedLabelManager {
   }
 
   async fillUpCache() {
-    let start = Date.now();
-    const containers = [];
-    let textNodesToProcess = [] as TextNode[];
-    console.log(`fillUpCache - enter ${Date.now() - start}`);
-    await new Promise((resolve) => setTimeout(resolve, 2));
+    const start = Date.now();
+    const containers: string | any[] = [];
+    const textNodesToProcess: TextNode[] = [];
+    const keysLoaded = new Set<string>();
+    const localizedLabels = [];
 
-    const pages = figma.root.children;
-    for (const page of pages) {
-      // console.log('fillUpCache - page...' + page.name);
-      for (const pageChild of page.children) {
-        // console.log('fillUpCache - pageChilde...' + pageChild.name);
-        if (pageChild.type === 'TEXT') {
-          textNodesToProcess.push(pageChild);
-        } else if (
-          pageChild.type === 'COMPONENT' ||
-          pageChild.type === 'COMPONENT_SET' ||
-          pageChild.type === 'INSTANCE'
-        ) {
-          // we add it as container to collect
+    console.log(`fillUpCache - enter ${Date.now() - start}`);
+
+    try {
+      const pages = figma.root.children;
+
+      for (const page of pages) {
+        await this.processPage(page, containers, textNodesToProcess);
+      }
+
+      console.log(`fillUpCache - ${containers.length} containers collected, took ${Date.now() - start}ms`);
+
+      const outerStart = Date.now();
+      const skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
+      figma.skipInvisibleInstanceChildren = true;
+
+      await this.processContainers(containers, textNodesToProcess);
+
+      figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
+
+      console.log(`fillUpCache - collection of textNodes took ${Date.now() - outerStart}ms`);
+
+      const innerStart = Date.now();
+
+      await this.processTextNodes(textNodesToProcess, keysLoaded);
+
+      console.log(
+        `fillUpCache - creating localizedLabels took ${Date.now() - innerStart}ms for ${localizedLabels.length} labels`
+      );
+
+      this.postLinksLoadedMessage(keysLoaded);
+    } catch (error) {
+      console.error('fillUpCache - Error:', error);
+    }
+  }
+
+  async processPage(page: PageNode, containers: any[], textNodesToProcess: any[]) {
+    // Handle the page processing logic
+    for (const pageChild of page.children) {
+      if (pageChild.type === 'TEXT') {
+        textNodesToProcess.push(pageChild);
+      } else if (
+        pageChild.type === 'COMPONENT' ||
+        pageChild.type === 'COMPONENT_SET' ||
+        pageChild.type === 'INSTANCE'
+      ) {
+        containers.push(pageChild);
+      } else if (
+        pageChild.type === 'SECTION' ||
+        pageChild.type === 'GROUP' ||
+        pageChild.type === 'FRAME'
+      ) {
+        if (pageChild.width < this.containerSizeThreashold) {
           containers.push(pageChild);
-        } else if (
-          pageChild.type === 'SECTION' ||
-          pageChild.type === 'GROUP' ||
-          pageChild.type === 'FRAME'
-        ) {
-          if (pageChild.width < this.containerSizeThreashold) {
-            containers.push(pageChild);
-          } else {
-            for (const sectionChild of pageChild.children) {
-              // console.log('fillUpCache - sectionChild...' + sectionChild.name);
-              if (sectionChild.type === 'TEXT') {
-                textNodesToProcess.push(sectionChild);
-              } else if (
-                sectionChild.type === 'COMPONENT' ||
-                sectionChild.type === 'COMPONENT_SET' ||
-                sectionChild.type === 'FRAME' ||
-                sectionChild.type === 'GROUP' ||
-                sectionChild.type === 'SECTION' ||
-                sectionChild.type === 'INSTANCE'
-              ) {
-                // we add it as container to collect
-                containers.push(sectionChild);
-              }
-            }
-          }
+        } else {
+          await this.processSectionChildren(pageChild, containers, textNodesToProcess);
         }
       }
     }
+  }
 
-    console.log(`fillUpCache - containers ${containers.length} collected ${Date.now() - start}`);
-    await new Promise((resolve) => setTimeout(resolve, 2));
+  async processSectionChildren(section: FrameNode | GroupNode | SectionNode, containers: any[], textNodesToProcess: TextNode[]) {
+    for (const sectionChild of section.children) {
+      if (sectionChild.type === 'TEXT') {
+        textNodesToProcess.push(sectionChild);
+      } else if (
+        sectionChild.type === 'COMPONENT' ||
+        sectionChild.type === 'COMPONENT_SET' ||
+        sectionChild.type === 'FRAME' ||
+        sectionChild.type === 'GROUP' ||
+        sectionChild.type === 'SECTION' ||
+        sectionChild.type === 'INSTANCE'
+      ) {
+        // we add it as container to collect
+        containers.push(sectionChild);
+      }
+      await new Promise((resolve) => { setTimeout(resolve, 0); });
+    }
+  }
+
+  async processContainers(containers: any[], textNodesToProcess: TextNode[]) {
     let lastInterception = Date.now();
 
-    const outerStart = Date.now();
-
-    const skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
-    figma.skipInvisibleInstanceChildren = true;
-    // collect missing textNodesToProcess
     for (const container of containers) {
-      start = Date.now();
-      // find all textNodes in the container
-
-      // const foundtextNodes = container.findAllWithCriteria({ types: ['TEXT'] });
-      const foundtextNodes = container.findAll().filter((node) => node.type === 'TEXT');
-
-      if (foundtextNodes.filter((node) => node.id.indexOf(';') !== -1).length > 0) {
-        // debugger;
-      }
-      textNodesToProcess = textNodesToProcess.concat(foundtextNodes as TextNode[]);
+      const foundTextNodes = container.findAll().filter((node: { type: string; }) => node.type === 'TEXT');
+      textNodesToProcess.push(...foundTextNodes as TextNode[]);
 
       const blockedExecutionTime = Date.now() - lastInterception;
       if (blockedExecutionTime > 30) {
-        // console.log(`fillUpCache - ${container.name} textNodes ${foundtextNodes.length} collected ${Date.now() - start}`);
-        // console.log(`fillUpCache - break because of blockage of ${blockedExecutionTime}`);
+        // console.log(`fillUpCache - ${container.name} textNodes ${foundTextNodes.length} collected, took ${blockedExecutionTime}ms`);
         lastInterception = Date.now();
-        // eslint-disable-next-line no-promise-executor-return
-        // await new Promise((resolve) => setTimeout(resolve, 2));
+
+        await new Promise((resolve) => { setTimeout(resolve, 0); });
       }
     }
-    figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
+  }
 
-    console.log(`fillUpCache - collection of textNodes took ${Date.now() - outerStart}`);
-    const localizedLabels = [];
-    await new Promise((resolve) => setTimeout(resolve, 1));
-    const innerStart = Date.now();
-
-    const keysLoaded = new Set<string>();
-
+  async processTextNodes(textNodesToProcess: TextNode[], keysLoaded: Set<string>) {
     for (const textNode of textNodesToProcess) {
-      // const textAbsoluteBoundingBox = textNode.absoluteBoundingBox;
-      // if (this.firstTextnodeInViewport === undefined && textAbsoluteBoundingBox) {
-      //   if (
-      //     textAbsoluteBoundingBox.x > figmaBoundingBox.x &&
-      //     textAbsoluteBoundingBox.x < figmaBoundingBox.x + figmaBoundingBox.width &&
-      //     textAbsoluteBoundingBox.y > figmaBoundingBox.y &&
-      //     textAbsoluteBoundingBox.y < figmaBoundingBox.y + figmaBoundingBox.height
-      //   ) {
-      //     this.firstTextnodeInViewport = textNode.id;
-      //     if (figma.currentPage.selection.length === 0) {
-      //       figma.currentPage.selection = [textNode];
-      //     }
-      //   }
-      // }
       const textNodeId = textNode.id;
       this.virtualTree.addNode(textNode, textNodeId);
 
@@ -587,22 +588,19 @@ export default class LocalizedLabelManager {
         }
         keysLoaded.add(messageId);
       }
+
+      // Optional delay to prevent blocking
+      await new Promise((resolve) => { setTimeout(resolve, 0); });
     }
+  }
 
-    console.log(
-      `fillUpCache - creating localizedLabels took ${Date.now() - innerStart}ms for ${
-        localizedLabels.length
-      } labels`,
-    );
-
+  postLinksLoadedMessage(keysLoaded: Set<string>) {
     const message = {
       target: 'LocalizedLabelManager',
       type: 'linksLoaded',
       keys: [...keysLoaded],
     } as LinksLoadedEvent;
 
-    // console.log(JSON.stringify(event));
-    // console.log(message);
     figma.ui.postMessage(message);
   }
 

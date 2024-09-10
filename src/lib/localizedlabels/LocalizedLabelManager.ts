@@ -398,9 +398,9 @@ export default class LocalizedLabelManager {
               // console.log(`Node changed - ${change.id} name in vt affacted: ${JSON.stringify(changedVirtualNodes.length)}`);
             }
             // eslint-disable-next-line @typescript-eslint/no-loop-func
-            changedVirtualNodes.forEach(async (changedVNode) => {
+            changedVirtualNodes.forEach((changedVNode) => {
               if (changedVNode.cacheRelevant) {
-                const movedFigmaNode = await figma.getNodeByIdAsync(changedVNode.id);
+                const movedFigmaNode = figma.getNodeById(changedVNode.id);
                 if (movedFigmaNode && movedFigmaNode.type === 'TEXT') {
                   const localizedLabel = this.toLocalizedLabelOrUndefined(
                     movedFigmaNode as TextNode,
@@ -634,12 +634,12 @@ export default class LocalizedLabelManager {
           // eslint-disable-next-line @typescript-eslint/no-loop-func
           this.virtualTree
             .getAllNodesInBranchByRootId(virtualSelectedNode.id)
-            .forEach(async (virtualNode) => {
+            .forEach((virtualNode) => {
               if (virtualNode.type === 'TEXT' && selectionEnhanced[virtualNode.id] === undefined) {
-                const node = await figma.getNodeByIdAsync(virtualNode.id) as TextNode;
+                const node = figma.getNodeById(virtualNode.id) as TextNode;
                 if (node) {
                   const textNode = this.toLocalizedLabelOrUndefined(
-                    await figma.getNodeByIdAsync(virtualNode.id) as TextNode,
+                    figma.getNodeById(virtualNode.id) as TextNode,
                   );
                   selectionEnhanced[virtualNode.id] = {
                     directSelection: false,
@@ -692,7 +692,7 @@ export default class LocalizedLabelManager {
   }
 
   async getById(textNodeId: string) {
-    const textNode = await figma.getNodeByIdAsync(textNodeId) as TextNode;
+    const textNode = figma.getNodeById(textNodeId) as TextNode;
     const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode);
     if (lokalizedLabel) {
       if (!this.virtualTree.hasNode(textNode.id)) {
@@ -749,7 +749,7 @@ export default class LocalizedLabelManager {
     name: string;
     localizedLabelsInFrame: LocalizedLabel[];
   }> {
-    const frame = await figma.getNodeByIdAsync(frameId) as FrameNode;
+    const frame = figma.getNodeById(frameId) as FrameNode;
     return this.getFrame(frame);
   }
 
@@ -803,7 +803,7 @@ export default class LocalizedLabelManager {
     frameNodeId: string,
     properties: { language?: Locale; sampleValues?: boolean },
   ) {
-    const frame = await figma.getNodeByIdAsync(frameNodeId) as FrameNode;
+    const frame = figma.getNodeById(frameNodeId) as FrameNode;
     if (!frame) {
       return;
     }
@@ -856,7 +856,7 @@ export default class LocalizedLabelManager {
       this.labelUpdateQueue[nodeId] = [];
     }
 
-    const textNode = await figma.getNodeByIdAsync(nodeId)! as TextNode;
+    const textNode = figma.getNodeById(nodeId)! as TextNode;
     try {
       if (changedProperties.labelName !== undefined) {
         // console.log('setting name');
@@ -1149,7 +1149,7 @@ export default class LocalizedLabelManager {
   }
 
   async fixLabelLints(textNodeId: string, lintsToFix: string[]) {
-    const textNode = await figma.getNodeByIdAsync(textNodeId)! as TextNode;
+    const textNode = figma.getNodeById(textNodeId)! as TextNode;
     await this.loadFontsForTextNodes([textNode]);
     const linter = new TextNodeLinter();
     linter.fix(textNode, lintsToFix);

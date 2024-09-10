@@ -10,10 +10,23 @@ export class VirtualTreeNode {
 
   public cacheRelevant: boolean;
 
+  public messageId: string | null;
+
   constructor(baseNode: BaseNode, nodeId: string) {
     this.id = nodeId;
     this.type = baseNode.type;
     this.cacheRelevant = this.type === 'TEXT';
+    if (this.type === 'TEXT') {
+      const pluginDataKeys = baseNode.getPluginDataKeys();
+      const key = pluginDataKeys.find((k) => k.includes('__'));
+      if (key) {
+        [, this.messageId] = key.split('__');
+      } else {
+        this.messageId = null;
+      }
+    } else {
+      this.messageId = null;
+    }
     this.parent = null;
     this.children = [];
   }

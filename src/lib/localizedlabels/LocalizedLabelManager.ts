@@ -706,29 +706,20 @@ export default class LocalizedLabelManager {
     const labels = [] as LocalizedLabel[];
     const foundNodes = [] as VirtualTreeNode[];
 
-    // Plugin data key to search for
-    const pluginDataKey = `${this.messageNamePrefixKey}_${messageId}`;
-
     // Define the callback function for the traversal
     const findNodesWithMessage = (node: VirtualTreeNode) => {
-      const figmaNode = figma.getNodeById(node.id);
-
-      // Ensure the node exists and is of type 'TEXT'
-      if (figmaNode && figmaNode.type === 'TEXT') {
-        const textNode = figmaNode as TextNode;
-
-        // Check if the node has the relevant plugin data
-        if (textNode.getPluginData(pluginDataKey)) {
-          foundNodes.push(node);
-        }
+      if (node.cacheRelevant && node.messageId === messageId) {
+        foundNodes.push(node);
       }
     };
-    const start = Date.now();
+    // const start = Date.now();
+
     // Start traversal from the root node (assuming it's in the virtual tree)
     this.virtualTree.traverseNode(figma.root.id, findNodesWithMessage);
-    const stop = Date.now();
-    console.log(`traversal took ${stop - start}ms`);
-    console.log({ foundNodes });
+    // const stop = Date.now();
+    // console.log(`traversal took ${stop - start}ms`);
+    // console.log({ foundNodes });
+
     // Process found nodes to create LocalizedLabels
     for (const virtualNode of foundNodes) {
       const figmaNode = figma.getNodeById(virtualNode.id) as TextNode;

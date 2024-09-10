@@ -704,19 +704,41 @@ export default class LocalizedLabelManager {
 
   async getWithMessage(messageId: string) {
     const labels = [] as LocalizedLabel[];
-    const linkedNodes = figma.root.findAllWithCriteria({
-      pluginData: {
-        keys: [`${this.messageNamePrefixKey}_${messageId}`],
-      },
-    });
+    const foundNodes = [] as VirtualTreeNode[];
 
-    for (const textNode of linkedNodes) {
-      const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode as TextNode);
-      if (lokalizedLabel) {
-        if (!this.virtualTree.hasNode(textNode.id)) {
-          this.virtualTree.addNode(textNode, textNode.id);
+    // Plugin data key to search for
+    const pluginDataKey = `${this.messageNamePrefixKey}_${messageId}`;
+
+    // Define the callback function for the traversal
+    const findNodesWithMessage = (node: VirtualTreeNode) => {
+      const figmaNode = figma.getNodeById(node.id);
+
+      // Ensure the node exists and is of type 'TEXT'
+      if (figmaNode && figmaNode.type === 'TEXT') {
+        const textNode = figmaNode as TextNode;
+
+        // Check if the node has the relevant plugin data
+        if (textNode.getPluginData(pluginDataKey)) {
+          foundNodes.push(node);
         }
-        labels.push(lokalizedLabel);
+      }
+    };
+    const start = Date.now();
+    // Start traversal from the root node (assuming it's in the virtual tree)
+    this.virtualTree.traverseNode(figma.root.id, findNodesWithMessage);
+    const stop = Date.now();
+    console.log(`traversal took ${stop - start}ms`);
+    console.log({ foundNodes });
+    // Process found nodes to create LocalizedLabels
+    for (const virtualNode of foundNodes) {
+      const figmaNode = figma.getNodeById(virtualNode.id) as TextNode;
+      const localizedLabel = this.toLocalizedLabelOrUndefined(figmaNode);
+
+      if (localizedLabel) {
+        if (!this.virtualTree.hasNode(figmaNode.id)) {
+          this.virtualTree.addNode(figmaNode, figmaNode.id);
+        }
+        labels.push(localizedLabel);
       }
     }
     return labels;

@@ -133,4 +133,33 @@ export default class VirtualTree {
     // console.log(`VirtualTree: found nodesInBranch ${nodesInBranch.length}`);
     return nodesInBranch;
   }
+
+  // Recursive node traversal function
+  public traverseNode(nodeId: string, callback: (node: VirtualTreeNode) => void) {
+    const node = this.lookupTable.get(nodeId);
+
+    if (!node) {
+      console.warn(`Node with ID ${nodeId} not found in the tree.`);
+      return;
+    }
+
+    // Optimized traversal function
+    const traverseFast = (currentNode: VirtualTreeNode) => {
+      // Perform the operation on the current node
+      callback(currentNode);
+
+      const { children } = currentNode;
+      if (!children || children.length === 0) {
+        return;
+      }
+
+      // Iterate over children with a for loop
+      for (let i = 0; i < children.length; i += 1) {
+        traverseFast(children[i]);
+      }
+    };
+
+    // Start traversal from the node
+    traverseFast(node);
+  }
 }

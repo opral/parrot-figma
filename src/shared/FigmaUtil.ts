@@ -109,7 +109,7 @@ export default class FigmaUtil {
   }
 
   async getImageFromFrame(nodeId: string, settings: ExportSettings) {
-    const node = await figma.getNodeByIdAsync(nodeId) as TextNode;
+    const node = figma.getNodeById(nodeId) as TextNode;
     const imageAsUint8Array = await node.exportAsync(settings);
     return imageAsUint8Array;
   }
@@ -279,7 +279,7 @@ export default class FigmaUtil {
   }
 
   async ensureZoomLevelShowsNode(nodeId: string) {
-    const nodeToScrollAndZoomIntoView = await figma.getNodeByIdAsync(nodeId) as SceneNode;
+    const nodeToScrollAndZoomIntoView = figma.getNodeById(nodeId) as SceneNode;
 
     const viewportRect = figma.viewport.bounds;
     const virtualViewportRect = { ...viewportRect };
@@ -311,7 +311,7 @@ export default class FigmaUtil {
     await this.ensureZoomLevelShowsNode(nodeId);
 
     // console.log('scrollIntoViewIfNeeded');
-    const nodeToScrollAndZoomIntoView = await figma.getNodeByIdAsync(nodeId) as SceneNode;
+    const nodeToScrollAndZoomIntoView = figma.getNodeById(nodeId) as SceneNode;
     const nodeRect = nodeToScrollAndZoomIntoView.absoluteBoundingBox!;
 
     const nodeCenterX = nodeRect.x + nodeRect.width / 2;
@@ -382,7 +382,7 @@ export default class FigmaUtil {
     const nodesToSelect = [] as SceneNode[];
 
     for (const nodeId of nodeIds) {
-      const node = await figma.getNodeByIdAsync(nodeId) as SceneNode;
+      const node = figma.getNodeById(nodeId) as SceneNode;
       if (!node) {
         console.log(`WARNING: node with id ${nodeId} not found in select nodes`);
         continue;
@@ -399,7 +399,7 @@ export default class FigmaUtil {
     const nodesToSelect = [] as SceneNode[];
 
     for (const nodeId of nodeIds) {
-      const node = await figma.getNodeByIdAsync(nodeId) as SceneNode;
+      const node = figma.getNodeById(nodeId) as SceneNode;
       if (!node) {
         console.log(`WARNING: node with id ${nodeId} not found in select nodes`);
         continue;
@@ -413,10 +413,9 @@ export default class FigmaUtil {
   }
 
   async loadFontsForNodesWithId(textNodeIds: string[]) {
-    const textNodes = await Promise.all(
-      textNodeIds.map(async (textNodeId) => await figma.getNodeByIdAsync(textNodeId) as TextNode),
+    await this.loadFontForTextNodes(
+      textNodeIds.map((textNodeId) => figma.getNodeById(textNodeId)! as TextNode),
     );
-    await this.loadFontForTextNodes(textNodes);
   }
 
   private async loadFontForTextNodes(textNodes: TextNode[]) {

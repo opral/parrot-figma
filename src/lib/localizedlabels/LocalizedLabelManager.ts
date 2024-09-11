@@ -473,39 +473,26 @@ export default class LocalizedLabelManager {
 
   async fillUpCache() {
     const start = Date.now();
-    const containers: string | any[] = [];
-    const textNodesToProcess: TextNode[] = [];
     const keysLoaded = new Set<string>();
-    const localizedLabels = [];
 
     console.log(`fillUpCache - enter ${Date.now() - start}`);
 
     try {
-      const pages = figma.root.children;
+      // Start by processing the current page first
+      const { currentPage } = figma;
+      await this.processNodeRecursively(currentPage, keysLoaded);
 
-      for (const page of pages) {
-        await this.processPage(page, containers, textNodesToProcess);
+      console.log(`fillUpCache - Current page processed, took ${Date.now() - start}ms`);
+
+      // Now process the other pages
+      const otherPages = figma.root.children.filter(page => page.id !== currentPage.id);
+      for (const page of otherPages) {
+        const startPage = Date.now();
+        await this.processNodeRecursively(page, keysLoaded);
+        const endPage = Date.now();
+        console.log(`fillUpCache - Page ${page.name} processed, took ${endPage - startPage}ms`);
       }
-
-      console.log(`fillUpCache - ${containers.length} containers collected, took ${Date.now() - start}ms`);
-
-      const outerStart = Date.now();
-      const skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
-      figma.skipInvisibleInstanceChildren = true;
-
-      await this.processContainers(containers, textNodesToProcess);
-
-      figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
-
-      console.log(`fillUpCache - collection of textNodes took ${Date.now() - outerStart}ms`);
-
-      const innerStart = Date.now();
-
-      await this.processTextNodes(textNodesToProcess, keysLoaded);
-
-      console.log(
-        `fillUpCache - creating localizedLabels took ${Date.now() - innerStart}ms for ${localizedLabels.length} labels`
-      );
+      console.log(`fillUpCache - All pages processed, took ${Date.now() - start}ms`);
 
       this.postLinksLoadedMessage(keysLoaded);
     } catch (error) {
@@ -513,85 +500,45 @@ export default class LocalizedLabelManager {
     }
   }
 
-  async processPage(page: PageNode, containers: any[], textNodesToProcess: any[]) {
-    // Handle the page processing logic
-    for (const pageChild of page.children) {
-      if (pageChild.type === 'TEXT') {
-        textNodesToProcess.push(pageChild);
-      } else if (
-        pageChild.type === 'COMPONENT' ||
-        pageChild.type === 'COMPONENT_SET' ||
-        pageChild.type === 'INSTANCE'
-      ) {
-        containers.push(pageChild);
-      } else if (
-        pageChild.type === 'SECTION' ||
-        pageChild.type === 'GROUP' ||
-        pageChild.type === 'FRAME'
-      ) {
-        if (pageChild.width < this.containerSizeThreashold) {
-          containers.push(pageChild);
-        } else {
-          await this.processSectionChildren(pageChild, containers, textNodesToProcess);
-        }
+  async processNodeRecursively(node: BaseNode, keysLoaded: Set<string>) {
+    // Process if the node is a Page
+    const nodeType = node.type;
+    if (nodeType === 'PAGE') {
+      for (const child of (node as PageNode).children) {
+        await this.processNodeRecursively(child, keysLoaded);
+      }
+    } else if (nodeType === 'TEXT') {
+      await this.processTextNode(node as TextNode, keysLoaded);
+    } else if (
+      nodeType === 'COMPONENT'
+      || nodeType === 'COMPONENT_SET'
+      || nodeType === 'INSTANCE'
+      || nodeType === 'FRAME'
+      || nodeType === 'GROUP'
+      || nodeType === 'SECTION'
+    ) {
+      for (const child of node.children) {
+        await this.processNodeRecursively(child, keysLoaded);
       }
     }
   }
 
-  async processSectionChildren(section: FrameNode | GroupNode | SectionNode, containers: any[], textNodesToProcess: TextNode[]) {
-    for (const sectionChild of section.children) {
-      if (sectionChild.type === 'TEXT') {
-        textNodesToProcess.push(sectionChild);
-      } else if (
-        sectionChild.type === 'COMPONENT' ||
-        sectionChild.type === 'COMPONENT_SET' ||
-        sectionChild.type === 'FRAME' ||
-        sectionChild.type === 'GROUP' ||
-        sectionChild.type === 'SECTION' ||
-        sectionChild.type === 'INSTANCE'
-      ) {
-        // we add it as container to collect
-        containers.push(sectionChild);
+  async processTextNode(textNode: TextNode, keysLoaded: Set<string>) {
+    const textNodeId = textNode.id;
+    this.virtualTree.addNode(textNode, textNodeId);
+
+    const messageId = textNode.getPluginData(this.messageNameDataKey);
+    if (messageId) {
+      const previousMessage = this.refreshLabelMessageLinkCache(textNodeId, messageId);
+      if (previousMessage) {
+        keysLoaded.add(previousMessage);
+        this.virtualTree.addNode(textNode, textNodeId);
       }
-      await new Promise((resolve) => { setTimeout(resolve, 0); });
+      keysLoaded.add(messageId);
     }
-  }
 
-  async processContainers(containers: any[], textNodesToProcess: TextNode[]) {
-    let lastInterception = Date.now();
-
-    for (const container of containers) {
-      const foundTextNodes = container.findAll().filter((node: { type: string; }) => node.type === 'TEXT');
-      textNodesToProcess.push(...foundTextNodes as TextNode[]);
-
-      const blockedExecutionTime = Date.now() - lastInterception;
-      if (blockedExecutionTime > 30) {
-        // console.log(`fillUpCache - ${container.name} textNodes ${foundTextNodes.length} collected, took ${blockedExecutionTime}ms`);
-        lastInterception = Date.now();
-
-        await new Promise((resolve) => { setTimeout(resolve, 0); });
-      }
-    }
-  }
-
-  async processTextNodes(textNodesToProcess: TextNode[], keysLoaded: Set<string>) {
-    for (const textNode of textNodesToProcess) {
-      const textNodeId = textNode.id;
-      this.virtualTree.addNode(textNode, textNodeId);
-
-      const messageId = textNode.getPluginData(this.messageNameDataKey);
-      if (messageId) {
-        const previousMessage = this.refreshLabelMessageLinkCache(textNodeId, messageId);
-        if (previousMessage) {
-          keysLoaded.add(previousMessage);
-          this.virtualTree.addNode(textNode, textNodeId);
-        }
-        keysLoaded.add(messageId);
-      }
-
-      // Optional delay to prevent blocking
-      await new Promise((resolve) => { setTimeout(resolve, 0); });
-    }
+    // Optional delay to prevent blocking
+    await new Promise((resolve) => { setTimeout(resolve, 0); });
   }
 
   postLinksLoadedMessage(keysLoaded: Set<string>) {

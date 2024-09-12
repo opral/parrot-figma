@@ -471,28 +471,38 @@ export default class LocalizedLabelManager {
     this.fillUpCache().catch((e) => console.log(e));
   }
 
+  private nodeCount = 0;
+
   async fillUpCache() {
     const start = Date.now();
     const keysLoaded = new Set<string>();
+    let totalNodesProcessed = 0;
 
     console.log(`fillUpCache - enter ${Date.now() - start}`);
 
     try {
       // Start by processing the current page first
       const { currentPage } = figma;
-      await this.processNodeRecursively(currentPage, keysLoaded);
+      const currentPageExport = await currentPage.exportAsync({ format: 'JSON_REST_V1' });
+      const { nodesProcessed: nodesProcessedInCurrentPage, maxDepth: maxDepthInCurrentPage } = await this.processNodeRecursively((currentPageExport as any).document, keysLoaded, 0);
+      totalNodesProcessed += nodesProcessedInCurrentPage;
 
-      console.log(`fillUpCache - Current page processed, took ${Date.now() - start}ms`);
+      console.log(`fillUpCache - Current page processed, processed ${nodesProcessedInCurrentPage} nodes, max depth ${maxDepthInCurrentPage}, took ${Date.now() - start}ms`);
 
       // Now process the other pages
       const otherPages = figma.root.children.filter(page => page.id !== currentPage.id);
       for (const page of otherPages) {
+        const pageExport = await page.exportAsync({ format: 'JSON_REST_V1' });
         const startPage = Date.now();
-        await this.processNodeRecursively(page, keysLoaded);
+        const { nodesProcessed: nodesProcessedInPage, maxDepth: maxDepthInPage } = await this.processNodeRecursively((pageExport as any).document, keysLoaded, 0);
+        totalNodesProcessed += nodesProcessedInPage;
         const endPage = Date.now();
-        console.log(`fillUpCache - Page ${page.name} processed, took ${endPage - startPage}ms`);
+        console.log(`fillUpCache - Page ${page.name} processed, processed ${nodesProcessedInPage} nodes, max depth ${maxDepthInPage}, took ${endPage - startPage}ms`);
+
+        // Optional delay to prevent blocking
+        await new Promise((resolve) => { setTimeout(resolve, 0); });
       }
-      console.log(`fillUpCache - All pages processed, took ${Date.now() - start}ms`);
+      console.log(`fillUpCache - All pages processed, total nodes processed: ${totalNodesProcessed}, total time: ${Date.now() - start}ms`);
 
       this.postLinksLoadedMessage(keysLoaded);
     } catch (error) {
@@ -500,15 +510,20 @@ export default class LocalizedLabelManager {
     }
   }
 
-  async processNodeRecursively(node: BaseNode, keysLoaded: Set<string>) {
+  async processNodeRecursively(node: BaseNode, keysLoaded: Set<string>, depth: number): Promise<{ nodesProcessed: number, maxDepth: number }> {
+    let nodesProcessed = 0;
+    let maxDepth = depth;
     // Process if the node is a Page
     const nodeType = node.type;
     if (nodeType === 'PAGE') {
       for (const child of (node as PageNode).children) {
-        await this.processNodeRecursively(child, keysLoaded);
+        const result = await this.processNodeRecursively(child, keysLoaded, depth + 1);
+        nodesProcessed += result.nodesProcessed;
+        maxDepth = Math.max(maxDepth, result.maxDepth);
       }
     } else if (nodeType === 'TEXT') {
       await this.processTextNode(node as TextNode, keysLoaded);
+      nodesProcessed += 1;
     } else if (
       nodeType === 'COMPONENT'
       || nodeType === 'COMPONENT_SET'
@@ -516,15 +531,26 @@ export default class LocalizedLabelManager {
       || nodeType === 'FRAME'
       || nodeType === 'GROUP'
       || nodeType === 'SECTION'
+      || nodeType === 'CANVAS'
     ) {
       for (const child of node.children) {
-        await this.processNodeRecursively(child, keysLoaded);
+        const result = await this.processNodeRecursively(child, keysLoaded, depth + 1);
+        nodesProcessed += result.nodesProcessed;
+        maxDepth = Math.max(maxDepth, result.maxDepth);
       }
     }
+    return { nodesProcessed, maxDepth };
   }
 
   async processTextNode(textNode: TextNode, keysLoaded: Set<string>) {
     const textNodeId = textNode.id;
+    // eslint-disable-next-line no-param-reassign
+    textNode.getPluginData = (key: string) => {
+      if (!textNode._cachedNode) {
+        textNode._cachedNode = figma.getNodeById(textNodeId);
+      }
+      return textNode._cachedNode.getPluginData(key) as any;
+    };
     this.virtualTree.addNode(textNode, textNodeId);
 
     const messageId = textNode.getPluginData(this.messageNameDataKey);
@@ -537,8 +563,11 @@ export default class LocalizedLabelManager {
       keysLoaded.add(messageId);
     }
 
-    // Optional delay to prevent blocking
-    await new Promise((resolve) => { setTimeout(resolve, 0); });
+    if (this.nodeCount % 300 === 0) {
+      // Optional delay to prevent blocking
+      await new Promise((resolve) => { setTimeout(resolve, 0); });
+    }
+    this.nodeCount += 1;
   }
 
   postLinksLoadedMessage(keysLoaded: Set<string>) {

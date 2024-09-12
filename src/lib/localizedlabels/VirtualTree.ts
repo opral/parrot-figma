@@ -147,7 +147,7 @@ export default class VirtualTree {
     }
 
     // Optimized traversal function
-    const traverseFast = (currentNode: VirtualTreeNode) => {
+    const traverse = (currentNode: VirtualTreeNode) => {
       // Perform the operation on the current node
       callback(currentNode);
 
@@ -158,11 +158,11 @@ export default class VirtualTree {
 
       // Iterate over children with a for loop
       for (let i = 0; i < children.length; i += 1) {
-        traverseFast(children[i]);
+        traverse(children[i]);
       }
     };
 
     // Start traversal from the node
-    traverseFast(node);
+    traverse(node);
   }
 }

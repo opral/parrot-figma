@@ -478,29 +478,21 @@ export default class LocalizedLabelManager {
     const keysLoaded = new Set<string>();
     let totalNodesProcessed = 0;
 
-    console.log(`fillUpCache - enter ${Date.now() - start}`);
-
     try {
       // Start by processing the current page first
       const { currentPage } = figma;
-      const currentPageExport = await currentPage.exportAsync({ format: 'JSON_REST_V1' });
-      const { nodesProcessed: nodesProcessedInCurrentPage, maxDepth: maxDepthInCurrentPage } = await this.processNodeRecursively((currentPageExport as any).document, keysLoaded, 0);
+      const { nodesProcessed: nodesProcessedInCurrentPage, maxDepth: maxDepthInCurrentPage } = await this.processNodeRecursively(currentPage, keysLoaded, 0);
       totalNodesProcessed += nodesProcessedInCurrentPage;
-
       console.log(`fillUpCache - Current page processed, processed ${nodesProcessedInCurrentPage} nodes, max depth ${maxDepthInCurrentPage}, took ${Date.now() - start}ms`);
 
       // Now process the other pages
       const otherPages = figma.root.children.filter(page => page.id !== currentPage.id);
       for (const page of otherPages) {
-        const pageExport = await page.exportAsync({ format: 'JSON_REST_V1' });
         const startPage = Date.now();
-        const { nodesProcessed: nodesProcessedInPage, maxDepth: maxDepthInPage } = await this.processNodeRecursively((pageExport as any).document, keysLoaded, 0);
+        const { nodesProcessed: nodesProcessedInPage, maxDepth: maxDepthInPage } = await this.processNodeRecursively(page, keysLoaded, 0);
         totalNodesProcessed += nodesProcessedInPage;
         const endPage = Date.now();
         console.log(`fillUpCache - Page ${page.name} processed, processed ${nodesProcessedInPage} nodes, max depth ${maxDepthInPage}, took ${endPage - startPage}ms`);
-
-        // Optional delay to prevent blocking
-        await new Promise((resolve) => { setTimeout(resolve, 0); });
       }
       console.log(`fillUpCache - All pages processed, total nodes processed: ${totalNodesProcessed}, total time: ${Date.now() - start}ms`);
 
@@ -517,9 +509,12 @@ export default class LocalizedLabelManager {
     const nodeType = node.type;
     if (nodeType === 'PAGE') {
       for (const child of (node as PageNode).children) {
-        const result = await this.processNodeRecursively(child, keysLoaded, depth + 1);
+        const exportChild = await child.exportAsync({ format: 'JSON_REST_V1' });
+        const result = await this.processNodeRecursively((exportChild as any).document, keysLoaded, depth + 1);
         nodesProcessed += result.nodesProcessed;
         maxDepth = Math.max(maxDepth, result.maxDepth);
+        // Optional delay to prevent blocking
+        await new Promise((resolve) => { setTimeout(resolve, 0); });
       }
     } else if (nodeType === 'TEXT') {
       await this.processTextNode(node as TextNode, keysLoaded);
@@ -688,13 +683,10 @@ export default class LocalizedLabelManager {
         foundNodes.push(node);
       }
     };
-    // const start = Date.now();
 
-    // Start traversal from the root node (assuming it's in the virtual tree)
+    // Start traversal from the root node
     this.virtualTree.traverseNode(figma.root.id, findNodesWithMessage);
-    // const stop = Date.now();
-    // console.log(`traversal took ${stop - start}ms`);
-    // console.log({ foundNodes });
+    console.log({ foundNodes });
 
     // Process found nodes to create LocalizedLabels
     for (const virtualNode of foundNodes) {

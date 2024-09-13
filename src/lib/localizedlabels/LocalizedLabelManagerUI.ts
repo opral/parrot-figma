@@ -388,7 +388,7 @@ export default class LocalizedLabelManagerUI
       );
     }
 
-    console.log('started');
+    // console.log('started');
     await Promise.all(updatePromises).then(() => console.log('finished'));
   }
 

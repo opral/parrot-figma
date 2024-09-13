@@ -37,7 +37,7 @@ export default class VirtualTree {
     return this.lookupTable.get(id);
   }
 
-  public addNode(node: BaseNode, nodeId: string): VirtualTreeNode {
+  public addNode(node: BaseNode, nodeId: string, parentNode?: BaseNode): VirtualTreeNode {
     let virtualNode = this.getVirtualNode(nodeId);
     if (virtualNode) {
       return virtualNode;
@@ -46,8 +46,7 @@ export default class VirtualTree {
     virtualNode = new VirtualTreeNode(node, nodeId);
     this.lookupTable.set(virtualNode.id, virtualNode);
 
-    const { parent } = node;
-
+    const parent = parentNode !== undefined ? parentNode : node.parent;
     const parentId = parent?.id;
     let virtualParent = parentId ? this.lookupTable.get(parentId) : undefined;
 

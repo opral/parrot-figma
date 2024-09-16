@@ -128,6 +128,12 @@ export default class LocalizedLabelManager {
     this.messageStore!.messageIdToLabels[messageId].add(textNodeId);
     this.labelToMessage[textNodeId] = messageId;
 
+    // Update the messageId in the virtual tree node
+    const virtualNode = this.virtualTree.getVirtualNode(textNodeId);
+    if (virtualNode) {
+      virtualNode.messageId = messageId;
+    }
+
     if (currentKey) {
       if (currentKey !== messageId) {
         this.messageStore!.messageIdToLabels[currentKey]!.delete(textNodeId);
@@ -471,138 +477,114 @@ export default class LocalizedLabelManager {
     this.fillUpCache().catch((e) => console.log(e));
   }
 
+  private nodeCount = 0;
+
   async fillUpCache() {
-    let start = Date.now();
-    const containers = [];
-    let textNodesToProcess = [] as TextNode[];
-    console.log(`fillUpCache - enter ${Date.now() - start}`);
-    await new Promise((resolve) => setTimeout(resolve, 2));
-
-    const pages = figma.root.children;
-    for (const page of pages) {
-      // console.log('fillUpCache - page...' + page.name);
-      for (const pageChild of page.children) {
-        // console.log('fillUpCache - pageChilde...' + pageChild.name);
-        if (pageChild.type === 'TEXT') {
-          textNodesToProcess.push(pageChild);
-        } else if (
-          pageChild.type === 'COMPONENT' ||
-          pageChild.type === 'COMPONENT_SET' ||
-          pageChild.type === 'INSTANCE'
-        ) {
-          // we add it as container to collect
-          containers.push(pageChild);
-        } else if (
-          pageChild.type === 'SECTION' ||
-          pageChild.type === 'GROUP' ||
-          pageChild.type === 'FRAME'
-        ) {
-          if (pageChild.width < this.containerSizeThreashold) {
-            containers.push(pageChild);
-          } else {
-            for (const sectionChild of pageChild.children) {
-              // console.log('fillUpCache - sectionChild...' + sectionChild.name);
-              if (sectionChild.type === 'TEXT') {
-                textNodesToProcess.push(sectionChild);
-              } else if (
-                sectionChild.type === 'COMPONENT' ||
-                sectionChild.type === 'COMPONENT_SET' ||
-                sectionChild.type === 'FRAME' ||
-                sectionChild.type === 'GROUP' ||
-                sectionChild.type === 'SECTION' ||
-                sectionChild.type === 'INSTANCE'
-              ) {
-                // we add it as container to collect
-                containers.push(sectionChild);
-              }
-            }
-          }
-        }
-      }
-    }
-
-    console.log(`fillUpCache - containers ${containers.length} collected ${Date.now() - start}`);
-    await new Promise((resolve) => setTimeout(resolve, 2));
-    let lastInterception = Date.now();
-
-    const outerStart = Date.now();
-
-    const skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
-    figma.skipInvisibleInstanceChildren = true;
-    // collect missing textNodesToProcess
-    for (const container of containers) {
-      start = Date.now();
-      // find all textNodes in the container
-
-      // const foundtextNodes = container.findAllWithCriteria({ types: ['TEXT'] });
-      const foundtextNodes = container.findAll().filter((node) => node.type === 'TEXT');
-
-      if (foundtextNodes.filter((node) => node.id.indexOf(';') !== -1).length > 0) {
-        // debugger;
-      }
-      textNodesToProcess = textNodesToProcess.concat(foundtextNodes as TextNode[]);
-
-      const blockedExecutionTime = Date.now() - lastInterception;
-      if (blockedExecutionTime > 30) {
-        // console.log(`fillUpCache - ${container.name} textNodes ${foundtextNodes.length} collected ${Date.now() - start}`);
-        // console.log(`fillUpCache - break because of blockage of ${blockedExecutionTime}`);
-        lastInterception = Date.now();
-        // eslint-disable-next-line no-promise-executor-return
-        // await new Promise((resolve) => setTimeout(resolve, 2));
-      }
-    }
-    figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
-
-    console.log(`fillUpCache - collection of textNodes took ${Date.now() - outerStart}`);
-    const localizedLabels = [];
-    await new Promise((resolve) => setTimeout(resolve, 1));
-    const innerStart = Date.now();
-
+    const start = Date.now();
     const keysLoaded = new Set<string>();
+    let totalNodesProcessed = 0;
 
-    for (const textNode of textNodesToProcess) {
-      // const textAbsoluteBoundingBox = textNode.absoluteBoundingBox;
-      // if (this.firstTextnodeInViewport === undefined && textAbsoluteBoundingBox) {
-      //   if (
-      //     textAbsoluteBoundingBox.x > figmaBoundingBox.x &&
-      //     textAbsoluteBoundingBox.x < figmaBoundingBox.x + figmaBoundingBox.width &&
-      //     textAbsoluteBoundingBox.y > figmaBoundingBox.y &&
-      //     textAbsoluteBoundingBox.y < figmaBoundingBox.y + figmaBoundingBox.height
-      //   ) {
-      //     this.firstTextnodeInViewport = textNode.id;
-      //     if (figma.currentPage.selection.length === 0) {
-      //       figma.currentPage.selection = [textNode];
-      //     }
-      //   }
-      // }
-      const textNodeId = textNode.id;
-      this.virtualTree.addNode(textNode, textNodeId);
+    try {
+      // Start by processing the current page first
+      const { currentPage } = figma;
+      this.virtualTree.addNode(figma.root, figma.root.id);
+      this.virtualTree.addNode(currentPage, currentPage.id, figma.root);
+      const { nodesProcessed: nodesProcessedInCurrentPage, maxDepth: maxDepthInCurrentPage } = await this.processNodeRecursively(currentPage, figma.root, keysLoaded, 0);
+      totalNodesProcessed += nodesProcessedInCurrentPage;
+      console.log(`fillUpCache - Current page processed, processed ${nodesProcessedInCurrentPage} nodes, max depth ${maxDepthInCurrentPage}, took ${Date.now() - start}ms`);
 
-      const messageId = textNode.getPluginData(this.messageNameDataKey);
-      if (messageId) {
-        const previousMessage = this.refreshLabelMessageLinkCache(textNodeId, messageId);
-        if (previousMessage) {
-          keysLoaded.add(previousMessage);
-          this.virtualTree.addNode(textNode, textNodeId);
-        }
-        keysLoaded.add(messageId);
+      // Now process the other pages
+      const otherPages = figma.root.children.filter(page => page.id !== currentPage.id);
+      for (const page of otherPages) {
+        this.virtualTree.addNode(page, page.id);
+        const startPage = Date.now();
+        const { nodesProcessed: nodesProcessedInPage, maxDepth: maxDepthInPage } = await this.processNodeRecursively(page, figma.root, keysLoaded, 0);
+        totalNodesProcessed += nodesProcessedInPage;
+        const endPage = Date.now();
+        console.log(`fillUpCache - Page ${page.name} processed, processed ${nodesProcessedInPage} nodes, max depth ${maxDepthInPage}, took ${endPage - startPage}ms`);
+      }
+      console.log(`fillUpCache - All pages processed, total nodes processed: ${totalNodesProcessed}, total time: ${Date.now() - start}ms`);
+
+      this.postLinksLoadedMessage(keysLoaded);
+    } catch (error) {
+      console.error('fillUpCache - Error:', error);
+    }
+  }
+
+  async processNodeRecursively(node: BaseNode, parentNode: BaseNode, keysLoaded: Set<string>, depth: number): Promise<{ nodesProcessed: number, maxDepth: number }> {
+    let nodesProcessed = 0;
+    let maxDepth = depth;
+    // Process if the node is a Page
+    const nodeType = node.type;
+    if (nodeType === 'PAGE') {
+      this.virtualTree.addNode(node, node.id, parentNode);
+      for (const child of (node as PageNode).children) {
+        const exportChild = await child.exportAsync({ format: 'JSON_REST_V1' });
+        const result = await this.processNodeRecursively((exportChild as any).document, node, keysLoaded, depth + 1);
+        nodesProcessed += result.nodesProcessed;
+        maxDepth = Math.max(maxDepth, result.maxDepth);
+        // Optional delay to prevent blocking
+        await new Promise((resolve) => { setTimeout(resolve, 0); });
+      }
+    } else if (nodeType === 'TEXT') {
+      await this.processTextNode(node as TextNode, keysLoaded, parentNode);
+      nodesProcessed += 1;
+    } else if (
+      nodeType === 'COMPONENT'
+      || nodeType === 'COMPONENT_SET'
+      || nodeType === 'INSTANCE'
+      || nodeType === 'FRAME'
+      || nodeType === 'GROUP'
+      || nodeType === 'SECTION'
+      || nodeType === 'CANVAS'
+    ) {
+      this.virtualTree.addNode(node, node.id, parentNode);
+      for (const child of node.children) {
+        const result = await this.processNodeRecursively(child, node, keysLoaded, depth + 1);
+        nodesProcessed += result.nodesProcessed;
+        maxDepth = Math.max(maxDepth, result.maxDepth);
       }
     }
+    return { nodesProcessed, maxDepth };
+  }
 
-    console.log(
-      `fillUpCache - creating localizedLabels took ${Date.now() - innerStart}ms for ${
-        localizedLabels.length
-      } labels`,
-    );
+  async processTextNode(textNode: TextNode, keysLoaded: Set<string>, parentNode?: BaseNode) {
+    const textNodeId = textNode.id;
+    // eslint-disable-next-line no-param-reassign
+    textNode.getPluginData = (key: string) => {
+      if (!textNode._cachedNode) {
+        textNode._cachedNode = figma.getNodeById(textNodeId);
+      }
+      const pluginData = textNode._cachedNode.getPluginData(key)
+      // console.log("accessig key [" + key + "] via patched method:" +pluginData)
+      return pluginData as any;
+    };
+    this.virtualTree.addNode(textNode, textNodeId, parentNode);
 
+    const messageId = textNode.getPluginData(this.messageNameDataKey);
+    if (messageId) {
+      const previousMessage = this.refreshLabelMessageLinkCache(textNodeId, messageId);
+      if (previousMessage) {
+        keysLoaded.add(previousMessage);
+        this.virtualTree.addNode(textNode, textNodeId);
+      }
+      keysLoaded.add(messageId);
+    }
+
+    if (this.nodeCount % 300 === 0) {
+      // Optional delay to prevent blocking
+      await new Promise((resolve) => { setTimeout(resolve, 0); });
+    }
+    this.nodeCount += 1;
+  }
+
+  postLinksLoadedMessage(keysLoaded: Set<string>) {
     const message = {
       target: 'LocalizedLabelManager',
       type: 'linksLoaded',
       keys: [...keysLoaded],
     } as LinksLoadedEvent;
 
-    // console.log(JSON.stringify(event));
-    // console.log(message);
     figma.ui.postMessage(message);
   }
 
@@ -706,19 +688,29 @@ export default class LocalizedLabelManager {
 
   async getWithMessage(messageId: string) {
     const labels = [] as LocalizedLabel[];
-    const linkedNodes = figma.root.findAllWithCriteria({
-      pluginData: {
-        keys: [`${this.messageNamePrefixKey}_${messageId}`],
-      },
-    });
+    const foundNodes = [] as VirtualTreeNode[];
 
-    for (const textNode of linkedNodes) {
-      const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode as TextNode);
-      if (lokalizedLabel) {
-        if (!this.virtualTree.hasNode(textNode.id)) {
-          this.virtualTree.addNode(textNode, textNode.id);
+    // Define the callback function for the traversal
+    const findNodesWithMessage = (node: VirtualTreeNode) => {
+      if (node.cacheRelevant && node.messageId === messageId) {
+        foundNodes.push(node);
+      }
+    };
+
+    // Start traversal from the root node
+    this.virtualTree.traverseNode(figma.root.id, findNodesWithMessage);
+    // console.log({ foundNodes });
+
+    // Process found nodes to create LocalizedLabels
+    for (const virtualNode of foundNodes) {
+      const figmaNode = figma.getNodeById(virtualNode.id) as TextNode;
+      const localizedLabel = this.toLocalizedLabelOrUndefined(figmaNode);
+
+      if (localizedLabel) {
+        if (!this.virtualTree.hasNode(figmaNode.id)) {
+          this.virtualTree.addNode(figmaNode, figmaNode.id);
         }
-        labels.push(lokalizedLabel);
+        labels.push(localizedLabel);
       }
     }
     return labels;

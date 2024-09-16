@@ -10,10 +10,13 @@ export class VirtualTreeNode {
 
   public cacheRelevant: boolean;
 
+  public messageId: string | undefined = undefined;
+
   constructor(baseNode: BaseNode, nodeId: string) {
     this.id = nodeId;
     this.type = baseNode.type;
     this.cacheRelevant = this.type === 'TEXT';
+    if (this.type === 'TEXT' && baseNode.getPluginData('mn') !== '') this.messageId = baseNode.getPluginData('mn');
     this.parent = null;
     this.children = [];
   }
@@ -34,7 +37,7 @@ export default class VirtualTree {
     return this.lookupTable.get(id);
   }
 
-  public addNode(node: BaseNode, nodeId: string): VirtualTreeNode {
+  public addNode(node: BaseNode, nodeId: string, parentNode?: BaseNode): VirtualTreeNode {
     let virtualNode = this.getVirtualNode(nodeId);
     if (virtualNode) {
       return virtualNode;
@@ -43,8 +46,7 @@ export default class VirtualTree {
     virtualNode = new VirtualTreeNode(node, nodeId);
     this.lookupTable.set(virtualNode.id, virtualNode);
 
-    const { parent } = node;
-
+    const parent = parentNode !== undefined ? parentNode : node.parent;
     const parentId = parent?.id;
     let virtualParent = parentId ? this.lookupTable.get(parentId) : undefined;
 
@@ -132,5 +134,34 @@ export default class VirtualTree {
     }
     // console.log(`VirtualTree: found nodesInBranch ${nodesInBranch.length}`);
     return nodesInBranch;
+  }
+
+  // Recursive node traversal function
+  public traverseNode(nodeId: string, callback: (node: VirtualTreeNode) => void) {
+    const node = this.lookupTable.get(nodeId);
+
+    if (!node) {
+      console.warn(`Node with ID ${nodeId} not found in the tree.`);
+      return;
+    }
+
+    // Optimized traversal function
+    const traverse = (currentNode: VirtualTreeNode) => {
+      // Perform the operation on the current node
+      callback(currentNode);
+
+      const { children } = currentNode;
+      if (!children || children.length === 0) {
+        return;
+      }
+
+      // Iterate over children with a for loop
+      for (let i = 0; i < children.length; i += 1) {
+        traverse(children[i]);
+      }
+    };
+
+    // Start traversal from the node
+    traverse(node);
   }
 }

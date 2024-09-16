@@ -63,6 +63,10 @@ export interface DeltaOp {
   ignoreForLabelStyle?: boolean;
 }
 
+interface CachedTextNode extends TextNode {
+  _cachedNode?: TextNode;
+}
+
 export const MARKER_CHARACTER = '​';
 // export const MARKER_CHARACTER = 'X​';
 export default class LocalizedLabelManager {
@@ -536,7 +540,6 @@ export default class LocalizedLabelManager {
       || nodeType === 'FRAME'
       || nodeType === 'GROUP'
       || nodeType === 'SECTION'
-      || nodeType === 'CANVAS'
     ) {
       this.virtualTree.addNode(node, node.id, parentNode);
       for (const child of node.children) {
@@ -548,15 +551,18 @@ export default class LocalizedLabelManager {
     return { nodesProcessed, maxDepth };
   }
 
-  async processTextNode(textNode: TextNode, keysLoaded: Set<string>, parentNode?: BaseNode) {
+  async processTextNode(textNode: CachedTextNode, keysLoaded: Set<string>, parentNode?: BaseNode) {
     const textNodeId = textNode.id;
     // eslint-disable-next-line no-param-reassign
     textNode.getPluginData = (key: string) => {
+      // eslint-disable-next-line no-underscore-dangle
       if (!textNode._cachedNode) {
-        textNode._cachedNode = figma.getNodeById(textNodeId);
+        // eslint-disable-next-line no-underscore-dangle, no-param-reassign
+        textNode._cachedNode = figma.getNodeById(textNodeId) as TextNode | undefined;
       }
-      const pluginData = textNode._cachedNode.getPluginData(key)
-      // console.log("accessig key [" + key + "] via patched method:" +pluginData)
+      // eslint-disable-next-line no-underscore-dangle
+      const pluginData = textNode._cachedNode?.getPluginData(key);
+      // console.log("accessig key [" + key + "] via patched method:" +pluginData)
       return pluginData as any;
     };
     this.virtualTree.addNode(textNode, textNodeId, parentNode);

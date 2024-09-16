@@ -128,6 +128,12 @@ export default class LocalizedLabelManager {
     this.messageStore!.messageIdToLabels[messageId].add(textNodeId);
     this.labelToMessage[textNodeId] = messageId;
 
+    // Update the messageId in the virtual tree node
+    const virtualNode = this.virtualTree.getVirtualNode(textNodeId);
+    if (virtualNode) {
+      virtualNode.messageId = messageId;
+    }
+
     if (currentKey) {
       if (currentKey !== messageId) {
         this.messageStore!.messageIdToLabels[currentKey]!.delete(textNodeId);

@@ -10,7 +10,7 @@ export class VirtualTreeNode {
 
   public cacheRelevant: boolean;
 
-  public messageId: string | null = null;
+  public messageId: string | undefined = undefined;
 
   constructor(baseNode: BaseNode, nodeId: string) {
     this.id = nodeId;

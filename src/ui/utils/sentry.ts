@@ -1,5 +1,6 @@
 /* eslint-disable no-bitwise */
 import * as Sentry from '@sentry/react';
+import posthog from 'posthog-js';
 import * as pjs from '../../../package.json';
 
 // Bitwise operators are used to force conversion of  the string to a number
@@ -39,7 +40,7 @@ export const initializeSentry = () => {
         replaysSessionSampleRate: REPLAY_RATE,
         // We always want to replay errors
         replaysOnErrorSampleRate: 1.0,
-        integrations: [],
+        integrations: [new posthog.SentryIntegration(posthog, 'opral', 4507464642461696)],
       });
       break;
     default:

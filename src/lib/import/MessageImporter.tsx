@@ -121,7 +121,7 @@ export default class MessageImporter {
   }
 
   static processFile(fileName: string, content: string, language: Locale): ImportResult {
-    console.log(`processing file${fileName} content: ${content}`);
+    // console.log(`processing file${fileName} content: ${content}`);
 
     const results = {
       fileName,
@@ -162,7 +162,7 @@ export default class MessageImporter {
     };
 
     for (const key of Object.keys(result)) {
-      console.log('processing key ' + key);
+      // console.log('processing key ' + key);
       const lang = language as Language;
       const currentKey = this.getKey(key);
       if (!currentKey) {
@@ -177,7 +177,7 @@ export default class MessageImporter {
         }]);
         changedKeys.updated.push(updatedKey);
       } else {
-        console.log('skipping '+ key + ' text is equal');
+        // console.log('skipping '+ key + ' text is equal');
         // eslint-disable-next-line no-continue
         continue;
       }

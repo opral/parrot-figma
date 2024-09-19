@@ -640,7 +640,7 @@ export default class MessageStoreMemory extends EventTarget {
     const inlangProjectSettings = this.inlangProject?.settings();
     await this.figmaRemote.setRootPluginData('inlangProjectSettings', JSON.stringify(inlangProjectSettings));
     const numberOfLinkedMessages = this.inlangProject?.query.messages.includedMessageIds().length.toString();
-    await this.figmaRemote.setRootPluginData('numberOfLinkedMessages', numberOfLinkedMessages ?? '0');
+    await this.figmaRemote.setRootPluginData('numberOfMessages', numberOfLinkedMessages ?? '0');
   }
 
   async load(): Promise<Readonly<Message[]>> {

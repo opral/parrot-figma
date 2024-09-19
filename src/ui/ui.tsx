@@ -17,7 +17,6 @@ import {
   track,
   identify,
   identifyProject,
-  captureLoadProjectEvent,
 } from './utils/analytics';
 
 import LocalizedLabelsListView from './views/localizedlabelslist/LocalizedLabelsListView';
@@ -350,9 +349,7 @@ function App() {
 
       await localizedLabelManager.prepare();
       await memoryTranslationKeyStore.load();
-      localizedLabelManager.startFillupCache().then(() => {
-        captureLoadProjectEvent(figmaRemote);
-      });
+      localizedLabelManager.startFillupCache();
 
       let initialScreen = (await figmaRemote.getLocalFileConfig('lastView')) ?? 'design';
       if (fileSetupCompleted === undefined || fileSetupCompleted === '') {

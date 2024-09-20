@@ -232,6 +232,7 @@ asyncFunctionProxy.proxyAsyncMethods(remoteLocalizedLabelManager);
 const localizedLabelManager = new LocalizedLabelManagerUI(
   remoteLocalizedLabelManager,
   memoryTranslationKeyStore,
+  figmaRemote,
 );
 
 enum LicenseState {

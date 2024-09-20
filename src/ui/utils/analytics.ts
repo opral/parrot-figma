@@ -57,24 +57,24 @@ export function initializeAnalytics() {
   });
 }
 
-export async function captureLoadProjectEvent() {
-  const projectId = figma.root.getPluginData('projectId');
-  const inlangProjectSettings = figma.root.getPluginData('inlangProjectSettings');
+export async function captureLoadProjectEvent(figmaRemote: FigmaUtil) {
+  const projectId = await figmaRemote.getRootPluginData('projectId');
+  const inlangProjectSettings = await figmaRemote.getRootPluginData('inlangProjectSettings');
 
-  const numberOfMessages = Number(figma.root.getPluginData('numberOfMessages')); // all messages in message tab
-  const numberOfLinkedMessages = Number(figma.root.getPluginData('numberOfLinkedMessages')); // all messages in message tab linked to a TextNode
+  const numberOfMessages = Number(await figmaRemote.getRootPluginData('numberOfMessages')); // all messages in message tab
+  const numberOfLinkedMessages = Number(await figmaRemote.getRootPluginData('numberOfLinkedMessages')); // all messages in message tab linked to a TextNode
   const numberOfUnlinkedMessages = numberOfMessages - numberOfLinkedMessages; // numberOfMessages - numberOfLinkedMessages (imported but not linked)
   // numberOfAnonymousMessages = numberOfAnonymousTextNodes (unique to each TextNode)
-  const numberOfAnonymousMessages = Number(figma.root.getPluginData('numberOfAnonymousTextNodes')); // anonymous messages attached to a TextNode (not shown in message tab)
+  const numberOfAnonymousMessages = Number(await figmaRemote.getRootPluginData('numberOfAnonymousTextNodes')); // anonymous messages attached to a TextNode (not shown in message tab)
   const numberOfParrotMessages = numberOfLinkedMessages + numberOfAnonymousMessages; // all messages (anonymous or not) attached to a TextNode (relevant threshold)
 
-  const numberOfTextNodes = Number(figma.root.getPluginData('numberOfTextNodes')); // all TextNodes in the document
-  const numberOfLinkedTextNodes = Number(figma.root.getPluginData('numberOfLinkedTextNodes')); // TextNodes with messages attached
+  const numberOfTextNodes = Number(await figmaRemote.getRootPluginData('numberOfTextNodes')); // all TextNodes in the document
+  const numberOfLinkedTextNodes = Number(await figmaRemote.getRootPluginData('numberOfLinkedTextNodes')); // TextNodes with messages attached
   const numberOfUnlinkedTextNodes = numberOfTextNodes - numberOfLinkedTextNodes; // numberOfTextNodes - numberOfLinkedTextNodes
   const numberOfAnonymousTextNodes = numberOfAnonymousMessages; // TextNodes with anonymous messages attached (not shown in message tab)
-  const numberOfParrotTextNodes = Number(figma.root.getPluginData('numberOfParrotTextNodes')); // TextNodes with messages (anonymous or not) attached
+  const numberOfParrotTextNodes = Number(await figmaRemote.getRootPluginData('numberOfParrotTextNodes')); // TextNodes with messages (anonymous or not) attached
 
-  const numberOfFrames = Number(figma.root.getPluginData('numberOfFrames'));
+  const numberOfFrames = Number(await figmaRemote.getRootPluginData('numberOfFrames'));
 
   // console.log('numberOfMessages:', numberOfMessages);
   // console.log('numberOfLinkedMessages:', numberOfLinkedMessages);

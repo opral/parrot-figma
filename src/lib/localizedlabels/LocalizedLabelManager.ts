@@ -11,7 +11,6 @@ import FontHelper from './FontUtil';
 import { InlangMessageStore } from '../message/store/InlangMessageStoreFigmaRoot';
 import { FillinToPlaceholder as FillinsToPlaceholder } from '../message/MessageExtnesions';
 import { MessageParameterValues } from '../message/MessageParameterValues';
-import { captureLoadProjectEvent } from '../../ui/utils/analytics';
 
 export interface NodeSelection {
   [nodeId: string]: {
@@ -528,9 +527,6 @@ export default class LocalizedLabelManager {
       figma.root.setPluginData('numberOfParrotTextNodes', this.parrotTextNodesCount.toString());
 
       figma.root.setPluginData('numberOfFrames', this.frameCount.toString());
-
-      // execute after the cache is filled and data is available
-      captureLoadProjectEvent();
 
       this.postLinksLoadedMessage(keysLoaded);
     } catch (error) {

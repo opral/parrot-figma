@@ -100,7 +100,7 @@ export async function captureLoadProjectEvent(figmaRemote: FigmaUtil) {
   }
 
   if (projectId && inlangProjectSettings) {
-    posthog.capture('Parrot loaded project', {
+    posthog.capture('PARROT loaded project', {
       projectId,
       appId: 'app.parrot.figmaPlugin',
       settings: JSON.parse(inlangProjectSettings),

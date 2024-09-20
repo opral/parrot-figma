@@ -95,16 +95,29 @@ export async function captureLoadProjectEvent(figmaRemote: FigmaUtil) {
       projectId,
       appId: 'app.parrot.figmaPlugin',
       settings: JSON.parse(inlangProjectSettings),
-      numberOfMessages: Number(numberOfMessages),
-      numberOfLinkedMessages: Number(numberOfLinkedMessages),
-      numberOfUnlinkedMessages: Number(numberOfUnlinkedMessages),
-      numberOfAnonymousMessages: Number(numberOfAnonymousMessages),
-      numberOfParrotMessages: Number(numberOfParrotMessages), // relevant threshold
-      numberOfTextNodes: Number(numberOfTextNodes),
-      numberOfLinkedTextNodes: Number(numberOfLinkedTextNodes),
-      numberOfUnlinkedTextNodes: Number(numberOfUnlinkedTextNodes),
-      numberOfAnonymousTextNodes: Number(numberOfAnonymousTextNodes),
-      numberOfParrotTextNodes: Number(numberOfParrotTextNodes),
+      numberOfParrotMessages: Number(numberOfParrotMessages),
+    });
+  }
+
+  if (projectId && inlangProjectSettings) {
+    posthog.capture('Parrot loaded project', {
+      projectId,
+      appId: 'app.parrot.figmaPlugin',
+      settings: JSON.parse(inlangProjectSettings),
+      messages: {
+        numberOfMessages: Number(numberOfMessages),
+        numberOfLinkedMessages: Number(numberOfLinkedMessages),
+        numberOfUnlinkedMessages: Number(numberOfUnlinkedMessages),
+        numberOfAnonymousMessages: Number(numberOfAnonymousMessages),
+        numberOfParrotMessages: Number(numberOfParrotMessages),
+      },
+      textNodes: {
+        numberOfTextNodes: Number(numberOfTextNodes),
+        numberOfLinkedTextNodes: Number(numberOfLinkedTextNodes),
+        numberOfUnlinkedTextNodes: Number(numberOfUnlinkedTextNodes),
+        numberOfAnonymousTextNodes: Number(numberOfAnonymousTextNodes),
+        numberOfParrotTextNodes: Number(numberOfParrotTextNodes),
+      },
       numberOfFrames: Number(numberOfFrames),
     });
   }

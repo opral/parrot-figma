@@ -399,11 +399,11 @@ export default function LanguageSetup({
                       </div>
                     </div>
                     <div className="language-summary">
-                      <div>
+                      {/* <div>
                         {keySummary.withMissingVariantsPerLanguage[languageOption.value as Locale]
                           ?.size ?? 0}{' '}
                         Missing Translations
-                      </div>
+                      </div> */}
                     </div>
                     <div className="language-import-action">
                       <FileSelect

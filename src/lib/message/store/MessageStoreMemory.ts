@@ -21,7 +21,7 @@ import { Config, InlangMessageStore } from './InlangMessageStoreFigmaRoot';
 import { MessageParameterValues } from '../MessageParameterValues';
 import PlaceholderHelper from '../PlaceholderUtil';
 import TranslatorMachine from '../../translationprovider/TranslatorMachine';
-import { captureLoadProjectEvent } from '../../../ui/utils/analytics';
+import FigmaUtil from '../../../shared/FigmaUtil';
 
 export type SearchQuery = {
   selected?: 'FRAME' | 'LABEL' | undefined;
@@ -68,9 +68,12 @@ export default class MessageStoreMemory extends EventTarget {
 
   parentKeyStore: InlangMessageStore;
 
-  constructor(parentKeyStore: InlangMessageStore) {
+  figmaRemote: FigmaUtil;
+
+  constructor(parentKeyStore: InlangMessageStore, figmaRemote: FigmaUtil) {
     super();
     this.parentKeyStore = parentKeyStore;
+    this.figmaRemote = figmaRemote;
 
     window.addEventListener('message', (event: MessageEvent) => {
       if (event.data.pluginMessage.target === 'TranslationKeyStore') {
@@ -634,7 +637,10 @@ export default class MessageStoreMemory extends EventTarget {
         // return import('./inlang/FigmaPlugin');
       },
     });
-    captureLoadProjectEvent(this.inlangProject);
+    const inlangProjectSettings = this.inlangProject?.settings();
+    await this.figmaRemote.setRootPluginData('inlangProjectSettings', JSON.stringify(inlangProjectSettings));
+    const numberOfLinkedMessages = this.inlangProject?.query.messages.includedMessageIds().length.toString();
+    await this.figmaRemote.setRootPluginData('numberOfMessages', numberOfLinkedMessages ?? '0');
   }
 
   async load(): Promise<Readonly<Message[]>> {

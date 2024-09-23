@@ -483,6 +483,16 @@ export default class LocalizedLabelManager {
 
   private nodeCount = 0;
 
+  private textNodeCount = 0;
+
+  private linkedTextNodeCount = 0;
+
+  private numberOfAnonymousTextNodes = 0;
+
+  private parrotTextNodesCount = 0;
+
+  private frameCount = 0;
+
   async fillUpCache() {
     const start = Date.now();
     const keysLoaded = new Set<string>();
@@ -508,6 +518,15 @@ export default class LocalizedLabelManager {
         console.log(`fillUpCache - Page ${page.name} processed, processed ${nodesProcessedInPage} nodes, max depth ${maxDepthInPage}, took ${endPage - startPage}ms`);
       }
       console.log(`fillUpCache - All pages processed, total nodes processed: ${totalNodesProcessed}, total time: ${Date.now() - start}ms`);
+
+      figma.root.setPluginData('numberOfLinkedMessages', keysLoaded.size.toString());
+
+      figma.root.setPluginData('numberOfTextNodes', this.textNodeCount.toString());
+      figma.root.setPluginData('numberOfLinkedTextNodes', this.linkedTextNodeCount.toString());
+      figma.root.setPluginData('numberOfAnonymousTextNodes', this.numberOfAnonymousTextNodes.toString());
+      figma.root.setPluginData('numberOfParrotTextNodes', this.parrotTextNodesCount.toString());
+
+      figma.root.setPluginData('numberOfFrames', this.frameCount.toString());
 
       this.postLinksLoadedMessage(keysLoaded);
     } catch (error) {
@@ -541,6 +560,9 @@ export default class LocalizedLabelManager {
       || nodeType === 'GROUP'
       || nodeType === 'SECTION'
     ) {
+      if (nodeType === 'FRAME') {
+        this.frameCount += 1;
+      }
       this.virtualTree.addNode(node, node.id, parentNode);
       for (const child of node.children) {
         const result = await this.processNodeRecursively(child, node, keysLoaded, depth + 1);
@@ -569,12 +591,21 @@ export default class LocalizedLabelManager {
 
     const messageId = textNode.getPluginData(this.messageNameDataKey);
     if (messageId) {
+      this.linkedTextNodeCount += 1;
       const previousMessage = this.refreshLabelMessageLinkCache(textNodeId, messageId);
       if (previousMessage) {
         keysLoaded.add(previousMessage);
         this.virtualTree.addNode(textNode, textNodeId);
       }
       keysLoaded.add(messageId);
+    }
+
+    this.textNodeCount += 1;
+    if (textNode.getPluginData(this.messageUnmanagedKey) === 'false') {
+      this.parrotTextNodesCount += 1;
+      if (textNode.getPluginData(this.anonymMessageDataKey)) {
+        this.numberOfAnonymousTextNodes += 1;
+      }
     }
 
     if (this.nodeCount % 300 === 0) {

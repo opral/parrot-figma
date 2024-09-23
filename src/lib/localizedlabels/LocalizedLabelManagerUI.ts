@@ -18,6 +18,8 @@ import { FillinToPlaceholder, MessageExtension, Parameter } from '../message/Mes
 import { MessageParameterValues } from '../message/MessageParameterValues';
 import MessageImporter from '../import/MessageImporter';
 import TranslatorMachine from '../translationprovider/TranslatorMachine';
+import { captureLoadProjectEvent } from '../../ui/utils/analytics';
+import FigmaUtil from '../../shared/FigmaUtil';
 
 export default class LocalizedLabelManagerUI
   extends EventTarget
@@ -152,6 +154,7 @@ export default class LocalizedLabelManagerUI
   constructor(
     localizedLabelMangerSandbox: LocalizedLabelManager,
     messageStore: MessageStoreMemory,
+    figmaRemote: FigmaUtil,
   ) {
     super();
     this.localizedLabelMangerSandbox = localizedLabelMangerSandbox;
@@ -164,6 +167,7 @@ export default class LocalizedLabelManagerUI
         }
         if (event.data.pluginMessage.type === 'linksLoaded') {
           this.onKeyLabelLinksLoaded(event.data.pluginMessage as LinksLoadedEvent);
+          captureLoadProjectEvent(figmaRemote);
         }
       }
     });

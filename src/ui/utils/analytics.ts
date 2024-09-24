@@ -74,6 +74,7 @@ export async function captureLoadProjectEvent(figmaRemote: FigmaUtil) {
   const numberOfAnonymousTextNodes = numberOfAnonymousMessages; // TextNodes with anonymous messages attached (not shown in message tab)
   const numberOfParrotTextNodes = Number(await figmaRemote.getRootPluginData('numberOfParrotTextNodes')); // TextNodes with messages (anonymous or not) attached
 
+  const loadingTime = Number(await figmaRemote.getRootPluginData('loadingTime'));
   const numberOfFrames = Number(await figmaRemote.getRootPluginData('numberOfFrames'));
 
   // console.log('numberOfMessages:', numberOfMessages);
@@ -88,6 +89,7 @@ export async function captureLoadProjectEvent(figmaRemote: FigmaUtil) {
   // console.log('numberOfAnonymousTextNodes:', numberOfAnonymousTextNodes);
   // console.log('numberOfParrotTextNodes:', numberOfParrotTextNodes);
 
+  // console.log('loadingTime:', loadingTime);
   // console.log('numberOfFrames:', numberOfFrames);
 
   if (projectId && inlangProjectSettings) {
@@ -104,20 +106,21 @@ export async function captureLoadProjectEvent(figmaRemote: FigmaUtil) {
       projectId,
       settings: JSON.parse(inlangProjectSettings),
       messages: {
-        numberOfMessages: Number(numberOfMessages),
-        numberOfLinkedMessages: Number(numberOfLinkedMessages),
-        numberOfUnlinkedMessages: Number(numberOfUnlinkedMessages),
-        numberOfAnonymousMessages: Number(numberOfAnonymousMessages),
-        numberOfParrotMessages: Number(numberOfParrotMessages),
+        numberOfMessages,
+        numberOfLinkedMessages,
+        numberOfUnlinkedMessages,
+        numberOfAnonymousMessages,
+        numberOfParrotMessages,
       },
       textNodes: {
-        numberOfTextNodes: Number(numberOfTextNodes),
-        numberOfLinkedTextNodes: Number(numberOfLinkedTextNodes),
-        numberOfUnlinkedTextNodes: Number(numberOfUnlinkedTextNodes),
-        numberOfAnonymousTextNodes: Number(numberOfAnonymousTextNodes),
-        numberOfParrotTextNodes: Number(numberOfParrotTextNodes),
+        numberOfTextNodes,
+        numberOfLinkedTextNodes,
+        numberOfUnlinkedTextNodes,
+        numberOfAnonymousTextNodes,
+        numberOfParrotTextNodes,
       },
-      numberOfFrames: Number(numberOfFrames),
+      loadingTime,
+      numberOfFrames,
     });
   }
 }

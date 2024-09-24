@@ -526,6 +526,7 @@ export default class LocalizedLabelManager {
       figma.root.setPluginData('numberOfAnonymousTextNodes', this.numberOfAnonymousTextNodes.toString());
       figma.root.setPluginData('numberOfParrotTextNodes', this.parrotTextNodesCount.toString());
 
+      figma.root.setPluginData('loadingTime', (Date.now() - start).toString());
       figma.root.setPluginData('numberOfFrames', this.frameCount.toString());
 
       this.postLinksLoadedMessage(keysLoaded);

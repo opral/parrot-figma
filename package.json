@@ -47,6 +47,8 @@
   "dependencies": {
     "@figma-plugin/helpers": "^0.15.2",
     "@inlang/sdk": "^0.9.0",
+    "@inlang/message": "2.0.0",
+    "@inlang/plugin": "2.0.0",
     "@sentry/react": "^7.57.0",
     "@types/diff": "^5.0.2",
     "@types/ejs": "^3.1.2",
@@ -74,6 +76,7 @@
     "npm": "^10.8.3",
     "overlayscrollbars": "^2.4.4",
     "overlayscrollbars-react": "^0.5.3",
+    "parchment": "1.1.4",
     "pjs": "^5.1.2",
     "posthog-js": "^1.131.4",
     "quill": "github:martin-lysk/quill#develop",

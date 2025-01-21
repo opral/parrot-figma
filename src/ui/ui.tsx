@@ -126,6 +126,29 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+function renderCssVariables(vars: any) {
+  // eslint-disable-next-line prefer-template
+  return (Object.entries(vars).map((entry: any) => entry.join(': ')).join('; ')) + ';';
+}
+
+window.addEventListener('message', (event) => {
+  if (
+    event.source === window.parent.parent.parent
+    && event.data
+    && typeof event.data === 'object'
+    && 'figmaMessage' in event.data
+  ) {
+    event.stopImmediatePropagation();
+
+    const { figmaMessage } = event.data;
+
+    if (figmaMessage.type === 'THEME') {
+      const figmaStyle = document.getElementById('figma-style')!;
+      figmaStyle.textContent = `:root { ${renderCssVariables(figmaMessage.payload.variables)} }`;
+    }
+  }
+}, true);
+
 const resizeHandle = document.getElementById('resize-handle')!;
 const resizeHeightHandle = document.getElementById('height-resize-handle')!;
 
@@ -549,10 +572,15 @@ function App() {
       <Tooltip contentAttribute="data-tooltip-content" />
       { !boughtCredit && (
       <div className="discountBanner">
-        <span onClick={() => { Monitoring.instance?.mixpanel_track('consumptionDiscountClicked'); setCunsumptionPayWallFeature('.'); return false; }}>🎉🎉🎉 Unlock a 40% discount on additional
-        translations
-        
-        until the end of February with the exclusive code: </span> EARLYPARROT 🎉🎉🎉
+        <span onClick={() => { Monitoring.instance?.mixpanel_track('consumptionDiscountClicked'); setCunsumptionPayWallFeature('.'); return false; }}>
+          🎉🎉🎉 Unlock a 40% discount on additional
+          translations
+
+          until the end of February with the exclusive code:
+          {' '}
+        </span>
+        {' '}
+        EARLYPARROT 🎉🎉🎉
       </div>
       )}
       <div className="toolbar">

@@ -126,7 +126,7 @@ export default class UserManager {
     const fileStateRaw = figma.root.getPluginData(fileStorageKey);
     if (fileStateRaw !== '') {
       const rootFileState = JSON.parse(fileStateRaw) as FileUsage;
-      console.log(`Filestate found - FileId: ${rootFileState}`);
+      console.log(`Filestate found2 - FileId: ${rootFileState}`);
       return rootFileState;
     }
     const newFileId = generateGUID();

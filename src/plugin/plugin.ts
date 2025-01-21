@@ -81,7 +81,6 @@ asyncFunctionProxy.registerInstance(remoteLocalizedLabelManager);
 const figmaHelper = new FigmaHelper(figma);
 asyncFunctionProxy.registerInstance(figmaHelper);
 
-
 const monitoring = new Monitoring();
 asyncFunctionProxy.proxyAsyncMethods(monitoring);
 

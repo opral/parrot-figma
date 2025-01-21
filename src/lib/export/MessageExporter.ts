@@ -3,12 +3,17 @@ import { getVariant } from '@inlang/sdk';
 import { Locale } from '../message/variants/Locale';
 import MessageStoreMemory from '../message/store/MessageStoreMemory';
 
-const androidXmlExporterTmpl = ejs.compile(require('./templates/AndroidXmlExporter.ejs').default); // include the EJS template as a string
+// Import EJS templates as strings
+import androidXmlExporterTmplContent from './templates/AndroidXmlExporter.ejs';
+import appleStringsFileExporterTmplContent from './templates/AppleStringsFileExporter.ejs';
+import i18nextJsonExporterContent from './templates/i18nextJsonExporter.ejs';
+
+const androidXmlExporterTmpl = ejs.compile(androidXmlExporterTmplContent); // include the EJS template as a string
 const appleStringsFileExporterTmpl = ejs.compile(
-  require('./templates/AppleStringsFileExporter.ejs').default,
+  appleStringsFileExporterTmplContent,
 );
 // const appleDictFileExporterTmpl = ejs.compile(require('./templates/AppleDictFileExporter.ejs').default);
-const i18nextJsonExporter = ejs.compile(require('./templates/i18nextJsonExporter.ejs').default);
+const i18nextJsonExporter = ejs.compile(i18nextJsonExporterContent);
 
 export default class MessageExporter {
   static export(messageStore: MessageStoreMemory, language: Locale, format: string) {

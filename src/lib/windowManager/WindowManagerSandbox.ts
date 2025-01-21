@@ -154,11 +154,11 @@ export class WindowManagerSandbox {
       const [storedWindowSize, storedWindowBottomSheetHeight, storedWindowMode] = values;
 
       if (
-        storedWindowSize &&
-        storedWindowSize.width !== undefined &&
-        !Number.isNaN(storedWindowSize.width) &&
-        storedWindowSize.height !== undefined &&
-        !Number.isNaN(storedWindowSize.height)
+        storedWindowSize
+        && storedWindowSize.width !== undefined
+        && !Number.isNaN(storedWindowSize.width)
+        && storedWindowSize.height !== undefined
+        && !Number.isNaN(storedWindowSize.height)
       ) {
         this.windowModeSize = storedWindowSize;
       }
@@ -175,11 +175,31 @@ export class WindowManagerSandbox {
 
       const windowRect = this.calculateWindowRect(this.currentWindowMode);
 
-      const patchedHtml = __html__.split('__%%InitialWindowMode%%__').join(this.currentWindowMode);
+      // const patchedHtml = __html__.split('__%%InitialWindowMode%%__').join(this.currentWindowMode);
 
       // const patchedHtml = "<sc"+"ript>window.location.href = 'http://127.0.0.1:8080/dist/ui.html?nocache="+ (new Date()).getTime() +"';</scr"+"ipt>";
 
-      figma.showUI(patchedHtml, {
+      // @ts-ignore
+      const uiUrl = import.meta.env.VITE_CUSTOM_URL;
+
+      figma.showUI(`
+          <script>
+          // Assuming the variable is defined on the :root or another element
+          const rootElement = document.documentElement; // Reference to the <html> element
+
+          // Get the computed style of the root element
+          const computedStyle = getComputedStyle(rootElement);
+
+          // Get the value of the CSS variable
+          const colorValue = computedStyle.getPropertyValue('--figma-color-bg').trim();
+
+          let figmaTheme = 'figma-dark'
+          if (colorValue === '#ffffff') {
+              figmaTheme = 'figma-light'
+          }
+
+          window.location.href = "${uiUrl}#${this.currentWindowMode}|" + figmaTheme;
+        </script>`, {
         themeColors: true,
         width: windowRect.width,
         height: Math.max(50, windowRect.height),
@@ -256,9 +276,9 @@ export class WindowManagerSandbox {
     // its not possible to zoom and resize the viewport at the same time
     // only if there is no change in zoom a window positioning is needed
     if (
-      previousZoom === figma.viewport.zoom &&
-      (previousWidth !== figma.viewport.bounds.width ||
-        previousHeight !== figma.viewport.bounds.height)
+      previousZoom === figma.viewport.zoom
+      && (previousWidth !== figma.viewport.bounds.width
+        || previousHeight !== figma.viewport.bounds.height)
     ) {
       // console.log(`[WM] resize deteceted from ${fromCheckInterval ? 'interval' : 'drag'}`);
       this.onViewPortResize();
@@ -403,12 +423,12 @@ export class WindowManagerSandbox {
       case WindowMode.Fullscreen:
         return {
           width: Math.floor(
-            figma.viewport.bounds.width * figma.viewport.zoom -
-              (this.fullscreenMarginLeft + this.fullscreenMarginRight),
+            figma.viewport.bounds.width * figma.viewport.zoom
+              - (this.fullscreenMarginLeft + this.fullscreenMarginRight),
           ),
           height: Math.floor(
-            figma.viewport.bounds.height * figma.viewport.zoom -
-              (this.toolbarHeight + this.fullscreenMarginTop + this.fullscreenMarginBottom),
+            figma.viewport.bounds.height * figma.viewport.zoom
+              - (this.toolbarHeight + this.fullscreenMarginTop + this.fullscreenMarginBottom),
           ),
           x: Math.floor(
             figma.viewport.bounds.x + this.fullscreenMarginLeft / figma.viewport.zoom),
@@ -420,13 +440,13 @@ export class WindowManagerSandbox {
           width: Math.floor(this.windowModeSize.width),
           height: Math.floor(this.windowModeSize.height),
           x: Math.floor(
-            figma.viewport.bounds.x +
-              (figma.viewport.bounds.width / 2 -
-                this.windowModeSize.width / 2 / figma.viewport.zoom),
+            figma.viewport.bounds.x
+              + (figma.viewport.bounds.width / 2
+                - this.windowModeSize.width / 2 / figma.viewport.zoom),
           ),
           y: Math.floor(
-            figma.viewport.bounds.y +
-              ((figma.viewport.bounds.height - this.windowModeSize.height - 2 * this.toolbarHeight)
+            figma.viewport.bounds.y
+              + ((figma.viewport.bounds.height - this.windowModeSize.height - 2 * this.toolbarHeight)
                 / figma.viewport.zoom),
           ),
         };
@@ -438,10 +458,10 @@ export class WindowManagerSandbox {
           height: Math.floor(minimizedViewHeight),
           x: Math.floor(figma.viewport.bounds.x + this.bottomSheetMarginLeft / figma.viewport.zoom),
           y: Math.floor(
-            figma.viewport.bounds.y +
-              figma.viewport.bounds.height -
-              (minimizedViewHeight - RESIZEDETECTION_OVERLAP_PX) /
-                figma.viewport.zoom,
+            figma.viewport.bounds.y
+              + figma.viewport.bounds.height
+              - (minimizedViewHeight - RESIZEDETECTION_OVERLAP_PX)
+                / figma.viewport.zoom,
           ),
         };
       case WindowMode.IntroWindow:
@@ -451,14 +471,14 @@ export class WindowManagerSandbox {
           width: Math.floor(this.introModeSize.width),
           height: Math.floor(this.introModeSize.height),
           x: Math.floor(
-            figma.viewport.bounds.x +
-              (figma.viewport.bounds.width / 2 -
-                this.introModeSize.width / 2 / figma.viewport.zoom),
+            figma.viewport.bounds.x
+              + (figma.viewport.bounds.width / 2
+                - this.introModeSize.width / 2 / figma.viewport.zoom),
           ),
           y: Math.floor(
-            figma.viewport.bounds.y +
-              (figma.viewport.bounds.height / 2 -
-                centerHeight / 2 / figma.viewport.zoom),
+            figma.viewport.bounds.y
+              + (figma.viewport.bounds.height / 2
+                - centerHeight / 2 / figma.viewport.zoom),
           ),
         };
       default:

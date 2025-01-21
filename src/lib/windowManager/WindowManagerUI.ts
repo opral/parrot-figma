@@ -37,7 +37,7 @@ export default class WindowManagerUi extends EventTarget {
   isResizing = false;
 
   // a hacky solution for now but we want this to be available synchronous so we replace this before the html is injected
-  windowMode = '__%%InitialWindowMode%%__' as WindowMode;
+  windowMode: WindowMode;
 
   ratioChangedOnce = false;
 
@@ -59,12 +59,20 @@ export default class WindowManagerUi extends EventTarget {
     if (this.instance) {
       throw Error('WindowManagerUi initialized twice');
     }
+    const { hash } = window.location; 
+    const windowMode = hash.slice(1).split('|')[0]; 
+
+    if (windowMode === undefined) {
+      throw new Error('missing window mode');
+    }
+
     this.instance = new WindowManagerUi(
       sizeWrapperEl,
       contentEl,
       resizeHandelEl,
       heightResizeHandleEl,
       handleElementId,
+      windowMode as WindowMode,
     );
   }
 
@@ -74,8 +82,10 @@ export default class WindowManagerUi extends EventTarget {
     resizeHandelEl: HTMLElement,
     heightResizeHandleEl: HTMLElement,
     handleElementId: string,
+    windowMode: WindowMode,
   ) {
     super();
+    this.windowMode = windowMode;
     this.sizeWrapper = sizeWrapperEl;
     this.contentEl = contentEl;
     this.resizeHandelEl = resizeHandelEl;
@@ -203,6 +213,7 @@ export default class WindowManagerUi extends EventTarget {
     this.resizeHandelEl.classList.add(this.windowMode);
 
     window.addEventListener('message', (event: MessageEvent) => {
+      
       if (event.data.pluginMessage.target === 'WindowManager') {
         if (event.data.pluginMessage.windowMode) {
           const mode = event.data.pluginMessage.windowMode as WindowMode;

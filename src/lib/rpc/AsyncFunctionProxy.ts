@@ -63,7 +63,7 @@ export class AsyncFunctionProxy {
       if (
         memberName !== 'constructor'
         && instancePrototype[memberName].constructor
-        && instancePrototype[memberName].constructor.name === 'Function'
+        && (instancePrototype[memberName].constructor.name === 'Function' || instancePrototype[memberName].constructor.name === 'AsyncFunction')
       ) {
         const proxy = this;
         // eslint-disable-next-line func-names -- we store this function anonymous in an array and there is no way to dynamically name it for better - thats fine
@@ -104,7 +104,7 @@ export class AsyncFunctionProxy {
       if (
         memberName !== 'constructor'
         && instancePrototype[memberName].constructor
-        && instancePrototype[memberName].constructor.name === 'Function'
+        &&  (instancePrototype[memberName].constructor.name === 'Function' || instancePrototype[memberName].constructor.name === 'AsyncFunction')
       ) {
         // console.log(this.name+ ' proxy class!' + instanceClassName + '.' + memberName);
         this.registerInvocationHandler(
@@ -154,6 +154,7 @@ export class AsyncFunctionProxy {
   }
 
   handleInvocationRequest(pluginMessage: any) {
+    
     if (!this.invocationRequestHandler[pluginMessage.name]) {
       throw new Error(
         `${this.name} Invocation handler for [${pluginMessage.name}] does not exist (did you register the executing instance in [${this.name}]?`,

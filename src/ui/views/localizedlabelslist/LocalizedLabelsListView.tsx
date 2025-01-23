@@ -1,8 +1,5 @@
-/* eslint-disable jsx-a11y/anchor-is-valid */
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
-import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import FigmaUtil from '../../../shared/FigmaUtil';
 import LocalizedFrameGroup from './LocalizedFrameGroup';
@@ -61,6 +58,7 @@ if (!Element.prototype.scrollIntoViewIfNeeded) {
 }
 
 type LocalizedLabelsListViewProps = {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   showMessage: Function;
   figmaRemote: FigmaUtil;
   localizedLabelManager: LocalizedLabelManagerUI;

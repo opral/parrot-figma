@@ -1,17 +1,14 @@
-/* eslint-disable jsx-a11y/no-static-element-interactions */
-/* eslint-disable jsx-a11y/click-events-have-key-events */
 import * as React from 'react';
 import * as Sentry from '@sentry/react';
 import { useEffect, useRef, useState } from 'react';
-import OutsideClickHandler from 'react-outside-click-handler';
 import { Plural } from '../../../lib/message/variants/Plural';
-import { MessageLinkState, LocalizedLabel } from '../../../lib/localizedlabels/LocalizedLabel';
+import { MessageLinkState } from '../../../lib/localizedlabels/LocalizedLabel';
 import FigmaUtil from '../../../shared/FigmaUtil';
 import InputSelect, {
   InputSelectOption,
   InputSelectionOptionType,
 } from '../../compontents/selectInput/inputselect';
-import Select, { SelectOption } from '../../compontents/select/select';
+import { SelectOption } from '../../compontents/select/select';
 import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
 import { Locale } from '../../../lib/message/variants/Locale';
 import TranslationEditor from '../../compontents/translationEditor/TranslationEditor';
@@ -19,14 +16,9 @@ import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabel
 import TextField from '../../compontents/textfield/TextField';
 import MessageListView from '../messages/MessageListView';
 import { UILocalizedLabel } from '../../../lib/localizedlabels/UILocalizedLabel';
-import PlaceholderEditorListItem from '../../compontents/placeholder/PlaceholderEditor';
-import FEATURES_FLAGS from '../../featuretoggle';
 import { track } from '../../utils/analytics';
 import Drawer from '../../compontents/drawer/Drawer';
-import { Gender } from '../../../lib/message/variants/Gender';
-import { FillinToPlaceholder } from '../../../lib/message/MessageExtnesions';
 import { MessageParameterValues } from '../../../lib/message/MessageParameterValues';
-import GoogleTranslator from '../../../lib/translationprovider/google';
 import TranslatorMachine, { NoMoreTranslationsLeftError } from '../../../lib/translationprovider/TranslatorMachine';
 import FeatureFlags from '../../../lib/featureflags/FeatureFlags';
 

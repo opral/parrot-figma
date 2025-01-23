@@ -1,22 +1,20 @@
 export default class Monitoring {
   sentry: any | undefined;
 
-  mixpanel: any | undefined;
 
   static instance: Monitoring | undefined;
 
-  constructor(sentry?: any, mixpanel?: any) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  constructor(sentry?: any) {
     Monitoring.instance = this;
 
-    if (!sentry && !mixpanel) {
+    if (!sentry) {
       this.sentry = undefined;
-      this.mixpanel = undefined;
       // proxy!
       return;
     }
 
     this.sentry = sentry;
-    this.mixpanel = mixpanel;
   }
 
   // eslint-disable-next-line class-methods-use-this

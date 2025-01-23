@@ -1,6 +1,5 @@
 /* eslint-disable class-methods-use-this -- this class gets proxied using the async proxy - this doesn't work with static methods for now :-/ */
 
-import { MessageLinkState, LocalizedLabel } from '../lib/localizedlabels/LocalizedLabel';
 import generateGUID from '../lib/usage/generateGUID';
 import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowManagerSandbox';
 

@@ -1,7 +1,7 @@
-/* eslint-disable jsx-a11y/mouse-events-have-key-events */
+
 /* eslint-disable max-classes-per-file */
-/* eslint-disable jsx-a11y/no-static-element-interactions */
-/* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
+
+
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 /* eslint-disable react/require-default-props */
 import * as React from 'react';

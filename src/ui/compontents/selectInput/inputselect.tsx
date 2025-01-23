@@ -1,6 +1,6 @@
-/* eslint-disable jsx-a11y/mouse-events-have-key-events */
-/* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
-/* eslint-disable jsx-a11y/no-static-element-interactions */
+
+
+
 import React, {
   useEffect, useState, useRef, MouseEvent,
 } from 'react';

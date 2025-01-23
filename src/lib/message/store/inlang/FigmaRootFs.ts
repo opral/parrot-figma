@@ -140,8 +140,8 @@ export function createNodeishMemoryFs(): NodeishFilesystem {
     },
 
     // @ts-expect-error
-    //   Typescript can't derive that the return type is either
-    //   a string or a Uint8Array based on the options.
+    // Typescript can't derive that the return type is either
+    // a string or a Uint8Array based on the options.
     async readFile(
       path: Parameters<NodeishFilesystem['readFile']>[0],
       options?: Parameters<NodeishFilesystem['readFile']>[1],

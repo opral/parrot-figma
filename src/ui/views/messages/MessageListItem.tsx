@@ -1,37 +1,32 @@
-/* eslint-disable jsx-a11y/mouse-events-have-key-events */
-/* eslint-disable jsx-a11y/interactive-supports-focus */
 /* eslint-disable prefer-template */
-/* eslint-disable jsx-a11y/no-static-element-interactions */
-/* eslint-disable jsx-a11y/click-events-have-key-events */
-/* eslint-disable jsx-a11y/label-has-associated-control */
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import * as Sentry from '@sentry/react';
 
 import '../../localization/i18n';
-import { Message } from '@inlang/sdk';
+
 import { Locale } from '../../../lib/message/variants/Locale';
 
 import MessageStoreMemory from '../../../lib/message/store/MessageStoreMemory';
 
 import FigmaUtil from '../../../shared/FigmaUtil';
 
-import TranslationEditor from '../../compontents/translationEditor/TranslationEditor';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 
-import FEATURES_FLAGS from '../../featuretoggle';
 import Drawer from '../../compontents/drawer/Drawer';
-import { MessageParameterValues } from '../../../lib/message/MessageParameterValues';
 import MessageVariantItem from './MessageVariantItem';
 // import ReactQuill from 'react-quill';
 
 type TranslationKeyListItemProps = {
   rowClassNames?: string | undefined;
   figmaRemote: FigmaUtil;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   searchMatch: any;
   messageStore: MessageStoreMemory;
   messageId: string;
   localizedLabelManager: LocalizedLabelManagerUI;
+  
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   select?: Function;
   messageSelected: boolean;
   onFocus?: (messageId: string, locale?: Locale, variantMatch?: string[]) => void;
@@ -183,7 +178,7 @@ export default function TranslationKeyListItem({
       </div>
       <div className="message-group-header-sticky-border">test</div>
 
-      {languages.map((language, i, allLanguages) => (
+      {languages.map((language) => (
         <MessageVariantItem
           key={language}
           language={language}

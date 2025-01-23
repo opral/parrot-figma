@@ -1,8 +1,4 @@
-/* eslint-disable jsx-a11y/anchor-is-valid */
-/* eslint-disable jsx-a11y/anchor-has-content */
-/* eslint-disable jsx-a11y/control-has-associated-label */
-/* eslint-disable jsx-a11y/no-static-element-interactions */
-/* eslint-disable jsx-a11y/click-events-have-key-events */
+
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import * as ReactDOM from 'react-dom';
@@ -36,7 +32,6 @@ import './tabbar.css';
 import './assets/icons.css';
 import SegmentedControl from './compontents/segmentedControl/SegmentedControl';
 import Onboarding from './views/onboarding/Onboarding';
-import { Locale } from '../lib/message/variants/Locale';
 import Tooltip from './compontents/tooltip/Tooltip';
 
 import Export from './views/export/Export';
@@ -46,19 +41,14 @@ import * as pjs from '../../package.json';
 import UserManager, { PluginUser, UserFileRole } from '../lib/usage/UsageManager';
 import UserManagerUI from '../lib/usage/UsageManagerUI';
 import UserManagement from './views/usermanagement/Usermanagement';
-import Drawer from './compontents/drawer/Drawer';
 
-import ComparisonChart from './compontents/plans/ComparisonChart';
 import { InlangMessageStore } from '../lib/message/store/InlangMessageStoreFigmaRoot';
 import { OverlayScrollbarsComponent } from './compontents/overlayscrollbar';
 
 import TranslatorMachine from '../lib/translationprovider/TranslatorMachine';
 import MessageUpsellOverlay from './compontents/upselloverlay/MessageUpsellOverlay';
-import MessagesConsumptionPaywall from './compontents/plans/MessagesConsumptionPaywall';
-import TextField from './compontents/textfield/TextField';
 import Monitoring from '../lib/monitoring/MonitoringProxy';
 import FeatureFlags from '../lib/featureflags/FeatureFlags';
-import { TranslationCredit } from '../lib/api/Parrot';
 
 console.log(`Starting Figma UI - Version ${pjs.version}`);
 
@@ -271,36 +261,18 @@ enum LicenseState {
 function App() {
   // initial app screen is startup until we initialy loaded the data
   const [appScreen, setAppScreen] = useState(undefined as String | undefined);
-  const [consumptionPayWallFeature, setCunsumptionPayWallFeature] = useState(
-    undefined as String | undefined,
-  );
-
-  const [enteredLicenseKey, setEnteredLicenseKey] = useState(undefined as string | undefined);
-
-  const [didntbuyReason, setDidntBuyReason] = useState(undefined as string | undefined);
-
-  const [refillClicked, setRefillClicked] = useState(false);
-
-  const [licenseKeyState, setLicenseKeyState] = useState<LicenseState>(LicenseState.unvalidated);
-  const [showAllFeatures, setShowAllFeatures] = useState(false);
 
   const [user, setUser] = useState(undefined as PluginUser | undefined);
 
   const [windowMode, setWindowMode] = useState(WindowManagerUi.instance!.windowMode);
   const [keyQuery, setKeyQuery] = useState(MessageStoreMemory.toQueryObject(''));
 
-  const [boughtCredit, setBoughtCredit] = useState(true);
 
   useEffect(() => {
     // asynchronous fetch the state from figma helper
     (async () => {
       await userStateManagerUi.loadUserState();
       userStateManagerUi.trackFileUsageStatistics();
-
-      if (FeatureFlags.features.payment) {
-        const state = TranslatorMachine.instance.getCreditStateAsync();
-        setBoughtCredit((await state).credits.length > 1);
-      }
 
       if (windowMode === WindowMode.DevPanel) {
         const updatedUser = await userStateManagerUi.requestUserRole(UserFileRole.developer);
@@ -333,37 +305,6 @@ function App() {
     };
   }, []);
 
-  useEffect(() => {
-    const creditUpdateHandler = (event: MessageEvent) => {
-      if (event.data.pluginMessage.target === 'TranslatorMachine') {
-        if (event.data.pluginMessage.type === 'creditUpdate') {
-          if (event.data.pluginMessage.requestShowUpsellCTA) {
-            setCunsumptionPayWallFeature('message');
-          }
-
-          const state = event.data.pluginMessage.data as {
-            credits: TranslationCredit[],
-            availableMessages: number,
-          };
-
-          const usageSum = state.credits.reduce((acc, obj) => acc + obj.msgu, 0);
-          const creditTypes = state.credits.map((credit) => credit.ct);
-          Monitoring.instance?.mixpanel_people_set('translationsUsed', usageSum);
-          Monitoring.instance?.mixpanel_people_set('translationsAvailable', state.availableMessages);
-          for (const creditType of creditTypes) {
-            Monitoring.instance?.mixpanel_people_set(`creditType_${creditType}`, true);
-          }
-        }
-      }
-    };
-
-    window.addEventListener('message', creditUpdateHandler);
-    // TODO listen to events from translatorMachine
-
-    return () => {
-      window.removeEventListener('message', creditUpdateHandler);
-    };
-  }, []);
 
   useEffect(() => {
     // asynchronous fetch the state from figma helper
@@ -504,15 +445,6 @@ function App() {
             figmaRemote={figmaRemote}
             highlightSelectedNodes
           />
-          { FeatureFlags.features.payment
-           && (
-           <MessageUpsellOverlay
-             hideInfo
-             onclick={() => {
-               setCunsumptionPayWallFeature('test');
-             }}
-           />
-           )}
         </>
 
       );
@@ -521,15 +453,7 @@ function App() {
       view = (
         <>
           <SetupView labelManager={localizedLabelManager} />
-          { FeatureFlags.features.payment
-          && (
-          <MessageUpsellOverlay
-            hideInfo={false}
-            onclick={() => {
-              setCunsumptionPayWallFeature('test');
-            }}
-          />
-          )}
+          
         </>
       );
       break;
@@ -548,15 +472,6 @@ function App() {
             localizedLabelManager={localizedLabelManager}
             figmaRemote={figmaRemote}
           />
-          { FeatureFlags.features.payment
-          && (
-          <MessageUpsellOverlay
-            hideInfo
-            onclick={() => {
-              setCunsumptionPayWallFeature('test');
-            }}
-          />
-          )}
         </>
 
       );
@@ -571,19 +486,6 @@ function App() {
   return (
     <>
       <Tooltip contentAttribute="data-tooltip-content" />
-      { !boughtCredit && (
-      <div className="discountBanner">
-        <span onClick={() => { Monitoring.instance?.mixpanel_track('consumptionDiscountClicked'); setCunsumptionPayWallFeature('.'); return false; }}>
-          🎉🎉🎉 Unlock a 40% discount on additional
-          translations
-
-          until the end of February with the exclusive code:
-          {' '}
-        </span>
-        {' '}
-        EARLYPARROT 🎉🎉🎉
-      </div>
-      )}
       <div className="toolbar">
         <div className="tabHeader">
           <div
@@ -673,248 +575,7 @@ function App() {
         {view}
       </OverlayScrollbarsComponent>
       <a id="focusHelper" href="" />
-      <Drawer
-        position="top"
-        shown={didntbuyReason !== undefined}
-        buttons={[
-          {
-            type: 'primary',
-            text: 'Submit feedback',
-            key: undefined,
-            disabled: (didntbuyReason !== undefined && didntbuyReason.length < 1),
-            callback: () => {
-              const reason = didntbuyReason;
-              Monitoring.instance?.mixpanel_people_set('didntRefillReason', reason);
-              setDidntBuyReason(undefined);
-              figmaRemote.notify('Thank you for your feedback!');
-            },
-          },
-          {
-            type: 'secondary',
-            text: 'Cancel',
-            key: 'escape',
-            callback: () => {
-              setDidntBuyReason(undefined);
-            },
-          },
-        ]}
-      >
-        <>
-          <div className="modal-dialog-title-bar">
-            <div className="modal-dialog-title-text">Refill Purchase Feedback</div>
-            <div
-              className="modal-dialog-title-close button"
-              onClick={() => {
-                setEnteredLicenseKey(undefined);
-              }}
-            />
-          </div>
-          <div className="modal-dialog-body refill-feedback">
-            <div className="modal-dialog-text ">Could you please share any specific reasons or concerns that influenced your decision not to purchase a refill?</div>
-            <textarea
-              rows={5}
-              cols={35}
-              wrap="off"
-              maxLength={400}
-              value={didntbuyReason}
-              onChange={(e) => { setDidntBuyReason(e.target.value); }}
-              placeholder="Add your feedback"
-            />
-
-          </div>
-
-        </>
-      </Drawer>
-
-      <Drawer
-        position="top"
-        shown={enteredLicenseKey !== undefined}
-        buttons={[
-          {
-            type: 'secondary',
-            text: 'Cancel',
-            key: 'escape',
-            callback: () => {
-              if (refillClicked) {
-                setDidntBuyReason('');
-                Monitoring.instance?.mixpanel_track('consumptionPaywallTranslationsDidntBuy');
-              }
-              setEnteredLicenseKey(undefined);
-              setLicenseKeyState(LicenseState.unvalidated);
-            },
-          },
-          {
-            type: 'primary',
-            text: licenseKeyState === LicenseState.validating ? 'Validating...' : 'Use License Key',
-            key: 'enter',
-            disabled: (enteredLicenseKey !== undefined && enteredLicenseKey.length < 10) || licenseKeyState === LicenseState.validating || licenseKeyState === LicenseState.invalid,
-            callback: () => {
-              Monitoring.instance?.mixpanel_track('activateLicenseClicked');
-
-              // setEnteredLicenseKey(undefined);
-              setLicenseKeyState(LicenseState.validating);
-              // call backend
-              translationMachine.activateLicenseAsync(enteredLicenseKey!).then((result) => {
-                if (result.activated || result.success) {
-                  // {activated: true, error: null, license_key: {…}, instance: {…}, meta: {…}}
-                  if (result.activated) {
-                    figmaRemote.notify('🎉🎉 Licence Key was activated 🎉🎉');
-
-                    Monitoring.instance?.mixpanel_track('licenseActivated');
-                    translationMachine.syncTranslations().then(() => {
-                      setLicenseKeyState(LicenseState.valid);
-                      setEnteredLicenseKey(undefined);
-                    });
-                  } else {
-                    figmaRemote.notify('Licence Key is active already');
-                    setLicenseKeyState(LicenseState.valid);
-                    setEnteredLicenseKey(undefined);
-                  }
-                } else if (result.error) {
-                  // currently only
-                  setLicenseKeyState(LicenseState.invalid);
-                  figmaRemote.notifyError('License key not accepted.');
-                  Sentry.captureException(new Error(result.error));
-                }
-              }).catch((e) => {
-                setLicenseKeyState(LicenseState.unvalidated);
-                figmaRemote.notifyError('Networking issue. Couldn\'t validate the license key.');
-                Sentry.captureException(e);
-              });
-            },
-          },
-        ]}
-      >
-        <>
-          <div className="modal-dialog-title-bar">
-            <div className="modal-dialog-title-text">Activate your License</div>
-            <div
-              className="modal-dialog-title-close button"
-              onClick={() => {
-                setEnteredLicenseKey(undefined);
-              }}
-            >
-              <div className="svg-container cross-svg" />
-            </div>
-          </div>
-          <div className="modal-dialog-body">
-            <div className="modal-dialog-text">Enter your License Key:</div>
-            <TextField
-              singleClick
-              onSave={() => {}}
-              placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXXX"
-              onChange={(value: string) => {
-                setLicenseKeyState(LicenseState.unvalidated);
-                setEnteredLicenseKey(value);
-              }}
-              text={enteredLicenseKey || ''}
-            />
-            <div className="modal-dialog-error-text">
-              {licenseKeyState === LicenseState.used && '* License Key in use'}
-              {licenseKeyState === LicenseState.invalid && '* Not valid'}
-            </div>
-          </div>
-
-        </>
-      </Drawer>
-
-      <Drawer
-        shown={consumptionPayWallFeature !== undefined}
-        beforeShow={async () => {
-          Monitoring.instance?.mixpanel_track('consumptionPaywallTranslationsShown');
-          const waitOneFrame = () => new Promise<void>((resolve) => {
-            setTimeout(() => {
-              resolve();
-            }, 30);
-          });
-          WindowManagerUi.instance?.requestWindowMode(WindowMode.Fullscreen, false);
-          return waitOneFrame();
-        }}
-        buttons={[]}
-        onCancel={() => {
-          setCunsumptionPayWallFeature(undefined);
-        }}
-        position="top"
-      >
-        <MessagesConsumptionPaywall
-          closeClick={() => {
-            setCunsumptionPayWallFeature(undefined);
-            setRefillClicked(false);
-          }}
-          buyClick={() => {
-            Monitoring.instance?.mixpanel_track('consumptionPaywallTranslationsCheckoutClicked');
-            window.open('https://parrot.lemonsqueezy.com/checkout/buy/9a667dcf-2039-462b-8809-5fd977859fee', 'blank');
-            setCunsumptionPayWallFeature(undefined);
-            setEnteredLicenseKey('');
-            setRefillClicked(true);
-          }}
-          gotLicencesClick={() => {
-            setCunsumptionPayWallFeature(undefined);
-            setEnteredLicenseKey('');
-            setRefillClicked(false);
-          }}
-        />
-      </Drawer>
-      <Drawer
-        shown={showAllFeatures}
-        beforeShow={async () => {
-          const waitOneFrame = () => new Promise<void>((resolve) => {
-            setTimeout(() => {
-              resolve();
-            }, 30);
-          });
-          WindowManagerUi.instance?.requestWindowMode(WindowMode.Fullscreen, false);
-          return waitOneFrame();
-        }}
-        buttons={[]}
-        onCancel={() => {
-          setShowAllFeatures(false);
-        }}
-        position="top"
-      >
-        <ComparisonChart
-          upgradePlan={() => {
-            setCunsumptionPayWallFeature(undefined);
-            // upgradePlan();
-          }}
-        />
-      </Drawer>
-
-      {/* <Drawer
-        shown={showUpgradePlan}
-        beforeShow={async () => {
-          const waitOneFrame = () => new Promise<void>((resolve) => {
-            setTimeout(() => {
-              resolve();
-            }, 30);
-          });
-          WindowManagerUi.instance?.requestWindowMode(WindowMode.Fullscreen, false);
-          return waitOneFrame();
-        }}
-        buttons={[]}
-        position="top"
-      >
-        <ConsumptionPaywall showAllFeatures={() => {}} upgradePlan={() => {}}/>
-
-      </Drawer> */}
-
-      {/* <Drawer
-        shown={showThanksForYourSupport}
-        beforeShow={async () => {
-          const waitOneFrame = () => new Promise<void>((resolve) => {
-            setTimeout(() => {
-              resolve();
-            }, 30);
-          });
-          WindowManagerUi.instance?.requestWindowMode(WindowMode.Fullscreen, false);
-          return waitOneFrame();
-        }}
-        buttons={[]}
-        position="top"
-      >
-        <div>Thanks for your support!</div>
-
-      </Drawer> */}
+     
     </>
   );
 }

@@ -1,6 +1,3 @@
-/* eslint-disable jsx-a11y/label-has-associated-control */
-/* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
-/* eslint-disable jsx-a11y/click-events-have-key-events */
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import '../../localization/i18n';
@@ -13,6 +10,7 @@ import WindowManagerUi from '../../../lib/windowManager/WindowManagerUI';
 
 type OnboardingProps = {
   labelManager: LocalizedLabelManagerUI;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   onFinishSetup: Function;
 };
 
@@ -24,6 +22,7 @@ export default function Onboarding({ labelManager, onFinishSetup }: OnboardingPr
     labelManager.messageStore.getRefLanugage(),
   );
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO specfiy type 
   const scrollHeightCheckInterval = useRef<any | undefined>(undefined);
 
   const lastPropagatedScrollheight = useRef<number | undefined>(undefined);

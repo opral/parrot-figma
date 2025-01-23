@@ -1,5 +1,5 @@
-/* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
-/* eslint-disable jsx-a11y/no-static-element-interactions */
+
+
 import React, { useEffect, useState, useRef } from 'react';
 import OutsideClickHandler from 'react-outside-click-handler';
 import './select.css';

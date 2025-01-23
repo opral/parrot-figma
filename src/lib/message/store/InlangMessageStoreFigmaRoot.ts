@@ -1,6 +1,3 @@
-/* eslint-disable class-methods-use-this */
-/* eslint-disable no-await-in-loop */
-
 import TextEncoding from 'text-encoding';
 
 import blake from 'blakejs';

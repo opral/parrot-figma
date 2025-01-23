@@ -23,6 +23,7 @@ import LocalizedLabelsListView from './views/localizedlabelslist/LocalizedLabels
 import FigmaUtil from '../shared/FigmaUtil';
 import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
 import './ui.css';
+import 'overlayscrollbars/overlayscrollbars.css';
 import WindowManagerUi from '../lib/windowManager/WindowManagerUI';
 import { WindowMode } from '../lib/windowManager/WindowManagerSandbox';
 import MessageListView from './views/messages/MessageListView';
@@ -49,8 +50,8 @@ import Drawer from './compontents/drawer/Drawer';
 
 import ComparisonChart from './compontents/plans/ComparisonChart';
 import { InlangMessageStore } from '../lib/message/store/InlangMessageStoreFigmaRoot';
-import 'overlayscrollbars/overlayscrollbars.css';
 import { OverlayScrollbarsComponent } from './compontents/overlayscrollbar';
+
 import TranslatorMachine from '../lib/translationprovider/TranslatorMachine';
 import MessageUpsellOverlay from './compontents/upselloverlay/MessageUpsellOverlay';
 import MessagesConsumptionPaywall from './compontents/plans/MessagesConsumptionPaywall';

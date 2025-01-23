@@ -99,7 +99,7 @@ importers:
         specifier: ^10.8.3
         version: 10.9.2
       overlayscrollbars:
-        specifier: ^2.4.4
+        specifier: ^2.7.3
         version: 2.7.3
       overlayscrollbars-react:
         specifier: ^0.5.3

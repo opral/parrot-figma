@@ -78,7 +78,7 @@
     "mixpanel-figma": "^2.0.2",
     "node-fetch": "^3.3.0",
     "npm": "^10.8.3",
-    "overlayscrollbars": "^2.4.4",
+    "overlayscrollbars": "^2.7.3",
     "overlayscrollbars-react": "^0.5.3",
     "parchment": "1.1.4",
     "pjs": "^5.1.2",

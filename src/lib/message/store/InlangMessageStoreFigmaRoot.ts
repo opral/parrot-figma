@@ -50,7 +50,7 @@ export class InlangMessageStore {
     }
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   forwardDocumentChanges(event: any) {
     for (const change of event.documentChanges) {
       if (
@@ -59,12 +59,12 @@ export class InlangMessageStore {
         || change.node.id !== '0:0'
         || change.properties.indexOf('pluginData') === -1
       ) {
-        // eslint-disable-next-line no-continue
+         
         continue;
       }
 
       // TODO #25 CACHING implement for multi user - keep tracK of changes in config as well
-      // eslint-disable-next-line default-case
+       
       const currentFileStorageKeys = figma.root
         .getPluginDataKeys()
         .filter((value) => value.indexOf(InlangMessageStore.messagePrefix) === 0);

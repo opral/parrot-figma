@@ -1,12 +1,12 @@
 import BaseTextNodeLintRule from './BaseTextNodeLintRule';
 
-// eslint-disable-next-line max-classes-per-file
+ 
 export default class ListOptionTypeUnknown extends BaseTextNodeLintRule {
   constructor() {
     super('ListOptionTypeUnknown');
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   matches(textNode: TextNode) {
     if (textNode.characters.length === 0) {
       return false;
@@ -30,7 +30,7 @@ export default class ListOptionTypeUnknown extends BaseTextNodeLintRule {
     return false;
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   fix(textNode: TextNode): void {
     const styleSegments = textNode.getStyledTextSegments(['indentation', 'listOptions']);
     for (const styleSegment of styleSegments) {

@@ -55,7 +55,7 @@ async function addEntriesToStorage() {
 
   (function() {
     const start = new Date();
-    let checkedKeys = 0;
+    const checkedKeys = 0;
     for(const key of figma.root.getPluginDataKeys()) {
         figma.root.setPluginData(key, '');
     }

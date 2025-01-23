@@ -313,7 +313,7 @@ export default class LocalizedLabelManagerUI
     for (const localizedLabelId of this.cachedFrames[frameId].localizedLabelIds) {
       const localizedLabel = this.cachedLocalisedLabels[localizedLabelId]!;
 
-      // eslint-disable-next-line no-await-in-loop
+       
       try {
         await this.setLabelLanguage(localizedLabel, targetLanguage, translator, false, false /** CTA is triggered not every time */);
       } catch (e: any) {
@@ -378,7 +378,7 @@ export default class LocalizedLabelManagerUI
 
       // TODO #17 versioning implement when inlang history is in place
       // const historyEntryForVersion = message.getHistoryEntry(localizedLabel.rootFrameLanguage, localizedLabel.genderId, localizedLabel.pluralId, message.latestVersion);
-      // eslint-disable-next-line no-await-in-loop
+       
       updatePromises.push(
         this.updateLabelProperties(localizedLabel.nodeId, {
           messageState: {
@@ -412,7 +412,7 @@ export default class LocalizedLabelManagerUI
 
     for (const labelWithLinkToMessage of labelsWithLinkToMessage) {
       if (messageToUnlink !== undefined) {
-        // eslint-disable-next-line no-await-in-loop
+         
         await this.updateLabelProperties(labelWithLinkToMessage.nodeId, {
           messageState: {
             type: 'unlinked',
@@ -421,7 +421,7 @@ export default class LocalizedLabelManagerUI
           },
         });
       } else {
-        // eslint-disable-next-line no-await-in-loop
+         
         await this.updateLabelProperties(labelWithLinkToMessage.nodeId, {
           messageState: { type: 'unset' },
         });
@@ -444,7 +444,7 @@ export default class LocalizedLabelManagerUI
       });
     } else {
       if (localizedLabel.unlinkedMessage) {
-        // eslint-disable-next-line no-param-reassign
+         
         localizedLabel.unlinkedMessage.id = messageNameToLinkTo;
         message = await this.messageStore.upsertMessage(
           localizedLabel.unlinkedMessage,
@@ -523,7 +523,7 @@ export default class LocalizedLabelManagerUI
     await this.localizedLabelMangerSandbox.commitUndo();
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   async updateLabelPatternHtml(
     localizedLabel: UILocalizedLabel,
     patternHtml: string,
@@ -600,7 +600,7 @@ export default class LocalizedLabelManagerUI
 
       for (const parameter of parameters) {
         if (changedProperties.messageState!.parameterValues[parameter.name] === undefined) {
-          // eslint-disable-next-line no-param-reassign
+           
           changedProperties.messageState!.parameterValues[parameter.name] = {
             type: 'string',
             value: parameter.name, // TODO #18 default values have better default values
@@ -640,7 +640,7 @@ export default class LocalizedLabelManagerUI
         );
         variantPatternHTMLHash = blake.blake2sHex(variantHTML);
 
-        // eslint-disable-next-line no-param-reassign
+         
         changedProperties.language = language; // bestMatchingVariant.languageTag as Locale;
       }
       // the variant pattern in the label have changed
@@ -654,7 +654,7 @@ export default class LocalizedLabelManagerUI
         changedProperties.messageState.parameterValues,
       );
       variantPatternHTMLHash = blake.blake2sHex(variantHTML);
-      // eslint-disable-next-line no-param-reassign
+       
       changedProperties.language = language;
     }
     // unset will be passed automatically
@@ -698,7 +698,7 @@ export default class LocalizedLabelManagerUI
 
     for (const newMessage of importStats.newMessages) {
       console.log(`creating Message: ${newMessage.id}`);
-      // eslint-disable-next-line no-await-in-loop
+       
       await this.messageStore.upsertMessage(newMessage, {});
     }
 
@@ -708,7 +708,7 @@ export default class LocalizedLabelManagerUI
       console.log(
         `creating Variant for Message: ${newVariant.message.id} match: ${newVariant.variant.match} `,
       );
-      // eslint-disable-next-line no-await-in-loop
+       
       await this.messageStore.upsertMessage(updatedMessage.data!, {});
     }
 
@@ -721,7 +721,7 @@ export default class LocalizedLabelManagerUI
       console.log(
         `updating Variant for Message: ${updatedVariant.message.id} match: ${updatedVariant.variant.match} `,
       );
-      // eslint-disable-next-line no-await-in-loop
+       
       await this.messageStore.upsertMessage(updatedMessage.data!, {});
     }
   }

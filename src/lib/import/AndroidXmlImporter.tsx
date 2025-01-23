@@ -1,6 +1,6 @@
-/* eslint-disable no-await-in-loop */
-/* eslint-disable no-continue */
-/* eslint-disable no-plusplus */
+ 
+ 
+ 
 
 import { Message } from '@inlang/sdk';
 import { ImportMessage } from './ImportMessage';
@@ -120,7 +120,7 @@ export default class AndroidXmlImporter {
         return undefined;
       }
 
-      // eslint-disable-next-line prefer-destructuring
+       
       resources = resourcesNodes[0];
     } catch (e) {
       console.warn(e);

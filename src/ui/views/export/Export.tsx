@@ -1,4 +1,4 @@
-/* eslint-disable no-await-in-loop */
+ 
 
 import * as React from 'react';
 import { useEffect, useState } from 'react';
@@ -169,7 +169,7 @@ export default function Export({ labelManager, userManager }: ExportProps) {
 
     labelManager.messageStore.addEventListener('updated', updateSummary);
 
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
+     
     return () => {
       labelManager.messageStore.removeEventListener('updated', updateSummary);
     };

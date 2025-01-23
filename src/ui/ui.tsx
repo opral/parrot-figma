@@ -59,7 +59,7 @@ initializeSentry();
 initializeAnalytics();
 
 const monkeyPatchCommandExec = document.execCommand;
-// eslint-disable-next-line func-names
+ 
 document.execCommand = function () {
   // eslint-disable-next-line prefer-rest-params
   if (arguments[0] === 'undo' || arguments[0] === 'redo') {
@@ -118,7 +118,7 @@ window.addEventListener('keydown', (e) => {
 });
 
 function renderCssVariables(vars: any) {
-  // eslint-disable-next-line prefer-template
+   
   return (Object.entries(vars).map((entry: any) => entry.join(': ')).join('; ')) + ';';
 }
 
@@ -156,7 +156,7 @@ window.startDevMode = WindowManagerUi.instance!.startDevMode;
 const asyncFunctionProxy = new AsyncFunctionProxy(
   'UIAsyncFunctionProxy',
   (data: any) => {
-    // eslint-disable-next-line no-restricted-globals
+     
     parent.postMessage(
       {
         pluginMessage: data,
@@ -184,7 +184,7 @@ asyncFunctionProxy.proxyAsyncMethods(figmaRemote);
         new Error(`Migration version: ${report.version} - ${report.message}`),
       );
       report.reportedToSentry = true;
-      // eslint-disable-next-line no-await-in-loop
+       
       await figmaRemote.updateReport(report);
     }
   }
@@ -260,7 +260,7 @@ enum LicenseState {
 
 function App() {
   // initial app screen is startup until we initialy loaded the data
-  const [appScreen, setAppScreen] = useState(undefined as String | undefined);
+  const [appScreen, setAppScreen] = useState(undefined as string | undefined);
 
   const [user, setUser] = useState(undefined as PluginUser | undefined);
 
@@ -292,7 +292,7 @@ function App() {
     };
 
     const onPlanUpgradeNeeded = (event: any) => {
-      setCunsumptionPayWallFeature(event.detail as String);
+      setCunsumptionPayWallFeature(event.detail as string);
     };
 
     userStateManagerUi.addEventListener('planUpgradeNeeded', onPlanUpgradeNeeded);

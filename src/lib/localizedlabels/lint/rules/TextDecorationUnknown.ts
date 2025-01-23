@@ -1,12 +1,12 @@
 import BaseTextNodeLintRule from './BaseTextNodeLintRule';
 
-// eslint-disable-next-line max-classes-per-file
+ 
 export default class TextDecorationUnknown extends BaseTextNodeLintRule {
   constructor() {
     super('TextDecorationUnknown');
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   matches(textNode: TextNode) {
     if (textNode.characters.length === 0) {
       return false;
@@ -29,7 +29,7 @@ export default class TextDecorationUnknown extends BaseTextNodeLintRule {
     return false;
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   fix(textNode: TextNode): void {
     const styleSegments = textNode.getStyledTextSegments(['textDecoration']);
     for (const styleSegment of styleSegments) {

@@ -1,5 +1,5 @@
-/* eslint-disable no-plusplus */
-/* eslint-disable no-await-in-loop */
+ 
+ 
 import {
   ProjectSettings,
   loadProject,
@@ -306,10 +306,10 @@ export default class MessageStoreMemory extends EventTarget {
         } else if (filterParts[0] === 'exact_text' && filterParts.length > 1) {
           searchQueryObj.exactText = filterParts[1] === 'true';
         } else if (filterParts[0] === 'name' && filterParts.length > 1) {
-          // eslint-disable-next-line prefer-destructuring
+           
           searchQueryObj.name = filterParts[1];
         } else {
-          // eslint-disable-next-line no-continue
+           
           continue;
         }
 
@@ -325,7 +325,7 @@ export default class MessageStoreMemory extends EventTarget {
       const nameAtTheEnd = /name:([\w,*:]+)$/g;
       const matches = processedInputString.match(nameAtTheEnd);
       if (matches) {
-        // eslint-disable-next-line prefer-destructuring
+         
         searchQueryObj.name = matches[0].split(':')[1];
         processedInputString = processedInputString.split(matches[0]).join('');
         searchQueryObj.nameAtEnd = true;
@@ -464,7 +464,7 @@ export default class MessageStoreMemory extends EventTarget {
             };
             results.inNames.add(message.id);
           } else {
-            // eslint-disable-next-line no-continue
+             
             results.matchingNames.delete(message.id);
           }
         }

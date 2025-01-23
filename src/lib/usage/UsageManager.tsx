@@ -1,4 +1,4 @@
-/* eslint-disable max-classes-per-file */
+ 
 // TODO #32 use the local storage for now - information will be sourced by the backend later
 
 import { FileUsage } from './FileUsage';

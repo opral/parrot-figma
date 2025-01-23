@@ -67,14 +67,14 @@ export default function MessageListView({
         event.data.pluginMessage.type === 'event'
         && event.data.pluginMessage.name === 'selectionchange'
       ) {
-        // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
+         
         refreshSelection(true);
       }
     };
 
     // asynchronous fetch the state from figma helper
     (async () => {
-      // eslint-disable-next-line @typescript-eslint/no-use-before-define
+       
       await refreshSelection(false);
     })();
 
@@ -206,7 +206,7 @@ export default function MessageListView({
           }
 
           rendered += 1;
-          // eslint-disable-next-line consistent-return
+           
           return (
             <TranslationKeyListItem
               key={messageId}

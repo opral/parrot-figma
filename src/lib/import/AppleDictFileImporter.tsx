@@ -1,6 +1,6 @@
-/* eslint-disable no-await-in-loop */
-/* eslint-disable no-continue */
-/* eslint-disable no-plusplus */
+ 
+ 
+ 
 
 import { Gender } from '../message/variants/Gender';
 import { Plural } from '../message/variants/Plural';

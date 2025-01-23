@@ -1,4 +1,4 @@
-/* eslint-disable class-methods-use-this -- this class gets proxied using the async proxy - this doesn't work with static methods for now :-/ */
+ 
 
 import generateGUID from '../lib/usage/generateGUID';
 import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowManagerSandbox';

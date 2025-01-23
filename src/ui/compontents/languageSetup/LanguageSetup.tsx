@@ -125,7 +125,7 @@ export default function LanguageSetup({
 
     labelManager.messageStore.addEventListener('updated', updateSummary);
 
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
+     
     return () => {
       labelManager.messageStore.removeEventListener('updated', updateSummary);
     };

@@ -10,7 +10,7 @@ export enum Plural {
   OTHER = 'other',
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 const pluralArrayByLanguage: { [key in Locale]: Plural[] } = {
   [Locale.AF]: [Plural.OTHER, Plural.ONE],
   [Locale.AM]: [Plural.OTHER, Plural.ONE],

@@ -96,7 +96,7 @@ export default class UserManagerUI extends EventTarget {
     } */
 
     setTimeout(() => {
-      // eslint-disable-next-line object-shorthand
+       
       const currentUserUpdatedEvent = new CustomEvent<any>('planUpgradeNeeded', {
         detail: feature,
       });

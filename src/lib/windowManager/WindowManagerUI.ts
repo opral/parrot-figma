@@ -1,4 +1,4 @@
-/* eslint-disable class-methods-use-this */
+ 
 import { debug } from 'console';
 import { RESIZEDETECTION_OVERLAP_PX, WindowMode } from './WindowManagerSandbox';
 
@@ -185,7 +185,7 @@ export default class WindowManagerUi extends EventTarget {
           ) {
             lastRatio = entries[0].intersectionRatio;
 
-            // eslint-disable-next-line no-restricted-globals
+             
             parent.postMessage(
               {
                 pluginMessage: { target: 'WindowManager', windowOverlapChanged: true },
@@ -240,7 +240,7 @@ export default class WindowManagerUi extends EventTarget {
       }
     });
 
-    // eslint-disable-next-line no-restricted-globals
+     
     parent.postMessage(
       { pluginMessage: { target: 'WindowManager', uiInit: true }, pluginId: '*' },
       '*',

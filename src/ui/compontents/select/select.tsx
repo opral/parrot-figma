@@ -220,7 +220,7 @@ export default function Select({
         top: menuContainerRef.current!.offsetTop,
       };
 
-      const setContainer = (pos: { height: Number; top: Number }) => {
+      const setContainer = (pos: { height: number; top: number }) => {
         menuContainerRef.current!.style.top = `${pos.top}px`;
         menuContainerRef.current!.style.height = `${pos.height}px`;
 

@@ -16,7 +16,7 @@ const features = {
   aiTranslation: '',
 };
 
-// eslint-disable-next-line no-empty-pattern
+ 
 export default function ConsumptionPaywall({
   showAllFeatures,
   upgradePlan,

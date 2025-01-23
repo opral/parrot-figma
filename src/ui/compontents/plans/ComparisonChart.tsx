@@ -16,7 +16,7 @@ const features = {
   aiTranslation: '',
 };
 
-// eslint-disable-next-line no-empty-pattern
+ 
 export default function ComparisonChart({ upgradePlan }: ComparisonChartProps) {
   return (
     <table className="comparison_chart--table">

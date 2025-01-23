@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-use-before-define */
+ 
 /* eslint-disable import/no-extraneous-dependencies */
 /*
 React-Quill

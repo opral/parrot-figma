@@ -188,7 +188,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 
     // allways add an additional line break at the end
     if (ops.length > 0) {
-      // eslint-disable-next-line no-param-reassign
+       
       ops[ops.length - 1].end += 1;
     }
     const rawtext = `${text}\n`;
@@ -333,7 +333,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     let currentPositon = 0;
     contents.ops?.forEach((operation: any) => {
       if (currentPositon + operation.insert.length > text.length) {
-        // eslint-disable-next-line no-param-reassign
+         
         operation.insert = operation.insert.slice(0, -1);
       }
 
@@ -424,7 +424,7 @@ export class UILocalizedLabel implements LocalizedLabel {
   ) {
     const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
     const fromRefLanguage = this.language === refLanguage;
-    // eslint-disable-next-line no-case-declarations
+     
     let unlinkedMessage: Message = {
       id: '____unlinked',
       // we start with no pattern - unlinked messages cannot have variants other than language - for more complex messages a linked message is required
@@ -669,7 +669,7 @@ export class UILocalizedLabel implements LocalizedLabel {
     const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
     if (this.messageLinkState === MessageLinkState.Unset) {
       // TODO #29 in unset - create message ?
-      // eslint-disable-next-line no-case-declarations
+       
       const unlinkedMessage = {
         id: '____unlinked',
         // we start with no pattern - unlinked messages cannot have variants other than language - for more complex messages a linked message is required

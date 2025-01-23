@@ -1,6 +1,6 @@
-/* eslint-disable max-classes-per-file */
-/* eslint-disable no-restricted-syntax */
-/* eslint-disable no-labels */
+ 
+ 
+ 
 import { stat } from 'fs';
 import ParrotApi, { TranslationCredit, TranslationCreditUsage } from '../api/Parrot';
 import { Locale } from '../message/variants/Locale';
@@ -206,7 +206,7 @@ export default class TranslatorMachine {
     }
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   async updateInBackend(
     figmaUserId: string,
     figmaFileOwnerId: string,
@@ -272,12 +272,12 @@ export default class TranslatorMachine {
     };
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   async setUpsellCTAShownFlag(state: boolean) {
     await figma.clientStorage.setAsync('parrot_upsell_cta_shown', state);
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   async getUpsellCTAShownFlag() {
     const ctaShown = await figma.clientStorage.getAsync('parrot_upsell_cta_shown');
     if (ctaShown === undefined) {

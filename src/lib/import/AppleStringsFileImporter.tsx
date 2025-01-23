@@ -1,6 +1,6 @@
-/* eslint-disable no-await-in-loop */
-/* eslint-disable no-continue */
-/* eslint-disable no-plusplus */
+ 
+ 
+ 
 
 import { Message } from '@inlang/sdk';
 import MessageStoreMemory from '../message/store/MessageStoreMemory';
@@ -58,7 +58,7 @@ export default class AppleStringsFileImporter {
     const foundMessages = [] as Message[];
 
     // iterate over each line of the file
-    // eslint-disable-next-line no-plusplus
+     
     let inComment = false;
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();

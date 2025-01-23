@@ -38,7 +38,7 @@ export default class GoogleTranslator {
         // const placeholderName = name;
         placeholderIndexMapping[currentIndex] = match;
         const placeholderReplacement = `[[${currentIndex}]]`;
-        // eslint-disable-next-line no-plusplus
+         
         currentIndex++;
         return placeholderReplacement;
       },
@@ -60,7 +60,7 @@ export default class GoogleTranslator {
         continue;
       }
 
-      // eslint-disable-next-line no-await-in-loop
+       
       const result = await fetch(
         `https://translate.googleapis.com/translate_a/single?${new URLSearchParams({
           client: 'gtx',
@@ -82,7 +82,7 @@ export default class GoogleTranslator {
         Monitoring.instance?.sentryCaptureMesage(`Translation of ${text} failed. Status code (${result.status}).`);
         return null;
       }
-      // eslint-disable-next-line no-await-in-loop
+       
       const translationResults = await result.json();
 
       if (!translationResults[0] || !translationResults[0][0] || !translationResults[0][0][0]) {

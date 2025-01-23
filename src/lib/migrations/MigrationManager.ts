@@ -32,7 +32,7 @@ export default class MigrationManager {
   private migrations = [
     {
       version: '0.10.71',
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+       
       migrate: (version: string) => {
         // CONFIG - migrate legacy config to new conifig
         const legacyConfigDataKey = 'prt_c';
@@ -182,7 +182,7 @@ export default class MigrationManager {
 
         for (const textNodeWitAnonymMessageToMigrate of textNodesWitAnonymMessageToMigrate) {
           if (textNodeWitAnonymMessageToMigrate.getPluginData('mi') !== '') {
-            // eslint-disable-next-line no-continue
+             
             continue; // skip labels that have a message reference
           }
 
@@ -287,13 +287,13 @@ export default class MigrationManager {
     },
   ];
 
-  // eslint-disable-next-line class-methods-use-this
+   
   private setPluginData(node: BaseNodeMixin, dataKey: string, data: string) {
     console.log(`[${node.id}] setting ${dataKey} to ]${data}[`);
     node.setPluginData(dataKey, data);
   }
 
-  // eslint-disable-next-line class-methods-use-this, consistent-return
+   
   private isMigrationNeeded(lastMigrationVersion: string, migrationVersion: string) {
     if (lastMigrationVersion === '') {
       return true;

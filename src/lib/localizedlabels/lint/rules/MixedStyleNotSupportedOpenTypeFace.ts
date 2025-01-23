@@ -1,6 +1,6 @@
 import BaseTextNodeLintRule from './BaseTextNodeLintRule';
 
-// eslint-disable-next-line max-classes-per-file
+ 
 export default class MixedStyleNotSupportedOpenTypeFace extends BaseTextNodeLintRule {
   styleField: string;
 
@@ -9,7 +9,7 @@ export default class MixedStyleNotSupportedOpenTypeFace extends BaseTextNodeLint
     this.styleField = 'openTypeFeatures';
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   matches(textNode: TextNode) {
     if (textNode.getStyledTextSegments(['openTypeFeatures']).length > 1) {
       return true;

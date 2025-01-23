@@ -1,4 +1,4 @@
-/* eslint-disable no-await-in-loop */
+ 
 // This plugin will open a window to prompt the user to enter a number, and
 // it will then create that many rectangles on the screen.
 
@@ -95,7 +95,7 @@ figma.on('selectionchange', () => {
 // callback. The callback will be passed the "pluginMessage" property of the
 // posted message.
 figma.ui.onmessage = (msg) => {
-  // eslint-disable-next-line default-case
+   
   switch (msg.type) {
     case 'undo':
       console.log('undo forwarded');

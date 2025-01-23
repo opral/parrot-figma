@@ -1,6 +1,6 @@
-/* eslint-disable no-await-in-loop */
-/* eslint-disable no-continue */
-/* eslint-disable no-plusplus */
+ 
+ 
+ 
 
 import { Message } from '@inlang/sdk';
 import { Gender } from '../message/variants/Gender';
@@ -137,7 +137,7 @@ export default class I18NextKeyValueImporter {
         const html = this.toParrotPlaceholders(subNode as string);
         const pattern = MessageStoreMemory.patternHtmlToPattern(html);
 
-        // eslint-disable-next-line no-param-reassign
+         
         foundMessages[idAndPlrual.id] = {
           id: idAndPlrual.id,
           selectors: [],

@@ -1,6 +1,6 @@
-/* eslint-disable no-await-in-loop */
-/* eslint-disable no-plusplus */
-/* eslint-disable no-continue */
+ 
+ 
+ 
 import React, { useState, ReactNode } from 'react';
 import './Dropzone.css';
 

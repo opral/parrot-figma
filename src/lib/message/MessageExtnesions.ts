@@ -1,4 +1,4 @@
-// eslint-disable-next-line max-classes-per-file
+ 
 import { Message, Variant, getVariant } from '@inlang/sdk';
 import { Locale } from './variants/Locale';
 

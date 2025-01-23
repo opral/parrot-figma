@@ -38,7 +38,7 @@ export default abstract class BaseTextNodeLintRule {
     }
 
     try {
-      // eslint-disable-next-line no-param-reassign
+       
       (textNode as any)[field] = JSON.parse(mostPresentStyleSerialized!);
     } catch (e) {
       throw new Error(

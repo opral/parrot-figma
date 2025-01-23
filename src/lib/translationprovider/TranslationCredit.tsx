@@ -26,10 +26,10 @@ const atob = function (b64: string) {
   let data = '';
 
   while (i < len) {
-    // eslint-disable-next-line no-bitwise, no-plusplus, no-mixed-operators
+     
     const code = indices[b64[++i]] << 18 | indices[b64[++i]] << 12 | indices[b64[++i]] << 6 | indices[b64[++i]];
     if (code !== 0) {
-      // eslint-disable-next-line no-bitwise
+       
       data += String.fromCharCode((code >>> 16) & 255, (code >>> 8) & 255, code & 255);
     }
   }

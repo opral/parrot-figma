@@ -1,7 +1,7 @@
 import TextEncoding from 'text-encoding';
 
-/* eslint-disable no-param-reassign */
-/* eslint-disable @typescript-eslint/no-use-before-define */
+ 
+ 
 /**
  * The filesystem interface.
  *
@@ -366,7 +366,7 @@ function normalPath(path: string): string {
 
   // Resolve relative paths if they exist
   let match;
-  // eslint-disable-next-line no-cond-assign
+   
   while ((match = path.match(upreference)?.[0])) {
     path = path.replace(match, '');
   }

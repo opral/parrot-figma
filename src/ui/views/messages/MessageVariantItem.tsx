@@ -89,7 +89,7 @@ export default function MessageVariantItem({
               // let skip = message.variants[language as Locale]?.[gender as Gender]?.[plural as Plural]?.skip ?? false;
 
               Object.values(parameters).forEach((parameter) => {
-                // eslint-disable-next-line no-param-reassign
+                 
                 parameter.default = true;
               });
 

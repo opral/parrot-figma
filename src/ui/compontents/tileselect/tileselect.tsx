@@ -32,7 +32,7 @@ export default function TileSelect<T>({
   const [selectedOptions, setSelectedOptions] = useState<T[]>(defaultSelection ?? []);
 
   function toggleOption(option: TileSelectOption<T>) {
-    // eslint-disable-next-line @typescript-eslint/no-shadow
+     
     setSelectedOptions((selectedOptions: T[]) => {
       const position = selectedOptions.findIndex((v) => v === option.value);
       let newSelectedOptions: T[];

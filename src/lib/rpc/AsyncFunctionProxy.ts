@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-loop-func */
-/* eslint-disable max-classes-per-file */
+ 
+ 
 export class AsyncMessageBus {
   static invocationResult = 'invocationResult';
 
@@ -66,11 +66,11 @@ export class AsyncFunctionProxy {
         && (instancePrototype[memberName].constructor.name === 'Function' || instancePrototype[memberName].constructor.name === 'AsyncFunction')
       ) {
         const proxy = this;
-        // eslint-disable-next-line func-names -- we store this function anonymous in an array and there is no way to dynamically name it for better - thats fine
+         
         instancePrototype[memberName] = async function () {
           let thrownError: undefined | any;
           // console.log(proxy.name + ' request invocation of: ' + instanceClassName + '.' + memberName);
-          // eslint-disable-next-line prefer-rest-params -- proxy here we want just forward the arguments
+           
           try {
             const remoteResult = await proxy.invoke(
               `${instanceClassName}.${memberName}`,
@@ -174,7 +174,7 @@ export class AsyncFunctionProxy {
         this.postMessage(transferObj);
       })
       .catch((error: Error) => {
-        // eslint-disable-next-line no-console
+         
         this.postMessage({
           target: 'AsyncFunctionProxy',
           type: AsyncMessageBus.invocationResult,
@@ -201,7 +201,7 @@ export class AsyncFunctionProxy {
     return true;
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   private toSerializableError(error: Error) {
     return {
       message: error.message,
@@ -210,7 +210,7 @@ export class AsyncFunctionProxy {
     };
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   private fromSerializableError(serializedError: any) {
     const { message, name, stack } = serializedError;
     const error = new Error(message);

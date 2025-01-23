@@ -119,7 +119,7 @@ export class WindowManagerSandbox {
 
     // @ts-ignore --- figma does not provide this in ther typings yet
     if (figma.editorType === 'dev') {
-      // eslint-disable-next-line no-param-reassign
+       
       windowMode = WindowMode.DevPanel;
     }
 

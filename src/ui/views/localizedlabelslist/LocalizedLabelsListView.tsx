@@ -18,7 +18,7 @@ if (!Element.prototype.scrollIntoViewIfNeeded) {
     this: HTMLElement,
     centerIfNeeded?: boolean,
   ) {
-    // eslint-disable-next-line no-param-reassign
+     
     centerIfNeeded = arguments.length === 0 ? true : !!centerIfNeeded;
 
     const parent = this.parentNode! as HTMLElement;
@@ -88,13 +88,13 @@ export default function LocalizedLabelsListView({
 
     for (const selectedNode of Object.values(selectedNodes)) {
       if (!selectedNode.rootFrameId) {
-        // eslint-disable-next-line no-continue
+         
         continue;
       }
 
       if (!updatedParentIds.has(selectedNode.rootFrameId)) {
         // console.log('getting labels from manager');
-        // eslint-disable-next-line no-await-in-loop -- parallizing would not bring any advantage here
+         
         const selectedLabelsByFrame = await localizedLabelManager.getLocalizedLabelsByFrame(
           selectedNode.rootFrameId,
         );
@@ -112,7 +112,7 @@ export default function LocalizedLabelsListView({
   function messageHandler(event: any) {
     if (event.data.pluginMessage.type === 'event') {
       if (event.data.pluginMessage.name === 'selectionchange') {
-        // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
+         
         refreshSelection();
       }
     }
@@ -121,16 +121,16 @@ export default function LocalizedLabelsListView({
   useEffect(() => {
     // asynchronous fetch the state from figma helper
     (async () => {
-      // eslint-disable-next-line @typescript-eslint/no-use-before-define
+       
       await refreshSelection();
     })();
 
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
+     
     localizedLabelManager.addEventListener('updated', refreshSelection);
     localizedLabelManager.messageStore.addEventListener('updated', refreshSelection);
     window.addEventListener('message', messageHandler);
 
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
+     
     return () => {
       localizedLabelManager.removeEventListener('updated', refreshSelection);
       localizedLabelManager.messageStore.removeEventListener('updated', refreshSelection);

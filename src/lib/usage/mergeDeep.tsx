@@ -16,13 +16,13 @@ export default function mergeDeep(target: any, source: any) {
     const sourceValue = source[key];
 
     if (Array.isArray(targetValue) && Array.isArray(sourceValue)) {
-      // eslint-disable-next-line no-param-reassign
+       
       target[key] = targetValue.concat(sourceValue);
     } else if (isObject(targetValue) && isObject(sourceValue)) {
-      // eslint-disable-next-line no-param-reassign
+       
       target[key] = mergeDeep({ ...targetValue }, sourceValue);
     } else {
-      // eslint-disable-next-line no-param-reassign
+       
       target[key] = sourceValue;
     }
   });

@@ -1,4 +1,4 @@
-/* eslint-disable no-bitwise */
+ 
 import * as Sentry from '@sentry/react';
 import posthog from 'posthog-js';
 import * as pjs from '../../../package.json';

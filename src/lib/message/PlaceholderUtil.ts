@@ -22,7 +22,7 @@ export default class PlaceholderHelper {
     const placeholderMatches = [] as { start: number; length: number; placeholder: Placeholder }[];
 
     let match;
-    // eslint-disable-next-line no-cond-assign
+     
     while ((match = pattern.exec(text)) !== null) {
       const placeholder = this.extractFromRawHtml(
         match[patternGroups.name],
@@ -47,7 +47,7 @@ export default class PlaceholderHelper {
     let options: any | undefined;
 
     let match;
-    // eslint-disable-next-line no-cond-assign
+     
     while (
       attributeString !== undefined
       && (match = attributeRegex.exec(attributeString)) !== null

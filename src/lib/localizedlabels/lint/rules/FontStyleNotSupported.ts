@@ -1,15 +1,15 @@
 import FontUtil from '../../FontUtil';
 import BaseTextNodeLintRule from './BaseTextNodeLintRule';
 
-// eslint-disable-next-line max-classes-per-file
+ 
 export default class FontStyleNotSuppoorted extends BaseTextNodeLintRule {
-  fontNameStyleField = 'fontName' as 'fontName';
+  fontNameStyleField = 'fontName' as const;
 
   constructor() {
     super('FontStyleNotSupported');
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   matches(textNode: TextNode) {
     if (textNode.characters.length === 0) {
       return false;
@@ -27,7 +27,7 @@ export default class FontStyleNotSuppoorted extends BaseTextNodeLintRule {
     );
 
     for (const fontNameStyleSegment of fontNameStyleSegments) {
-      // eslint-disable-next-line no-await-in-loop
+       
       const font = FontUtil.getStylingSupport(fontNameStyleSegment.fontName);
       if (
         fontNameStyleSegment.fontName.style !== font.bold?.style
@@ -41,7 +41,7 @@ export default class FontStyleNotSuppoorted extends BaseTextNodeLintRule {
     return false;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars, class-methods-use-this
+   
   fix(textNode: TextNode): void {
     const currentStyleSegments = textNode.getStyledTextSegments([this.fontNameStyleField]);
     const stylesPresent = {} as any;
@@ -75,7 +75,7 @@ export default class FontStyleNotSuppoorted extends BaseTextNodeLintRule {
     }
 
     try {
-      // eslint-disable-next-line no-param-reassign
+       
       (textNode as any)[this.fontNameStyleField] = JSON.parse(mostPresentStyleSerialized!);
     } catch (e) {
       throw new Error(

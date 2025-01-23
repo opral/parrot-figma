@@ -17,7 +17,7 @@ export default class Monitoring {
     this.sentry = sentry;
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   async mixpanel_track(name: string, opts = {}) {
     // if (process.env.MIXPANEL_ACCESS_TOKEN) {
     //   this.mixpanel?.track(name, opts);
@@ -26,7 +26,7 @@ export default class Monitoring {
     // }
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   async mixpanel_people_set(property: string, value: any) {
     // if (process.env.MIXPANEL_ACCESS_TOKEN) {
     //   this.mixpanel?.people.set(property, value);
@@ -35,7 +35,7 @@ export default class Monitoring {
     // }
   }
 
-  // eslint-disable-next-line class-methods-use-this
+   
   async mixpanel_people_increment(property: string, value: number) {
     // if (process.env.MIXPANEL_ACCESS_TOKEN) {
     //   this.mixpanel?.people?.increment?.(property, value);

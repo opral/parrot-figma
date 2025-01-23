@@ -1,5 +1,5 @@
-/* eslint-disable no-await-in-loop */
-/* eslint-disable class-methods-use-this */
+ 
+ 
 import { Message } from '@inlang/sdk';
 import { Locale } from '../message/variants/Locale';
 import { LabelStyle, LocalizedLabel } from './LocalizedLabel';
@@ -207,8 +207,8 @@ export default class LocalizedLabelManager {
               node: activeNode,
             });
           } else {
-            // eslint-disable-next-line no-restricted-syntax, no-labels
-            // eslint-disable-next-line no-plusplus
+             
+             
             checkStateLoop: for (let i = 0; i < currentState.textSegments.length; i++) {
               if (
                 selectedNodeStateByUser[user.id].textSegments[i].indentation
@@ -226,7 +226,7 @@ export default class LocalizedLabelManager {
 
                   node: activeNode,
                 });
-                // eslint-disable-next-line no-labels, no-extra-label
+                 
                 break checkStateLoop;
               }
             }
@@ -251,7 +251,7 @@ export default class LocalizedLabelManager {
     const createdLabels = [] as LocalizedLabel[];
     const keysChanged = new Set<string>();
     for (const change of event.documentChanges) {
-      // eslint-disable-next-line default-case
+       
       switch (change.type) {
         case 'CREATE': {
           if (change.node.removed) {
@@ -407,7 +407,7 @@ export default class LocalizedLabelManager {
               changedVirtualNodes = this.virtualTree.getAllNodesInBranchByRootId(changedNode!.id);
               // console.log(`Node changed - ${change.id} name in vt affacted: ${JSON.stringify(changedVirtualNodes.length)}`);
             }
-            // eslint-disable-next-line @typescript-eslint/no-loop-func
+             
             changedVirtualNodes.forEach((changedVNode) => {
               if (changedVNode.cacheRelevant) {
                 const movedFigmaNode = figma.getNodeById(changedVNode.id);
@@ -576,14 +576,14 @@ export default class LocalizedLabelManager {
 
   async processTextNode(textNode: CachedTextNode, keysLoaded: Set<string>, parentNode?: BaseNode) {
     const textNodeId = textNode.id;
-    // eslint-disable-next-line no-param-reassign
+     
     textNode.getPluginData = (key: string) => {
-      // eslint-disable-next-line no-underscore-dangle
+       
       if (!textNode._cachedNode) {
-        // eslint-disable-next-line no-underscore-dangle, no-param-reassign
+         
         textNode._cachedNode = figma.getNodeById(textNodeId) as TextNode | undefined;
       }
-      // eslint-disable-next-line no-underscore-dangle
+       
       const pluginData = textNode._cachedNode?.getPluginData(key);
       // console.log("accessig key [" + key + "] via patched method:" +pluginData)
       return pluginData as any;
@@ -653,7 +653,7 @@ export default class LocalizedLabelManager {
 
         const virtualSelectedNode = this.virtualTree.getVirtualNode(selectedNode.id);
         if (virtualSelectedNode) {
-          // eslint-disable-next-line @typescript-eslint/no-loop-func
+           
           this.virtualTree
             .getAllNodesInBranchByRootId(virtualSelectedNode.id)
             .forEach((virtualNode) => {
@@ -686,7 +686,7 @@ export default class LocalizedLabelManager {
    * @param node the node to extract the root frame from
    * @returns the root frame (The last parent of type frame)
    */
-  // eslint-disable-next-line class-methods-use-this
+   
   getRootFrame(node: any): FrameNode | undefined {
     if (!node.parent) {
       throw new Error('given node has no parent');
@@ -853,7 +853,7 @@ export default class LocalizedLabelManager {
     // - if no execution is ongoing hop right in and create a queue
     // - if an execution is ongoing await the previous call
     if (this.labelUpdateQueue[nodeId]) {
-      // eslint-disable-next-line no-promise-executor-return
+       
       // console.log('queing update');
       await new Promise((resolver: any) => {
         // we don't resolve this promise - this is done by the excution of the current function
@@ -1317,7 +1317,7 @@ export default class LocalizedLabelManager {
       ? JSON.parse(node.getPluginData(this.anonymMessageDataKey))
       : undefined;
 
-    // eslint-disable-next-line consistent-return
+     
     return {
       pageId: page.id,
       pageName: page.name,
@@ -1351,7 +1351,7 @@ export default class LocalizedLabelManager {
 
     const fillinValues = Object.keys(fillins);
 
-    // eslint-disable-next-line for-direction, no-plusplus
+     
     for (let i = fillinValues.length - 1; i >= 0; i--) {
       const fillinValue = fillinValues[i];
       const placeholder = fillins[fillinValue]!;
@@ -1483,7 +1483,7 @@ export default class LocalizedLabelManager {
     for (const textStyleDeltaOp of textStyleDeltaOps) {
       // console.log('processing:');
       // console.log(textStyleDeltaOp);
-      // eslint-disable-next-line no-plusplus
+       
       for (let i = 0; i < placehodlderDeltaOps.length; i++) {
         const placehodlderDeltaOp = placehodlderDeltaOps[i];
         if (!placehodlderDeltaOps[i].processed) {
@@ -1642,7 +1642,7 @@ export default class LocalizedLabelManager {
     for (const deltaOp of deltaOps) {
       if (deltaOp.ignoreForLabelStyle) {
         // ignoring placeholders not wrapped by styles
-        // eslint-disable-next-line no-continue
+         
         continue;
       }
       if (deltaOp.attributes.fontFamily) {

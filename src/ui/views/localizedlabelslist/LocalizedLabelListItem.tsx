@@ -54,7 +54,7 @@ export default function LocalizedLabelListItem({
   // Dummy state variable to trigger re-render when currentHighlightIndex.current changes
   const [, setDummyState] = useState<any>();
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO remove when we implemented the design != keystore resolution
+   
 
   const pluralsAvailable = [] as SelectOption[];
 

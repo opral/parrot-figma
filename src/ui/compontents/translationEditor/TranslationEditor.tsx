@@ -1,5 +1,5 @@
 
-/* eslint-disable max-classes-per-file */
+ 
 
 
 /* eslint-disable jsx-a11y/click-events-have-key-events */
@@ -300,7 +300,7 @@ export default function TranslationEditor({
     updatedHtml: string,
     updatedParameters: MessageParameterValues,
   ) {
-    // eslint-disable-next-line no-param-reassign
+     
     (currentQuillEditor.clipboard as any).matchers[0][1] = function matchText(
       node: any,
       delta: any,
@@ -309,7 +309,7 @@ export default function TranslationEditor({
       return delta.insert(text);
     };
     // add extra cr
-    // eslint-disable-next-line no-param-reassign
+     
     updatedHtml += '\n';
 
     const cleanedValue = updatedHtml.split('\n').join('<br>');
@@ -556,7 +556,7 @@ export default function TranslationEditor({
                           value: string,
                           propagate: boolean,
                         ): void => {
-                          // eslint-disable-next-line no-param-reassign -- TODO #34 check if this acutally works
+                           
                           parameterValues[name] = {
                             type: 'string',
                             value,

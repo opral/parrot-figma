@@ -1,6 +1,6 @@
 import BaseTextNodeLintRule from './BaseTextNodeLintRule';
 
-// eslint-disable-next-line max-classes-per-file
+ 
 export default class MixedStyleNotSupported extends BaseTextNodeLintRule {
   styleField: string;
 

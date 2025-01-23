@@ -13,7 +13,7 @@ type MessagesConsumptionPaywallProps = {
   gotLicencesClick: () => void;
 };
 
-// eslint-disable-next-line no-empty-pattern
+ 
 export default function MessagessConsumptionPaywall({
   closeClick,
   buyClick,

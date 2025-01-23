@@ -1,4 +1,4 @@
-/* eslint-disable max-classes-per-file */
+ 
 export class VirtualTreeNode {
   public id: string;
 
@@ -78,7 +78,7 @@ export default class VirtualTree {
       this.lookupTable.delete(child.id);
     }
     // if parent has no children - remove parent as well!
-    // eslint-disable-next-line no-param-reassign
+     
     node.parent!.children = node.parent!.children.filter((child) => child !== node);
     if (node.parent?.children.length === 0) {
       this.lookupTable.delete(node.parent.id);

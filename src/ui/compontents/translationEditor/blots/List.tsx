@@ -1,4 +1,4 @@
-// eslint-disable-next-line max-classes-per-file, import/no-extraneous-dependencies
+// eslint-disable-next-line import/no-extraneous-dependencies
 import Parchment from 'parchment';
 import Quill from 'quill';
 import Scroll from 'quill/blots/scroll';

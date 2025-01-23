@@ -1,6 +1,6 @@
-// eslint-disable-next-line max-classes-per-file, import/no-extraneous-dependencies
+// eslint-disable-next-line import/no-extraneous-dependencies
 
-// eslint-disable-next-line max-classes-per-file
+ 
 import Quill from 'quill';
 import Scroll from 'quill/blots/scroll';
 

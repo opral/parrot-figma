@@ -77,10 +77,9 @@ export default function FormatPlaceholder({
 
     if (currentPlaceholderName) {
       const parameterName = currentPlaceholderName;
-      const parameterValue =
-        formats[format] && formats[format].name
-          ? parameterValues[formats[format].name].value
-          : (editor as any).getText({ index: range?.index, length: range?.length! });
+      const parameterValue = formats[format] && formats[format].name
+        ? parameterValues[formats[format].name].value
+        : (editor as any).getText({ index: range?.index, length: range?.length! });
       const parameterType = 'string';
 
       setParameterValue(parameterName, parameterValue, false);
@@ -109,20 +108,20 @@ export default function FormatPlaceholder({
   }
 
   function resetPlaceholderName(event: React.KeyboardEvent) {
-    console.log('resetting placeholder name in control to ' + formats[format].name);
+    console.log(`resetting placeholder name in control to ${formats[format].name}`);
     setCurrentPlaceholderName(formats[format].name ?? '');
   }
 
   function resetPlaceholderValue(event: React.KeyboardEvent) {
     console.log(
-      'resetting placeholder value in control to ' + parameterValues[currentPlaceholderName].value,
+      `resetting placeholder value in control to ${parameterValues[currentPlaceholderName].value}`,
     );
     setCurrentPlaceholderValue(parameterValues[currentPlaceholderName].value ?? '');
   }
 
   function updatePlaceholderValue(event: React.KeyboardEvent) {
     console.log(
-      'updateingPlaceholderValue ' + currentPlaceholderName + ' to ' + currentPlaceholderValue,
+      `updateingPlaceholderValue ${currentPlaceholderName} to ${currentPlaceholderValue}`,
     );
     setParameterValue(currentPlaceholderName, currentPlaceholderValue, true);
   }

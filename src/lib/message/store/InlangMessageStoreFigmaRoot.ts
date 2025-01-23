@@ -57,10 +57,10 @@ export class InlangMessageStore {
   forwardDocumentChanges(event: any) {
     for (const change of event.documentChanges) {
       if (
-        change.origin === 'LOCAL' ||
-        change.type !== 'PROPERTY_CHANGE' ||
-        change.node.id !== '0:0' ||
-        change.properties.indexOf('pluginData') === -1
+        change.origin === 'LOCAL'
+        || change.type !== 'PROPERTY_CHANGE'
+        || change.node.id !== '0:0'
+        || change.properties.indexOf('pluginData') === -1
       ) {
         // eslint-disable-next-line no-continue
         continue;
@@ -86,8 +86,8 @@ export class InlangMessageStore {
           changedKeys.added.push(id);
         } else {
           if (
-            blake.blake2sHex(encoder.encode(figma.root.getPluginData(currentFileStorageKey))) !==
-            this.messageState[id]
+            blake.blake2sHex(encoder.encode(figma.root.getPluginData(currentFileStorageKey)))
+            !== this.messageState[id]
           ) {
             changedKeys.updated.push(id);
           }
@@ -102,9 +102,9 @@ export class InlangMessageStore {
       }
 
       if (
-        changedKeys.deleted.length > 0 ||
-        changedKeys.added.length > 0 ||
-        changedKeys.updated.length > 0
+        changedKeys.deleted.length > 0
+        || changedKeys.added.length > 0
+        || changedKeys.updated.length > 0
       ) {
         figma.ui.postMessage({
           target: 'TranslationKeyStore',

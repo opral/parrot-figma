@@ -176,9 +176,9 @@ export default class ReactQuill extends React.Component<ReactQuillProps, ReactQu
 
     if (this.lastDeltaChangeSet && props.value === this.lastDeltaChangeSet) {
       throw new Error(
-        'You are passing the `delta` object from the `onChange` event back ' +
-          'as `value`. You most probably want `editor.getContents()` instead. ' +
-          'See: https://github.com/zenoamaro/react-quill#using-deltas',
+        'You are passing the `delta` object from the `onChange` event back '
+          + 'as `value`. You most probably want `editor.getContents()` instead. '
+          + 'See: https://github.com/zenoamaro/react-quill#using-deltas',
       );
     }
   }

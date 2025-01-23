@@ -70,8 +70,8 @@ export class MyListItem extends ListItem {
 
   optimize(context: any) {
     if (
-      this.statics.requiredContainer &&
-      !(this.parent instanceof this.statics.requiredContainer)
+      this.statics.requiredContainer
+      && !(this.parent instanceof this.statics.requiredContainer)
     ) {
       // Insert the format value (bullet, ordered) into wrap arguments
       this.wrap(this.statics.requiredContainer.blotName, MyListItem.formats(this.domNode));

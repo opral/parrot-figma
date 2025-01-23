@@ -24,7 +24,7 @@ export type TranslationCredit = {
   msgc: number,
   // number of message credits used: msgc-msgu represent the available messages
   msgu: number,
-  
+
   // the signed jwt representing this token - used to send back
   jwt: string,
 };
@@ -56,7 +56,7 @@ export default class ParrotApi {
       if (!result.ok) {
         const resultNoOkError = new Error(`synchronizeCredits went wrong ${JSON.stringify(result)}`);
         await Monitoring.instance?.sentryCaptureException(resultNoOkError, {});
-        throw resultNoOkError
+        throw resultNoOkError;
       }
 
       return await result.json();

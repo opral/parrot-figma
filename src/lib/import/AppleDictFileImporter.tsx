@@ -61,8 +61,7 @@ export default class AppleDictFileImporter {
           // the dict element does not contain a plural rule type
           // add the variant to the message with the 'other' plural rule
           const valueElement = dictElement.querySelector('dict > string');
-          const text =
-            valueElement && valueElement.textContent ? valueElement.textContent : undefined;
+          const text = valueElement && valueElement.textContent ? valueElement.textContent : undefined;
           messages.push({
             name: messageName,
             plural: Plural.OTHER,

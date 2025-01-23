@@ -4,6 +4,8 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { use } from 'i18next';
+import { Message, Variant } from '@inlang/sdk';
+import posthog from 'posthog-js';
 import Select, { SelectOption } from '../select/select';
 import { Locale } from '../../../lib/message/variants/Locale';
 import './LanguageSetup.css';
@@ -15,8 +17,6 @@ import MessageImporter, { ImportResult, ImportType } from '../../../lib/import/M
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import { ImportMessage } from '../../../lib/import/ImportMessage';
 import Drawer from '../drawer/Drawer';
-import { Message, Variant } from '@inlang/sdk';
-import posthog from 'posthog-js';
 
 function Option(props: any) {
   return (
@@ -44,18 +44,16 @@ function DropdownIndicator(props: any) {
 function toLanguageOption(language: string, baseLanguage?: string) {
   let languageNameInCurrentLanguage = 'no name found';
   try {
-    languageNameInCurrentLanguage =
-      new Intl.DisplayNames('en', { type: 'language' }).of(language) ??
-      languageNameInCurrentLanguage;
+    languageNameInCurrentLanguage = new Intl.DisplayNames('en', { type: 'language' }).of(language)
+      ?? languageNameInCurrentLanguage;
   } catch (e) {
     /* empty */
   }
 
   let languageNameInForeignLanguage = 'no name found';
   try {
-    languageNameInForeignLanguage =
-      new Intl.DisplayNames(language, { type: 'language' }).of(language) ??
-      languageNameInForeignLanguage;
+    languageNameInForeignLanguage = new Intl.DisplayNames(language, { type: 'language' }).of(language)
+      ?? languageNameInForeignLanguage;
   } catch (e) {
     /* empty */
   }
@@ -109,13 +107,13 @@ export default function LanguageSetup({
   const [importResult, setImportResult] = useState(undefined as ImportResult | undefined);
 
   const [importKeysByState, setimportKeysByState] = useState<
-    | {
-        language: Locale;
-        newMessages: Message[];
-        newVariants: { message: Message; variant: Variant }[];
-        updatedVariants: { message: Message; variant: Variant }[];
-      }
-    | undefined
+  | {
+    language: Locale;
+    newMessages: Message[];
+    newVariants: { message: Message; variant: Variant }[];
+    updatedVariants: { message: Message; variant: Variant }[];
+  }
+  | undefined
   >(undefined);
 
   const [keySummary, setKeySummary] = useState(
@@ -142,8 +140,8 @@ export default function LanguageSetup({
       const previousBaseLanguage = selectedBaseLanguage;
       const currentLanguages = selectedLanguages;
       if (
-        previousBaseLanguage !== undefined &&
-        currentLanguages.findIndex(
+        previousBaseLanguage !== undefined
+        && currentLanguages.findIndex(
           (languageOption) => languageOption.value === previousBaseLanguage.value,
         ) === -1
       ) {
@@ -220,24 +218,47 @@ export default function LanguageSetup({
           {importResult && importResult.type === ImportType.UNSUPPORTED && (
             <div>
               File Type currently not supported.
-              <br /> Supported are l18next Json Files, Apple's <b>.stringsdict</b>, <b>.strings</b>{' '}
-              and Android's <b>.xml</b> file.{' '}
+              <br />
+              {' '}
+              Supported are l18next Json Files, Apple's
+              <b>.stringsdict</b>
+              ,
+              <b>.strings</b>
+              {' '}
+              and Android's
+              {' '}
+              <b>.xml</b>
+              {' '}
+              file.
+              {' '}
             </div>
           )}
 
           {importResult && importResult.type !== ImportType.UNSUPPORTED && importKeysByState && (
             <div>
-              Detected Format: {importResult.type}
+              Detected Format:
+              {' '}
+              {importResult.type}
               <br />
-              Filename: {importResult.fileName}
+              Filename:
+              {' '}
+              {importResult.fileName}
               <br />
-              Language: {importKeysByState.language}
+              Language:
+              {' '}
+              {importKeysByState.language}
               <br />
-              New Keys: {importKeysByState.newMessages.length}
+              New Keys:
+              {' '}
+              {importKeysByState.newMessages.length}
               <br />
-              New messages: {importKeysByState.newVariants.length}
+              New messages:
+              {' '}
+              {importKeysByState.newVariants.length}
               <br />
-              Updated messages: {importKeysByState.updatedVariants.length}
+              Updated messages:
+              {' '}
+              {importKeysByState.updatedVariants.length}
               <br />
             </div>
           )}
@@ -267,9 +288,7 @@ export default function LanguageSetup({
               display="contents"
             >
               <ReactSelect
-                filterOption={(option: any, input) =>
-                  option.data.menuLabel.toLowerCase().indexOf(input.toLowerCase()) !== -1
-                }
+                filterOption={(option: any, input) => option.data.menuLabel.toLowerCase().indexOf(input.toLowerCase()) !== -1}
                 options={availableLanguages}
                 placeholder="Select Language"
                 defaultValue={selectedBaseLanguage}
@@ -294,11 +313,13 @@ export default function LanguageSetup({
                   <div>{selectedBaseLanguage?.label}</div>
                 </div>
                 <div className="language-summary">
-                  {keySummary.matchingNames.size} Messages
+                  {keySummary.matchingNames.size}
+                  {' '}
+                  Messages
                   {keySummary.withMissingVariantsPerLanguage[
                     selectedBaseLanguage!.value as Locale
-                  ] &&
-                    keySummary.withMissingVariantsPerLanguage[
+                  ]
+                    && keySummary.withMissingVariantsPerLanguage[
                       selectedBaseLanguage!.value as Locale
                     ]!.size > 0 && (
                       <div>
@@ -307,10 +328,11 @@ export default function LanguageSetup({
                           keySummary.withMissingVariantsPerLanguage[
                             selectedBaseLanguage!.value as Locale
                           ]!.size
-                        }{' '}
+                        }
+                        {' '}
                         Missing Variants)
                       </div>
-                    )}
+                  )}
                 </div>
                 <div className="language-import-action">
                   <FileSelect
@@ -364,9 +386,7 @@ export default function LanguageSetup({
               disabled={selectedBaseLanguage === undefined}
             >
               <ReactSelect
-                filterOption={(option: any, input) =>
-                  option.data.menuLabel.toLowerCase().indexOf(input.toLowerCase()) !== -1
-                }
+                filterOption={(option: any, input) => option.data.menuLabel.toLowerCase().indexOf(input.toLowerCase()) !== -1}
                 options={availableLanguages}
                 value={selectedLanguages}
                 placeholder="Select additional Languages"
@@ -382,7 +402,8 @@ export default function LanguageSetup({
                 }}
                 onChange={onSelectedLanguagesChange}
                 classNamePrefix="react-select"
-              />{' '}
+              />
+              {' '}
             </OutsideClickHandler>
           </div>
         )}

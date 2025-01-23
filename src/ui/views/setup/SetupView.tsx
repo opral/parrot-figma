@@ -25,7 +25,7 @@ export default function SetupView({ labelManager }: SetupViewProps) {
           await labelManager.messageStore.setLanguages(activeLanguages);
         }}
       />
-     
+
       {/* <div
         className="start-staging-ui"
         onClick={() => {

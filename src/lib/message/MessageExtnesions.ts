@@ -81,9 +81,9 @@ export class MessageExtension {
     for (let variant of message.variants) {
       // a variant to be overwritten was found - check if the  current variant is the one
       if (
-        overwrittenVariant !== undefined &&
-        variant.languageTag === overwrittenVariant?.languageTag &&
-        JSON.stringify(variant.match) === JSON.stringify(overwrittenVariant)
+        overwrittenVariant !== undefined
+        && variant.languageTag === overwrittenVariant?.languageTag
+        && JSON.stringify(variant.match) === JSON.stringify(overwrittenVariant)
       ) {
         variant = overwrittenVariant;
       }

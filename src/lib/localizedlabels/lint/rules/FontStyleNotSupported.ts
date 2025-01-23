@@ -30,10 +30,10 @@ export default class FontStyleNotSuppoorted extends BaseTextNodeLintRule {
       // eslint-disable-next-line no-await-in-loop
       const font = FontUtil.getStylingSupport(fontNameStyleSegment.fontName);
       if (
-        fontNameStyleSegment.fontName.style !== font.bold?.style &&
-        fontNameStyleSegment.fontName.style !== font.italic?.style &&
-        fontNameStyleSegment.fontName.style !== font.boldItalic?.style &&
-        fontNameStyleSegment.fontName.style !== font.regular?.style
+        fontNameStyleSegment.fontName.style !== font.bold?.style
+        && fontNameStyleSegment.fontName.style !== font.italic?.style
+        && fontNameStyleSegment.fontName.style !== font.boldItalic?.style
+        && fontNameStyleSegment.fontName.style !== font.regular?.style
       ) {
         return true;
       }
@@ -51,10 +51,10 @@ export default class FontStyleNotSuppoorted extends BaseTextNodeLintRule {
       fontFamily = fontNameStyleSegment.fontName.family;
 
       if (
-        fontNameStyleSegment.fontName.style === font.bold?.style ||
-        fontNameStyleSegment.fontName.style === font.italic?.style ||
-        fontNameStyleSegment.fontName.style === font.boldItalic?.style ||
-        fontNameStyleSegment.fontName.style === font.regular?.style
+        fontNameStyleSegment.fontName.style === font.bold?.style
+        || fontNameStyleSegment.fontName.style === font.italic?.style
+        || fontNameStyleSegment.fontName.style === font.boldItalic?.style
+        || fontNameStyleSegment.fontName.style === font.regular?.style
       ) {
         const serializedStyle = JSON.stringify(fontNameStyleSegment[this.fontNameStyleField]);
         if (!stylesPresent[serializedStyle]) {

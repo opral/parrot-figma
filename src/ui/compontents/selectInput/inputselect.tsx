@@ -1,7 +1,9 @@
 /* eslint-disable jsx-a11y/mouse-events-have-key-events */
 /* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
 /* eslint-disable jsx-a11y/no-static-element-interactions */
-import React, { useEffect, useState, useRef, MouseEvent } from 'react';
+import React, {
+  useEffect, useState, useRef, MouseEvent,
+} from 'react';
 import OutsideClickHandler from 'react-outside-click-handler';
 import './inputselect.css';
 import { Plural } from '../../../lib/message/variants/Plural';
@@ -100,9 +102,9 @@ export default function InputSelect({
       'input-select-menu__item--highlighted',
     );
     if (
-      currentMouseOverHighlightIndex.current === undefined &&
-      highlightedEls &&
-      highlightedEls?.length > 0
+      currentMouseOverHighlightIndex.current === undefined
+      && highlightedEls
+      && highlightedEls?.length > 0
     ) {
       // console.log('scolling into view:');
       const rectToMakeVisible = highlightedEls[0].getBoundingClientRect();
@@ -110,12 +112,10 @@ export default function InputSelect({
       const visibleBottom = visibleRect.bottom - scrollDownRef.current!.clientHeight;
       const visibleTop = visibleRect.top + scrollDownRef.current!.clientHeight;
       if (rectToMakeVisible.bottom > visibleBottom) {
-        menuWrapperRef.current!.scrollTop =
-          menuWrapperRef.current!.scrollTop + (rectToMakeVisible.bottom - visibleBottom);
+        menuWrapperRef.current!.scrollTop = menuWrapperRef.current!.scrollTop + (rectToMakeVisible.bottom - visibleBottom);
       }
       if (rectToMakeVisible.top < visibleTop) {
-        menuWrapperRef.current!.scrollTop =
-          menuWrapperRef.current!.scrollTop - (visibleTop - rectToMakeVisible.top);
+        menuWrapperRef.current!.scrollTop = menuWrapperRef.current!.scrollTop - (visibleTop - rectToMakeVisible.top);
       }
 
       // highlightedEls[0].scrollIntoViewIfNeeded();
@@ -211,9 +211,9 @@ export default function InputSelect({
     let i = 0;
     for (const option of options) {
       if (
-        (option.type === InputSelectionOptionType.ADD ||
-          option.type === InputSelectionOptionType.SUGGESTION) &&
-        option.value === value
+        (option.type === InputSelectionOptionType.ADD
+          || option.type === InputSelectionOptionType.SUGGESTION)
+        && option.value === value
       ) {
         updateCurrentHighlightIndex(i);
       }
@@ -273,17 +273,16 @@ export default function InputSelect({
   };
 
   useEffect(() => {
-    const mouseHighlight =
-      currentMouseOverHighlightIndex.current !== undefined &&
-      options[currentMouseOverHighlightIndex.current]?.type === InputSelectionOptionType.SUGGESTION
-        ? options[currentMouseOverHighlightIndex.current]?.value
-        : undefined;
+    const mouseHighlight = currentMouseOverHighlightIndex.current !== undefined
+      && options[currentMouseOverHighlightIndex.current]?.type === InputSelectionOptionType.SUGGESTION
+      ? options[currentMouseOverHighlightIndex.current]?.value
+      : undefined;
     if (mouseHighlight) {
       setSuggestion(mouseHighlight);
     } else {
       setSuggestion(
-        currentHighlightIndex.current &&
-          options[currentHighlightIndex.current]?.type === InputSelectionOptionType.SUGGESTION
+        currentHighlightIndex.current
+          && options[currentHighlightIndex.current]?.type === InputSelectionOptionType.SUGGESTION
           ? options[currentHighlightIndex.current]?.value
           : undefined,
       );
@@ -310,9 +309,9 @@ export default function InputSelect({
   function updateScrollButtons() {
     const menuRect = menuWrapperRef.current!.getBoundingClientRect();
     if (
-      menuWrapperRef.current!.scrollTop - (menuWrapperRef.current!.scrollHeight - menuRect.height) >
-        -1 ||
-      menuRef.current!.clientHeight === menuWrapperRef.current?.clientHeight
+      menuWrapperRef.current!.scrollTop - (menuWrapperRef.current!.scrollHeight - menuRect.height)
+        > -1
+      || menuRef.current!.clientHeight === menuWrapperRef.current?.clientHeight
     ) {
       // at bottom
       setCanScrollDown(false);
@@ -369,8 +368,7 @@ export default function InputSelect({
       }
 
       const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-      const isOverlappingRight =
-        menuOverlayRef.current!.getBoundingClientRect().right > viewportWidth;
+      const isOverlappingRight = menuOverlayRef.current!.getBoundingClientRect().right > viewportWidth;
       if (isOverlappingRight) {
         menuOverlayRef.current!.style.right = `${3}px`;
       }
@@ -390,10 +388,10 @@ export default function InputSelect({
 
     const scrollHandler = (evt: any) => {
       if (
-        evt.target !== scrollDownRef.current &&
-        !scrollDownRef.current?.contains(evt.target) &&
-        evt.target !== scrollUpRef.current &&
-        !scrollUpRef.current?.contains(evt.target)
+        evt.target !== scrollDownRef.current
+        && !scrollDownRef.current?.contains(evt.target)
+        && evt.target !== scrollUpRef.current
+        && !scrollUpRef.current?.contains(evt.target)
       ) {
         updateScrollButtons();
       }
@@ -486,11 +484,10 @@ export default function InputSelect({
     (option) => option.type === InputSelectionOptionType.ADD,
   );
 
-  const addActive =
-    (currentMouseOverHighlightIndex.current === undefined &&
-      currentHighlightIndex.current === addOptionIndex) ||
-    (currentMouseOverHighlightIndex.current !== undefined &&
-      currentMouseOverHighlightIndex.current === addOptionIndex);
+  const addActive = (currentMouseOverHighlightIndex.current === undefined
+      && currentHighlightIndex.current === addOptionIndex)
+    || (currentMouseOverHighlightIndex.current !== undefined
+      && currentMouseOverHighlightIndex.current === addOptionIndex);
 
   let suggestionFieldValue = inputPlaceholder;
   if (suggestion !== undefined) {
@@ -562,8 +559,8 @@ export default function InputSelect({
                 }}
                 onBlur={(evt) => {
                   if (
-                    !evt.relatedTarget?.classList.contains('input-select-menu__item') &&
-                    !evt.relatedTarget?.classList.contains('input-select-menu-add')
+                    !evt.relatedTarget?.classList.contains('input-select-menu__item')
+                    && !evt.relatedTarget?.classList.contains('input-select-menu-add')
                   ) {
                     onExpandedStateChange(false);
                     setValue(defaultValue);
@@ -674,18 +671,18 @@ export default function InputSelect({
                     );
                   }
                   if (
-                    optionType === InputSelectionOptionType.SUGGESTION ||
-                    optionType === InputSelectionOptionType.ACTION
+                    optionType === InputSelectionOptionType.SUGGESTION
+                    || optionType === InputSelectionOptionType.ACTION
                   ) {
                     return (
                       // eslint-disable-next-line jsx-a11y/mouse-events-have-key-events
                       <li
                         tabIndex={i}
                         className={`input-select-menu__item ${
-                          (currentMouseOverHighlightIndex.current === undefined &&
-                            currentHighlightIndex.current === i) ||
-                          (currentMouseOverHighlightIndex.current !== undefined &&
-                            currentMouseOverHighlightIndex.current === i)
+                          (currentMouseOverHighlightIndex.current === undefined
+                            && currentHighlightIndex.current === i)
+                          || (currentMouseOverHighlightIndex.current !== undefined
+                            && currentMouseOverHighlightIndex.current === i)
                             ? 'input-select-menu__item--highlighted'
                             : ''
                         }`}

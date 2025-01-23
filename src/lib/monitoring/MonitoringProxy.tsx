@@ -28,7 +28,6 @@ export default class Monitoring {
     // }
   }
 
-
   // eslint-disable-next-line class-methods-use-this
   async mixpanel_people_set(property: string, value: any) {
     // if (process.env.MIXPANEL_ACCESS_TOKEN) {

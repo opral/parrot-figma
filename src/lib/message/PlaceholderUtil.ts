@@ -49,8 +49,8 @@ export default class PlaceholderHelper {
     let match;
     // eslint-disable-next-line no-cond-assign
     while (
-      attributeString !== undefined &&
-      (match = attributeRegex.exec(attributeString)) !== null
+      attributeString !== undefined
+      && (match = attributeRegex.exec(attributeString)) !== null
     ) {
       const [, attrWithVal, value, attrWithoutVal] = match;
       const attributeName = attrWithVal || attrWithoutVal;

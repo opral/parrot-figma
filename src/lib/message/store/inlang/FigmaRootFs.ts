@@ -232,11 +232,9 @@ export function createNodeishMemoryFs(): NodeishFilesystem {
       const target: Inode | undefined = fsMap.get(path);
       const parentDir: Inode | undefined = fsMap.get(getDirname(path));
 
-      if (parentDir === undefined || target === undefined)
-        throw new FilesystemError('ENOENT', path, 'rmdir');
+      if (parentDir === undefined || target === undefined) throw new FilesystemError('ENOENT', path, 'rmdir');
 
-      if (parentDir instanceof Uint8Array || target instanceof Uint8Array)
-        throw new FilesystemError('ENOTDIR', path, 'rmdir');
+      if (parentDir instanceof Uint8Array || target instanceof Uint8Array) throw new FilesystemError('ENOTDIR', path, 'rmdir');
 
       if (target.size) throw new FilesystemError('ENOTEMPTY', path, 'rmdir');
 
@@ -256,11 +254,9 @@ export function createNodeishMemoryFs(): NodeishFilesystem {
 
       if (fsMap.get(path)) throw new FilesystemError('EEXIST', path, 'symlink', target);
 
-      if (parentDir instanceof Uint8Array)
-        throw new FilesystemError('ENOTDIR', path, 'symlink', target);
+      if (parentDir instanceof Uint8Array) throw new FilesystemError('ENOTDIR', path, 'symlink', target);
 
-      if (targetInode === undefined || parentDir === undefined)
-        throw new FilesystemError('ENOENT', path, 'symlink', target);
+      if (targetInode === undefined || parentDir === undefined) throw new FilesystemError('ENOENT', path, 'symlink', target);
 
       parentDir.add(getBasename(path));
       newStatEntry(path, fsStats, 2, 0o777, target);
@@ -273,8 +269,7 @@ export function createNodeishMemoryFs(): NodeishFilesystem {
       const target: Inode | undefined = fsMap.get(path);
       const parentDir: Inode | undefined = fsMap.get(getDirname(path));
 
-      if (parentDir === undefined || target === undefined)
-        throw new FilesystemError('ENOENT', path, 'unlink');
+      if (parentDir === undefined || target === undefined) throw new FilesystemError('ENOENT', path, 'unlink');
 
       if (parentDir instanceof Uint8Array) throw new FilesystemError('ENOTDIR', path, 'unlink');
 
@@ -290,8 +285,7 @@ export function createNodeishMemoryFs(): NodeishFilesystem {
 
       if (linkStats === undefined) throw new FilesystemError('ENOENT', path, 'readlink');
 
-      if (linkStats.symlinkTarget === undefined)
-        throw new FilesystemError('EINVAL', path, 'readlink');
+      if (linkStats.symlinkTarget === undefined) throw new FilesystemError('EINVAL', path, 'readlink');
 
       return linkStats.symlinkTarget;
     },

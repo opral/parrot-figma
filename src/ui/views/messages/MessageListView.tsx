@@ -64,8 +64,8 @@ export default function MessageListView({
   useEffect(() => {
     const messageHandler = (event: any) => {
       if (
-        event.data.pluginMessage.type === 'event' &&
-        event.data.pluginMessage.name === 'selectionchange'
+        event.data.pluginMessage.type === 'event'
+        && event.data.pluginMessage.name === 'selectionchange'
       ) {
         // eslint-disable-next-line @typescript-eslint/no-use-before-define -- i prefere this order
         refreshSelection(true);

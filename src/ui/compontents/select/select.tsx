@@ -115,10 +115,10 @@ export default function Select({
   function updateScrollButtons() {
     if (
       Math.abs(
-        menuWrapperRef.current!.scrollTop -
-          (menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight),
-      ) <= 2 ||
-      menuRef.current?.clientHeight === menuWrapperRef.current?.clientHeight
+        menuWrapperRef.current!.scrollTop
+          - (menuWrapperRef.current!.scrollHeight - menuWrapperRef.current!.offsetHeight),
+      ) <= 2
+      || menuRef.current?.clientHeight === menuWrapperRef.current?.clientHeight
     ) {
       // at bottom
       setCanScrollDown(false);
@@ -157,8 +157,7 @@ export default function Select({
       const maxSpaceBelow = viewPortHeight - rect.top - controlMenuHeightDif / 2 - menuEntryHeight;
 
       let menuPositionIndex = options.findIndex(
-        (selectOption) =>
-          selectedOption !== undefined && selectOption.value === selectedOption?.value,
+        (selectOption) => selectedOption !== undefined && selectOption.value === selectedOption?.value,
       );
       // if nothing is selected - make it the first element in the list;
       menuPositionIndex = menuPositionIndex >= 0 ? menuPositionIndex : 0;
@@ -168,13 +167,11 @@ export default function Select({
       ] as HTMLDivElement;
 
       const spaceNeededOnTop = selectedDiv ? selectedDiv?.offsetTop : 0;
-      const spaceNeededOnBottom =
-        (options.length - menuPositionIndex - 1) * menuEntryHeight + menuPadding;
+      const spaceNeededOnBottom = (options.length - menuPositionIndex - 1) * menuEntryHeight + menuPadding;
 
-      let height =
-        Math.min(maxSpaceAbove, spaceNeededOnTop) +
-        menuEntryHeight +
-        Math.min(maxSpaceBelow, spaceNeededOnBottom);
+      let height = Math.min(maxSpaceAbove, spaceNeededOnTop)
+        + menuEntryHeight
+        + Math.min(maxSpaceBelow, spaceNeededOnBottom);
 
       let top = maxSpaceAbove - spaceNeededOnTop;
 
@@ -189,8 +186,7 @@ export default function Select({
       menuContainerRef.current!.style.top = `${top}px`;
 
       const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-      const isOverlappingRight =
-        menuContainerRef.current!.getBoundingClientRect().right - viewportWidth;
+      const isOverlappingRight = menuContainerRef.current!.getBoundingClientRect().right - viewportWidth;
 
       if (isOverlappingRight > 0) {
         menuContainerRef.current!.style.left = `${rect.left - isOverlappingRight - 8}px`;
@@ -238,8 +234,8 @@ export default function Select({
 
         // setContainerBox((box) => {
         if (
-          box.top - pxScrolledDown < 0 &&
-          box.height + pxScrolledDown < wrapperMaxHeight.current
+          box.top - pxScrolledDown < 0
+          && box.height + pxScrolledDown < wrapperMaxHeight.current
         ) {
           setContainer({
             height: box.height + pxScrolledDown,
@@ -492,48 +488,48 @@ export default function Select({
                 ref={menuRef}
                 className={`select-menu__menu ${expanListClass} ${disabledColorClass}`}
               >
-                {options &&
-                  options.map(({ value, label: optionLabel, divider, title, icon, tag }, i) =>
-                    divider ? (
-                      // eslint-disable-next-line react/no-array-index-key  -- options are static and dont change - using the index is fine here
-                      <React.Fragment key={`select-option-divider--${i}`}>
-                        {divider !== true && (
-                          <span className="select-menu__divider-label">{divider}</span>
-                        )}
-                        <div className="select-menu__divider" />
-                      </React.Fragment>
-                    ) : (
-                      <li
-                        className={`select-menu__item ${
-                          selectedOption && selectedOption.value === value
-                            ? 'select-menu__item--selected'
-                            : ''
-                        }`}
+                {options
+                  && options.map(({
+                    value, label: optionLabel, divider, title, icon, tag,
+                  }, i) => (divider ? (
+                  // eslint-disable-next-line react/no-array-index-key  -- options are static and dont change - using the index is fine here
+                    <React.Fragment key={`select-option-divider--${i}`}>
+                      {divider !== true && (
+                      <span className="select-menu__divider-label">{divider}</span>
+                      )}
+                      <div className="select-menu__divider" />
+                    </React.Fragment>
+                  ) : (
+                    <li
+                      className={`select-menu__item ${
+                        selectedOption && selectedOption.value === value
+                          ? 'select-menu__item--selected'
+                          : ''
+                      }`}
                         // eslint-disable-next-line react/no-array-index-key  -- options are static and dont change - using the index is fine here
-                        key={`select-option--${i}`}
-                        title={title}
-                        onMouseUp={() => handleSelectClick(value)}
-                      >
-                        {true && (
-                          <div className="select-menu__item-check">
-                            {selectedOption && selectedOption.value === value && (
-                              <div className="svg-container menu-checkmark-svg" />
-                            )}
-                          </div>
+                      key={`select-option--${i}`}
+                      title={title}
+                      onMouseUp={() => handleSelectClick(value)}
+                    >
+                      {true && (
+                      <div className="select-menu__item-check">
+                        {selectedOption && selectedOption.value === value && (
+                        <div className="svg-container menu-checkmark-svg" />
                         )}
+                      </div>
+                      )}
 
-                        {icon && (
-                          <div className="select-menu__item-icon">
-                            <div className={`svg-container ${icon}`} />
-                          </div>
-                        )}
-                        <span className="select-menu__item-label">{optionLabel}</span>
-                        {tag !== undefined && (
-                          <div className="select-menu__item-label-tag">{tag}</div>
-                        )}
-                      </li>
-                    ),
-                  )}
+                      {icon && (
+                      <div className="select-menu__item-icon">
+                        <div className={`svg-container ${icon}`} />
+                      </div>
+                      )}
+                      <span className="select-menu__item-label">{optionLabel}</span>
+                      {tag !== undefined && (
+                      <div className="select-menu__item-label-tag">{tag}</div>
+                      )}
+                    </li>
+                  )))}
               </ul>
             </div>
           </div>,

@@ -102,8 +102,7 @@ export default function Tooltip({ contentAttribute }: TooltipProps) {
 
       if (parentRect.right - (tooltipSourceRect.left! + elementRect.width / 2) < 0) {
         console.log('overlapping right1');
-        placement.transformX =
-          parentRect.right - (tooltipSourceRect.left! + (elementRect.width + 16));
+        placement.transformX = parentRect.right - (tooltipSourceRect.left! + (elementRect.width + 16));
       } else if (parentRect.left - (tooltipSourceRect.left! - elementRect.width / 2) > 0) {
         console.log('overlapping left1');
         placement.transformX = parentRect.left - (tooltipSourceRect.left! + 16);
@@ -123,8 +122,7 @@ export default function Tooltip({ contentAttribute }: TooltipProps) {
 
       if (parentRect.right - (tooltipSourceRect.left! + elementRect.width / 2) < 0) {
         console.log('overlapping right1');
-        placement.transformX =
-          parentRect.right - (tooltipSourceRect.left! + (elementRect.width + 16));
+        placement.transformX = parentRect.right - (tooltipSourceRect.left! + (elementRect.width + 16));
       } else if (parentRect.left - (tooltipSourceRect.left! - elementRect.width / 2) > 0) {
         console.log('overlapping left1');
         placement.transformX = parentRect.left - (tooltipSourceRect.left! + 16);

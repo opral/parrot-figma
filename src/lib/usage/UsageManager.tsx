@@ -33,19 +33,19 @@ const UserRoleUtils = {
     switch (type) {
       case UserFileRole.owner:
         if (
-          comparetToType === UserFileRole.designer ||
-          comparetToType === UserFileRole.developer ||
-          comparetToType === UserFileRole.inactive ||
-          comparetToType === undefined
+          comparetToType === UserFileRole.designer
+          || comparetToType === UserFileRole.developer
+          || comparetToType === UserFileRole.inactive
+          || comparetToType === undefined
         ) {
           return 1;
         }
         break;
       case UserFileRole.designer:
         if (
-          comparetToType === UserFileRole.developer ||
-          comparetToType === UserFileRole.inactive ||
-          comparetToType === undefined
+          comparetToType === UserFileRole.developer
+          || comparetToType === UserFileRole.inactive
+          || comparetToType === undefined
         ) {
           return 1;
         }
@@ -108,9 +108,9 @@ export default class UserManager {
     figma.on('documentchange', (event: any) => {
       for (const change of event.documentChanges) {
         if (
-          change.id === this.rootNodeId &&
-          change === 'PROPERTY_CHANGE' &&
-          change.properties.includes('pluginData')
+          change.id === this.rootNodeId
+          && change === 'PROPERTY_CHANGE'
+          && change.properties.includes('pluginData')
         ) {
           const newFileState = UserManager.loadFileStateFromRoot();
           this.state = UserManager.mergeStates(this.state, newFileState);
@@ -249,8 +249,8 @@ export default class UserManager {
     this.propagateState();
 
     if (
-      userRole !== UserFileRole.owner &&
-      this.autoApplyUserRole /* in the beta we auto apply requested roles */
+      userRole !== UserFileRole.owner
+      && this.autoApplyUserRole /* in the beta we auto apply requested roles */
     ) {
       setTimeout(() => this.setUserRole(userRole, forUser, 'plugin'), 1);
     }

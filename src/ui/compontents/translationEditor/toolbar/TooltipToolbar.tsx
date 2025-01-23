@@ -1,6 +1,8 @@
 import * as React from 'react';
 
-import Quill, { DeltaStatic, Sources, Delta as DeltaType, RangeStatic } from 'quill';
+import Quill, {
+  DeltaStatic, Sources, Delta as DeltaType, RangeStatic,
+} from 'quill';
 import { useEffect, useRef, useState } from 'react';
 import { Bounds, Range } from 'quill/core/selection';
 import Emitter from 'quill/core/emitter';
@@ -157,12 +159,10 @@ export default function TooltipToolbar({
 
     const minTop = rootViewBounds.top + 40 + 32;
     const maxTopAbove = rootViewBounds.top + rootViewBounds.height;
-    const maxTopBelow =
-      rootViewBounds.top + rootViewBounds.height - (tooltipContainer.current.offsetHeight + 6);
+    const maxTopBelow = rootViewBounds.top + rootViewBounds.height - (tooltipContainer.current.offsetHeight + 6);
 
     const containerMaxLeft = rootViewBounds.left + 10;
-    const containerMaxRightLeft =
-      rootViewBounds.left + rootViewBounds.width - tooltipContainer.current.offsetWidth - 10;
+    const containerMaxRightLeft = rootViewBounds.left + rootViewBounds.width - tooltipContainer.current.offsetWidth - 10;
 
     const arrowLeftAbsolut = framedLeft + framedWidth / 2 + leftCorrection;
     const containerLeftUnFramed = arrowLeftAbsolut - tooltipContainer.current.offsetWidth / 2;

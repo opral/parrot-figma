@@ -657,12 +657,12 @@ export default class MessageStoreMemory extends EventTarget {
   // wrapper methods to centralize the integration of inlang in case of api changes
 
   static hasVariant(message: Message, targetLanguage: Locale, match?: string[]) {
-    const variant = getVariant(message, { where: { languageTag: targetLanguage, match } })
+    const variant = getVariant(message, { where: { languageTag: targetLanguage, match } });
     return variant !== undefined;
   }
 
   static hasTranslationInVariant(message: Message, targetLanguage: Locale, match?: string[]) {
-    const variant = getVariant(message, { where: { languageTag: targetLanguage, match } })
+    const variant = getVariant(message, { where: { languageTag: targetLanguage, match } });
     return variant !== undefined && variant.pattern.length > 0;
   }
 
@@ -730,7 +730,7 @@ export default class MessageStoreMemory extends EventTarget {
     // TODO #35 target language not supported
     // TODO #35 source language not supported
 
-    // source language not set in Message 
+    // source language not set in Message
     const sourceVariantPatternHTML = MessageStoreMemory.htmlForPattern(
       message,
       sourceLanguage,

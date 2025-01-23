@@ -29,10 +29,10 @@ export default class WindowManagerUi extends EventTarget {
   static instance: WindowManagerUi | undefined;
 
   viewportBounds:
-    | undefined
-    | {
-        height: number;
-      };
+  | undefined
+  | {
+    height: number;
+  };
 
   isResizing = false;
 
@@ -59,8 +59,8 @@ export default class WindowManagerUi extends EventTarget {
     if (this.instance) {
       throw Error('WindowManagerUi initialized twice');
     }
-    const { hash } = window.location; 
-    const windowMode = hash.slice(1).split('|')[0]; 
+    const { hash } = window.location;
+    const windowMode = hash.slice(1).split('|')[0];
 
     if (windowMode === undefined) {
       throw new Error('missing window mode');
@@ -112,10 +112,10 @@ export default class WindowManagerUi extends EventTarget {
       const handleHeight = handleRect.height;
 
       if (
-        mouseX >= handleX &&
-        mouseX <= handleX + handleWidth &&
-        mouseY >= handleY &&
-        mouseY <= handleY + handleHeight
+        mouseX >= handleX
+        && mouseX <= handleX + handleWidth
+        && mouseY >= handleY
+        && mouseY <= handleY + handleHeight
       ) {
         this.heightResizeHandleEl.style.cursor = 'ns-resize';
         this.heightResizeHandleEl.style.left = `${mouseX - 10}px`;
@@ -179,9 +179,9 @@ export default class WindowManagerUi extends EventTarget {
 
         if (entries[0] && entries[0].target === this.sizeWrapper) {
           if (
-            lastRatio !== entries[0].intersectionRatio &&
-            entries[0].intersectionRatio !== 1 &&
-            entries[0].intersectionRect.height !== 0
+            lastRatio !== entries[0].intersectionRatio
+            && entries[0].intersectionRatio !== 1
+            && entries[0].intersectionRect.height !== 0
           ) {
             lastRatio = entries[0].intersectionRatio;
 
@@ -213,16 +213,13 @@ export default class WindowManagerUi extends EventTarget {
     this.resizeHandelEl.classList.add(this.windowMode);
 
     window.addEventListener('message', (event: MessageEvent) => {
-      
       if (event.data.pluginMessage.target === 'WindowManager') {
         if (event.data.pluginMessage.windowMode) {
           const mode = event.data.pluginMessage.windowMode as WindowMode;
           this.resizeHandelEl.classList.remove(...this.resizeHandelEl.classList);
           this.resizeHandelEl.classList.add(mode);
 
-          const currentModeClasses = [...this.contentEl.classList].filter((className) =>
-            className.startsWith('windowmanager-'),
-          );
+          const currentModeClasses = [...this.contentEl.classList].filter((className) => className.startsWith('windowmanager-'));
           this.contentEl.classList.remove(...currentModeClasses);
           this.contentEl.classList.add(`windowmanager-${mode}`);
 

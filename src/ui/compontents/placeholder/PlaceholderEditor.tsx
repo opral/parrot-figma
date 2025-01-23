@@ -39,7 +39,7 @@ export default function PlaceholderEditorListItem({
 }: PlaceholderEditorListItemProps) {
   return (
     <>
-      <div></div>
+      <div />
       <div>
         {/* { placeholder.type === 's' && 'T'}
         { placeholder.type === 'f' && '%'}

@@ -16,7 +16,7 @@ type TextFieldProps = {
   onSearchClick?: Function;
   onNoKeyClick?: Function;
   onChange?: Function;
-  
+
   text?: string;
   onSave: Function;
 };

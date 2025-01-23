@@ -65,9 +65,9 @@ export default function FormatLinkButton({
       }
       // invalid mail adress
     } else if (
-      rawValue.startsWith('http://') ||
-      rawValue.startsWith('https://') ||
-      rawValue.startsWith('/')
+      rawValue.startsWith('http://')
+      || rawValue.startsWith('https://')
+      || rawValue.startsWith('/')
     ) {
       const urlToCheck = rawValue.startsWith('/') ? `https://helperdomain${rawValue}` : rawValue;
       if (urlRegex.test(urlToCheck)) {

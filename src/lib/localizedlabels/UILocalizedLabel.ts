@@ -394,7 +394,6 @@ export class UILocalizedLabel implements LocalizedLabel {
   }
 
   isTranslatable() {
-    
     const refLanguage = this.manager.messageStore.getRefLanugage();
     if (!refLanguage) {
       return false;

@@ -37,8 +37,8 @@ export default function Onboarding({ labelManager, onFinishSetup }: OnboardingPr
 
     scrollHeightCheckInterval.current = setInterval(() => {
       if (
-        scrollContainerRef.current &&
-        scrollContainerRef.current.scrollHeight !== lastPropagatedScrollheight.current
+        scrollContainerRef.current
+        && scrollContainerRef.current.scrollHeight !== lastPropagatedScrollheight.current
       ) {
         lastPropagatedScrollheight.current = scrollContainerRef.current.scrollHeight;
         console.log(`propagateScrollHeight${lastPropagatedScrollheight.current}`);

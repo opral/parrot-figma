@@ -35,7 +35,7 @@ export default function MessagessConsumptionPaywall({
         onClick={closeClick}
       >
         <div className="svg-container cross-svg" />
-        
+
       </button>
       <p className="consumption_paywall_modals--largeModalSubtitle">
         Parrot comes with 100 machine translations, but getting more is easy.
@@ -50,7 +50,7 @@ export default function MessagessConsumptionPaywall({
                   20% off using FLUEGGE
                 </span>} */}
               </p>
-              <p className="consumption_paywall_modals--planName" style={{ marginLeft: 'auto' }}></p>
+              <p className="consumption_paywall_modals--planName" style={{ marginLeft: 'auto' }} />
             </div>
             <div style={{ height: '20px' }}>
               <p className="consumption_paywall_modals--planDescription">

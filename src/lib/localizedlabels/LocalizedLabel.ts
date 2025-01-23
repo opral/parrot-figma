@@ -1,7 +1,7 @@
+import { Message } from '@inlang/sdk';
 import { FillinToPlaceholder } from '../message/MessageExtnesions';
 import { Locale } from '../message/variants/Locale';
 import { DeltaOp } from './LocalizedLabelManager';
-import { Message } from '@inlang/sdk';
 
 export enum MessageLinkState {
   Unset = 'unset', // label has not yet modified by the plugin

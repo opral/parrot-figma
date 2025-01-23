@@ -104,7 +104,7 @@ export class AsyncFunctionProxy {
       if (
         memberName !== 'constructor'
         && instancePrototype[memberName].constructor
-        &&  (instancePrototype[memberName].constructor.name === 'Function' || instancePrototype[memberName].constructor.name === 'AsyncFunction')
+        && (instancePrototype[memberName].constructor.name === 'Function' || instancePrototype[memberName].constructor.name === 'AsyncFunction')
       ) {
         // console.log(this.name+ ' proxy class!' + instanceClassName + '.' + memberName);
         this.registerInvocationHandler(
@@ -154,7 +154,6 @@ export class AsyncFunctionProxy {
   }
 
   handleInvocationRequest(pluginMessage: any) {
-    
     if (!this.invocationRequestHandler[pluginMessage.name]) {
       throw new Error(
         `${this.name} Invocation handler for [${pluginMessage.name}] does not exist (did you register the executing instance in [${this.name}]?`,

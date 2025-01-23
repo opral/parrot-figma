@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
 
+import posthog from 'posthog-js';
 import Select, { SelectOption } from '../../compontents/select/select';
 import './Export.css';
 import { Locale } from '../../../lib/message/variants/Locale';
@@ -14,23 +15,20 @@ import MessageExporter from '../../../lib/export/MessageExporter';
 import FEATURES_FLAGS from '../../featuretoggle';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
 import UserManagerUI from '../../../lib/usage/UsageManagerUI';
-import posthog from 'posthog-js';
 
 function toLanguageOption(language: string, baseLanguage?: string) {
   let languageNameInCurrentLanguage = 'no name found';
   try {
-    languageNameInCurrentLanguage =
-      new Intl.DisplayNames('en', { type: 'language' }).of(language) ??
-      languageNameInCurrentLanguage;
+    languageNameInCurrentLanguage = new Intl.DisplayNames('en', { type: 'language' }).of(language)
+      ?? languageNameInCurrentLanguage;
   } catch (e) {
     /* empty */
   }
 
   let languageNameInForeignLanguage = 'no name found';
   try {
-    languageNameInForeignLanguage =
-      new Intl.DisplayNames(language, { type: 'language' }).of(language) ??
-      languageNameInForeignLanguage;
+    languageNameInForeignLanguage = new Intl.DisplayNames(language, { type: 'language' }).of(language)
+      ?? languageNameInForeignLanguage;
   } catch (e) {
     /* empty */
   }
@@ -139,7 +137,7 @@ export default function Export({ labelManager, userManager }: ExportProps) {
 
   const onTagCurrentVersionClick = async () => {
     // TODO #17 versioning we dont do this in inlang for now
-    /* 
+    /*
     const newTag = await labelManager.messageStore.createTag(title, description);
     const options = defaultOptions.concat(labelManager.messageStore.historyTags.slice().reverse().map((historyTag) => ({
       label: historyTag.title,
@@ -218,9 +216,11 @@ export default function Export({ labelManager, userManager }: ExportProps) {
                 <div>{selectedBaseLanguage?.label}</div>
               </div>
               <div className="language-summary">
-                {keySummary.matchingNames.size} Translation Keys
-                {keySummary.withMissingVariantsPerLanguage[selectedBaseLanguage!.value as Locale] &&
-                  keySummary.withMissingVariantsPerLanguage[selectedBaseLanguage!.value as Locale]!
+                {keySummary.matchingNames.size}
+                {' '}
+                Translation Keys
+                {keySummary.withMissingVariantsPerLanguage[selectedBaseLanguage!.value as Locale]
+                  && keySummary.withMissingVariantsPerLanguage[selectedBaseLanguage!.value as Locale]!
                     .size > 0 && (
                     <div>
                       (
@@ -228,10 +228,11 @@ export default function Export({ labelManager, userManager }: ExportProps) {
                         keySummary.withMissingVariantsPerLanguage[
                           selectedBaseLanguage!.value as Locale
                         ]!.size
-                      }{' '}
+                      }
+                      {' '}
                       Missing Translations)
                     </div>
-                  )}
+                )}
               </div>
               <div className="language-export-action">
                 <button

@@ -431,7 +431,8 @@ export class WindowManagerSandbox {
               - (this.toolbarHeight + this.fullscreenMarginTop + this.fullscreenMarginBottom),
           ),
           x: Math.floor(
-            figma.viewport.bounds.x + this.fullscreenMarginLeft / figma.viewport.zoom),
+            figma.viewport.bounds.x + this.fullscreenMarginLeft / figma.viewport.zoom,
+          ),
           y: Math.floor(figma.viewport.bounds.y + this.fullscreenMarginTop / figma.viewport.zoom),
         };
       case WindowMode.Window:

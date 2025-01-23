@@ -25,18 +25,16 @@ type LocalizedFrameGroupProps = {
 function toLanguageOption(language: string, baseLanguage?: string) {
   let languageNameInCurrentLanguage = 'no name found';
   try {
-    languageNameInCurrentLanguage =
-      new Intl.DisplayNames('en', { type: 'language' }).of(language) ??
-      languageNameInCurrentLanguage;
+    languageNameInCurrentLanguage = new Intl.DisplayNames('en', { type: 'language' }).of(language)
+      ?? languageNameInCurrentLanguage;
   } catch (e) {
     /* empty */
   }
 
   let languageNameInForeignLanguage = 'no name found';
   try {
-    languageNameInForeignLanguage =
-      new Intl.DisplayNames(language, { type: 'language' }).of(language) ??
-      languageNameInForeignLanguage;
+    languageNameInForeignLanguage = new Intl.DisplayNames(language, { type: 'language' }).of(language)
+      ?? languageNameInForeignLanguage;
   } catch (e) {
     /* empty */
   }
@@ -100,7 +98,6 @@ export default function LocalizedFrameGroup({
         language,
         translationProvider,
       );
-
     } catch (e: any) {
       if (!(e instanceof NoMoreTranslationsLeftError)) {
         figmaRemote.notify(`Something went wrong with translation - ${e.message}`);
@@ -144,8 +141,8 @@ export default function LocalizedFrameGroup({
       </div>
       <div className="layer-group-header-sticky-border" />
 
-      {rootFrameLanguage?.value &&
-        localizedLabels.map((translationState) => {
+      {rootFrameLanguage?.value
+        && localizedLabels.map((translationState) => {
           let selection = 'unselected' as 'unselected' | 'selected' | 'selected-by-parent';
           if (selectedNodes[translationState.nodeId] !== undefined) {
             if (selectedNodes[translationState.nodeId].directSelection) {

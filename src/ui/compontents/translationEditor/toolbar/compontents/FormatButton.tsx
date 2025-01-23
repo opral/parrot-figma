@@ -10,7 +10,9 @@ type FormatButtonProps = {
   // onClick: () => void
   formats: any;
 };
-export default function FormatButton({ format, value, icon, editor, formats }: FormatButtonProps) {
+export default function FormatButton({
+  format, value, icon, editor, formats,
+}: FormatButtonProps) {
   let active: boolean;
   if (value === undefined) {
     active = formats[format] !== undefined;

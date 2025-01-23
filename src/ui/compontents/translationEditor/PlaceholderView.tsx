@@ -20,24 +20,24 @@ export function PlaceholderView({
   return (
     <span className={`placholder-container ${selected ? 'selected' : ''}`}>
       <span className="placholder-placeholder-type">{name}</span>
-      {specifiedArgumentPositon !== undefined &&
-        specifiedArgumentPositon !== derivedArgumentPosition && (
+      {specifiedArgumentPositon !== undefined
+        && specifiedArgumentPositon !== derivedArgumentPosition && (
           <span
             className="placholder-argument-position placholder-argument-position-missmatch"
             data-tooltip-content={`Specified Position conflicts with postion ${derivedArgumentPosition}`}
           >
             {specifiedArgumentPositon}
           </span>
-        )}
-      {specifiedArgumentPositon !== undefined &&
-        specifiedArgumentPositon === derivedArgumentPosition && (
+      )}
+      {specifiedArgumentPositon !== undefined
+        && specifiedArgumentPositon === derivedArgumentPosition && (
           <span
             className="placholder-argument-position placholder-argument-position-match"
             data-tooltip-content="Argument Position"
           >
             {specifiedArgumentPositon}
           </span>
-        )}
+      )}
       {/*
       {type === PlaceholderType.float && decimalPlaces === undefined && (
       <>

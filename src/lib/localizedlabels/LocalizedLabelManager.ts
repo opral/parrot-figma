@@ -25,11 +25,11 @@ export interface NodeSelection {
 export interface SandboxUpdateLabelProperties {
   labelName?: string;
   messageState:
-    | { type: 'linked'; messageId: string; parameterValues: MessageParameterValues }
-    | { type: 'unlinked'; unlinkedMessage: Message; parameterValues: MessageParameterValues }
-    | { type: 'unmanaged'; unmanaged: boolean }
-    | { type: 'unset' }
-    | undefined;
+  | { type: 'linked'; messageId: string; parameterValues: MessageParameterValues }
+  | { type: 'unlinked'; unlinkedMessage: Message; parameterValues: MessageParameterValues }
+  | { type: 'unmanaged'; unmanaged: boolean }
+  | { type: 'unset' }
+  | undefined;
   language?: Locale;
   messageVersion?: number;
   variantPatternHTMLHash?: string;
@@ -187,14 +187,14 @@ export default class LocalizedLabelManager {
           }
 
           if (
-            !selectedNodeStateByUser[user.id] ||
-            selectedNodeStateByUser[user.id].nodeId !== currentState.nodeId
+            !selectedNodeStateByUser[user.id]
+            || selectedNodeStateByUser[user.id].nodeId !== currentState.nodeId
           ) {
             selectedNodeStateByUser[user.id] = currentState;
             // console.log('no change');
           } else if (
-            selectedNodeStateByUser[user.id].textSegments.length !==
-            currentState.textSegments.length
+            selectedNodeStateByUser[user.id].textSegments.length
+            !== currentState.textSegments.length
           ) {
             // TODO change detected
             selectedNodeStateByUser[user.id] = currentState;
@@ -211,10 +211,10 @@ export default class LocalizedLabelManager {
             // eslint-disable-next-line no-plusplus
             checkStateLoop: for (let i = 0; i < currentState.textSegments.length; i++) {
               if (
-                selectedNodeStateByUser[user.id].textSegments[i].indentation !==
-                  currentState.textSegments[i].indentation ||
-                selectedNodeStateByUser[user.id].textSegments[i].listOptions.type !==
-                  currentState.textSegments[i].listOptions.type
+                selectedNodeStateByUser[user.id].textSegments[i].indentation
+                  !== currentState.textSegments[i].indentation
+                || selectedNodeStateByUser[user.id].textSegments[i].listOptions.type
+                  !== currentState.textSegments[i].listOptions.type
               ) {
                 // TODO indentation change detected
                 selectedNodeStateByUser[user.id] = currentState;
@@ -399,9 +399,9 @@ export default class LocalizedLabelManager {
               );
               // console.log(`Node changed - parent ${change.id} moved in vt affacted: ${JSON.stringify(changedVirtualNodes.length)}`);
             } else if (
-              change.properties.includes('name') ||
-              change.properties.includes('pluginData') ||
-              change.properties.includes('visible')
+              change.properties.includes('name')
+              || change.properties.includes('pluginData')
+              || change.properties.includes('visible')
             ) {
               // if the name changed we have to update all childs since naming changes the key abrivation
               changedVirtualNodes = this.virtualTree.getAllNodesInBranchByRootId(changedNode!.id);
@@ -508,7 +508,7 @@ export default class LocalizedLabelManager {
       console.log(`fillUpCache - Current page processed, processed ${nodesProcessedInCurrentPage} nodes, max depth ${maxDepthInCurrentPage}, took ${Date.now() - start}ms`);
 
       // Now process the other pages
-      const otherPages = figma.root.children.filter(page => page.id !== currentPage.id);
+      const otherPages = figma.root.children.filter((page) => page.id !== currentPage.id);
       for (const page of otherPages) {
         this.virtualTree.addNode(page, page.id);
         const startPage = Date.now();
@@ -698,12 +698,12 @@ export default class LocalizedLabelManager {
     while (parent) {
       const parentType = parent.type;
       if (
-        (parentType === 'COMPONENT' ||
-          parentType === 'COMPONENT_SET' ||
-          parentType === 'FRAME' ||
-          parentType === 'GROUP' ||
-          parentType === 'INSTANCE') &&
-        parent.width < this.containerSizeThreashold
+        (parentType === 'COMPONENT'
+          || parentType === 'COMPONENT_SET'
+          || parentType === 'FRAME'
+          || parentType === 'GROUP'
+          || parentType === 'INSTANCE')
+        && parent.width < this.containerSizeThreashold
       ) {
         rootFrame = parent;
       }
@@ -965,9 +965,8 @@ export default class LocalizedLabelManager {
 
         // NOTE: when we are here and we have mixed font family we **should** have warned the user already - we go for the first one
         // TODO warn user about problematic labels
-        const textNodeFontFamily =
-          (textNode.fontName as FontName).family ??
-          (textNode.getRangeFontName(0, 1) as FontName).family;
+        const textNodeFontFamily = (textNode.fontName as FontName).family
+          ?? (textNode.getRangeFontName(0, 1) as FontName).family;
         const fonts = await figma.listAvailableFontsAsync();
         const fontFamilyVariants = fonts
           .filter((font: Font) => font.fontName.family === textNodeFontFamily)
@@ -1019,9 +1018,9 @@ export default class LocalizedLabelManager {
               boldItalicFontName = fontFamilyVariant;
             }
             if (
-              !boldItalicFontName &&
-              styleLowerCase.includes('italic') &&
-              styleLowerCase.includes('bold')
+              !boldItalicFontName
+              && styleLowerCase.includes('italic')
+              && styleLowerCase.includes('bold')
             ) {
               boldItalicFontName = fontFamilyVariant;
             }
@@ -1116,9 +1115,9 @@ export default class LocalizedLabelManager {
           if (!rangeStyle.attributes?.bold && !rangeStyle.attributes?.italic) {
             if (rangeStyle.from === 0 && rangeStyle.to === textNode.characters.length) {
               if (
-                textNode.fontName === boldItalicFontName ||
-                textNode.fontName === boldFontName ||
-                textNode.fontName === italicFontName
+                textNode.fontName === boldItalicFontName
+                || textNode.fontName === boldFontName
+                || textNode.fontName === italicFontName
               ) {
                 textNode.setRangeFontName(rangeStyle.from, rangeStyle.to, regularFontName!);
               }
@@ -1181,9 +1180,8 @@ export default class LocalizedLabelManager {
     if (textNode.characters.length === 0) {
       if (
         !fontArray.find(
-          (font) =>
-            font.family === (textNode.fontName as FontName).family &&
-            font.style === (textNode.fontName as FontName).style,
+          (font) => font.family === (textNode.fontName as FontName).family
+            && font.style === (textNode.fontName as FontName).style,
         )
       ) {
         fontArray.push(textNode.fontName as FontName);
@@ -1193,9 +1191,8 @@ export default class LocalizedLabelManager {
       for (const fontToLoad of fontsToLoad) {
         if (
           !fontArray.find(
-            (font) =>
-              font.family === (fontToLoad as FontName).family &&
-              font.style === (fontToLoad as FontName).style,
+            (font) => font.family === (fontToLoad as FontName).family
+              && font.style === (fontToLoad as FontName).style,
           )
         ) {
           fontArray.push(fontToLoad as FontName);
@@ -1250,12 +1247,12 @@ export default class LocalizedLabelManager {
       const parentType = parent.type;
 
       if (
-        (parentType === 'COMPONENT' ||
-          parentType === 'COMPONENT_SET' ||
-          parentType === 'FRAME' ||
-          parentType === 'GROUP' ||
-          parentType === 'INSTANCE') &&
-        parent.width < this.containerSizeThreashold
+        (parentType === 'COMPONENT'
+          || parentType === 'COMPONENT_SET'
+          || parentType === 'FRAME'
+          || parentType === 'GROUP'
+          || parentType === 'INSTANCE')
+        && parent.width < this.containerSizeThreashold
       ) {
         rootFrame = parent as FrameNode;
       } else if (parentType === 'PAGE') {
@@ -1263,10 +1260,10 @@ export default class LocalizedLabelManager {
       }
 
       if (
-        parentType !== 'GROUP' &&
-        parentType !== 'PAGE' &&
-        parent.parent &&
-        parent.parent.type !== 'PAGE'
+        parentType !== 'GROUP'
+        && parentType !== 'PAGE'
+        && parent.parent
+        && parent.parent.type !== 'PAGE'
       ) {
         x += parent.x;
         y += parent.y;
@@ -1287,14 +1284,12 @@ export default class LocalizedLabelManager {
     // 1562ms -> 1071ms ~ 1/4
     const labelText = node.characters;
 
-    const fillins =
-      node.getPluginData(this.fillinsToPlaceholderKey) === ''
-        ? {}
-        : JSON.parse(node.getPluginData(this.fillinsToPlaceholderKey));
-    const parameterValues =
-      node.getPluginData(this.parameterValuesKey) === ''
-        ? {}
-        : JSON.parse(node.getPluginData(this.parameterValuesKey));
+    const fillins = node.getPluginData(this.fillinsToPlaceholderKey) === ''
+      ? {}
+      : JSON.parse(node.getPluginData(this.fillinsToPlaceholderKey));
+    const parameterValues = node.getPluginData(this.parameterValuesKey) === ''
+      ? {}
+      : JSON.parse(node.getPluginData(this.parameterValuesKey));
     const tokenizedTextResult = this.extractDeltaOpsAndLabelStyles(node, fillins);
 
     if (labelText.length === 1 && !/[0-9a-zA-Z\n\s]/.test(labelText)) {
@@ -1304,28 +1299,23 @@ export default class LocalizedLabelManager {
     // get plugin 1192ms -> 938ms
 
     const unmanaged = node.getPluginData(this.messageUnmanagedKey) === 'true';
-    const messageId =
-      node.getPluginData(this.messageNameDataKey) === ''
-        ? undefined
-        : node.getPluginData(this.messageNameDataKey);
-    const rootFrameLanguage =
-      rootFrame.getPluginData(this.languageDataKey) === ''
-        ? this.messageStore?.getConfigSync()!.refLanguage!
-        : (rootFrame.getPluginData(this.languageDataKey) as Locale);
+    const messageId = node.getPluginData(this.messageNameDataKey) === ''
+      ? undefined
+      : node.getPluginData(this.messageNameDataKey);
+    const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === ''
+      ? this.messageStore?.getConfigSync()!.refLanguage!
+      : (rootFrame.getPluginData(this.languageDataKey) as Locale);
 
-    const language =
-        node.getPluginData(this.languageDataKey) === ''
-          ? rootFrameLanguage
-          : (node.getPluginData(this.languageDataKey) as Locale);
+    const language = node.getPluginData(this.languageDataKey) === ''
+      ? rootFrameLanguage
+      : (node.getPluginData(this.languageDataKey) as Locale);
 
-    const variantPatternHTMLHash =
-      node.getPluginData(this.variantPatternHTMLHashDataKey) !== ''
-        ? node.getPluginData(this.variantPatternHTMLHashDataKey)
-        : undefined;
-    const unlinkedMessage =
-      node.getPluginData(this.anonymMessageDataKey) !== ''
-        ? JSON.parse(node.getPluginData(this.anonymMessageDataKey))
-        : undefined;
+    const variantPatternHTMLHash = node.getPluginData(this.variantPatternHTMLHashDataKey) !== ''
+      ? node.getPluginData(this.variantPatternHTMLHashDataKey)
+      : undefined;
+    const unlinkedMessage = node.getPluginData(this.anonymMessageDataKey) !== ''
+      ? JSON.parse(node.getPluginData(this.anonymMessageDataKey))
+      : undefined;
 
     // eslint-disable-next-line consistent-return
     return {
@@ -1443,20 +1433,16 @@ export default class LocalizedLabelManager {
 
     textSegments.forEach((textSegment) => {
       // if the node has one stile (non mixed) its not inline styling - ignore it
-      const italic =
-        node.fontName !== figma.mixed
-          ? undefined
-          : textSegment.fontName.style.toLowerCase().includes('italic');
+      const italic = node.fontName !== figma.mixed
+        ? undefined
+        : textSegment.fontName.style.toLowerCase().includes('italic');
       const weightName = textSegment.fontName.style.replace('italic', '').replace(' ', '');
-      const bold =
-        node.fontName !== figma.mixed ? undefined : weightName.toLowerCase().includes('bold');
-      const textDecoration =
-        node.textDecoration !== figma.mixed || textSegment.textDecoration === 'NONE'
-          ? undefined
-          : textSegment.textDecoration;
+      const bold = node.fontName !== figma.mixed ? undefined : weightName.toLowerCase().includes('bold');
+      const textDecoration = node.textDecoration !== figma.mixed || textSegment.textDecoration === 'NONE'
+        ? undefined
+        : textSegment.textDecoration;
 
-      let linkUrl =
-        textSegment.hyperlink?.type === 'URL' ? textSegment.hyperlink?.value : undefined;
+      let linkUrl = textSegment.hyperlink?.type === 'URL' ? textSegment.hyperlink?.value : undefined;
       if (linkUrl && textSegment.hyperlink?.value.startsWith(this.helperDomain)) {
         linkUrl = textSegment.hyperlink.value.substring(this.helperDomain.length);
       }
@@ -1502,8 +1488,8 @@ export default class LocalizedLabelManager {
         const placehodlderDeltaOp = placehodlderDeltaOps[i];
         if (!placehodlderDeltaOps[i].processed) {
           if (
-            textStyleDeltaOp.start === placehodlderDeltaOp.start &&
-            textStyleDeltaOp.end === placehodlderDeltaOp.end
+            textStyleDeltaOp.start === placehodlderDeltaOp.start
+            && textStyleDeltaOp.end === placehodlderDeltaOp.end
           ) {
             // style delta and placeholder match
             // - add placeholder to textStyleOp and push the whole textStyleOp
@@ -1512,11 +1498,11 @@ export default class LocalizedLabelManager {
             placehodlderDeltaOp.processed = true;
             textStyleDeltaOp.processed = true;
           } else if (
-            textStyleDeltaOp.start === placehodlderDeltaOp.start &&
-            textStyleDeltaOp.end >
-              placehodlderDeltaOp.end -
-                placehodlderDeltaOp.attributes.placeholder!.invisibleMarkers &&
-            textStyleDeltaOp.end < placehodlderDeltaOp.end
+            textStyleDeltaOp.start === placehodlderDeltaOp.start
+            && textStyleDeltaOp.end
+              > placehodlderDeltaOp.end
+                - placehodlderDeltaOp.attributes.placeholder!.invisibleMarkers
+            && textStyleDeltaOp.end < placehodlderDeltaOp.end
           ) {
             // style delta only formats the placeholder - but its end sits within the invisible markers
             // - no split needed but set end to the end of the text marker
@@ -1526,16 +1512,16 @@ export default class LocalizedLabelManager {
             placehodlderDeltaOp.processed = true;
             deltaOps.push(textStyleDeltaOp);
           } else if (
-            textStyleDeltaOp.start >= placehodlderDeltaOp.start &&
-            textStyleDeltaOp.end <= placehodlderDeltaOp.end
+            textStyleDeltaOp.start >= placehodlderDeltaOp.start
+            && textStyleDeltaOp.end <= placehodlderDeltaOp.end
           ) {
             // Segment starts and ends within the placeholder but don't cover it completly (previous cases)
             // - we ignore this style
             textStyleDeltaOp.processed = true;
           } else if (
-            textStyleDeltaOp.start < placehodlderDeltaOp.start &&
-            textStyleDeltaOp.end >=
-              placehodlderDeltaOp.end - placehodlderDeltaOp.attributes.placeholder!.invisibleMarkers
+            textStyleDeltaOp.start < placehodlderDeltaOp.start
+            && textStyleDeltaOp.end
+              >= placehodlderDeltaOp.end - placehodlderDeltaOp.attributes.placeholder!.invisibleMarkers
           ) {
             // start is before the placeholder and it covers it completly split it and move start
             // - push delta before the placeholder
@@ -1568,10 +1554,10 @@ export default class LocalizedLabelManager {
               throw new Error('textStyleDeltaOp.start < textStyleDeltaOp.end');
             }
           } else if (
-            textStyleDeltaOp.start < placehodlderDeltaOp.start &&
-            textStyleDeltaOp.end >= placehodlderDeltaOp.start &&
-            textStyleDeltaOp.end <
-              placehodlderDeltaOp.end - placehodlderDeltaOp.attributes.placeholder!.invisibleMarkers
+            textStyleDeltaOp.start < placehodlderDeltaOp.start
+            && textStyleDeltaOp.end >= placehodlderDeltaOp.start
+            && textStyleDeltaOp.end
+              < placehodlderDeltaOp.end - placehodlderDeltaOp.attributes.placeholder!.invisibleMarkers
           ) {
             // start falls before a placeholder but it ends within it -> move end to the beginng
             // - we cant process it yet since its bounds may be changed by later placeholder
@@ -1586,17 +1572,17 @@ export default class LocalizedLabelManager {
             // placeholder is processed
             textStyleDeltaOp.processed = true;
           } else if (
-            textStyleDeltaOp.start >= placehodlderDeltaOp.start &&
-            textStyleDeltaOp.start <
-              placehodlderDeltaOp.end - placehodlderDeltaOp.attributes.placeholder!.invisibleMarkers
+            textStyleDeltaOp.start >= placehodlderDeltaOp.start
+            && textStyleDeltaOp.start
+              < placehodlderDeltaOp.end - placehodlderDeltaOp.attributes.placeholder!.invisibleMarkers
           ) {
             // start falls into a placeholder - move it to the end of the placeholder
             // - we cant process it yet since its bounds may be changed by later placeholder
             textStyleDeltaOp.start = placehodlderDeltaOp.end;
           } else if (
-            textStyleDeltaOp.end > placehodlderDeltaOp.start &&
-            textStyleDeltaOp.end <
-              placehodlderDeltaOp.end - placehodlderDeltaOp.attributes.placeholder!.invisibleMarkers
+            textStyleDeltaOp.end > placehodlderDeltaOp.start
+            && textStyleDeltaOp.end
+              < placehodlderDeltaOp.end - placehodlderDeltaOp.attributes.placeholder!.invisibleMarkers
           ) {
             // end falls into hello within helloXXX of the placeholder move it to the start
             textStyleDeltaOp.end = placehodlderDeltaOp.start;
@@ -1634,10 +1620,10 @@ export default class LocalizedLabelManager {
     node: TextNode,
     fillins: FillinsToPlaceholder,
   ): {
-    matchingLabelLints: string[];
-    deltaOps: any[];
-    labelStyle: LabelStyle /* , allowedFormats: string[] */;
-  } {
+      matchingLabelLints: string[];
+      deltaOps: any[];
+      labelStyle: LabelStyle /* , allowedFormats: string[] */;
+    } {
     const fontFamilies = new Set<string>();
 
     const labelStyle = {
@@ -1664,34 +1650,27 @@ export default class LocalizedLabelManager {
         // console.log('adding font fimily: ' + deltaOp.attributes.fontFamily);
       }
 
-      labelStyle.bold =
-        labelStyle.bold !== null && labelStyle.bold !== deltaOp.attributes.bold
-          ? 'MIXED'
-          : deltaOp.attributes.bold;
-      labelStyle.italic =
-        labelStyle.italic !== null && labelStyle.italic !== deltaOp.attributes.italic
-          ? 'MIXED'
-          : deltaOp.attributes.italic;
-      labelStyle.textDecoration =
-        labelStyle.textDecoration !== null &&
-        labelStyle.textDecoration !== deltaOp.attributes.textDecoration
-          ? 'MIXED'
-          : deltaOp.attributes.textDecoration;
-      labelStyle.fontFamily =
-        labelStyle.fontFamily !== null && labelStyle.fontFamily !== deltaOp.attributes.fontFamily
-          ? 'MIXED'
-          : deltaOp.attributes.fontFamily;
+      labelStyle.bold = labelStyle.bold !== null && labelStyle.bold !== deltaOp.attributes.bold
+        ? 'MIXED'
+        : deltaOp.attributes.bold;
+      labelStyle.italic = labelStyle.italic !== null && labelStyle.italic !== deltaOp.attributes.italic
+        ? 'MIXED'
+        : deltaOp.attributes.italic;
+      labelStyle.textDecoration = labelStyle.textDecoration !== null
+        && labelStyle.textDecoration !== deltaOp.attributes.textDecoration
+        ? 'MIXED'
+        : deltaOp.attributes.textDecoration;
+      labelStyle.fontFamily = labelStyle.fontFamily !== null && labelStyle.fontFamily !== deltaOp.attributes.fontFamily
+        ? 'MIXED'
+        : deltaOp.attributes.fontFamily;
     }
 
     // reset unmixed label stlyes
     for (const deltaOp of deltaOps) {
       deltaOp.attributes.bold = labelStyle.bold !== 'MIXED' ? undefined : deltaOp.attributes.bold;
-      deltaOp.attributes.italic =
-        labelStyle.italic !== 'MIXED' ? undefined : deltaOp.attributes.italic;
-      deltaOp.attributes.textDecoration =
-        labelStyle.textDecoration !== 'MIXED' ? undefined : deltaOp.attributes.textDecoration;
-      deltaOp.attributes.fontFamily =
-        labelStyle.fontFamily !== 'MIXED' ? undefined : deltaOp.attributes.fontFamily;
+      deltaOp.attributes.italic = labelStyle.italic !== 'MIXED' ? undefined : deltaOp.attributes.italic;
+      deltaOp.attributes.textDecoration = labelStyle.textDecoration !== 'MIXED' ? undefined : deltaOp.attributes.textDecoration;
+      deltaOp.attributes.fontFamily = labelStyle.fontFamily !== 'MIXED' ? undefined : deltaOp.attributes.fontFamily;
     }
 
     return {

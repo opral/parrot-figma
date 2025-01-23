@@ -135,7 +135,7 @@ const pluralArrayByLanguage: { [key in Locale]: Plural[] } = {
 export function getPluralFormsByLanguage(language: Locale) {
   const pluralForms = pluralArrayByLanguage[language];
   if (!pluralForms) {
-    console.warn('plural forms for ' + language + ' not defined - retruning default (one, other)');
+    console.warn(`plural forms for ${language} not defined - retruning default (one, other)`);
     return [Plural.OTHER, Plural.ONE];
   }
   return pluralForms;

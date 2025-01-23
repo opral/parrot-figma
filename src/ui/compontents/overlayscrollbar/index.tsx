@@ -44,7 +44,9 @@ function OverlayScrollbarsComponent<T extends keyof JSX.IntrinsicElements>(
   props: OverlayScrollbarsComponentBaseProps<T>,
   ref: ForwardedRef<OverlayScrollbarsComponentRef<T>>,
 ) {
-  const { element = 'div', options, events, defer, children, ...other } = props;
+  const {
+    element = 'div', options, events, defer, children, ...other
+  } = props;
   const Tag = element;
   const elementRef = useRef<ElementRef<T>>(null);
   const childrenRef = useRef<HTMLDivElement>(null);

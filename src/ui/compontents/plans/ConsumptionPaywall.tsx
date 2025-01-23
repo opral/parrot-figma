@@ -108,7 +108,7 @@ export default function ConsumptionPaywall({
             Get a Refill (20% off in February!)
           </button>
           <p><a className="consumption_paywall_modals--licenseKey">I have a License key already</a></p>
-          
+
         </div>
 
       </div>

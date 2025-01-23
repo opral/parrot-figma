@@ -1,11 +1,8 @@
-
-
 // use polyfill in sandbox https://forum.figma.com/t/sandbox-not-support-urlsearchparams/41676
 import URLSearchParams from '@ungap/url-search-params';
 import Monitoring from '../monitoring/MonitoringProxy';
 
 export default class GoogleTranslator {
-
   static async translate(text: string, sourceLanguage: string, targetLanguage: string) {
     // if the text only contains whitespaces - uses the orignal one
     if (/^\s*$/.test(text) || text === '') {

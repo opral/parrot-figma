@@ -80,7 +80,17 @@ export default function FileDropZone({ onFilesReceived }: FileDropZoneProps) {
               <div className="dropzone-info-msg">
                 <b>Click or drag &amp; drop to import a .stringsdict, .strings, .xml file</b>
                 <br />
-                Supported are Apple's <b>.stringsdict</b>, <b>.strings</b> and Android's <b>.xml</b>{' '}
+                Supported are Apple's
+                {' '}
+                <b>.stringsdict</b>
+                ,
+                {' '}
+                <b>.strings</b>
+                {' '}
+                and Android's
+                {' '}
+                <b>.xml</b>
+                {' '}
                 file.
               </div>
             </div>

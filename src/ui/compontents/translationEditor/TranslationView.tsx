@@ -64,7 +64,7 @@ export default function TranslationView({ match, text }: TranslationViewProps) {
       if (content === '') {
         return '<p><br></p>';
       }
-      return '<p>' + content + '</p>';
+      return `<p>${content}</p>`;
     })
     .join('');
   return <span dangerouslySetInnerHTML={{ __html: htmlRepresentation }} />;

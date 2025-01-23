@@ -61,8 +61,8 @@ export default function TileSelect<T>({
         <div
           data-tooltip-content={option.tooltip}
           className={`tile${
-            selectedOptions.findIndex((v) => v === option.value) !== -1 ||
-            option.forceSelected === true
+            selectedOptions.findIndex((v) => v === option.value) !== -1
+            || option.forceSelected === true
               ? ' selected'
               : ''
           }`}

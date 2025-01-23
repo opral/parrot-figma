@@ -26,8 +26,8 @@ export default class UserManagerUI extends EventTarget {
     const freshUserState = await this.userManagerSandbox.getCurrentUser();
     if (this.currentUser !== undefined) {
       if (
-        freshUserState.userRole !== this.currentUser.userRole ||
-        freshUserState.openUserRoleRequest !== this.currentUser.openUserRoleRequest
+        freshUserState.userRole !== this.currentUser.userRole
+        || freshUserState.openUserRoleRequest !== this.currentUser.openUserRoleRequest
       ) {
         this.currentUser = freshUserState;
         console.log(`user updated:${JSON.stringify(this.currentUser)}`);

@@ -60,7 +60,8 @@ export default function ComparisonChart({ upgradePlan }: ComparisonChartProps) {
                   <strong className="plan_information--mostPopular">Most popular</strong>
                 </h2>
                 <p className="plan_information--description">
-                  For you and your team, with unlimited files and all the pro features.{' '}
+                  For you and your team, with unlimited files and all the pro features.
+                  {' '}
                 </p>
                 <div className="helper_div" />
               </div>
@@ -89,7 +90,8 @@ export default function ComparisonChart({ upgradePlan }: ComparisonChartProps) {
               <div className="plan_information--headerContainer">
                 <h2 className="plan_information--name">Organization </h2>
                 <p className="plan_information--description">
-                  For bringing teams together, sharing an org-wide design system, and more.{' '}
+                  For bringing teams together, sharing an org-wide design system, and more.
+                  {' '}
                 </p>
                 <div className="helper_div" />
               </div>

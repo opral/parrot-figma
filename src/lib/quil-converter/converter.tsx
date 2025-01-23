@@ -29,7 +29,7 @@ export default class FigmaTextNodeToDelta {
       });
     });
 
-    //return new Delta(deltaRaw);
+    // return new Delta(deltaRaw);
   }
 }
 /*
@@ -42,7 +42,7 @@ interface ScrollBlot {
 
 interface MinimumQuil {
 
-}*/
+} */
 /*
 export default class Converter {
   quill: MinimumQuil;

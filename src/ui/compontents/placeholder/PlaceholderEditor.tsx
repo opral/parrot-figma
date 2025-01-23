@@ -1,5 +1,5 @@
-import * as React from 'react';
-import { Placeholder } from '../../../lib/message/Placeholder';
+import * as React from "react";
+import { Placeholder } from "../../../lib/message/Placeholder";
 
 // placeholder editor should be able to:
 // - change the name of a placeholder
@@ -27,40 +27,40 @@ import { Placeholder } from '../../../lib/message/Placeholder';
 //                                  ^ radio select to choose which one defines the quantity
 
 type PlaceholderEditorListItemProps = {
-  placeholder: Placeholder;
-  fillin: string | number;
-  onValueChange: (placeholderName: string, value: string) => void;
+	placeholder: Placeholder;
+	fillin: string | number;
+	onValueChange: (placeholderName: string, value: string) => void;
 };
 
 export default function PlaceholderEditorListItem({
-  placeholder,
-  fillin,
-  onValueChange,
+	placeholder,
+	fillin,
+	onValueChange,
 }: PlaceholderEditorListItemProps) {
-  return (
-    <>
-      <div />
-      <div>
-        {/* { placeholder.type === 's' && 'T'}
+	return (
+		<>
+			<div />
+			<div>
+				{/* { placeholder.type === 's' && 'T'}
         { placeholder.type === 'f' && '%'}
         { placeholder.type === 'd' && '#'} */}
-      </div>
-      <div>{placeholder.name}</div>
-      <div>
-        <input
-          type="text"
-          spellCheck="false"
-          dir="auto"
-          defaultValue={fillin}
-          onChange={(e) => {
-            onValueChange(placeholder.name, e.target.value);
-            /* onSearchChange(e.target.value);
+			</div>
+			<div>{placeholder.name}</div>
+			<div>
+				<input
+					type="text"
+					spellCheck="false"
+					dir="auto"
+					defaultValue={fillin}
+					onChange={(e) => {
+						onValueChange(placeholder.name, e.target.value);
+						/* onSearchChange(e.target.value);
 
             setRenderEntries(100); */
-          }}
-        />
-      </div>
-      <div>{/* { placeholder.type === 'f' && placeholder.decimalPlaces} */}</div>
-    </>
-  );
+					}}
+				/>
+			</div>
+			<div>{/* { placeholder.type === 'f' && placeholder.decimalPlaces} */}</div>
+		</>
+	);
 }

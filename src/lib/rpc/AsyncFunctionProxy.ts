@@ -1,223 +1,220 @@
- 
- 
 export class AsyncMessageBus {
-  static invocationResult = 'invocationResult';
+	static invocationResult = "invocationResult";
 
-  static invocationRequest = 'invocationRequest';
+	static invocationRequest = "invocationRequest";
 }
 
 export class AsyncFunctionProxy {
-  name: string;
+	name: string;
 
-  invocationId = 0;
+	invocationId = 0;
 
-  invocationRequests: any = {};
+	invocationRequests: any = {};
 
-  invocationRequestHandler: any = {};
+	invocationRequestHandler: any = {};
 
-  postMessage: any;
+	postMessage: any;
 
-  constructor(name: string, postMessage: any, messageBus: any) {
-    this.postMessage = (message: any) => {
-      postMessage(message);
-    };
-    this.name = name;
+	constructor(name: string, postMessage: any, messageBus: any) {
+		this.postMessage = (message: any) => {
+			postMessage(message);
+		};
+		this.name = name;
 
-    try {
-      if (messageBus.addEventListener) {
-        messageBus.addEventListener('message', (event: MessageEvent) => {
-          this.handleMessage(event.data.pluginMessage);
-        });
-      } else {
-        messageBus.on('message', (message: any) => {
-          this.handleMessage(message);
-        });
-      }
-    } catch (e) {
-      const error = new Error(`was not able to add event listener to receive events${name}`);
-      throw error;
-    }
-  }
+		try {
+			if (messageBus.addEventListener) {
+				messageBus.addEventListener("message", (event: MessageEvent) => {
+					this.handleMessage(event.data.pluginMessage);
+				});
+			} else {
+				messageBus.on("message", (message: any) => {
+					this.handleMessage(message);
+				});
+			}
+		} catch (e) {
+			const error = new Error(`was not able to add event listener to receive events${name}`);
+			throw error;
+		}
+	}
 
-  handleMessage(message: any) {
-    if (message.target === 'AsyncFunctionProxy') {
-      if (message.type === AsyncMessageBus.invocationResult) {
-        this.handleInvocationResult(message);
-      } else if (message.type === AsyncMessageBus.invocationRequest) {
-        this.handleInvocationRequest(message);
-      }
-    }
-  }
+	handleMessage(message: any) {
+		if (message.target === "AsyncFunctionProxy") {
+			if (message.type === AsyncMessageBus.invocationResult) {
+				this.handleInvocationResult(message);
+			} else if (message.type === AsyncMessageBus.invocationRequest) {
+				this.handleInvocationRequest(message);
+			}
+		}
+	}
 
-  /**
-   * monkey patches all async method of the given instnce and proxies calls via figmas postMessage to
-   * sandbox or / the ui
-   *
-   * @param instance
-   */
-  proxyAsyncMethods(instance: any) {
-    const instanceClassName = instance.proxyClassName;
+	/**
+	 * monkey patches all async method of the given instnce and proxies calls via figmas postMessage to
+	 * sandbox or / the ui
+	 *
+	 * @param instance
+	 */
+	proxyAsyncMethods(instance: any) {
+		const instanceClassName = instance.proxyClassName;
 
-    const instancePrototype = Object.getPrototypeOf(instance);
-    for (const memberName of Object.getOwnPropertyNames(instancePrototype)) {
-      if (
-        memberName !== 'constructor'
-        && instancePrototype[memberName].constructor
-        && (instancePrototype[memberName].constructor.name === 'Function' || instancePrototype[memberName].constructor.name === 'AsyncFunction')
-      ) {
-        // eslint-disable-next-line @typescript-eslint/no-this-alias -- we need this for the functino binding
-        const proxy = this;
-         
-        instancePrototype[memberName] = async function () {
-          let thrownError: undefined | any;
-          // console.log(proxy.name + ' request invocation of: ' + instanceClassName + '.' + memberName);
-           
-          try {
-            const remoteResult = await proxy.invoke(
-              `${instanceClassName}.${memberName}`,
-              // eslint-disable-next-line prefer-rest-params -- check how rest params can be used here
-              Array.prototype.slice.call(arguments),
-            );
-            return remoteResult;
-          } catch (e: any) {
-            thrownError = e;
-          }
+		const instancePrototype = Object.getPrototypeOf(instance);
+		for (const memberName of Object.getOwnPropertyNames(instancePrototype)) {
+			if (
+				memberName !== "constructor" &&
+				instancePrototype[memberName].constructor &&
+				(instancePrototype[memberName].constructor.name === "Function" ||
+					instancePrototype[memberName].constructor.name === "AsyncFunction")
+			) {
+				// eslint-disable-next-line @typescript-eslint/no-this-alias -- we need this for the functino binding
+				const proxy = this;
 
-          if (thrownError) {
-            try {
-              throw new Error(`stacktrace helper error - ${memberName}`);
-            } catch (error: any) {
-              thrownError.stack += error.stack;
-            }
-            throw thrownError;
-          }
-        };
-      }
-    }
-  }
+				instancePrototype[memberName] = async function () {
+					let thrownError: undefined | any;
+					// console.log(proxy.name + ' request invocation of: ' + instanceClassName + '.' + memberName);
 
-  registerInstance(instance: any) {
-    const instanceClassName = instance.proxyClassName;
+					try {
+						const remoteResult = await proxy.invoke(
+							`${instanceClassName}.${memberName}`,
+							// eslint-disable-next-line prefer-rest-params -- check how rest params can be used here
+							Array.prototype.slice.call(arguments),
+						);
+						return remoteResult;
+					} catch (e: any) {
+						thrownError = e;
+					}
 
-    // console.log(this.name+ ' proxy class:' + instanceClassName + Object.getOwnPropertyNames(instance));
+					if (thrownError) {
+						try {
+							throw new Error(`stacktrace helper error - ${memberName}`);
+						} catch (error: any) {
+							thrownError.stack += error.stack;
+						}
+						throw thrownError;
+					}
+				};
+			}
+		}
+	}
 
-    const instancePrototype = Object.getPrototypeOf(instance);
-    for (const memberName of Object.getOwnPropertyNames(instancePrototype)) {
-      if (
-        memberName !== 'constructor'
-        && instancePrototype[memberName].constructor
-        && (instancePrototype[memberName].constructor.name === 'Function' || instancePrototype[memberName].constructor.name === 'AsyncFunction')
-      ) {
-        // console.log(this.name+ ' proxy class!' + instanceClassName + '.' + memberName);
-        this.registerInvocationHandler(
-          `${instanceClassName}.${memberName}`,
-          instance,
-          instance[memberName],
-        );
-      }
-    }
-  }
+	registerInstance(instance: any) {
+		const instanceClassName = instance.proxyClassName;
 
-  private registerInvocationHandler(
-    messageName: string,
-    instance: any,
-    messageHandler: Promise<any>,
-  ) {
-    // console.log(`registerInvocationHandler${messageName}`);
-    if (this.invocationRequestHandler[messageName]) {
-      // console.log(this.invocationRequestHandler[messageName]);
-      throw new Error(`${this.name} Message ${messageName} handler did exist already`);
-    }
-    this.invocationRequestHandler[messageName] = {
-      instance,
-      method: messageHandler,
-    };
-  }
+		// console.log(this.name+ ' proxy class:' + instanceClassName + Object.getOwnPropertyNames(instance));
 
-  private async invoke(messageName: string, parameter: any | undefined) {
-    const invocationId = `${messageName}.${(this.invocationId += 1)}`;
+		const instancePrototype = Object.getPrototypeOf(instance);
+		for (const memberName of Object.getOwnPropertyNames(instancePrototype)) {
+			if (
+				memberName !== "constructor" &&
+				instancePrototype[memberName].constructor &&
+				(instancePrototype[memberName].constructor.name === "Function" ||
+					instancePrototype[memberName].constructor.name === "AsyncFunction")
+			) {
+				// console.log(this.name+ ' proxy class!' + instanceClassName + '.' + memberName);
+				this.registerInvocationHandler(
+					`${instanceClassName}.${memberName}`,
+					instance,
+					instance[memberName],
+				);
+			}
+		}
+	}
 
-    return new Promise((resolve, reject) => {
-      this.invocationRequests[invocationId] = {
-        messageName,
-        resolve: resolve.bind(this),
-        reject: reject.bind(this),
-      };
+	private registerInvocationHandler(
+		messageName: string,
+		instance: any,
+		messageHandler: Promise<any>,
+	) {
+		// console.log(`registerInvocationHandler${messageName}`);
+		if (this.invocationRequestHandler[messageName]) {
+			// console.log(this.invocationRequestHandler[messageName]);
+			throw new Error(`${this.name} Message ${messageName} handler did exist already`);
+		}
+		this.invocationRequestHandler[messageName] = {
+			instance,
+			method: messageHandler,
+		};
+	}
 
-      const message = {
-        target: 'AsyncFunctionProxy',
-        type: AsyncMessageBus.invocationRequest,
-        name: messageName,
-        id: invocationId,
-        parameter,
-      };
-      this.postMessage(message);
-    });
-  }
+	private async invoke(messageName: string, parameter: any | undefined) {
+		const invocationId = `${messageName}.${(this.invocationId += 1)}`;
 
-  handleInvocationRequest(pluginMessage: any) {
-    if (!this.invocationRequestHandler[pluginMessage.name]) {
-      throw new Error(
-        `${this.name} Invocation handler for [${pluginMessage.name}] does not exist (did you register the executing instance in [${this.name}]?`,
-      );
-    }
+		return new Promise((resolve, reject) => {
+			this.invocationRequests[invocationId] = {
+				messageName,
+				resolve: resolve.bind(this),
+				reject: reject.bind(this),
+			};
 
-    const methodHandler = this.invocationRequestHandler[pluginMessage.name];
+			const message = {
+				target: "AsyncFunctionProxy",
+				type: AsyncMessageBus.invocationRequest,
+				name: messageName,
+				id: invocationId,
+				parameter,
+			};
+			this.postMessage(message);
+		});
+	}
 
-    methodHandler.method
-      .apply(methodHandler.instance, pluginMessage.parameter)
-      .then((data: any) => {
-        const transferObj = {
-          target: 'AsyncFunctionProxy',
-          type: AsyncMessageBus.invocationResult,
-          invocationId: pluginMessage.id,
-          result: data,
-        };
-        this.postMessage(transferObj);
-      })
-      .catch((error: Error) => {
-         
-        this.postMessage({
-          target: 'AsyncFunctionProxy',
-          type: AsyncMessageBus.invocationResult,
-          invocationId: pluginMessage.id,
-          error: this.toSerializableError(error),
-        });
-      });
-  }
+	handleInvocationRequest(pluginMessage: any) {
+		if (!this.invocationRequestHandler[pluginMessage.name]) {
+			throw new Error(
+				`${this.name} Invocation handler for [${pluginMessage.name}] does not exist (did you register the executing instance in [${this.name}]?`,
+			);
+		}
 
-  handleInvocationResult(pluginMessage: any) {
-    if (!this.invocationRequests[pluginMessage.invocationId]) {
-      throw Error(`${this.name} Invocation with id ${pluginMessage.invocationId} was not found `);
-    }
+		const methodHandler = this.invocationRequestHandler[pluginMessage.name];
 
-    if (pluginMessage.error !== undefined) {
-      const error = this.fromSerializableError(pluginMessage.error);
-      this.invocationRequests[pluginMessage.invocationId].reject(error);
-    } else {
-      const fn = this.invocationRequests[pluginMessage.invocationId].resolve;
-      // console.log(this.name, " handleInvocationResult result "+ fn + ' ' + JSON.stringify(pluginMessage))
-      fn(pluginMessage.result);
-    }
+		methodHandler.method
+			.apply(methodHandler.instance, pluginMessage.parameter)
+			.then((data: any) => {
+				const transferObj = {
+					target: "AsyncFunctionProxy",
+					type: AsyncMessageBus.invocationResult,
+					invocationId: pluginMessage.id,
+					result: data,
+				};
+				this.postMessage(transferObj);
+			})
+			.catch((error: Error) => {
+				this.postMessage({
+					target: "AsyncFunctionProxy",
+					type: AsyncMessageBus.invocationResult,
+					invocationId: pluginMessage.id,
+					error: this.toSerializableError(error),
+				});
+			});
+	}
 
-    return true;
-  }
+	handleInvocationResult(pluginMessage: any) {
+		if (!this.invocationRequests[pluginMessage.invocationId]) {
+			throw Error(`${this.name} Invocation with id ${pluginMessage.invocationId} was not found `);
+		}
 
-   
-  private toSerializableError(error: Error) {
-    return {
-      message: error.message,
-      name: error.name,
-      stack: error.stack,
-    };
-  }
+		if (pluginMessage.error !== undefined) {
+			const error = this.fromSerializableError(pluginMessage.error);
+			this.invocationRequests[pluginMessage.invocationId].reject(error);
+		} else {
+			const fn = this.invocationRequests[pluginMessage.invocationId].resolve;
+			// console.log(this.name, " handleInvocationResult result "+ fn + ' ' + JSON.stringify(pluginMessage))
+			fn(pluginMessage.result);
+		}
 
-   
-  private fromSerializableError(serializedError: any) {
-    const { message, name, stack } = serializedError;
-    const error = new Error(message);
-    error.name = name;
-    error.stack = stack;
-    return error;
-  }
+		return true;
+	}
+
+	private toSerializableError(error: Error) {
+		return {
+			message: error.message,
+			name: error.name,
+			stack: error.stack,
+		};
+	}
+
+	private fromSerializableError(serializedError: any) {
+		const { message, name, stack } = serializedError;
+		const error = new Error(message);
+		error.name = name;
+		error.stack = stack;
+		return error;
+	}
 }

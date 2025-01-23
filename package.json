@@ -13,7 +13,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "lintfix": "./node_modules/.bin/eslint . --fix ",
-    "prettier-ts": "prettier --write '**/*.{ts,tsx}'"
+    "format": "prettier ./src --write"
   },
   "author": "Martin Lysk",
   "license": "",

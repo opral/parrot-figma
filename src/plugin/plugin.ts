@@ -1,4 +1,3 @@
- 
 // This plugin will open a window to prompt the user to enter a number, and
 // it will then create that many rectangles on the screen.
 
@@ -8,58 +7,58 @@
 
 // This shows the HTML page in "ui.html".
 
-import { AsyncFunctionProxy } from '../lib/rpc/AsyncFunctionProxy';
-import MigrationManager from '../lib/migrations/MigrationManager';
+import { AsyncFunctionProxy } from "../lib/rpc/AsyncFunctionProxy";
+import MigrationManager from "../lib/migrations/MigrationManager";
 
-import FigmaUtil from '../shared/FigmaUtil';
-import FigmaHelper from '../shared/FigmaHelper';
-import { WindowManagerSandbox, WindowMode } from '../lib/windowManager/WindowManagerSandbox';
-import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager'; // TODO change this to a config when implemented
-import { InlangMessageStore } from '../lib/message/store/InlangMessageStoreFigmaRoot';
-import UserManager from '../lib/usage/UsageManager';
-import TranslatorMachine from '../lib/translationprovider/TranslatorMachine';
-import ParrotApi from '../lib/api/Parrot';
-import Monitoring from '../lib/monitoring/MonitoringProxy';
-import FeatureFlags from '../lib/featureflags/FeatureFlags';
+import FigmaUtil from "../shared/FigmaUtil";
+import FigmaHelper from "../shared/FigmaHelper";
+import { WindowManagerSandbox, WindowMode } from "../lib/windowManager/WindowManagerSandbox";
+import LocalizedLabelManager from "../lib/localizedlabels/LocalizedLabelManager"; // TODO change this to a config when implemented
+import { InlangMessageStore } from "../lib/message/store/InlangMessageStoreFigmaRoot";
+import UserManager from "../lib/usage/UsageManager";
+import TranslatorMachine from "../lib/translationprovider/TranslatorMachine";
+import ParrotApi from "../lib/api/Parrot";
+import Monitoring from "../lib/monitoring/MonitoringProxy";
+import FeatureFlags from "../lib/featureflags/FeatureFlags";
 
 const figmaRemote = new FigmaUtil();
 
 const featureFlags = figmaRemote.getFeatureFlagsSync();
 FeatureFlags.setFeatureflags(featureFlags);
 
-const fileConfigured = figmaRemote.getRootPluginDataSync('fileSetupCompleted') !== '';
+const fileConfigured = figmaRemote.getRootPluginDataSync("fileSetupCompleted") !== "";
 const introShownToUser = true;
 
-figma.root.setRelaunchData({ open: 'Let Your Design Speak all Languages' });
+figma.root.setRelaunchData({ open: "Let Your Design Speak all Languages" });
 
 const migrationManager = new MigrationManager(figmaRemote);
 migrationManager.migrate();
 
 WindowManagerSandbox.init(
-  {
-    bottomSheet: {
-      height: 200,
-    },
-    introWindowSize: {
-      centerHeight: 488,
-      height: 364,
-      width: 415,
-    },
-    windowSize: {
-      width: 800,
-      height: 600,
-    },
-    windowMode: WindowMode.IntroWindow,
-  },
-  !fileConfigured || !introShownToUser ? WindowMode.IntroWindow : undefined,
+	{
+		bottomSheet: {
+			height: 200,
+		},
+		introWindowSize: {
+			centerHeight: 488,
+			height: 364,
+			width: 415,
+		},
+		windowSize: {
+			width: 800,
+			height: 600,
+		},
+		windowMode: WindowMode.IntroWindow,
+	},
+	!fileConfigured || !introShownToUser ? WindowMode.IntroWindow : undefined,
 );
 
 const asyncFunctionProxy = new AsyncFunctionProxy(
-  'SandboxAsyncFunctionProxy',
-  (data: any) => {
-    figma.ui.postMessage(data);
-  },
-  figma.ui,
+	"SandboxAsyncFunctionProxy",
+	(data: any) => {
+		figma.ui.postMessage(data);
+	},
+	figma.ui,
 );
 
 asyncFunctionProxy.registerInstance(figmaRemote);
@@ -84,29 +83,28 @@ asyncFunctionProxy.registerInstance(figmaHelper);
 const monitoring = new Monitoring();
 asyncFunctionProxy.proxyAsyncMethods(monitoring);
 
-figma.on('selectionchange', () => {
-  figma.ui.postMessage({
-    type: 'event',
-    name: 'selectionchange',
-  });
+figma.on("selectionchange", () => {
+	figma.ui.postMessage({
+		type: "event",
+		name: "selectionchange",
+	});
 });
 
 // Calls to "parent.postMessage" from within the HTML page will trigger this
 // callback. The callback will be passed the "pluginMessage" property of the
 // posted message.
 figma.ui.onmessage = (msg) => {
-   
-  switch (msg.type) {
-    case 'undo':
-      console.log('undo forwarded');
-      figma.triggerUndo();
-      break;
-  }
-  /* if (asyncFunctionProxy.onMessage(payload)) {
+	switch (msg.type) {
+		case "undo":
+			console.log("undo forwarded");
+			figma.triggerUndo();
+			break;
+	}
+	/* if (asyncFunctionProxy.onMessage(payload)) {
     return
   } */
 
-  // Make sure to close the plugin when you're done. Otherwise the plugin will
-  // keep running, which shows the cancel button at the bottom of the screen.
-  // figma.closePlugin();
+	// Make sure to close the plugin when you're done. Otherwise the plugin will
+	// keep running, which shows the cancel button at the bottom of the screen.
+	// figma.closePlugin();
 };

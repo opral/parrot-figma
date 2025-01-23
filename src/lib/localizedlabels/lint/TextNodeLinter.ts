@@ -1,54 +1,54 @@
-import BaseTextNodeLintRule from './rules/BaseTextNodeLintRule';
-import MixedStyleNotSupported from './rules/MixedStyleNotSupported';
-import UnmatchingFontWeightNotSupported from './rules/FontStyleNotSupported';
-import IndentationNotSupported from './rules/IndentationNotSupported';
-import TextDecorationUnknown from './rules/TextDecorationUnknown';
-import FontStyleNotSuppoorted from './rules/FontStyleNotSupported';
-import MixedStyleNotSupportedOpenTypeFace from './rules/MixedStyleNotSupportedOpenTypeFace';
+import BaseTextNodeLintRule from "./rules/BaseTextNodeLintRule";
+import MixedStyleNotSupported from "./rules/MixedStyleNotSupported";
+import UnmatchingFontWeightNotSupported from "./rules/FontStyleNotSupported";
+import IndentationNotSupported from "./rules/IndentationNotSupported";
+import TextDecorationUnknown from "./rules/TextDecorationUnknown";
+import FontStyleNotSuppoorted from "./rules/FontStyleNotSupported";
+import MixedStyleNotSupportedOpenTypeFace from "./rules/MixedStyleNotSupportedOpenTypeFace";
 
 export default class TextNodeLinter {
-  defaultRules = [
-    new MixedStyleNotSupportedOpenTypeFace(),
-    MixedStyleNotSupported.createRuleForField('textCase'),
-    MixedStyleNotSupported.createRuleForField('fontSize'),
-    MixedStyleNotSupported.createRuleForField('letterSpacing'),
-    MixedStyleNotSupported.createRuleForField('lineHeight'),
-    MixedStyleNotSupported.createRuleForField('leadingTrim'),
-    MixedStyleNotSupported.createRuleForField('fills'),
-    new UnmatchingFontWeightNotSupported(),
-    new IndentationNotSupported(),
-    new TextDecorationUnknown(),
-    new FontStyleNotSuppoorted(),
-  ];
+	defaultRules = [
+		new MixedStyleNotSupportedOpenTypeFace(),
+		MixedStyleNotSupported.createRuleForField("textCase"),
+		MixedStyleNotSupported.createRuleForField("fontSize"),
+		MixedStyleNotSupported.createRuleForField("letterSpacing"),
+		MixedStyleNotSupported.createRuleForField("lineHeight"),
+		MixedStyleNotSupported.createRuleForField("leadingTrim"),
+		MixedStyleNotSupported.createRuleForField("fills"),
+		new UnmatchingFontWeightNotSupported(),
+		new IndentationNotSupported(),
+		new TextDecorationUnknown(),
+		new FontStyleNotSuppoorted(),
+	];
 
-  registeredRules = {} as { [ruleName: string]: BaseTextNodeLintRule };
+	registeredRules = {} as { [ruleName: string]: BaseTextNodeLintRule };
 
-  constructor() {
-    for (const defaultRule of this.defaultRules) {
-      this.registerRule(defaultRule);
-    }
-  }
+	constructor() {
+		for (const defaultRule of this.defaultRules) {
+			this.registerRule(defaultRule);
+		}
+	}
 
-  registerRule(textNodeLintRule: BaseTextNodeLintRule) {
-    this.registeredRules[textNodeLintRule.ruleName] = textNodeLintRule;
-  }
+	registerRule(textNodeLintRule: BaseTextNodeLintRule) {
+		this.registeredRules[textNodeLintRule.ruleName] = textNodeLintRule;
+	}
 
-  lint(textNode: TextNode) {
-    const matchingRules = [];
-    for (const rule of Object.values(this.registeredRules)) {
-      const currentRuleMatches = rule.matches(textNode);
-      if (currentRuleMatches) {
-        matchingRules.push(rule.ruleName);
-      }
-    }
-    return matchingRules;
-  }
+	lint(textNode: TextNode) {
+		const matchingRules = [];
+		for (const rule of Object.values(this.registeredRules)) {
+			const currentRuleMatches = rule.matches(textNode);
+			if (currentRuleMatches) {
+				matchingRules.push(rule.ruleName);
+			}
+		}
+		return matchingRules;
+	}
 
-  fix(textNode: TextNode, ruleNames: string[]) {
-    for (const ruleNameToFix of ruleNames) {
-      this.registeredRules[ruleNameToFix].fix(textNode);
-    }
-  }
+	fix(textNode: TextNode, ruleNames: string[]) {
+		for (const ruleNameToFix of ruleNames) {
+			this.registeredRules[ruleNameToFix].fix(textNode);
+		}
+	}
 }
 
 // TODO:

@@ -1,44 +1,44 @@
-import * as React from 'react';
+import * as React from "react";
 
 export type PlaceholderViewProps = {
-  name: string;
-  specifiedArgumentPositon?: number;
-  derivedArgumentPosition: number;
-  decimalPlaces?: number;
-  selected?: boolean;
-  fillIn?: string;
+	name: string;
+	specifiedArgumentPositon?: number;
+	derivedArgumentPosition: number;
+	decimalPlaces?: number;
+	selected?: boolean;
+	fillIn?: string;
 };
 
 export function PlaceholderView({
-  name,
-  specifiedArgumentPositon,
-  decimalPlaces,
-  derivedArgumentPosition,
-  selected,
-  fillIn,
+	name,
+	specifiedArgumentPositon,
+	decimalPlaces,
+	derivedArgumentPosition,
+	selected,
+	fillIn,
 }: PlaceholderViewProps) {
-  return (
-    <span className={`placholder-container ${selected ? 'selected' : ''}`}>
-      <span className="placholder-placeholder-type">{name}</span>
-      {specifiedArgumentPositon !== undefined
-        && specifiedArgumentPositon !== derivedArgumentPosition && (
-          <span
-            className="placholder-argument-position placholder-argument-position-missmatch"
-            data-tooltip-content={`Specified Position conflicts with postion ${derivedArgumentPosition}`}
-          >
-            {specifiedArgumentPositon}
-          </span>
-      )}
-      {specifiedArgumentPositon !== undefined
-        && specifiedArgumentPositon === derivedArgumentPosition && (
-          <span
-            className="placholder-argument-position placholder-argument-position-match"
-            data-tooltip-content="Argument Position"
-          >
-            {specifiedArgumentPositon}
-          </span>
-      )}
-      {/*
+	return (
+		<span className={`placholder-container ${selected ? "selected" : ""}`}>
+			<span className="placholder-placeholder-type">{name}</span>
+			{specifiedArgumentPositon !== undefined &&
+				specifiedArgumentPositon !== derivedArgumentPosition && (
+					<span
+						className="placholder-argument-position placholder-argument-position-missmatch"
+						data-tooltip-content={`Specified Position conflicts with postion ${derivedArgumentPosition}`}
+					>
+						{specifiedArgumentPositon}
+					</span>
+				)}
+			{specifiedArgumentPositon !== undefined &&
+				specifiedArgumentPositon === derivedArgumentPosition && (
+					<span
+						className="placholder-argument-position placholder-argument-position-match"
+						data-tooltip-content="Argument Position"
+					>
+						{specifiedArgumentPositon}
+					</span>
+				)}
+			{/*
       {type === PlaceholderType.float && decimalPlaces === undefined && (
       <>
         <span className="placholder-placeholder-type-spacer">:</span>
@@ -57,6 +57,6 @@ export function PlaceholderView({
         <span className="placholder-placeholder-type">d</span>
       </>
       )} */}
-    </span>
-  );
+		</span>
+	);
 }

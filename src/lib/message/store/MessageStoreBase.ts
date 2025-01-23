@@ -1,5 +1,3 @@
- 
-
 /*
 export interface MessageStore {
   createMessage(name: string, messages: { language: Locale, plural: Plural, text: string | undefined, skip: boolean }[], plural: boolean) : Promise<Message>

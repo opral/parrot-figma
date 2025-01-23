@@ -1,5 +1,5 @@
-import { FileUsage } from './FileUsage';
+import { FileUsage } from "./FileUsage";
 
 interface UserStorage {
-  [fileId: string]: FileUsage;
+	[fileId: string]: FileUsage;
 }

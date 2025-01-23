@@ -1,132 +1,135 @@
 // use polyfill in sandbox https://forum.figma.com/t/sandbox-not-support-urlsearchparams/41676
-import URLSearchParams from '@ungap/url-search-params';
-import Monitoring from '../monitoring/MonitoringProxy';
+import URLSearchParams from "@ungap/url-search-params";
+import Monitoring from "../monitoring/MonitoringProxy";
 
 export default class GoogleTranslator {
-  static async translate(text: string, sourceLanguage: string, targetLanguage: string) {
-    // if the text only contains whitespaces - uses the orignal one
-    if (/^\s*$/.test(text) || text === '') {
-      return text;
-    }
+	static async translate(text: string, sourceLanguage: string, targetLanguage: string) {
+		// if the text only contains whitespaces - uses the orignal one
+		if (/^\s*$/.test(text) || text === "") {
+			return text;
+		}
 
-    // replace placeholder with numbers to not translate them
+		// replace placeholder with numbers to not translate them
 
-    const pattern = /(<ph( type="([^"]*)"=)?( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*))<\/ph>)/g;
+		const pattern =
+			/(<ph( type="([^"]*)"=)?( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*))<\/ph>)/g;
 
-    const placeholderIndexMapping = [] as string[];
-    let currentIndex = 0;
+		const placeholderIndexMapping = [] as string[];
+		let currentIndex = 0;
 
-    // const wholeMatch = paramMatch[0];
-    // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
-    // const name = paramMatch[2];
+		// const wholeMatch = paramMatch[0];
+		// const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
+		// const name = paramMatch[2];
 
-    const textWithMaskedPlaceholders = text.replace(
-      pattern,
-      (
-        match,
-        _helper1,
-        type,
-        _helper3,
-        format,
-        _helper5,
-        argumentPosition,
-        unnamed,
-        _helper8,
-        _helper9,
-        name,
-      ) => {
-        // const placeholderName = name;
-        placeholderIndexMapping[currentIndex] = match;
-        const placeholderReplacement = `[[${currentIndex}]]`;
-         
-        currentIndex++;
-        return placeholderReplacement;
-      },
-    );
+		const textWithMaskedPlaceholders = text.replace(
+			pattern,
+			(
+				match,
+				_helper1,
+				type,
+				_helper3,
+				format,
+				_helper5,
+				argumentPosition,
+				unnamed,
+				_helper8,
+				_helper9,
+				name,
+			) => {
+				// const placeholderName = name;
+				placeholderIndexMapping[currentIndex] = match;
+				const placeholderReplacement = `[[${currentIndex}]]`;
 
-    const sentences = textWithMaskedPlaceholders.split('. ');
-    const translatedSentences = [] as string[];
-    for (const sentence of sentences) {
-      const patchedQuery = sentence
-        .split('.')
-        .join('{{dot}}')
-        .split('#')
-        .join('{{route}}')
-        .split('\n')
-        .join('{{newline}}');
+				currentIndex++;
+				return placeholderReplacement;
+			},
+		);
 
-      if (/^\s*$/.test(patchedQuery) || patchedQuery === '') {
-        translatedSentences.push(patchedQuery);
-        continue;
-      }
+		const sentences = textWithMaskedPlaceholders.split(". ");
+		const translatedSentences = [] as string[];
+		for (const sentence of sentences) {
+			const patchedQuery = sentence
+				.split(".")
+				.join("{{dot}}")
+				.split("#")
+				.join("{{route}}")
+				.split("\n")
+				.join("{{newline}}");
 
-       
-      const result = await fetch(
-        `https://translate.googleapis.com/translate_a/single?${new URLSearchParams({
-          client: 'gtx',
-          dt: 't',
-          sl: sourceLanguage === 'se' ? 'SV' : sourceLanguage,
-          tl: targetLanguage === 'se' ? 'SV' : targetLanguage,
-          q: patchedQuery,
-        })}`,
-        {
-          method: 'GET',
-          /* headers: {
+			if (/^\s*$/.test(patchedQuery) || patchedQuery === "") {
+				translatedSentences.push(patchedQuery);
+				continue;
+			}
+
+			const result = await fetch(
+				`https://translate.googleapis.com/translate_a/single?${new URLSearchParams({
+					client: "gtx",
+					dt: "t",
+					sl: sourceLanguage === "se" ? "SV" : sourceLanguage,
+					tl: targetLanguage === "se" ? "SV" : targetLanguage,
+					q: patchedQuery,
+				})}`,
+				{
+					method: "GET",
+					/* headers: {
                 'origin-when-cross-origin': '*',
               }, */
-        },
-      );
+				},
+			);
 
-      if (!result.ok) {
-        // TODO #29 fix this before we release - test
-        Monitoring.instance?.sentryCaptureMesage(`Translation of ${text} failed. Status code (${result.status}).`);
-        return null;
-      }
-       
-      const translationResults = await result.json();
+			if (!result.ok) {
+				// TODO #29 fix this before we release - test
+				Monitoring.instance?.sentryCaptureMesage(
+					`Translation of ${text} failed. Status code (${result.status}).`,
+				);
+				return null;
+			}
 
-      if (!translationResults[0] || !translationResults[0][0] || !translationResults[0][0][0]) {
-        const error = new Error('Expected a translation within [0][0][0] not found');
-        // TODO #29 fix this before we release - test
-        Monitoring.instance?.sentryCaptureException(error, {
-          extra: {
-            sourceLanguage,
-            targetLanguage,
-            patchedQuery,
-            translationResults,
-          },
-        });
-      } else {
-        for (let i = 0; i < translationResults[0].length; i += 1) {
-          const resultMessage = translationResults[0][i][0];
-          translatedSentences.push(
-            resultMessage
-              .split('{{dot}}')
-              .join('.')
-              .split('{{route}}')
-              .join('#')
-              .split('{{newline}}')
-              .join('\n'),
-          );
-        }
-      }
-    }
+			const translationResults = await result.json();
 
-    const translationWithMaskedPlaceholders = translatedSentences.join('. ');
+			if (!translationResults[0] || !translationResults[0][0] || !translationResults[0][0][0]) {
+				const error = new Error("Expected a translation within [0][0][0] not found");
+				// TODO #29 fix this before we release - test
+				Monitoring.instance?.sentryCaptureException(error, {
+					extra: {
+						sourceLanguage,
+						targetLanguage,
+						patchedQuery,
+						translationResults,
+					},
+				});
+			} else {
+				for (let i = 0; i < translationResults[0].length; i += 1) {
+					const resultMessage = translationResults[0][i][0];
+					translatedSentences.push(
+						resultMessage
+							.split("{{dot}}")
+							.join(".")
+							.split("{{route}}")
+							.join("#")
+							.split("{{newline}}")
+							.join("\n"),
+					);
+				}
+			}
+		}
 
-    const patternMaskedPlaceholders = /\[\[([0-9]+)\]\]/g;
+		const translationWithMaskedPlaceholders = translatedSentences.join(". ");
 
-    // const wholeMatch = paramMatch[0];
-    // const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
-    // const name = paramMatch[2];
+		const patternMaskedPlaceholders = /\[\[([0-9]+)\]\]/g;
 
-    const translationWithoutPlaceholders = translationWithMaskedPlaceholders.replace(
-      patternMaskedPlaceholders,
-      (match, placeholderIndex, _argumentPosition) => `${placeholderIndexMapping[placeholderIndex]}`,
-    );
+		// const wholeMatch = paramMatch[0];
+		// const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
+		// const name = paramMatch[2];
 
-    return translationWithoutPlaceholders;
-    /*
+		const translationWithoutPlaceholders = translationWithMaskedPlaceholders.replace(
+			patternMaskedPlaceholders,
+			(match, placeholderIndex, _argumentPosition) =>
+				`${placeholderIndexMapping[placeholderIndex]}`,
+		);
+
+		return translationWithoutPlaceholders;
+		/*
           // https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=fr&dt=t&q=Hello
           // origin-when-cross-origin
           // console.log(`tranalating: ${text} with deepl`);
@@ -149,5 +152,5 @@ export default class GoogleTranslator {
           const translationResults = await result.json();
 
           return translationResults.messages[0].text; */
-  }
+	}
 }

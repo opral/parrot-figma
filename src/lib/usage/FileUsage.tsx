@@ -1,8 +1,8 @@
-import { UserInFile } from './UserInFile';
+import { UserInFile } from "./UserInFile";
 
 export interface FileUsage {
-  fileId: string;
-  usersInFile: {
-    [userID: string]: UserInFile;
-  };
+	fileId: string;
+	usersInFile: {
+		[userID: string]: UserInFile;
+	};
 }

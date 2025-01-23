@@ -9,7 +9,7 @@
     "generate-strings": "node ./util/assets-and-resources.js;",
     "start": "set -a; source .env; set +a; webpack --mode development --watch ",
     "start-with-server": "node ./util/assets-and-resources.js; webpack --mode development --watch & npx http-server --cors -o ./dist",
-    "build": "webpack --mode production",
+    "build": "vite build",
     "lint": "eslint .",
     "lintfix": "./node_modules/.bin/eslint . --fix ",
     "prettier-ts": "prettier --write '**/*.{ts,tsx}'"
@@ -96,6 +96,7 @@
     "react-usestateref": "^1.0.8",
     "svg-url-loader": "^8.0.0",
     "text-encoding": "^0.7.0",
+    "typescript-eslint": "^8.21.0",
     "vite": "^6.0.7",
     "vite-plugin-generate-file": "^0.2.0",
     "vite-plugin-react-rich-svg": "^1.2.0",

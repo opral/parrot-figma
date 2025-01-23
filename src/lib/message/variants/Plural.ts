@@ -1,4 +1,3 @@
-/* eslint-disable import/prefer-default-export */
 import { Locale } from './Locale';
 
 export enum Plural {

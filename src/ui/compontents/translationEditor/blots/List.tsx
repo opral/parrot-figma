@@ -1,4 +1,3 @@
-// eslint-disable-next-line import/no-extraneous-dependencies
 import Parchment from 'parchment';
 import Quill from 'quill';
 import Scroll from 'quill/blots/scroll';

@@ -5,6 +5,7 @@ import React, { useState, ReactNode } from 'react';
 import './FileSelect.css';
 
 type FileSelectProps = {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO specify type
   onFilesReceived: Function;
   text: string;
 };

@@ -9,6 +9,7 @@ import './Drawer.css';
 
 type ButtonConfig = {
   text: string;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO specify type
   callback: Function;
   type: 'primary' | 'primary-destructive' | 'secondary' | 'secondary-destructive';
   key: undefined | 'enter' | 'escape';
@@ -143,7 +144,6 @@ export default function Drawer({
           <div className="buttonGroup buttonGroup-reversed">
             {sortedButtons.reverse().map((button, index) => (
               <button
-              // eslint-disable-next-line react/no-array-index-key -- buttons should not be updated dynamically here
                 key={index}
                 className={`button button-${button.type}`}
                 type="button"

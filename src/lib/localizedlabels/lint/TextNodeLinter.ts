@@ -1,6 +1,5 @@
 import BaseTextNodeLintRule from './rules/BaseTextNodeLintRule';
 import MixedStyleNotSupported from './rules/MixedStyleNotSupported';
-// eslint-disable-next-line import/no-named-as-default
 import UnmatchingFontWeightNotSupported from './rules/FontStyleNotSupported';
 import IndentationNotSupported from './rules/IndentationNotSupported';
 import TextDecorationUnknown from './rules/TextDecorationUnknown';

@@ -44,7 +44,6 @@ export default function StringDiff({
 
       return (
         <span
-          // eslint-disable-next-line react/no-array-index-key
           key={index}
           style={style}
         >

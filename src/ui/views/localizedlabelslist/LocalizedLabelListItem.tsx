@@ -23,6 +23,7 @@ import TranslatorMachine, { NoMoreTranslationsLeftError } from '../../../lib/tra
 import FeatureFlags from '../../../lib/featureflags/FeatureFlags';
 
 type LocalizedLabelListItemProps = {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO specify type
   showMessage: Function;
   localizedLabel: UILocalizedLabel;
   figmaRemote: FigmaUtil;

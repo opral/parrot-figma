@@ -68,6 +68,7 @@ interface CachedTextNode extends TextNode {
 }
 
 export const MARKER_CHARACTER = '​';
+// eslint-disable-next-line no-irregular-whitespace -- this is on purpose to have a zero width space in figma
 // export const MARKER_CHARACTER = 'X​';
 export default class LocalizedLabelManager {
   private containerSizeThreashold = 3000;
@@ -159,6 +160,7 @@ export default class LocalizedLabelManager {
     figma.on('documentchange', this.forwardDocumentChanges.bind(this));
 
     const selectedNodeStateByUser = {} as any;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias -- we need to access this in the interval
     const that = this;
     setInterval(() => {
       const changeEvent = {
@@ -927,7 +929,7 @@ export default class LocalizedLabelManager {
       // }
 
       if (changedProperties.language !== undefined) {
-        if (changedProperties.language !== this.messageStore?.getConfigSync().refLanguage!) {
+        if (changedProperties.language !== this.messageStore?.getConfigSync().refLanguage) {
           if (textNode.autoRename) {
             textNode.setPluginData(this.autoRenameHashKey, textNode.characters);
             textNode.autoRename = false;
@@ -1303,6 +1305,7 @@ export default class LocalizedLabelManager {
       ? undefined
       : node.getPluginData(this.messageNameDataKey);
     const rootFrameLanguage = rootFrame.getPluginData(this.languageDataKey) === ''
+      // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain -- used to fix the type the type if the plugin data key is set we expect a refLanguage
       ? this.messageStore?.getConfigSync()!.refLanguage!
       : (rootFrame.getPluginData(this.languageDataKey) as Locale);
 

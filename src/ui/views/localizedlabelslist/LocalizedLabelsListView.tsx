@@ -145,8 +145,7 @@ export default function LocalizedLabelsListView({
         const foundElement = firstSelected.firstChild as any;
         if (foundElement.scrollIntoViewIfNeeded) {
           (firstSelected.firstChild as any).scrollIntoViewIfNeeded({ block: 'center' });
-        } else {
-        }
+        } 
       }
     }
   }, [selection]);

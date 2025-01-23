@@ -1,9 +1,3 @@
-
- 
-
-
-/* eslint-disable jsx-a11y/click-events-have-key-events */
-/* eslint-disable react/require-default-props */
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import OutsideClickHandler from 'react-outside-click-handler';
@@ -60,6 +54,7 @@ type TranslationEditorProps = {
   /**
    * Triggered when the user presses esc
    */
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO specify type
   onCancel?: Function;
   /**
    * Triggered when the user changed the fillins or the text
@@ -69,7 +64,9 @@ type TranslationEditorProps = {
     parameters: MessageParameterValues,
     reset?: () => void,
   ) => void;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO specify type
   onBlur?: Function;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO specify type
   onFocus?: Function;
   match: { start: number; length: number } | undefined;
   isDisabled: false | true;
@@ -190,7 +187,6 @@ export default function TranslationEditor({
               shortKey: true,
               handler(_range: any, context: any) {
                 const format = 'textDecoration';
-                // eslint-disable-next-line react/no-this-in-sfc
                 this.quill.format(
                   format,
                   context.format[format] === 'UNDERLINE' ? undefined : 'UNDERLINE',
@@ -550,7 +546,6 @@ export default function TranslationEditor({
                         editor={quillEditor.current}
                         rootView={document.body}
                         parameterValues={parameterValues}
-                        // eslint-disable-next-line react/jsx-no-bind
                         setParameterValue={(
                           name: string,
                           value: string,

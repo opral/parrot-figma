@@ -20,8 +20,8 @@ export default [
 	{
 		files: ["**/*.{js,ts,tsx}"],
 		rules: {
-			// "@typescript-eslint/no-explicit-any": "off",
-			// "@typescript-eslint/no-unused-vars": "off",
+			"@typescript-eslint/no-explicit-any": "off",
+			"@typescript-eslint/no-unused-vars": "off",
 			"no-restricted-imports": [
 				"error",
 				{
@@ -40,6 +40,6 @@ export default [
 		},
 	},
 	{
-        ignores: ["/dist"]
+        ignores: ["dist/*", "dist/**", "snippets"]
     },
 ];

@@ -1,5 +1,3 @@
-/* eslint-disable -- TODO remove this when most of the class is used again */
-
 import LocalizedLabelManager from '../lib/localizedlabels/LocalizedLabelManager';
 import { MessageLinkState } from '../lib/localizedlabels/LocalizedLabel';
 

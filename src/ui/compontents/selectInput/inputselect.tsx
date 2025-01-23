@@ -1,6 +1,3 @@
-
-
-
 import React, {
   useEffect, useState, useRef, MouseEvent,
 } from 'react';
@@ -606,7 +603,6 @@ export default function InputSelect({
                 }}
               />
               {addOptionIndex !== -1 && (
-                // eslint-disable-next-line jsx-a11y/mouse-events-have-key-events
                 <div
                   tabIndex={addOptionIndex}
                   className={`input-select-menu-add  ${addActive ? 'on-primary' : ''}`}
@@ -657,7 +653,6 @@ export default function InputSelect({
                 {options?.map(({ label: optionLabel, type: optionType, icon }, i) => {
                   if (optionType === InputSelectionOptionType.DIVIDER) {
                     return (
-                      // eslint-disable-next-line react/no-array-index-key -- does not change
                       <React.Fragment key={`input-select-option-divider--${i}`}>
                         {/* We only add diveder after the first icon and we ignore add entries? */}
                         {i > 0 && options[i - 1].type !== InputSelectionOptionType.ADD && (
@@ -675,7 +670,6 @@ export default function InputSelect({
                     || optionType === InputSelectionOptionType.ACTION
                   ) {
                     return (
-                      // eslint-disable-next-line jsx-a11y/mouse-events-have-key-events
                       <li
                         tabIndex={i}
                         className={`input-select-menu__item ${
@@ -686,7 +680,6 @@ export default function InputSelect({
                             ? 'input-select-menu__item--highlighted'
                             : ''
                         }`}
-                        // eslint-disable-next-line react/no-array-index-key  -- options are static and dont change - using the index is fine here
                         key={`input-select-option--${i}`}
                         onMouseUp={() => {
                           selectHighlight();

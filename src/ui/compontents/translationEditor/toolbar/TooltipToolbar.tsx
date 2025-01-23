@@ -65,7 +65,7 @@ export default function TooltipToolbar({
       const lastLine = lines[lines.length - 1];
       const index = editor.getIndex(lastLine);
       const length = Math.min(lastLine.length() - 1, range.index + range.length - index);
-      // @ts-expect-error
+      // @ts-expect-error -- TODO check if we can just pass the index and the length
       const indexBounds = editor.getBounds(new Range(index, length));
       setSelectionBounds(indexBounds);
     }
@@ -211,14 +211,14 @@ export default function TooltipToolbar({
 
     document.addEventListener('wheel', onScrollContainerScroll);
 
-    // @ts-expect-error
+    // @ts-expect-error -- TODO check why the event is not accessible
     editor.on(Emitter.events.SCROLL_OPTIMIZE, onEditorScrollOptimize);
     editor.on(Emitter.events.EDITOR_CHANGE, onEditorChange);
 
     return () => {
       resizeObserver.disconnect();
       document.removeEventListener('wheel', onScrollContainerScroll);
-      // @ts-expect-error
+      // @ts-expect-error -- TODO check why the event is not accessible
       editor.off(Emitter.events.SCROLL_OPTIMIZE, onEditorScrollOptimize);
     };
   }, []);

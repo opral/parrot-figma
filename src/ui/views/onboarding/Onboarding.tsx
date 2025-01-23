@@ -22,7 +22,7 @@ export default function Onboarding({ labelManager, onFinishSetup }: OnboardingPr
     labelManager.messageStore.getRefLanugage(),
   );
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO specfiy type 
+   
   const scrollHeightCheckInterval = useRef<any | undefined>(undefined);
 
   const lastPropagatedScrollheight = useRef<number | undefined>(undefined);

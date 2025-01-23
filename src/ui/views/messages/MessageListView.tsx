@@ -1,6 +1,3 @@
-
-/* eslint-disable jsx-a11y/click-events-have-key-events */
-/* eslint-disable jsx-a11y/interactive-supports-focus */
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import '../../localization/i18n';

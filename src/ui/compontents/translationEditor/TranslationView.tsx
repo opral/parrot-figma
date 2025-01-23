@@ -36,6 +36,7 @@ export default function TranslationView({ match, text }: TranslationViewProps) {
     // we do not mask if the cursor is placed within a placeholder
   }
 
+  // eslint-disable-next-line no-constant-condition, no-constant-binary-expression -- todo check if this is needed with latest quill
   if (false && result.length > 0) {
     result.push(<>{text.substring(lastEnd)}</>);
     return <>{result.map((el) => el)}</>;
@@ -58,6 +59,7 @@ export default function TranslationView({ match, text }: TranslationViewProps) {
   htmlRepresentation = htmlRepresentation
     .split('\n')
     .map((content, index, array) => {
+      // eslint-disable-next-line no-constant-condition, no-constant-binary-expression -- todo check if this is needed with latest quill
       if (false && index === array.length - 1 && content === '') {
         return '';
       }

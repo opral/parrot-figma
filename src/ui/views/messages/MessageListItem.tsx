@@ -20,7 +20,7 @@ import MessageVariantItem from './MessageVariantItem';
 type TranslationKeyListItemProps = {
   rowClassNames?: string | undefined;
   figmaRemote: FigmaUtil;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   searchMatch: any;
   messageStore: MessageStoreMemory;
   messageId: string;

@@ -4,7 +4,7 @@ export default class Monitoring {
 
   static instance: Monitoring | undefined;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   constructor(sentry?: any) {
     Monitoring.instance = this;
 

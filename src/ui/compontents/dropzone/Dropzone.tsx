@@ -5,6 +5,7 @@ import React, { useState, ReactNode } from 'react';
 import './Dropzone.css';
 
 type FileDropZoneProps = {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO specify type
   onFilesReceived: Function;
 };
 

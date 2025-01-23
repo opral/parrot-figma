@@ -1,7 +1,3 @@
-
-
-/* eslint-disable jsx-a11y/click-events-have-key-events */
-/* eslint-disable react/require-default-props */
 import * as React from 'react';
 import { useEffect, useRef } from 'react';
 import useState from 'react-usestateref';
@@ -13,11 +9,15 @@ type TextFieldProps = {
   editingTrigger?: number;
   placeholder?: string;
   icon?: string;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO specify type
   onSearchClick?: Function;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO specify type
   onNoKeyClick?: Function;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO specify type
   onChange?: Function;
 
   text?: string;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO specify type
   onSave: Function;
 };
 

@@ -1,5 +1,3 @@
-
-/* eslint-disable jsx-a11y/click-events-have-key-events */
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 
@@ -14,6 +12,7 @@ export interface Segment {
 type SegmentedControlProps<Type> = {
   selectedSegment: Type;
   segments: Segment[];
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO specify type
   onChoose: Function;
 };
 

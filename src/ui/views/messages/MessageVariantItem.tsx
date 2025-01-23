@@ -1,5 +1,3 @@
-/* eslint-disable jsx-a11y/click-events-have-key-events */
-
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { Message } from '@inlang/sdk';
@@ -17,6 +15,7 @@ type MessageVariantItemProps = {
   localizedLabelManager: LocalizedLabelManagerUI;
   messageStore: MessageStoreMemory;
   searchMatch: any;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO define proper types
   select?: Function;
   message: Message,
   onFocus: () => void;
@@ -50,7 +49,7 @@ export default function MessageVariantItem({
 
   const variantHTML = variant !== undefined ? MessageStoreMemory.patternToHtml(variant.pattern) : undefined;
 
-  const [isEmpty, setEmpty] = useState(variantHTML === undefined || variantHTML === '');
+  const [isEmpty, setEmpty] = useState(variantHTML === undefined || variantHTML === '');
 
   const parameterValues = {}; /*  TODO #18 default values  support fillins message.defaultFillins */
   return (
@@ -142,7 +141,9 @@ export default function MessageVariantItem({
                   )}
           </TranslationEditor>
         </div>
-        {false && ( // TODO roadmap - message lints make this depending on the warning
+
+        {/* TODO roadmap - message lints make this depending on the warning
+         {false && ( 
           <div
             className="layerIcon iconWrapper button"
             data-tooltip-content="Show warnings..."
@@ -153,7 +154,8 @@ export default function MessageVariantItem({
             <span className="svg-container notice-svg" />
           </div>
         )}
-        {false && ( // TODO roadmap - message lints make this depending on the warning
+          TODO roadmap - message lints make this depending on the warning
+        {false && ( 
           <div
             className="layerIcon iconWrapper button"
             data-tooltip-content="More..."
@@ -163,7 +165,7 @@ export default function MessageVariantItem({
           >
             <span className="svg-container three-dots-svg" />
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );

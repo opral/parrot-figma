@@ -117,7 +117,6 @@ export class WindowManagerSandbox {
       throw new Error('init called twice');
     }
 
-    // @ts-ignore --- figma does not provide this in ther typings yet
     if (figma.editorType === 'dev') {
        
       windowMode = WindowMode.DevPanel;
@@ -179,7 +178,7 @@ export class WindowManagerSandbox {
 
       // const patchedHtml = "<sc"+"ript>window.location.href = 'http://127.0.0.1:8080/dist/ui.html?nocache="+ (new Date()).getTime() +"';</scr"+"ipt>";
 
-      // @ts-ignore
+      // @ts-expect-error -- figma does not expose the showUI method
       const uiUrl = import.meta.env.VITE_CUSTOM_URL;
 
       figma.showUI(`
@@ -207,7 +206,7 @@ export class WindowManagerSandbox {
         title: 'Parrot',
       });
 
-      // @ts-ignore -- figmas ui type does not expose the reposition atm
+      // @ts-expect-error -- figmas ui type does not expose the reposition atm
       figma.ui.reposition(windowRect.x, windowRect.y);
       // console.log('calling show');
 
@@ -517,7 +516,6 @@ export class WindowManagerSandbox {
     figma.ui.resize(windowRect.width, windowRect.height);
 
     if (windowRect.x && windowRect.y) {
-      // @ts-ignore
       figma.ui.reposition(windowRect.x, windowRect.y);
     }
   }

@@ -1,6 +1,3 @@
- 
- 
- 
 import { stat } from 'fs';
 import ParrotApi, { TranslationCredit, TranslationCreditUsage } from '../api/Parrot';
 import { Locale } from '../message/variants/Locale';
@@ -86,7 +83,7 @@ export default class TranslatorMachine {
 
   state: UsageState | null = null;
 
-  parrotApi: ParrotApi | undefined;
+  parrotApi: ParrotApi | undefined;
 
   constructor(parrotApi?: ParrotApi) {
     // if its a proxy we don't have an api key

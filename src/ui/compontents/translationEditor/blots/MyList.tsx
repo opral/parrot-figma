@@ -1,6 +1,3 @@
-// eslint-disable-next-line import/no-extraneous-dependencies
-
- 
 import Quill from 'quill';
 import Scroll from 'quill/blots/scroll';
 

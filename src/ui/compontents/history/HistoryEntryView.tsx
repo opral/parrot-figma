@@ -1,7 +1,6 @@
 import React from 'react';
 import '../../localization/i18n';
 import { useTranslation } from 'react-i18next';
-// eslint-disable-next-line import/no-extraneous-dependencies
 import ReactTimeAgo from 'react-time-ago';
 import './HistoryEntryView.css';
 
@@ -16,6 +15,7 @@ interface HistoryEntryViewProps {
   userName: string;
   userIconUrl: string;
   previousText?: string;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO specify type
   onReuse?: Function;
 }
 

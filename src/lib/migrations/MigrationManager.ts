@@ -158,7 +158,7 @@ export default class MigrationManager {
         // LABEL migrations
 
         // lets not overcomplicate the migration - just mapp it to value + signalCharacter
-        // {"what":{"value":"message"}} -> '{"message​":{"name":"what","named":false}}'
+        // {"what":{"value":"message"}} -> '{"message":{"name":"what","named":false}}'
         const migrateFillins = (legacyFillins: any) => {
           const fillinsToPlaceholder = {} as { [fillinValue: string]: any };
           const parameterValues = {} as MessageParameterValues;

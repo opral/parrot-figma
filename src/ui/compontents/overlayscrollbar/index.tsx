@@ -77,8 +77,7 @@ function OverlayScrollbarsComponent<T extends keyof JSX.IntrinsicElements>(
   );
 
   return (
-    // @ts-ignore
-    // eslint-disable-next-line react/jsx-props-no-spreading
+    // @ts-expect-error -- todo check union type
     <Tag data-overlayscrollbars-initialize="" ref={elementRef} {...other}>
       <div data-overlayscrollbars-contents="" ref={childrenRef}>
         {children}

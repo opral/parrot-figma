@@ -1,8 +1,3 @@
-
-/* eslint-disable jsx-a11y/click-events-have-key-events */
-/* eslint-disable jsx-a11y/anchor-is-valid */
-/* eslint-disable react/button-has-type */
-/* eslint-disable jsx-a11y/no-redundant-roles */
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import './ConsumptionPaywall.css';

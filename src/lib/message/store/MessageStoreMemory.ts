@@ -180,7 +180,7 @@ export default class MessageStoreMemory extends EventTarget {
 
     // forwared languages to inlang project - if initialzied already
     this.inlangProject?.setSettings({
-      sourceLanguageTag: this.config?.refLanguage!,
+      sourceLanguageTag: this.config!.refLanguage!,
       languageTags: languages as string[],
       modules: [],
     });
@@ -546,7 +546,6 @@ export default class MessageStoreMemory extends EventTarget {
     */
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async upsertMessage(message: Message, _defaultParameters: MessageParameterValues) {
     // TODO #18 variables - store the default parameters for this message ( we no longer store them in the message it self )
     this.upsertedMessageIds.add(message.id);
@@ -736,7 +735,7 @@ export default class MessageStoreMemory extends EventTarget {
       sourceLanguage,
       match,
     );
-    if (sourceVariantPatternHTML === undefined || sourceVariantPatternHTML === '') {
+    if (sourceVariantPatternHTML === undefined || sourceVariantPatternHTML === '') {
       return false;
     }
     return true;

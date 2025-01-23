@@ -63,8 +63,9 @@ export class AsyncFunctionProxy {
       if (
         memberName !== 'constructor'
         && instancePrototype[memberName].constructor
-        && (instancePrototype[memberName].constructor.name === 'Function' || instancePrototype[memberName].constructor.name === 'AsyncFunction')
+        && (instancePrototype[memberName].constructor.name === 'Function' || instancePrototype[memberName].constructor.name === 'AsyncFunction')
       ) {
+        // eslint-disable-next-line @typescript-eslint/no-this-alias -- we need this for the functino binding
         const proxy = this;
          
         instancePrototype[memberName] = async function () {
@@ -74,6 +75,7 @@ export class AsyncFunctionProxy {
           try {
             const remoteResult = await proxy.invoke(
               `${instanceClassName}.${memberName}`,
+              // eslint-disable-next-line prefer-rest-params -- check how rest params can be used here
               Array.prototype.slice.call(arguments),
             );
             return remoteResult;
@@ -104,7 +106,7 @@ export class AsyncFunctionProxy {
       if (
         memberName !== 'constructor'
         && instancePrototype[memberName].constructor
-        && (instancePrototype[memberName].constructor.name === 'Function' || instancePrototype[memberName].constructor.name === 'AsyncFunction')
+        && (instancePrototype[memberName].constructor.name === 'Function' || instancePrototype[memberName].constructor.name === 'AsyncFunction')
       ) {
         // console.log(this.name+ ' proxy class!' + instanceClassName + '.' + memberName);
         this.registerInvocationHandler(

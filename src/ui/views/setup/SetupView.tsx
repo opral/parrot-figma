@@ -1,6 +1,3 @@
-/* eslint-disable jsx-a11y/label-has-associated-control */
-
-/* eslint-disable jsx-a11y/click-events-have-key-events */
 import * as React from 'react';
 import { useState } from 'react';
 import '../../localization/i18n';
@@ -25,16 +22,6 @@ export default function SetupView({ labelManager }: SetupViewProps) {
           await labelManager.messageStore.setLanguages(activeLanguages);
         }}
       />
-
-      {/* <div
-        className="start-staging-ui"
-        onClick={() => {
-          // @ts-expect-error
-          window.startDevMode();
-        }}
-      >
-        stagin-ui
-      </div> */}
     </>
   );
 }

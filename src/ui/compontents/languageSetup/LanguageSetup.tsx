@@ -1,19 +1,14 @@
-
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import { use } from 'i18next';
 import { Message, Variant } from '@inlang/sdk';
 import posthog from 'posthog-js';
-import Select, { SelectOption } from '../select/select';
 import { Locale } from '../../../lib/message/variants/Locale';
 import './LanguageSetup.css';
 import ReactSelect, { MultiValueRemoveProps, components } from 'react-select';
 import OutsideClickHandler from 'react-outside-click-handler';
-import FileDropZone from '../dropzone/Dropzone';
 import FileSelect from '../fileselect/FileSelect';
 import MessageImporter, { ImportResult, ImportType } from '../../../lib/import/MessageImporter';
 import LocalizedLabelManagerUI from '../../../lib/localizedlabels/LocalizedLabelManagerUI';
-import { ImportMessage } from '../../../lib/import/ImportMessage';
 import Drawer from '../drawer/Drawer';
 
 function Option(props: any) {
@@ -266,7 +261,6 @@ export default function LanguageSetup({
         <div className="setup-header">
           <div className="setup-header-title">Reference Language</div>
           {!changeBaseLanguage && (
-            // eslint-disable-next-line jsx-a11y/no-static-element-interactions
             <div
               className="choosen-language-change"
               onClick={() => {

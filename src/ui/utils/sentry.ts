@@ -1,4 +1,3 @@
- 
 import * as Sentry from '@sentry/react';
 import posthog from 'posthog-js';
 import * as pjs from '../../../package.json';
@@ -17,10 +16,10 @@ export const replay = new Sentry.Replay({
 export const setupReplay = () => {
   const client = Sentry.getCurrentHub().getClient();
 
-  if (client) {
+  if (client !== undefined) {
     if (!client?.getIntegration(Sentry.Replay)) {
-      // @ts-ignore This should never be undefined after the check above
-      client.addIntegration(replay);
+      
+      client.addIntegration?.(replay);
     }
   }
 };

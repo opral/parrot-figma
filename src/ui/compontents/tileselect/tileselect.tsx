@@ -1,6 +1,3 @@
-/* eslint-disable jsx-a11y/click-events-have-key-events */
-
-
 import { debug } from 'console';
 import React, { useEffect, useState } from 'react';
 import './tileselect.css';

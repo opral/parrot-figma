@@ -139,7 +139,7 @@ export function createNodeishMemoryFs(): NodeishFilesystem {
       fsMap.set(path, data);
     },
 
-    // @ts-expect-error
+    // @ts-expect-error -- we just implement the parts we need here
     // Typescript can't derive that the return type is either
     // a string or a Uint8Array based on the options.
     async readFile(

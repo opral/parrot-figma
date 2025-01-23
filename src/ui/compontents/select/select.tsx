@@ -492,7 +492,7 @@ export default function Select({
                   && options.map(({
                     value, label: optionLabel, divider, title, icon, tag,
                   }, i) => (divider ? (
-                  // eslint-disable-next-line react/no-array-index-key  -- options are static and dont change - using the index is fine here
+                  
                     <React.Fragment key={`select-option-divider--${i}`}>
                       {divider !== true && (
                       <span className="select-menu__divider-label">{divider}</span>
@@ -506,19 +506,17 @@ export default function Select({
                           ? 'select-menu__item--selected'
                           : ''
                       }`}
-                        // eslint-disable-next-line react/no-array-index-key  -- options are static and dont change - using the index is fine here
                       key={`select-option--${i}`}
                       title={title}
                       onMouseUp={() => handleSelectClick(value)}
                     >
-                      {true && (
+                      
                       <div className="select-menu__item-check">
                         {selectedOption && selectedOption.value === value && (
                         <div className="svg-container menu-checkmark-svg" />
                         )}
                       </div>
-                      )}
-
+                      
                       {icon && (
                       <div className="select-menu__item-icon">
                         <div className={`svg-container ${icon}`} />

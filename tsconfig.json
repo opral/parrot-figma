@@ -17,5 +17,6 @@
       "./node_modules/@figma"
     ],
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "manifest.figma.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "manifest.figma.ts"],
+  "exclude": ["snipets/**"]
 }

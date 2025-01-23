@@ -1,5 +1,4 @@
  
-/* eslint-disable import/no-extraneous-dependencies */
 /*
 React-Quill
 https://github.com/zenoamaro/react-quill
@@ -27,6 +26,7 @@ import UnprivilegedEditor = ReactQuill.UnprivilegedEditor;
 
 // Merged namespace hack to export types along with default object
 // See: https://github.com/Microsoft/TypeScript/issues/2719
+// eslint-disable-next-line @typescript-eslint/no-namespace -- TODO use module instead of namespace
 namespace ReactQuill {
   export type Value = string | DeltaStatic;
   export type Range = RangeStatic | null;

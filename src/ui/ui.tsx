@@ -150,8 +150,6 @@ WindowManagerUi.init(
   resizeHeightHandle,
   'toolbar-resize-handle',
 );
-// @ts-expect-error
-window.startDevMode = WindowManagerUi.instance!.startDevMode;
 
 const asyncFunctionProxy = new AsyncFunctionProxy(
   'UIAsyncFunctionProxy',
@@ -168,7 +166,7 @@ const asyncFunctionProxy = new AsyncFunctionProxy(
   window,
 );
 
-const monitoring = new Monitoring(Sentry, mixpanel);
+const monitoring = new Monitoring(Sentry);
 asyncFunctionProxy.registerInstance(monitoring);
 
 const figmaRemote = new FigmaUtil();

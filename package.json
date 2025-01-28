@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "PLUGIN_CODE_BASE_URL=https://lix.opral.com/figma vite build",
+    "build": "PLUGIN_CODE_BASE_URL=${RENDER_EXTERNAL_URL} vite build",
     "tsc": "tsc --noEmit",
     "generate-strings": "node ./util/assets-and-resources.js;",
     "start": "set -a; source .env; set +a; webpack --mode development --watch ",

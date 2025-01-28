@@ -12,15 +12,6 @@ import fs from 'fs'
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [
-    react(),
-    richSvg() as any /* any to avoid type problem*/,
-    rawPlugin({ 
-      // ejs templates for export
-      fileRegex: /\.ejs$/
-      // plugin source code
-
-    }),
-    // viteSingleFile(),
     viteStaticCopy({
       targets: [
         {

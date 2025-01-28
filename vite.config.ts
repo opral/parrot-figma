@@ -1,35 +1,24 @@
 import path from "node:path";
 import { defineConfig } from "vite";
-import { viteSingleFile } from "vite-plugin-singlefile";
-import generateFile from "vite-plugin-generate-file";
 import react from "@vitejs/plugin-react";
 import richSvg from "vite-plugin-react-rich-svg";
 import { viteStaticCopy } from "vite-plugin-static-copy"
 import rawPlugin from 'vite-raw-plugin';
 import fs from 'fs';
+import { execSync } from "child_process";
 
-import { exec, execSync } from "child_process";
-// import postcssUrl from "postcss-url";
-
-const buildWithUrl = (serverPort: string) => {
-  exec(
-    "VITE_CUSTOM_URL=" + "http://localhost:" + serverPort + " vite build",/// -c vite.config.plugin.ts",
-    (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error during build: ${error.message}`);
-        return;
-      }
-      if (stderr) console.error(stderr);
-      console.log(stdout);
-    },
-  );
-};
-
+const PLUGIN_CODE_BASE_URL = process.env.PLUGIN_CODE_BASE_URL;
 let vitePort: number | undefined = undefined;
 
 let lastPluginBuildPort = -1
 
 const buildPlugin = (force: boolean = false) => {
+
+  if (PLUGIN_CODE_BASE_URL !==  undefined) {
+    console.log('👷  building for production using url: ' + PLUGIN_CODE_BASE_URL);
+    execSync(`PLUGIN_CODE_BASE_URL=${PLUGIN_CODE_BASE_URL} vite build -c vite.config.sandbox.ts`);
+    return
+  }
 
   if (!vitePort) {
     return 
@@ -116,8 +105,6 @@ export default defineConfig(({ mode }) => ({
     rawPlugin({ 
       // ejs templates for export
       fileRegex: /\.ejs$/
-      // plugin source code
-
      }),
     // viteSingleFile(),
     viteStaticCopy({
@@ -128,15 +115,6 @@ export default defineConfig(({ mode }) => ({
         },
       ]
     }),
-    
-    // viteStaticCopy({
-    //   targets: [
-    //     {
-    //       src: '../manifest.json',
-    //       dest: '.'
-    //     }
-    //   ]
-    // }),
   ],
   define: {
     process: { env: {} },
@@ -170,10 +148,8 @@ export default defineConfig(({ mode }) => ({
   },
   resolve: {
     alias: {
-      // "@common": path.resolve("src/common"),
        "@ui": path.resolve("src/ui"),
        "@plugin": path.resolve("src/plugin"),
-      // "@plugin": path.resolve("src/sandbox"),
     },
   },
 }));

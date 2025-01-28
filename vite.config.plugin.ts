@@ -8,15 +8,16 @@ import { viteStaticCopy } from "vite-plugin-static-copy"
 export default defineConfig(({ mode }) => ({
   plugins: [
     viteSingleFile(),
-    viteStaticCopy({
-          targets: [
-            {
-              src: 'manifest.json',
-              dest: '.'
-            }
-          ]
-        }),
+    // viteStaticCopy({
+    //       targets: [
+    //         {
+    //           src: 'manifest.json',
+    //           dest: '.'
+    //         }
+    //       ]
+    //     }),
   ],
+  root: path.resolve("src/plugin"),
   build: {
     minify: mode === "production",
     sourcemap: mode !== "production" ? "inline" : false,

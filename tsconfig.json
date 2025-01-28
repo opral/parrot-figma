@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
     "sourceMap": true,
-    "target": "es6",
+    "target": "ES2022",
     "strict": true,
 		// strict ES module
-		"module": "es2020",
+		"module": "ES2022",
 		// strict ES module
 		"moduleResolution": "Bundler",
 

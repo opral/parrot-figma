@@ -5,7 +5,9 @@
 // You can access browser APIs in the <script> tag inside "ui.html" which has a
 // full browser environment (see documentation).
 
-// This shows the HTML page in "ui.html".
+// This shows the HTML page in "ui.html". d
+
+eval('console.log("I am comming from an eval...")')
 
 import { AsyncFunctionProxy } from "../lib/rpc/AsyncFunctionProxy";
 import MigrationManager from "../lib/migrations/MigrationManager";
@@ -34,8 +36,14 @@ figma.root.setRelaunchData({ open: "Let Your Design Speak all Languages" });
 const migrationManager = new MigrationManager(figmaRemote);
 migrationManager.migrate();
 
+console.log('I AM STILL RUNNING - I AM STILL RUNNING -I AM STILL RUNNING -I AM STILL RUNNING2')
+// @ts-expect-error -- url is global
+console.log('url:' + url)
+
 WindowManagerSandbox.init(
 	{
+		// @ts-expect-error -- url is global
+		uiUrl: url,
 		bottomSheet: {
 			height: 200,
 		},

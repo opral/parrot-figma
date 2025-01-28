@@ -7,7 +7,7 @@
     "dev"
   ],
   "capabilities": ["inspect"],
-  "main": "plugin.js",
+  "main": "loader.js",
   "permissions": ["currentuser"],
   "relaunchButtons": [
     {"command": "open", "name": "Localize"},

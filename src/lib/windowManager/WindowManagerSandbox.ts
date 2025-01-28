@@ -1,5 +1,3 @@
-import { debug } from "console";
-
 export enum WindowMode {
 	IntroWindow = "introWindow", // fixed/auto sized window
 	Minimized = "minimized", // minimized widged mode
@@ -10,6 +8,7 @@ export enum WindowMode {
 }
 
 interface InitialWindowConfig {
+	uiUrl: string;
 	introWindowSize: {
 		width: number;
 		height: number;
@@ -176,9 +175,8 @@ export class WindowManagerSandbox {
 			// const patchedHtml = __html__.split('__%%InitialWindowMode%%__').join(this.currentWindowMode);
 
 			// const patchedHtml = "<sc"+"ript>window.location.href = 'http://127.0.0.1:8080/dist/ui.html?nocache="+ (new Date()).getTime() +"';</scr"+"ipt>";
-
-			// @ts-expect-error -- figma does not expose the showUI method
-			const uiUrl = import.meta.env.VITE_CUSTOM_URL;
+			
+			
 
 			figma.showUI(
 				`
@@ -197,7 +195,7 @@ export class WindowManagerSandbox {
               figmaTheme = 'figma-light'
           }
 
-          window.location.href = "${uiUrl}#${this.currentWindowMode}|" + figmaTheme;
+          window.location.href = "${config.uiUrl}#${this.currentWindowMode}|" + figmaTheme;
         </script>`,
 				{
 					themeColors: true,

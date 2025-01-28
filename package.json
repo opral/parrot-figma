@@ -4,6 +4,10 @@
   "description": "Plugin to handle assets and resources directly within figma",
   "main": "code.js",
   "type": "module",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9.8.0 <10"
+  },
   "scripts": {
     "dev": "vite",
     "build": "PLUGIN_CODE_BASE_URL=https://lix.opral.com/figma vite build",

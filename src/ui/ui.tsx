@@ -209,28 +209,6 @@ Promise.all([figmaRemote.getInlangFileId()]).then(([fileId]) => {
 const translationMachine = new TranslatorMachine();
 asyncFunctionProxy.proxyAsyncMethods(translationMachine);
 
-const checkVersion = async () => {
-	const minVersionRequest = await fetch("https://parrot-global.github.io/parrot/min-version.json", {
-		cache: "no-cache",
-	});
-	const { minVersion } = await minVersionRequest.json();
-	const figVersion = Number.parseInt(pjs.version.split(".")[2], 10);
-	console.log(`Current Version: ${figVersion} Minimum version ${minVersion}`);
-	if (minVersion > figVersion) {
-		if (document.getElementById("version-outdated")) {
-			document.getElementById("version-outdated")!.classList.remove("gone");
-			document.getElementById("version-outdated")!.classList.add("visible");
-		}
-	}
-};
-
-const versionCheckInterval = 1000 * 40;
-// we use any here since NodeJS.Timout - the suggested type by the ide is not correct
-// checkVersion().catch(console.log);
-// setInterval(() => {
-//   checkVersion().catch(console.log);
-// }, versionCheckInterval);
-
 const userStateManagerSandbox = new UserManager(true);
 asyncFunctionProxy.proxyAsyncMethods(userStateManagerSandbox);
 const userStateManagerUi = new UserManagerUI(userStateManagerSandbox);
@@ -246,15 +224,6 @@ const localizedLabelManager = new LocalizedLabelManagerUI(
 	memoryTranslationKeyStore,
 	figmaRemote,
 );
-
-enum LicenseState {
-	unvalidated,
-	validating,
-	valid,
-	activatedAlready,
-	used,
-	invalid,
-}
 
 function App() {
 	// initial app screen is startup until we initialy loaded the data

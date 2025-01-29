@@ -19,7 +19,7 @@ services:
      - fromGroup: production
    headers:
     # add headers for cors
-    - path: "/*""
+    - path: "/*"
       name: Access-Control-Allow-Origin
       value: "*"
     - path: "/*"

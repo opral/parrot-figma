@@ -17,3 +17,14 @@ services:
    #     - packages/csv-app/**
    envVars:
      - fromGroup: production
+   headers:
+      # add headers for cors
+      - path: /*
+        name: Access-Control-Allow-Origin
+        value: *
+      - path: /*
+        name: Access-Control-Allow-Methods
+        value: GET, OPTIONS
+      - path: /*
+        name: Access-Control-Allow-Headers
+        value: Content-Type

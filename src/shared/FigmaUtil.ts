@@ -1,12 +1,6 @@
 import generateGUID from "../lib/usage/generateGUID";
 import { WindowManagerSandbox, WindowMode } from "../lib/windowManager/WindowManagerSandbox";
 
-interface MigrationReport {
-	version: string;
-	message: string;
-	reportedToSentry: boolean;
-}
-
 /**
  * Figma api wrapper that simplifies varios task.
  * All public async functions only accept and return primitives and can be proxied between sandbox and iframe
@@ -51,32 +45,6 @@ export default class FigmaUtil {
 
 	public getRootPluginDataSync(key: string): string {
 		return figma.root.getPluginData(key);
-	}
-
-	public async addMigrationReport(version: string, message: string) {
-		const reports = this.getReports();
-		reports[version] = { version, message, reportedToSentry: false } as MigrationReport;
-
-		figma.root.setPluginData("migrationReport", JSON.stringify(reports));
-	}
-
-	public getReports() {
-		const reportsRaw = figma.root.getPluginData("migrationReport");
-		let reports = {} as { [version: string]: MigrationReport };
-		if (reportsRaw !== "") {
-			reports = JSON.parse(reportsRaw) as { [version: string]: MigrationReport };
-		}
-		return reports;
-	}
-
-	public async getReportsAsync() {
-		return this.getReports();
-	}
-
-	async updateReport(updatedReport: MigrationReport) {
-		const reports = this.getReports();
-		reports[updatedReport.version] = updatedReport;
-		figma.root.setPluginData("migrationReport", JSON.stringify(reports));
 	}
 
 	async notify(message: string) {

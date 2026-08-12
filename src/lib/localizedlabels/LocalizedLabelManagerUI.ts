@@ -1,5 +1,4 @@
 import blake from "blakejs";
-import * as Sentry from "@sentry/react";
 import {
 	createVariant,
 	getVariant,

@@ -3,11 +3,9 @@ import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import TimeAgo from "javascript-time-ago";
 import en from "javascript-time-ago/locale/en.json";
-import * as Sentry from "@sentry/react";
 import * as mixpanel from "mixpanel-figma";
 
-import { initializeSentry } from "./utils/sentry";
-import { initializeAnalytics, track, identify, identifyProject } from "./utils/analytics";
+import { track, identify, identifyProject } from "./utils/analytics";
 
 import LocalizedLabelsListView from "./views/localizedlabelslist/LocalizedLabelsListView";
 import FigmaUtil from "../shared/FigmaUtil";
@@ -46,10 +44,6 @@ import FeatureFlags from "../lib/featureflags/FeatureFlags";
 console.log(`Starting Figma UI - Version ${pjs.version}`);
 
 TimeAgo.addDefaultLocale(en);
-
-initializeSentry();
-
-initializeAnalytics();
 
 const monkeyPatchCommandExec = document.execCommand;
 
@@ -165,27 +159,11 @@ const asyncFunctionProxy = new AsyncFunctionProxy(
 	window,
 );
 
-const monitoring = new Monitoring(Sentry);
+const monitoring = new Monitoring();
 asyncFunctionProxy.registerInstance(monitoring);
 
 const figmaRemote = new FigmaUtil();
 asyncFunctionProxy.proxyAsyncMethods(figmaRemote);
-
-(async () => {
-	// reportUnreportedMigrationReports
-	const reports = await figmaRemote.getReportsAsync();
-	for (const report of Object.values(reports)) {
-		if (!report.reportedToSentry) {
-			console.log(`reporting: Migration version: ${report.version} - ${report.message}`);
-			Sentry.captureException(
-				new Error(`Migration version: ${report.version} - ${report.message}`),
-			);
-			report.reportedToSentry = true;
-
-			await figmaRemote.updateReport(report);
-		}
-	}
-})();
 
 figmaRemote.getFeatureFlags().then((featureFlags) => {
 	FeatureFlags.setFeatureflags(featureFlags);
@@ -193,9 +171,6 @@ figmaRemote.getFeatureFlags().then((featureFlags) => {
 
 figmaRemote.getUserId().then((userId) => {
 	identify(userId!);
-	if (userId) {
-		Sentry.setUser({ id: userId! });
-	}
 });
 
 Promise.all([figmaRemote.getInlangFileId()]).then(([fileId]) => {

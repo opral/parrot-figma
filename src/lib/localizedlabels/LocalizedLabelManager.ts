@@ -77,9 +77,7 @@ export type FrameMutationSnapshot = {
 	}>;
 };
 
-interface CachedTextNode extends TextNode {
-	_cachedNode?: TextNode;
-}
+type CachedTextNode = TextNode;
 
 export const MARKER_CHARACTER = "​";
 // eslint-disable-next-line no-irregular-whitespace -- this is on purpose to have a zero width space in figma
@@ -512,8 +510,9 @@ export default class LocalizedLabelManager {
 	private parrotTextNodesCount = 0;
 
 	private frameCount = 0;
+	private availableFontsPromise: Promise<readonly Font[]> | undefined;
 
-	async fillUpCache() {
+	async fillUpCache(onCurrentPageReady?: () => void) {
 		const start = Date.now();
 		const keysLoaded = new Set<string>();
 		let totalNodesProcessed = 0;
@@ -529,6 +528,8 @@ export default class LocalizedLabelManager {
 			console.log(
 				`fillUpCache - Current page processed, processed ${nodesProcessedInCurrentPage} nodes, max depth ${maxDepthInCurrentPage}, took ${Date.now() - start}ms`,
 			);
+			this.postLinksLoadedMessage(keysLoaded);
+			onCurrentPageReady?.();
 
 			// Now process the other pages
 			const otherPages = figma.root.children.filter((page) => page.id !== currentPage.id);
@@ -579,13 +580,7 @@ export default class LocalizedLabelManager {
 		if (nodeType === "PAGE") {
 			this.virtualTree.addNode(node, node.id, parentNode);
 			for (const child of (node as PageNode).children) {
-				const exportChild = await child.exportAsync({ format: "JSON_REST_V1" });
-				const result = await this.processNodeRecursively(
-					(exportChild as any).document,
-					node,
-					keysLoaded,
-					depth + 1,
-				);
+				const result = await this.processNodeRecursively(child, node, keysLoaded, depth + 1);
 				nodesProcessed += result.nodesProcessed;
 				maxDepth = Math.max(maxDepth, result.maxDepth);
 				// Optional delay to prevent blocking
@@ -619,16 +614,6 @@ export default class LocalizedLabelManager {
 
 	async processTextNode(textNode: CachedTextNode, keysLoaded: Set<string>, parentNode?: BaseNode) {
 		const textNodeId = textNode.id;
-
-		textNode.getPluginData = (key: string) => {
-			if (!textNode._cachedNode) {
-				textNode._cachedNode = figma.getNodeById(textNodeId) as TextNode | undefined;
-			}
-
-			const pluginData = textNode._cachedNode?.getPluginData(key);
-			// console.log("accessig key [" + key + "] via patched method:" +pluginData)
-			return pluginData as any;
-		};
 		this.virtualTree.addNode(textNode, textNodeId, parentNode);
 
 		const messageId = textNode.getPluginData(this.messageNameDataKey);
@@ -768,23 +753,20 @@ export default class LocalizedLabelManager {
 
 	async getWithMessage(messageId: string) {
 		const labels = [] as LocalizedLabel[];
-		const foundNodes = [] as VirtualTreeNode[];
-
-		// Define the callback function for the traversal
-		const findNodesWithMessage = (node: VirtualTreeNode) => {
-			if (node.cacheRelevant && node.messageId === messageId) {
-				foundNodes.push(node);
+		const indexedIds = this.messageStore?.messageIdToLabels[messageId] ?? new Set<string>();
+		for (const nodeId of [...indexedIds]) {
+			const figmaNode = figma.getNodeById(nodeId) as TextNode;
+			if (!figmaNode) {
+				indexedIds.delete(nodeId);
+				continue;
 			}
-		};
-
-		// Start traversal from the root node
-		this.virtualTree.traverseNode(figma.root.id, findNodesWithMessage);
-		// console.log({ foundNodes });
-
-		// Process found nodes to create LocalizedLabels
-		for (const virtualNode of foundNodes) {
-			const figmaNode = figma.getNodeById(virtualNode.id) as TextNode;
 			const localizedLabel = this.toLocalizedLabelOrUndefined(figmaNode);
+			if (!localizedLabel || localizedLabel.messageId !== messageId) {
+				indexedIds.delete(nodeId);
+				if (localizedLabel?.messageId)
+					this.refreshLabelMessageLinkCache(nodeId, localizedLabel.messageId);
+				continue;
+			}
 
 			if (localizedLabel) {
 				if (!this.virtualTree.hasNode(figmaNode.id)) {
@@ -1010,7 +992,11 @@ export default class LocalizedLabelManager {
 				const textNodeFontFamily =
 					(textNode.fontName as FontName).family ??
 					(textNode.getRangeFontName(0, 1) as FontName).family;
-				const fonts = await figma.listAvailableFontsAsync();
+				this.availableFontsPromise ??= figma.listAvailableFontsAsync().catch((error) => {
+					this.availableFontsPromise = undefined;
+					throw error;
+				});
+				const fonts = await this.availableFontsPromise;
 				const fontFamilyVariants = fonts
 					.filter((font: Font) => font.fontName.family === textNodeFontFamily)
 					.map((font) => font.fontName);

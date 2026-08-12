@@ -511,7 +511,16 @@ function App() {
 						setPerformanceStatus("Running real Figma performance…");
 						void window
 							.__PARROT_RUN_REAL_FIGMA_PERFORMANCE__?.([500, 5_000], 3)
-							.then((samples) => setPerformanceStatus(`Performance ${JSON.stringify(samples)}`))
+							.then((samples) =>
+								setPerformanceStatus(
+									samples
+										.map(
+											(sample) =>
+												`${sample.size}: ready ${sample.median.readinessMs}ms, cold ${sample.median.coldIndexMs}ms, warm ${sample.median.warmHydrationMs}ms, lookup ${sample.median.lookupMs}ms`,
+										)
+										.join(" | "),
+								),
+							)
 							.catch((error) => setPerformanceStatus(`Performance error: ${String(error)}`));
 					}}
 				>

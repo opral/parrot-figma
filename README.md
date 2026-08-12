@@ -4,7 +4,7 @@
 ## Local Inlang v3 development
 
 Until the Inlang v3 SDK and format plugins are published, keep the Inlang checkout as a sibling
-directory and build the four linked packages used by Parrot:
+directory and build the five linked packages used by Parrot:
 
 ```sh
 cd ../inlang
@@ -18,7 +18,7 @@ cd ../parrot-figma
 corepack pnpm install --frozen-lockfile
 ```
 
-`package.json` deliberately uses sibling `link:` dependencies for this stacked local-development phase. Before a Marketplace release, replace all four links with their published versions and regenerate `pnpm-lock.yaml`. A standalone Parrot checkout is not release-installable until that swap is made.
+`package.json` deliberately uses sibling `link:` dependencies for this stacked local-development phase. Before a Marketplace release, replace all five links with their published versions and regenerate `pnpm-lock.yaml`. A standalone Parrot checkout is not release-installable until that swap is made.
 
 MVP 
  - define sharedPluginDataFormat

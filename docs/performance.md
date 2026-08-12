@@ -10,6 +10,10 @@ Parrot uses two complementary performance checks:
 The real-Figma harness is registered only when `VITE_CUSTOM_URL` points the plugin at the local
 Vite server; it is not available in production builds. Its last successful result is stored in
 Figma client storage and printed as `PARROT_REAL_FIGMA_RESULT` on the next development-plugin run.
+The development UI also exposes a benchmark button. Each requested size runs on three fresh,
+removed-after-use fixture pages by default and reports every trial plus the median for O(1)
+readiness, native cold indexing, durable warm hydration, and indexed lookup. Fixture creation is
+reported separately and is never included in the startup targets.
 
 ## Baseline
 
@@ -35,9 +39,11 @@ Measured in the same Figma Desktop environment after switching cold discovery to
 | 1,000      | 1,916 ms       | 25 ms        | 2 ms           |
 | 5,000      | 13,024 ms      | 126 ms       | 2 ms           |
 
-Fixture creation is measured separately and excluded. This initial same-fixture observation showed
-the native 5,000-node index roughly 103× faster than recursive scanning. The harness now measures
-the native path first so subsequent runs exercise cold native discovery before the comparison path.
+Fixture creation is measured separately and excluded. This historical same-fixture observation
+showed the native 5,000-node index roughly 103× faster than recursive scanning. The current harness
+instead uses repeated fresh fixture pages and reports readiness, native indexing, durable hydration,
+and lookup independently. “Cold index” means a fresh application index over newly created Figma
+nodes; it does not claim a cold Figma process or operating-system cache.
 
 The first readiness publication is O(1): it performs no page traversal, node lookup, or plugin-data
 read. Durable hydration then runs after a task yield in O(K + L), where K is the page plugin-data

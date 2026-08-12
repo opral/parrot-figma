@@ -86,6 +86,7 @@ export default class LocalizedLabelManager {
 	private transactionNodeIds = new Set<string>();
 	private transactionExpectedFingerprint: string | undefined;
 	private activeFrameMutationSnapshot: FrameMutationSnapshot | undefined;
+	private ignoredDocumentChangeNodeIds = new Set<string>();
 	private containerSizeThreashold = 3000;
 
 	public proxyClassName = "LocalizedLabelManager";
@@ -336,6 +337,7 @@ export default class LocalizedLabelManager {
 		const createdLabels = [] as LocalizedLabel[];
 		const keysChanged = new Set<string>();
 		for (const change of event.documentChanges) {
+			if (this.ignoredDocumentChangeNodeIds.has(change.id)) continue;
 			if (change.origin === "REMOTE" && this.transactionNodeIds.has(change.id)) {
 				if (this.activeFrameMutationSnapshot)
 					this.activeFrameMutationSnapshot.remoteConflict = true;
@@ -594,6 +596,10 @@ export default class LocalizedLabelManager {
 		figma.ui.postMessage(message);
 	}
 
+	setIgnoredDocumentChangeNodes(nodeIds: string[]) {
+		this.ignoredDocumentChangeNodeIds = new Set(nodeIds);
+	}
+
 	async prepare() {
 		await FontHelper.initialize();
 	}
@@ -694,12 +700,10 @@ export default class LocalizedLabelManager {
 		try {
 			// Make the UI interactive before reading page metadata or discovering nodes.
 			const { currentPage } = figma;
-			this.virtualTree.addNode(figma.root, figma.root.id);
-			this.virtualTree.addNode(currentPage, currentPage.id, figma.root);
+			this.publishInitialReadiness(currentPage);
 			console.log(
 				`fillUpCache - Initial readiness published without scanning, took ${Date.now() - start}ms`,
 			);
-			this.postLinksLoadedMessage(keysLoaded);
 			onCurrentPageReady?.();
 
 			// Publish an O(1) provisional state before touching page metadata. After a task yield,
@@ -826,6 +830,12 @@ export default class LocalizedLabelManager {
 
 	postLinksLoadedMessage(keysLoaded: Set<string>) {
 		figma.ui.postMessage(this.linksLoadedMessage(keysLoaded));
+	}
+
+	publishInitialReadiness(currentPage = figma.currentPage) {
+		this.virtualTree.addNode(figma.root, figma.root.id);
+		this.virtualTree.addNode(currentPage, currentPage.id, figma.root);
+		this.postLinksLoadedMessage(new Set());
 	}
 
 	async getSelection() {

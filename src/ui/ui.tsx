@@ -222,35 +222,32 @@ declare global {
 	interface Window {
 		__PARROT_RUN_REAL_FIGMA_PERFORMANCE__?: (
 			sizes?: number[],
+			repetitions?: number,
 		) => Promise<RealFigmaPerformanceSample[]>;
 	}
 }
 
 if (location.hostname === "localhost") {
-	window.__PARROT_RUN_REAL_FIGMA_PERFORMANCE__ = async (sizes = [100, 1_000, 5_000]) => {
-		const requestId = crypto.randomUUID();
-		const samples = await new Promise<RealFigmaPerformanceSample[]>((resolve, reject) => {
-			const listener = (event: MessageEvent) => {
-				if (
-					event.data?.pluginMessage?.type !== "parrotPerformanceResult" ||
-					event.data.pluginMessage.requestId !== requestId
-				)
-					return;
-				window.clearTimeout(timeout);
-				window.removeEventListener("message", listener);
-				if (event.data.pluginMessage.error) reject(new Error(event.data.pluginMessage.error));
-				else resolve(event.data.pluginMessage.samples);
-			};
-			const timeout = window.setTimeout(() => {
-				window.removeEventListener("message", listener);
-				reject(new Error("The real-Figma performance run timed out."));
-			}, 120_000);
-			window.addEventListener("message", listener);
-			parent.postMessage(
-				{ pluginMessage: { type: "parrotPerformanceRun", requestId, sizes }, pluginId: "*" },
-				"*",
-			);
-		});
+	const performanceHarness = new (class {
+		proxyClassName = "RealFigmaPerformanceHarness";
+		async run(_sizes?: number[], _repetitions?: number): Promise<RealFigmaPerformanceSample[]> {
+			return [];
+		}
+	})();
+	asyncFunctionProxy.proxyAsyncMethods(performanceHarness);
+	window.__PARROT_RUN_REAL_FIGMA_PERFORMANCE__ = async (
+		sizes = [100, 1_000, 5_000],
+		repetitions = 3,
+	) => {
+		const samples = await Promise.race([
+			performanceHarness.run(sizes, repetitions),
+			new Promise<never>((_, reject) =>
+				window.setTimeout(
+					() => reject(new Error("The real-Figma performance run exceeded three minutes.")),
+					180_000,
+				),
+			),
+		]);
 		console.table(samples);
 		document.body.dataset.parrotPerformanceResult = JSON.stringify(samples);
 		return samples;
@@ -287,6 +284,7 @@ enum LicenseState {
 function App() {
 	// initial app screen is startup until we initialy loaded the data
 	const [appScreen, setAppScreen] = useState(undefined as string | undefined);
+	const [performanceStatus, setPerformanceStatus] = useState("Run real Figma performance");
 
 	const [user, setUser] = useState(undefined as PluginUser | undefined);
 
@@ -497,6 +495,21 @@ function App() {
 
 	return (
 		<>
+			{location.hostname === "localhost" && (
+				<button
+					style={{ position: "fixed", right: 8, bottom: 8, zIndex: 10000 }}
+					disabled={performanceStatus.startsWith("Running")}
+					onClick={() => {
+						setPerformanceStatus("Running real Figma performance…");
+						void window
+							.__PARROT_RUN_REAL_FIGMA_PERFORMANCE__?.([500, 5_000], 3)
+							.then((samples) => setPerformanceStatus(`Performance ${JSON.stringify(samples)}`))
+							.catch((error) => setPerformanceStatus(`Performance error: ${String(error)}`));
+					}}
+				>
+					{performanceStatus}
+				</button>
+			)}
 			<Tooltip contentAttribute="data-tooltip-content" />
 			<div className="toolbar">
 				<div className="tabHeader">

@@ -87,7 +87,8 @@ const isLocalDevelopmentUi =
 	developmentUiUrl?.startsWith("http://127.0.0.1:") ||
 	developmentUiUrl?.startsWith("http://[::1]:");
 if (isLocalDevelopmentUi) {
-	installRealFigmaPerformanceHarness();
+	const performanceHarness = installRealFigmaPerformanceHarness(remoteLocalizedLabelManager);
+	asyncFunctionProxy.registerInstance(performanceHarness);
 	void figma.clientStorage.getAsync(REAL_FIGMA_PERFORMANCE_RESULT_KEY).then((samples) => {
 		if (samples) console.log(`PARROT_REAL_FIGMA_RESULT ${JSON.stringify(samples)}`);
 	});

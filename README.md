@@ -3,20 +3,21 @@
 
 ## Local Inlang v3 development
 
-Until `@inlang/sdk` v3 is published, build and link the sibling Inlang checkout:
+Until the Inlang v3 SDK and format plugins are published, keep the Inlang checkout as a sibling
+directory and build the four linked packages used by Parrot:
 
 ```sh
 cd ../inlang
 pnpm --filter @inlang/sdk build
-cd packages/sdk
-npm link
+pnpm --filter @inlang/plugin-i18next build
+pnpm --filter @inlang/plugin-android build
+pnpm --filter @inlang/plugin-apple-strings build
 
-cd ../../../parrot-figma
-pnpm link ../inlang/packages/sdk
-pnpm install
+cd ../parrot-figma
+corepack pnpm install --frozen-lockfile
 ```
 
-The consumer-side `pnpm link` is necessary because Parrot's dependencies are managed by pnpm; `npm link @inlang/sdk` cannot safely rewrite its pnpm-managed `node_modules`. The temporary local `pnpm.overrides` entry created by `pnpm link` must not be committed. Once v3 is released, install it normally and regenerate `pnpm-lock.yaml`.
+`package.json` deliberately uses sibling `link:` dependencies for this stacked local-development phase. Before a Marketplace release, replace all four links with their published versions and regenerate `pnpm-lock.yaml`. A standalone Parrot checkout is not release-installable until that swap is made.
 
 MVP 
  - define sharedPluginDataFormat

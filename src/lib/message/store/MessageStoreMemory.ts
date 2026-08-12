@@ -171,6 +171,11 @@ export default class MessageStoreMemory extends EventTarget {
 		return this.config!.refLanguage;
 	}
 
+	async exportFiles(pluginKey: string, locale: Locale) {
+		if (!this.inlangProject) throw new Error("The Inlang project is not loaded");
+		return this.inlangProject.exportFiles(pluginKey, locale);
+	}
+
 	async setRefLanguage(language: Locale) {
 		const parentConfig = await this.parentKeyStore.getConfig();
 		this.config!.refLanguage = language;

@@ -3,11 +3,15 @@ import {
 	executeLixBatch,
 	selectBundleNested,
 	type BundleNested,
+	type InlangPlugin,
 	type InlangProject,
 	type ProjectSettings,
 } from "@inlang/sdk/browser";
 import { openLix, type Lix } from "@inlang/sdk/lix";
 import type { Message } from "../LegacyMessage";
+import i18nextPlugin from "@inlang/plugin-i18next";
+import androidPlugin from "@inlang/plugin-android";
+import appleStringsPlugin from "@inlang/plugin-apple-strings";
 import { bundleToLegacyMessage, legacyMessageToBundle } from "./LegacyMessageBundleConverter";
 
 /**
@@ -32,7 +36,11 @@ export class InlangV3Project {
 	}): Promise<InlangV3Project> {
 		const lix = await openLix();
 		try {
-			const project = await openProject({ lix, settings: args.settings });
+			const project = await openProject({
+				lix,
+				settings: args.settings,
+				providePlugins: [i18nextPlugin, androidPlugin, appleStringsPlugin] as InlangPlugin[],
+			});
 			const session = new InlangV3Project(project, lix);
 			for (const message of args.messages) await session.upsert(message);
 			return session;
@@ -92,6 +100,10 @@ export class InlangV3Project {
 		}
 	}
 
+	async exportFiles(pluginKey: string, locale: string) {
+		const files = await this.project.exportFiles({ pluginKey });
+		return files.filter((file) => file.locale === locale);
+	}
 	async close(): Promise<void> {
 		await this.project.close();
 		await this.lix.close();

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 
-import Select, { SelectOption } from "../../compontents/select/select";
+import { SelectOption } from "../../compontents/select/select";
 import "./Export.css";
 import { Locale } from "../../../lib/message/variants/Locale";
 import MessageExporter from "../../../lib/export/MessageExporter";
@@ -95,6 +95,8 @@ export default function Export({ labelManager, userManager }: ExportProps) {
 	const [featureEnabled, setFeatureEnabled] = useState(false);
 
 	const [exportTarget, setExportTarget] = useState<string | undefined>(undefined);
+	const [exporting, setExporting] = useState(false);
+	const [exportError, setExportError] = useState<string | undefined>();
 
 	const exportPlatformOptions = [
 		{
@@ -122,6 +124,7 @@ export default function Export({ labelManager, userManager }: ExportProps) {
 		document.body.appendChild(link);
 		link.click();
 		document.body.removeChild(link);
+		URL.revokeObjectURL(fileUrl);
 	};
 
 	const onVersionSelect = (version: string) => {
@@ -148,9 +151,20 @@ export default function Export({ labelManager, userManager }: ExportProps) {
 		//   console.log('nope');
 		//   return
 		// }
-		const exportedFile = MessageExporter.export(translationKeyStore, exportLanguage, format);
-		if (exportedFile) {
+		setExporting(true);
+		setExportError(undefined);
+		try {
+			const exportedFile = await MessageExporter.export(
+				translationKeyStore,
+				exportLanguage,
+				format,
+			);
+			if (!exportedFile) throw new Error(`No ${exportLanguage} file was generated`);
 			downloadFile(exportedFile.fileName, exportedFile.fileType, exportedFile.content);
+		} catch (error) {
+			setExportError(error instanceof Error ? error.message : String(error));
+		} finally {
+			setExporting(false);
 		}
 	};
 
@@ -186,17 +200,25 @@ export default function Export({ labelManager, userManager }: ExportProps) {
 			<div style={{ display: "flex" }}>
 				<div className="setup-header-title">Export</div>
 				<div style={{ marginLeft: "auto", marginRight: "8px" }}>
-					<Select
-						checkmark={false}
-						placeholder="Export Target"
-						onChange={(value) => {
-							setExportTarget(value.value as string);
-						}}
-						getOptions={() => exportPlatformOptions}
-					/>
+					<select
+						aria-label="Export target"
+						className="input"
+						value={exportTarget ?? ""}
+						onChange={(event) => setExportTarget(event.currentTarget.value || undefined)}
+					>
+						<option value="" disabled>
+							Export Target
+						</option>
+						{exportPlatformOptions.map((option) => (
+							<option key={option.value as string} value={option.value as string}>
+								{option.label}
+							</option>
+						))}
+					</select>
 				</div>
 			</div>
 			<div>
+				{exportError && <div role="alert">{exportError}</div>}
 				<div className="setup-header">
 					<div className="setup-header-title">Main file language</div>
 				</div>
@@ -227,7 +249,7 @@ export default function Export({ labelManager, userManager }: ExportProps) {
 							<div className="language-export-action">
 								<button
 									className="button button--buttonSecondary"
-									disabled={exportTarget === undefined}
+									disabled={exportTarget === undefined || exporting}
 									type="button"
 									onClick={() => {
 										doExport(selectedBaseLanguage.value as Locale, exportTarget!);
@@ -248,7 +270,7 @@ export default function Export({ labelManager, userManager }: ExportProps) {
 						<div className="svg-container world-svg" />
 						<div className="choosen-languages">
 							{selectedLanguages.map((languageOption) => (
-								<>
+								<React.Fragment key={languageOption.value}>
 									<div className="language-name-wrapper">
 										<div className="language-name">
 											<div>{languageOption.label}</div>
@@ -264,7 +286,7 @@ export default function Export({ labelManager, userManager }: ExportProps) {
 									<div className="language-export-action">
 										<button
 											className="button button--buttonSecondary"
-											disabled={exportTarget === undefined}
+											disabled={exportTarget === undefined || exporting}
 											type="button"
 											onClick={() => {
 												doExport(languageOption.value as Locale, exportTarget!);
@@ -273,7 +295,7 @@ export default function Export({ labelManager, userManager }: ExportProps) {
 											<span data-tooltip-type="text">Export</span>
 										</button>
 									</div>
-								</>
+								</React.Fragment>
 							))}
 						</div>
 						{/* <div className="choosen-language-change" onClick={() => { setChangeLanguages(true); }}>Change</div> */}

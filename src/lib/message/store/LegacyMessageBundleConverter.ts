@@ -6,12 +6,14 @@ type LegacyPatternElement = Message["variants"][number]["pattern"][number];
 
 export function legacyMessageToBundle(message: Message): BundleNested {
 	const selectorNames = message.selectors.map((selector) => selector.name);
+	const hasCountPluralSelector = selectorNames.includes("countPlural");
 	const variableNames = new Set(selectorNames);
 	const selectors: BundleSelector[] = selectorNames.map((name) => ({
 		type: "variable-reference",
 		name,
 	}));
 	const locales = [...new Set(message.variants.map((variant) => variant.languageTag))];
+	if (hasCountPluralSelector) variableNames.add("count");
 
 	for (const variant of message.variants) {
 		for (const element of variant.pattern) {
@@ -21,10 +23,23 @@ export function legacyMessageToBundle(message: Message): BundleNested {
 
 	const bundle: BundleNested = {
 		id: message.id,
-		declarations: [...variableNames].map((name) => ({
-			type: "input-variable",
-			name,
-		})),
+		declarations: [...variableNames].map((name) =>
+			name === "countPlural" && hasCountPluralSelector
+				? {
+						type: "local-variable" as const,
+						name,
+						value: {
+							type: "expression" as const,
+							arg: { type: "variable-reference" as const, name: "count" },
+							annotation: {
+								type: "function-reference" as const,
+								name: "plural",
+								options: [],
+							},
+						},
+					}
+				: { type: "input-variable" as const, name },
+		),
 		messages: locales.map((locale) => {
 			const messageId = `${message.id}_${locale}`;
 			return {

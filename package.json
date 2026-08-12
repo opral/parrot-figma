@@ -21,6 +21,7 @@
   },
   "author": "Martin Lysk",
   "license": "",
+  "packageManager": "pnpm@10.23.0",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@figma/plugin-typings": "^1.133.0",
@@ -44,7 +45,10 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "@inlang/sdk": "^3.0.0",
+    "@inlang/plugin-android": "link:../inlang/packages/plugins/android",
+    "@inlang/plugin-apple-strings": "link:../inlang/packages/plugins/apple-strings",
+    "@inlang/plugin-i18next": "link:../inlang/packages/plugins/i18next",
+    "@inlang/sdk": "link:../inlang/packages/sdk",
     "@ungap/url-search-params": "^0.2.2",
     "blakejs": "^1.2.1",
     "diff": "^9.0.0",

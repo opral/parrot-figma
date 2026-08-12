@@ -23,6 +23,11 @@ import TranslatorMachine, {
 	NoMoreTranslationsLeftError,
 } from "../../../lib/translationprovider/TranslatorMachine";
 import FeatureFlags from "../../../lib/featureflags/FeatureFlags";
+import {
+	canonicalMessageKeySearchQuery,
+	isCanonicalMessageKey,
+	preserveCanonicalMessageKey,
+} from "../../../lib/message/canonicalMessageKey";
 
 type LocalizedLabelListItemProps = {
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO specify type
@@ -71,7 +76,7 @@ export default function LocalizedLabelListItem({
 		await localizedLabelManager
 			.fixLabelLints(localizedLabel, localizedLabel.matchingLabelLints)
 			.catch((e: Error) => {
-					reportError(e);
+				reportError(e);
 				figmaRemote.notifyError(e.message);
 			});
 	}
@@ -150,7 +155,7 @@ export default function LocalizedLabelListItem({
 								.linkMessage(localizedLabel, messageToLink.id, localizedLabel.rootFrameLanguage!)
 								.catch((e) => {
 									figmaRemote.notifyError(`could not set message${e.message}`);
-										reportError(e);
+									reportError(e);
 								});
 							setMessageSearch(undefined);
 						},
@@ -231,7 +236,7 @@ export default function LocalizedLabelListItem({
 						onSave={async (labelName: string) => {
 							await localizedLabelManager.updateLabelName(localizedLabel, labelName).catch((e) => {
 								figmaRemote.notifyError(`could not set message${e.message}`);
-									reportError(e);
+								reportError(e);
 							});
 						}}
 						text={localizedLabel.name}
@@ -299,26 +304,23 @@ export default function LocalizedLabelListItem({
                       localizedLabelManager.linkKey(localizedLabel, selectedOption.value as string, selectedOption.language!, selectedOption.plural!);
                     } */
 							}}
-							valueReplaceFn={(value) =>
-								value.replace(/[ .]/g, (match) => (match === "." ? "__" : "_"))
-							}
+							valueReplaceFn={preserveCanonicalMessageKey}
 							defaultValue={messageName}
 							getOptions={(enteredValue: string) => {
 								let options = [] as InputSelectOption[];
 
-								const keySearch = enteredValue === "" ? "*" : enteredValue;
-								const textMatchQuery = MessageStoreMemory.toQueryObject(
-									`exact_text:true name:${keySearch} ${localizedLabel.characters}`,
+								const textMatchQuery = canonicalMessageKeySearchQuery(
+									enteredValue,
+									localizedLabel.characters,
 								);
-								const { inText: suggestedKeys, matchingNames: matchingKeysByName } =
+								const { inText: suggestedKeys, inNames: matchingKeysByName } =
 									messageStore.findMessages(textMatchQuery);
 
-								const isValidKey =
-									enteredValue.length >= 0 &&
-									/^[a-zA-Z0-9]$/.test(enteredValue[enteredValue.length - 1]);
+								const isValidKey = isCanonicalMessageKey(enteredValue);
 
 								if (
 									isValidKey &&
+									messageStore.getMessageByName(enteredValue) === undefined &&
 									!suggestedKeys.has(enteredValue) &&
 									!matchingKeysByName.has(enteredValue)
 								) {
@@ -349,7 +351,14 @@ export default function LocalizedLabelListItem({
 									}),
 								);
 
-								if (keySearch.length > 2 && matchingKeysByName.size > 0) {
+								const exactExistingMessage = messageStore.getMessageByName(enteredValue);
+								const visibleNameMatches = new Set(
+									[...matchingKeysByName].filter(
+										(key) => enteredValue.length > 2 || key === exactExistingMessage?.id,
+									),
+								);
+
+								if (visibleNameMatches.size > 0) {
 									options.push({
 										type: InputSelectionOptionType.DIVIDER,
 										value: "",
@@ -357,7 +366,7 @@ export default function LocalizedLabelListItem({
 									});
 
 									options = options.concat(
-										[...matchingKeysByName]
+										[...visibleNameMatches]
 											.filter((matchingKey) => !suggestedKeys.has(matchingKey))
 											.map((key) => ({
 												type: InputSelectionOptionType.SUGGESTION,
@@ -448,7 +457,7 @@ export default function LocalizedLabelListItem({
 											localizedLabelManager
 												.updateLabelPatternHtml(localizedLabel, patternHtml, parameters)
 												.catch((e: Error) => {
-														reportError(e);
+													reportError(e);
 													figmaRemote.notifyError(e.message);
 													reset();
 												});
@@ -482,7 +491,7 @@ export default function LocalizedLabelListItem({
 															figmaRemote.notify(
 																`Something went wrong with translation - ${e.message}`,
 															);
-																	reportError(e);
+															reportError(e);
 														}
 													}
 												}}

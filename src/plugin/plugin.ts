@@ -20,6 +20,10 @@ import TranslatorMachine from "../lib/translationprovider/TranslatorMachine";
 import ParrotApi from "../lib/api/Parrot";
 import Monitoring from "../lib/monitoring/MonitoringProxy";
 import FeatureFlags from "../lib/featureflags/FeatureFlags";
+import {
+	REAL_FIGMA_PERFORMANCE_RESULT_KEY,
+	installRealFigmaPerformanceHarness,
+} from "../lib/performance/RealFigmaPerformanceHarness";
 
 const figmaRemote = new FigmaUtil();
 
@@ -76,6 +80,15 @@ asyncFunctionProxy.registerInstance(inlangMessageStore);
 
 const remoteLocalizedLabelManager = new LocalizedLabelManager(inlangMessageStore);
 asyncFunctionProxy.registerInstance(remoteLocalizedLabelManager);
+
+const developmentUiUrl = import.meta.env.VITE_CUSTOM_URL;
+const developmentUiHost = developmentUiUrl ? new URL(developmentUiUrl).hostname : undefined;
+if (developmentUiHost === "localhost" || developmentUiHost === "127.0.0.1" || developmentUiHost === "::1") {
+	installRealFigmaPerformanceHarness();
+	void figma.clientStorage.getAsync(REAL_FIGMA_PERFORMANCE_RESULT_KEY).then((samples) => {
+		if (samples) console.log(`PARROT_REAL_FIGMA_RESULT ${JSON.stringify(samples)}`);
+	});
+}
 
 const figmaHelper = new FigmaHelper(figma);
 asyncFunctionProxy.registerInstance(figmaHelper);

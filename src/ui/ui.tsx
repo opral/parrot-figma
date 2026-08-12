@@ -40,6 +40,7 @@ import { OverlayScrollbarsComponent } from "./compontents/overlayscrollbar";
 import TranslatorMachine from "../lib/translationprovider/TranslatorMachine";
 import Monitoring from "../lib/monitoring/MonitoringProxy";
 import FeatureFlags from "../lib/featureflags/FeatureFlags";
+import type { RealFigmaPerformanceSample } from "../lib/performance/RealFigmaPerformanceHarness";
 
 console.log(`Starting Figma UI - Version ${pjs.version}`);
 
@@ -216,6 +217,58 @@ const memoryTranslationKeyStore = new MessageStoreMemory(figmaFileTranslationKey
 
 const remoteLocalizedLabelManager = new LocalizedLabelManager();
 asyncFunctionProxy.proxyAsyncMethods(remoteLocalizedLabelManager);
+
+declare global {
+	interface Window {
+		__PARROT_RUN_REAL_FIGMA_PERFORMANCE__?: (
+			sizes?: number[],
+		) => Promise<RealFigmaPerformanceSample[]>;
+	}
+}
+
+if (location.hostname === "localhost") {
+	window.__PARROT_RUN_REAL_FIGMA_PERFORMANCE__ = async (sizes = [100, 1_000, 5_000]) => {
+		const requestId = crypto.randomUUID();
+		const samples = await new Promise<RealFigmaPerformanceSample[]>((resolve, reject) => {
+			const listener = (event: MessageEvent) => {
+				if (
+					event.data?.pluginMessage?.type !== "parrotPerformanceResult" ||
+					event.data.pluginMessage.requestId !== requestId
+				)
+					return;
+				window.clearTimeout(timeout);
+				window.removeEventListener("message", listener);
+				if (event.data.pluginMessage.error) reject(new Error(event.data.pluginMessage.error));
+				else resolve(event.data.pluginMessage.samples);
+			};
+			const timeout = window.setTimeout(() => {
+				window.removeEventListener("message", listener);
+				reject(new Error("The real-Figma performance run timed out."));
+			}, 120_000);
+			window.addEventListener("message", listener);
+			parent.postMessage(
+				{ pluginMessage: { type: "parrotPerformanceRun", requestId, sizes }, pluginId: "*" },
+				"*",
+			);
+		});
+		console.table(samples);
+		document.body.dataset.parrotPerformanceResult = JSON.stringify(samples);
+		return samples;
+	};
+	const requestedSizes = new URLSearchParams(location.search).get("parrotPerformanceSizes");
+	if (requestedSizes) {
+		const sizes = requestedSizes
+			.split(",")
+			.map(Number)
+			.filter((size) => Number.isSafeInteger(size) && size > 0);
+		void window
+			.__PARROT_RUN_REAL_FIGMA_PERFORMANCE__(sizes)
+			.then((samples) => {
+				document.body.dataset.parrotPerformanceResult = JSON.stringify(samples);
+			})
+			.catch((error) => console.error("Real-Figma performance run failed", error));
+	}
+}
 const localizedLabelManager = new LocalizedLabelManagerUI(
 	remoteLocalizedLabelManager,
 	memoryTranslationKeyStore,

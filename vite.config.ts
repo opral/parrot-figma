@@ -48,6 +48,18 @@ const onConfigureServer = (server: any) => {
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  optimizeDeps: {
+    exclude: ["@inlang/sdk", "@lix-js/sdk"],
+  },
+  server: {
+    fs: {
+      allow: [path.resolve("."), path.resolve("../inlang")],
+    },
+    headers: {
+      "Content-Security-Policy":
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' ws: http: https:",
+    },
+  },
   plugins: [
     react(),
     richSvg() as any /* any to avoid type problem*/,

@@ -1,6 +1,11 @@
 import blake from "blakejs";
 import * as Sentry from "@sentry/react";
-import { Message, createVariant, getVariant, updateVariantPattern } from "@inlang/sdk";
+import {
+	createVariant,
+	getVariant,
+	updateVariantPattern,
+	type Message,
+} from "../message/LegacyMessage";
 import { MessageLinkState, LocalizedLabel } from "./LocalizedLabel";
 import { Plural } from "../message/variants/Plural";
 import LocalizedLabelManager, { SandboxUpdateLabelProperties } from "./LocalizedLabelManager";

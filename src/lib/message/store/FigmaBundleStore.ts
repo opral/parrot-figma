@@ -1,5 +1,8 @@
 import TextEncoding from "text-encoding";
 import blake from "blakejs";
+import type { BundleNested } from "@inlang/sdk";
+
+export type { BundleNested } from "@inlang/sdk";
 
 export const FIGMA_BUNDLE_PREFIX = "prt_ib__";
 export const FIGMA_BUNDLE_MIGRATION_KEY = "prt_ib_migration_v1";
@@ -8,43 +11,9 @@ export const LEGACY_MESSAGE_PREFIX = "prt_im__";
 const MAX_PLUGIN_DATA_BYTES = 100_000;
 const encoder = new TextEncoding.TextEncoder();
 
-export type BundleDeclaration = {
-	type: "input-variable";
-	name: string;
-};
-
-export type BundleSelector = {
-	type: "variable-reference";
-	name: string;
-};
-
-export type BundleMatch =
-	| { type: "literal-match"; key: string; value: string }
-	| { type: "catchall-match"; key: string };
-
+export type BundleSelector = BundleNested["messages"][number]["selectors"][number];
 export type BundlePatternElement =
-	| { type: "text"; value: string }
-	| {
-			type: "expression";
-			arg: { type: "variable-reference"; name: string };
-	  };
-
-export type BundleNested = {
-	id: string;
-	declarations: BundleDeclaration[];
-	messages: Array<{
-		id: string;
-		bundleId: string;
-		locale: string;
-		selectors: BundleSelector[];
-		variants: Array<{
-			id: string;
-			messageId: string;
-			matches: BundleMatch[];
-			pattern: BundlePatternElement[];
-		}>;
-	}>;
-};
+	BundleNested["messages"][number]["variants"][number]["pattern"][number];
 
 export type BundleChangeSet = {
 	added: string[];

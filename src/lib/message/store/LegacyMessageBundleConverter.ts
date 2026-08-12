@@ -1,4 +1,4 @@
-import type { Message } from "@inlang/sdk";
+import type { Message } from "../LegacyMessage";
 import type { BundleNested, BundlePatternElement, BundleSelector } from "./FigmaBundleStore";
 import { validateBundleNested } from "./FigmaBundleStore";
 
@@ -112,5 +112,8 @@ function legacyPatternElementToBundle(element: LegacyPatternElement): BundlePatt
 
 function bundlePatternElementToLegacy(element: BundlePatternElement): LegacyPatternElement {
 	if (element.type === "text") return { type: "Text", value: element.value };
-	return { type: "VariableReference", name: element.arg.name };
+	if (element.type === "expression" && element.arg.type === "variable-reference") {
+		return { type: "VariableReference", name: element.arg.name };
+	}
+	throw new Error(`Unsupported Inlang pattern element in the legacy Parrot UI`);
 }

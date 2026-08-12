@@ -1,4 +1,4 @@
-import { Message } from "@inlang/sdk";
+import type { Message } from "../LegacyMessage";
 import { Locale } from "../variants/Locale";
 import { FigmaBundleStore, LEGACY_MESSAGE_PREFIX } from "./FigmaBundleStore";
 import { bundleToLegacyMessage, legacyMessageToBundle } from "./LegacyMessageBundleConverter";

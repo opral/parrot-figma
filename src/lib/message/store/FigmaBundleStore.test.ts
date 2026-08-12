@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { Message } from "@inlang/sdk";
+import type { Message } from "../LegacyMessage";
 import {
 	FIGMA_BUNDLE_MIGRATION_KEY,
 	FIGMA_BUNDLE_PREFIX,

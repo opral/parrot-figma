@@ -1,4 +1,4 @@
-import { Message } from "@inlang/sdk";
+import type { Message } from "../message/LegacyMessage";
 import { ImportMessage } from "./ImportMessage";
 import MessageStoreMemory from "../message/store/MessageStoreMemory";
 import { Locale } from "../message/variants/Locale";

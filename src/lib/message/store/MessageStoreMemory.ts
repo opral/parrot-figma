@@ -1,25 +1,22 @@
 import {
-	ProjectSettings,
-	loadProject,
-	getVariant,
-	InlangProject,
-	LanguageTag,
-	updateVariantPattern,
 	createVariant,
-} from "@inlang/sdk";
-import { Message, Pattern } from "@inlang/message";
+	getVariant,
+	updateVariantPattern,
+	type Message,
+	type Pattern,
+} from "../LegacyMessage";
 import blake from "blakejs";
 import { Locale } from "../variants/Locale";
 import { Plural, getPluralFormsByLanguage } from "../variants/Plural";
 
 import { NodeSelection } from "../../localizedlabels/LocalizedLabelManager";
 import { Gender, genderList } from "../variants/Gender";
-import { createNodeishMemoryFs } from "./inlang/FigmaRootFs";
 import { Config, InlangMessageStore } from "./InlangMessageStoreFigmaRoot";
 import { MessageParameterValues } from "../MessageParameterValues";
 import PlaceholderHelper from "../PlaceholderUtil";
 import TranslatorMachine from "../../translationprovider/TranslatorMachine";
 import FigmaUtil from "../../../shared/FigmaUtil";
+import { InlangV3Project } from "./InlangV3Project";
 
 export type SearchQuery = {
 	selected?: "FRAME" | "LABEL" | undefined;
@@ -57,12 +54,10 @@ export type SearchResult = {
 	};
 };
 
-const fs = createNodeishMemoryFs();
-
 export default class MessageStoreMemory extends EventTarget {
 	config: Config | undefined;
 
-	inlangProject: InlangProject | undefined;
+	inlangProject: InlangV3Project | undefined;
 
 	parentKeyStore: InlangMessageStore;
 
@@ -103,15 +98,7 @@ export default class MessageStoreMemory extends EventTarget {
 	}
 
 	subscribeMessage(messageId: string, cb: (message: Message) => void) {
-		this.inlangProject?.query.messages.get.subscribe(
-			{ where: { id: messageId } },
-			(updatedMessage) => {
-				if (updatedMessage !== undefined) {
-					// skip deleted
-					cb(updatedMessage);
-				}
-			},
-		);
+		this.inlangProject?.subscribe(messageId, cb);
 	}
 
 	static UPDATE_EVENT = "updated";
@@ -129,7 +116,7 @@ export default class MessageStoreMemory extends EventTarget {
 		};
 
 		for (const deltedMessageId of changedMessages.deleted) {
-			this.inlangProject?.query.messages.delete({ where: { id: deltedMessageId } });
+			await this.inlangProject?.delete(deltedMessageId);
 			changes.deleted.push(deltedMessageId);
 			changes.changedKeys.push(deltedMessageId);
 		}
@@ -140,10 +127,7 @@ export default class MessageStoreMemory extends EventTarget {
 				throw new Error(`fresh message does not exist... [${updatedMessageId}]`);
 			}
 
-			this.inlangProject?.query.messages.upsert({
-				where: { id: freshMessage.id },
-				data: freshMessage,
-			});
+			await this.inlangProject?.upsert(freshMessage);
 			changes.updated.push(updatedMessageId);
 			changes.changedKeys.push(updatedMessageId);
 		}
@@ -153,10 +137,7 @@ export default class MessageStoreMemory extends EventTarget {
 			if (!freshMessage) {
 				throw new Error(`fresh message does not exist... [${addedMessageId}]`);
 			}
-			this.inlangProject?.query.messages.upsert({
-				where: { id: freshMessage.id },
-				data: freshMessage,
-			});
+			await this.inlangProject?.upsert(freshMessage);
 			changes.added.push(addedMessageId);
 			changes.changedKeys.push(addedMessageId);
 		}
@@ -177,9 +158,9 @@ export default class MessageStoreMemory extends EventTarget {
 		await this.parentKeyStore.setConfig(parentConfig);
 
 		// forwared languages to inlang project - if initialzied already
-		this.inlangProject?.setSettings({
-			sourceLanguageTag: this.config!.refLanguage!,
-			languageTags: languages as string[],
+		await this.inlangProject?.setSettings({
+			baseLocale: this.config!.refLanguage!,
+			locales: languages as string[],
 			modules: [],
 		});
 	}
@@ -196,19 +177,19 @@ export default class MessageStoreMemory extends EventTarget {
 		await this.parentKeyStore.setConfig(parentConfig);
 
 		// forwared ref language to inlang project - if initialzied already
-		this.inlangProject?.setSettings({
-			sourceLanguageTag: language,
-			languageTags: this.config!.enabledLanguages as string[],
+		await this.inlangProject?.setSettings({
+			baseLocale: language,
+			locales: this.config!.enabledLanguages as string[],
 			modules: [],
 		});
 	}
 
 	getMessage(id: string): Message | undefined {
-		return this.inlangProject!.query.messages.get({ where: { id } });
+		return this.inlangProject!.get(id);
 	}
 
 	getMessageByName(messageName: string): Message | undefined {
-		return this.inlangProject!.query.messages.get({ where: { id: messageName } });
+		return this.inlangProject!.get(messageName);
 	}
 
 	static toSearchString(searchQuery: SearchQuery): string {
@@ -405,7 +386,7 @@ export default class MessageStoreMemory extends EventTarget {
 			return results;
 		}
 
-		for (const message of Object.values(this.inlangProject!.query.messages.getAll())) {
+		for (const message of this.inlangProject!.getAll()) {
 			if (query.text === undefined || query.text === "") {
 				results.matchingNames.add(message.id);
 			} else {
@@ -524,7 +505,7 @@ export default class MessageStoreMemory extends EventTarget {
 	}
 
 	getAllMessages() {
-		return this.inlangProject?.query.messages.getAll();
+		return this.inlangProject?.getAll();
 	}
 
 	async createTag() {
@@ -542,8 +523,15 @@ export default class MessageStoreMemory extends EventTarget {
 
 	async upsertMessage(message: Message, _defaultParameters: MessageParameterValues) {
 		// TODO #18 variables - store the default parameters for this message ( we no longer store them in the message it self )
-		this.upsertedMessageIds.add(message.id);
-		this.inlangProject?.query.messages.upsert({ where: { id: message.id }, data: message });
+		const previous = this.inlangProject?.get(message.id);
+		await this.parentKeyStore.saveMessage(message);
+		try {
+			await this.inlangProject?.upsert(message);
+		} catch (error) {
+			if (previous) await this.parentKeyStore.saveMessage(previous);
+			else await this.parentKeyStore.deleteMessage(message.id);
+			throw error;
+		}
 
 		const changes = {
 			deleted: [] as string[],
@@ -564,80 +552,33 @@ export default class MessageStoreMemory extends EventTarget {
 	}
 
 	async deleteMessage(id: string) {
-		// await this.parentKeyStore.deleteMessage(id);
-		this.deletedMessageIds.add(id);
-		this.inlangProject?.query.messages.delete({ where: { id } });
+		const previous = this.inlangProject?.get(id);
+		await this.parentKeyStore.deleteMessage(id);
+		try {
+			await this.inlangProject?.delete(id);
+		} catch (error) {
+			if (previous) await this.parentKeyStore.saveMessage(previous);
+			throw error;
+		}
 	}
 
-	upsertedMessageIds = new Set<string>();
-
-	deletedMessageIds = new Set<string>();
-
 	private async loadInlangProject() {
-		// creating a project file
-		const inlangConfig = {
-			sourceLanguageTag: this.config!.refLanguage,
-			modules: ["./plugin.js"],
-			languageTags: this.config!.enabledLanguages,
-			// languageTags: ['en', 'de'],
-		};
-
-		// writing the project file to the virtual filesystem
-		await fs.writeFile("/project.inlang.json", JSON.stringify(inlangConfig));
-
-		// opening the project file and loading the plugin
-		this.inlangProject = await loadProject({
-			nodeishFs: fs as any,
-			settingsFilePath: "/project.inlang.json",
-			// simulate the import function that the SDK uses
-			// to inject the plugin into the project
-			_import: async () => {
-				console.log("import called");
-				return {
-					default: {
-						// id: id as Plugin["id"],
-						id: "plugin.organization.pluginName", // as Plugin['id'],
-						displayName: { en: "test" }, // as Plugin['displayName'],
-						description: { en: "test" }, // as Plugin['description'],
-						// displayName,
-						// description,
-						loadMessages: async () => {
-							const messages = await this.parentKeyStore.load();
-							return messages;
-						},
-						saveMessages: async ({
-							messages,
-							settings,
-							nodeishFs,
-						}: {
-							messages: Message[];
-							settings: any;
-							nodeishFs: any;
-						}) => {
-							for (const message of messages) {
-								if (this.upsertedMessageIds.has(message.id)) {
-									await this.parentKeyStore.saveMessage(message);
-								}
-							}
-
-							for (const deletedMessageId of [...this.deletedMessageIds]) {
-								await this.parentKeyStore.deleteMessage(deletedMessageId);
-							}
-							this.upsertedMessageIds = new Set<string>();
-						},
-					},
-				};
-				// return import('./inlang/FigmaPlugin');
+		await this.inlangProject?.close();
+		const messages = await this.parentKeyStore.load();
+		this.inlangProject = await InlangV3Project.open({
+			settings: {
+				baseLocale: this.config!.refLanguage!,
+				locales: this.config!.enabledLanguages as string[],
+				modules: [],
 			},
+			messages,
 		});
-		const inlangProjectSettings = this.inlangProject?.settings();
+		const inlangProjectSettings = await this.inlangProject.settings();
 		await this.figmaRemote.setRootPluginData(
 			"inlangProjectSettings",
 			JSON.stringify(inlangProjectSettings),
 		);
-		const numberOfLinkedMessages = this.inlangProject?.query.messages
-			.includedMessageIds()
-			.length.toString();
+		const numberOfLinkedMessages = this.inlangProject.getAll().length.toString();
 		await this.figmaRemote.setRootPluginData("numberOfMessages", numberOfLinkedMessages ?? "0");
 	}
 
@@ -649,7 +590,7 @@ export default class MessageStoreMemory extends EventTarget {
 		}
 
 		await this.loadInlangProject();
-		return this.inlangProject!.query.messages.getAll();
+		return this.inlangProject!.getAll();
 	}
 
 	// wrapper methods to centralize the integration of inlang in case of api changes

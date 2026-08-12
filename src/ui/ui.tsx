@@ -248,7 +248,15 @@ if (location.hostname === "localhost") {
 				),
 			),
 		]);
+		console.log(`PARROT_REPEATABLE_RESULT ${JSON.stringify(samples)}`);
 		console.table(samples);
+		parent.postMessage(
+			{
+				pluginMessage: { type: "parrotPerformanceUiResult", samples },
+				pluginId: "*",
+			},
+			"*",
+		);
 		document.body.dataset.parrotPerformanceResult = JSON.stringify(samples);
 		return samples;
 	};

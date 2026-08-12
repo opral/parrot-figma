@@ -176,6 +176,11 @@ export default class RealFigmaPerformanceHarness {
 		}
 
 		await figma.clientStorage.setAsync(REAL_FIGMA_PERFORMANCE_RESULT_KEY, results);
+		for (const sample of results) {
+			console.log(
+				`PARROT_PERF size=${sample.size} linked=${sample.linkedLabels} readiness=${sample.median.readinessMs} cold=${sample.median.coldIndexMs} warm=${sample.median.warmHydrationMs} lookup=${sample.median.lookupMs} trials=${sample.trials.map((trial) => `${trial.readinessMs}/${trial.coldIndexMs}/${trial.warmHydrationMs}/${trial.lookupMs}`).join(",")}`,
+			);
+		}
 		return results;
 	}
 }

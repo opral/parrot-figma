@@ -107,6 +107,12 @@ figma.on("selectionchange", () => {
 	});
 });
 
+figma.ui.on("message", (message) => {
+	if (isLocalDevelopmentUi && message?.type === "parrotPerformanceUiResult") {
+		console.log(`PARROT_REPEATABLE_RESULT ${JSON.stringify(message.samples)}`);
+	}
+});
+
 // Calls to "parent.postMessage" from within the HTML page will trigger this
 // callback. The callback will be passed the "pluginMessage" property of the
 // posted message.

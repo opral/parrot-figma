@@ -1,9 +1,9 @@
 name: CI
 
+# Restore pull_request and dev push triggers once @inlang/sdk v3 is published
+# and Parrot can commit a registry-backed lockfile.
 on:
-  pull_request:
-  push:
-    branches: [dev]
+  workflow_dispatch:
 
 permissions:
   contents: read

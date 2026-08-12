@@ -1,0 +1,138 @@
+import { afterEach, describe, expect, test } from "vitest";
+import LocalizedLabelManager from "../lib/localizedlabels/LocalizedLabelManager";
+import { FigmaBundleStore } from "../lib/message/store/FigmaBundleStore";
+import { FakeFigmaDocument, FakeFrameNode, FakeTextNode } from "../testing/figma/FakeFigma";
+import { createTranslationFixture } from "../testing/figma/translationFixtures";
+
+type Sample = { size: number; operations: number; elapsedMs: number };
+
+async function medianElapsed(run: () => Promise<void> | void) {
+	await run();
+	const values: number[] = [];
+	for (let iteration = 0; iteration < 7; iteration++) {
+		const started = performance.now();
+		await run();
+		values.push(performance.now() - started);
+	}
+	return values.sort((a, b) => a - b)[3]!;
+}
+
+function assertLinear(samples: Sample[], slack = 1.15) {
+	for (let index = 1; index < samples.length; index++) {
+		const previous = samples[index - 1]!;
+		const current = samples[index]!;
+		expect(current.operations / previous.operations).toBeLessThanOrEqual(
+			(current.size / previous.size) * slack,
+		);
+	}
+}
+
+describe("Big-O performance gates", () => {
+	afterEach(() => Reflect.deleteProperty(globalThis, "figma"));
+
+	test("native startup primitive work is O(nodes)", async () => {
+		const samples: Sample[] = [];
+		for (const size of [100, 1_000, 5_000]) {
+			const figma = new FakeFigmaDocument();
+			Object.assign(globalThis, { figma });
+			const page = figma.addPage("Page");
+			const frame = page.appendChild(new FakeFrameNode("Frame")) as FakeFrameNode;
+			for (let index = 0; index < size; index++) {
+				const parent =
+					index % 10 === 0
+						? (frame.appendChild(new FakeFrameNode(`Group ${index}`)) as FakeFrameNode)
+						: frame;
+				parent.appendChild(new FakeTextNode(`Cell ${index}`));
+			}
+			const manager = new LocalizedLabelManager();
+			(manager as any).messageStore = { messageIdToLabels: {} };
+			figma.counters.pluginDataReads = 0;
+			figma.counters.nodeLookups = 0;
+			const result = await manager.processNodeRecursively(
+				page as any,
+				figma.root as any,
+				new Set(),
+				0,
+			);
+			const operations = figma.counters.pluginDataReads + figma.counters.nodeLookups;
+			const elapsedMs = await medianElapsed(async () => {
+				await manager.processNodeRecursively(page as any, figma.root as any, new Set(), 0);
+			});
+			samples.push({ size, operations, elapsedMs });
+			expect(figma.counters.exports).toBe(0);
+			expect(result.nodesProcessed).toBe(size);
+			expect(operations).toBe(size * 3);
+		}
+		assertLinear(samples);
+		console.table(samples);
+	});
+
+	test("indexed lookup is O(matches), independent of unrelated nodes", async () => {
+		const samples: Sample[] = [];
+		for (const size of [100, 1_000, 5_000]) {
+			const { figma, richText, sibling, page } = createTranslationFixture();
+			Object.assign(globalThis, { figma });
+			const unrelated = page.appendChild(new FakeFrameNode("Unrelated")) as FakeFrameNode;
+			for (let index = 0; index < size; index++)
+				unrelated.appendChild(new FakeTextNode(`Cell ${index}`));
+			const manager = new LocalizedLabelManager();
+			(manager as any).messageStore = {
+				messageIdToLabels: { "checkout.greeting": new Set([richText.id, sibling.id]) },
+				getConfigSync: () => ({ refLanguage: "en" }),
+			};
+			(manager as any).toLocalizedLabelOrUndefined = (node: FakeTextNode) => ({
+				nodeId: node.id,
+				messageId: node.getPluginData("mn"),
+			});
+			const before = { ...figma.counters };
+			const labels = await manager.getWithMessage("checkout.greeting");
+			const operations = figma.counters.nodeLookups - before.nodeLookups;
+			expect(figma.counters.traversedNodes - before.traversedNodes).toBe(0);
+			expect(figma.counters.pluginDataReads - before.pluginDataReads).toBe(6);
+			const elapsedMs = await medianElapsed(async () => {
+				await manager.getWithMessage("checkout.greeting");
+			});
+			samples.push({
+				size,
+				operations,
+				elapsedMs,
+			});
+			expect(labels).toHaveLength(2);
+		}
+		expect(samples.map(({ operations }) => operations)).toEqual([2, 2, 2]);
+		console.table(samples);
+	});
+
+	test("bundle loading performs one plugin-data read per bundle", async () => {
+		const samples: Sample[] = [];
+		for (const size of [100, 1_000, 5_000]) {
+			let reads = 0;
+			const data = new Map<string, string>();
+			for (let index = 0; index < size; index++) {
+				data.set(
+					`prt_ib__message.${index}`,
+					JSON.stringify({ id: `message.${index}`, declarations: [], messages: [] }),
+				);
+			}
+			const root = {
+				id: "0:0",
+				getPluginData: (key: string) => {
+					reads++;
+					return data.get(key) ?? "";
+				},
+				getPluginDataKeys: () => [...data.keys()],
+				setPluginData: (key: string, value: string) => void data.set(key, value),
+			};
+			const store = new FigmaBundleStore({ root });
+			reads = 0;
+			expect(store.load()).toHaveLength(size);
+			const operations = reads;
+			const elapsedMs = await medianElapsed(() => void store.load());
+			samples.push({ size, operations, elapsedMs });
+			expect(operations).toBe(size);
+			store.dispose();
+		}
+		assertLinear(samples);
+		console.table(samples);
+	});
+});

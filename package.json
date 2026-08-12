@@ -12,6 +12,7 @@
     "tsc": "tsc --noEmit",
     "pretest": "pnpm paraglide:compile",
     "test": "vitest run --config vitest.config.ts",
+    "test:big-o": "vitest run --config vitest.config.ts src/performance/bigO.test.ts --reporter=verbose",
     "generate-strings": "node ./util/assets-and-resources.js;",
     "build": "vite build",
     "lint": "eslint .",

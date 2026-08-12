@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "tsc": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts",
     "generate-strings": "node ./util/assets-and-resources.js;",
     "start": "set -a; source .env; set +a; webpack --mode development --watch ",
     "start-with-server": "node ./util/assets-and-resources.js; webpack --mode development --watch & npx http-server --cors -o ./dist",
@@ -47,6 +48,7 @@
     "url-loader": "^4.1.1",
     "vite-plugin-raw": "^1.0.3",
     "vite-raw-plugin": "^1.0.2",
+    "vitest": "^3.2.4",
     "webpack": "^5.51.1",
     "webpack-cli": "^4.8.0"
   },

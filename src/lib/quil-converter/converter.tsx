@@ -1,5 +1,3 @@
-import { Delta, DeltaOperation } from "quill";
-
 export default class FigmaTextNodeToDelta {
 	static convertTextNode(textNode: TextNode) {
 		const textSegments = textNode.getStyledTextSegments([

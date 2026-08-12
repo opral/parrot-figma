@@ -1,5 +1,4 @@
 import path from "node:path";
-import { existsSync } from "node:fs";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import rawPlugin from 'vite-raw-plugin';
@@ -60,16 +59,6 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     rawPlugin({fileRegex: /\.ejs$/ }),
-    {
-      name: "resolve-quill-extensionless-imports",
-      enforce: "pre",
-      resolveId(source, importer) {
-        if (importer?.includes("/node_modules/quill/") && source.startsWith(".")) {
-          const resolved = path.resolve(path.dirname(importer), `${source}.js`);
-          if (existsSync(resolved)) return resolved;
-        }
-      },
-    },
     // viteSingleFile(),
     
     {
@@ -111,15 +100,8 @@ export default defineConfig(({ mode }) => ({
   //   },
   // },
   resolve: {
-    alias: [
-      {
-        // The custom Quill fork ships a development webpack bundle whose nested
-        // CommonJS runtime is incompatible with Vite 8's Rolldown optimizer.
-        // Its source entry is native ESM and avoids that compatibility layer.
-        find: /^quill$/,
-        replacement: path.resolve("node_modules/quill/quill.js"),
-      },
-      { find: "@ui", replacement: path.resolve("src/ui") },
-    ],
+    alias: {
+      "@ui": path.resolve("src/ui"),
+    },
   },
 }));

@@ -1,8 +1,12 @@
 import * as React from "react";
 
-import Quill, { DeltaStatic, Sources, Delta as DeltaType, RangeStatic } from "quill";
+import Quill, {
+	Delta,
+	Range,
+	type Bounds,
+	type EmitterSource,
+} from "quill";
 import { useEffect, useRef, useState } from "react";
-import { Bounds, Range } from "quill/core/selection";
 import Emitter from "quill/core/emitter";
 
 import "./TooltipToolbar.css";
@@ -10,6 +14,10 @@ import FormatButton from "./compontents/FormatButton";
 import FormatLinkButton from "./compontents/FormatLinkButton";
 import FormatPlaceholder from "./compontents/FormatPlaceholder";
 import { MessageParameterValues } from "../../../../lib/message/MessageParameterValues";
+
+type DeltaStatic = Delta;
+type RangeStatic = Range;
+type Sources = EmitterSource;
 
 type TooltipToolbarProps = {
 	rootView: HTMLElement;
@@ -58,14 +66,13 @@ export default function TooltipToolbar({
 		const lines = editor.getLines(range.index, range.length);
 
 		if (lines.length < 2) {
-			setSelectionBounds(editor.getBounds(range));
+			setSelectionBounds(editor.getBounds(range) ?? undefined);
 		} else {
 			const lastLine = lines[lines.length - 1];
 			const index = editor.getIndex(lastLine);
 			const length = Math.min(lastLine.length() - 1, range.index + range.length - index);
-			// @ts-expect-error -- TODO check if we can just pass the index and the length
 			const indexBounds = editor.getBounds(new Range(index, length));
-			setSelectionBounds(indexBounds);
+			setSelectionBounds(indexBounds ?? undefined);
 		}
 	}
 
@@ -75,10 +82,9 @@ export default function TooltipToolbar({
 		oldContents: DeltaStatic | RangeStatic,
 		source: Sources,
 	) {
-		let range: Range | undefined;
+		let range: Range | null | undefined;
 
 		if (name === "text-change") {
-			// @ts-expect-error - check type
 			[range] = editor.selection.getRange(); // quill.getSelection triggers update
 
 			// TODO update selected formats on toolbar
@@ -111,7 +117,6 @@ export default function TooltipToolbar({
 	function onEditorScrollOptimize() {
 		// Let selection be restored by toolbar handlers before repositioning
 		setTimeout(() => {
-			// @ts-expect-error - check type
 			const [range] = editor.selection.getRange(); // quill.getSelection triggers update
 			if (range != null) {
 				update(range);
@@ -211,14 +216,12 @@ export default function TooltipToolbar({
 
 		document.addEventListener("wheel", onScrollContainerScroll);
 
-		// @ts-expect-error -- TODO check why the event is not accessible
 		editor.on(Emitter.events.SCROLL_OPTIMIZE, onEditorScrollOptimize);
 		editor.on(Emitter.events.EDITOR_CHANGE, onEditorChange);
 
 		return () => {
 			resizeObserver.disconnect();
 			document.removeEventListener("wheel", onScrollContainerScroll);
-			// @ts-expect-error -- TODO check why the event is not accessible
 			editor.off(Emitter.events.SCROLL_OPTIMIZE, onEditorScrollOptimize);
 		};
 	}, []);

@@ -1,7 +1,5 @@
 import Quill from "quill";
-
-const Block = Quill.import("blots/block");
-const ListContainer = Quill.import("formats/list-container");
+import ListItem, { ListContainer } from "quill/formats/list";
 
 export class MyListContainer extends ListContainer {
 	static tagName = ["OL", "UL"];
@@ -23,36 +21,9 @@ export class MyListContainer extends ListContainer {
 
 	checkMerge() {
 		// Only merge if the next list is the same type as this one
-		return super.checkMerge() && this.domNode.tagName === this.next.domNode.tagName;
+		return super.checkMerge() && this.domNode.tagName === this.next?.domNode.tagName;
 	}
 }
-
-class ListItem extends Block {
-	static create(value: string) {
-		const node = super.create() as Element;
-
-		node.setAttribute("data-list", value);
-		return node;
-	}
-
-	static formats(domNode: HTMLElement) {
-		return domNode.getAttribute("data-list") || undefined;
-	}
-
-	static register() {
-		Quill.register(ListContainer);
-	}
-
-	format(name: string, value: string) {
-		if (name === this.statics.blotName && value) {
-			this.domNode.setAttribute("data-list", value);
-		} else {
-			super.format(name, value);
-		}
-	}
-}
-ListItem.blotName = "list";
-ListItem.tagName = "LI";
 
 ListContainer.allowedChildren = [ListItem];
 ListItem.requiredContainer = ListContainer;

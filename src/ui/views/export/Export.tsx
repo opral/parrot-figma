@@ -1,7 +1,5 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
-import "../../localization/i18n";
-import { useTranslation } from "react-i18next";
 
 import Select, { SelectOption } from "../../compontents/select/select";
 import "./Export.css";
@@ -59,7 +57,6 @@ type ExportProps = {
  * Select platform (ios/android) / export format
  */
 export default function Export({ labelManager, userManager }: ExportProps) {
-	const { t } = useTranslation();
 	const translationKeyStore = labelManager.messageStore;
 
 	const baseLanguage = labelManager.messageStore.getRefLanugage()!;

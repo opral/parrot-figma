@@ -2,6 +2,7 @@ import path from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import rawPlugin from 'vite-raw-plugin';
+import { paraglideVitePlugin } from "@inlang/paraglide-js";
 
 import { exec } from "child_process";
 // import postcssUrl from "postcss-url";
@@ -58,6 +59,12 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    paraglideVitePlugin({
+      project: "./project.inlang",
+      outdir: "./src/ui/paraglide",
+      strategy: ["baseLocale"],
+      emitTsDeclarations: true,
+    }),
     rawPlugin({fileRegex: /\.ejs$/ }),
     // viteSingleFile(),
     

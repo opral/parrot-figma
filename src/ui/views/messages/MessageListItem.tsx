@@ -2,8 +2,6 @@ import * as React from "react";
 import { useEffect, useState } from "react";
 import { reportError } from "../../utils/errorReporting";
 
-import "../../localization/i18n";
-
 import { Locale } from "../../../lib/message/variants/Locale";
 
 import MessageStoreMemory from "../../../lib/message/store/MessageStoreMemory";

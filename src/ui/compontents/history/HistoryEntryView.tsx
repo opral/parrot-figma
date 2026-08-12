@@ -1,6 +1,5 @@
 import React from "react";
-import "../../localization/i18n";
-import { useTranslation } from "react-i18next";
+import * as m from "../../paraglide/messages.js";
 import ReactTimeAgo from "react-time-ago";
 import "./HistoryEntryView.css";
 
@@ -32,7 +31,6 @@ export default function HistoryEntryView({
 	previousText,
 	onReuse,
 }: HistoryEntryViewProps) {
-	const { t } = useTranslation();
 	return (
 		<div className="history_view">
 			<div
@@ -107,7 +105,7 @@ export default function HistoryEntryView({
 								onReuse(text);
 							}}
 						>
-							<span data-tooltip-type="text">{t("keys__version__reuse_button")}</span>
+							<span data-tooltip-type="text">{m.keys__version__reuse_button()}</span>
 						</button>
 					)}
 				</div>

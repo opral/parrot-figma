@@ -40,6 +40,6 @@ export default [
 		},
 	},
 	{
-        ignores: ["dist/*", "dist/**", "snippets"]
-    },
+		ignores: ["dist/*", "dist/**", "snippets", "src/ui/paraglide/**"]
+	},
 ];

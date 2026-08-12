@@ -1,6 +1,5 @@
 import * as React from "react";
 import { useEffect, useRef, useState } from "react";
-import "../../localization/i18n";
 import LanguageSetup from "../../compontents/languageSetup/LanguageSetup";
 
 import "./Onboarding.css";

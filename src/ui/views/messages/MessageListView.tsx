@@ -1,7 +1,5 @@
 import * as React from "react";
 import { useEffect, useRef, useState } from "react";
-import "../../localization/i18n";
-import { useTranslation } from "react-i18next";
 
 import { Locale } from "../../../lib/message/variants/Locale";
 
@@ -35,7 +33,6 @@ export default function MessageListView({
 	selectedMessageId,
 	highlightSelectedNodes,
 }: MessageListViewProps) {
-	const { t } = useTranslation();
 	const [, setTrigger] = useState(0);
 	const [renderEntries, setRenderEntries] = useState(200);
 

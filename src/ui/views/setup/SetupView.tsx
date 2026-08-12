@@ -1,7 +1,4 @@
 import * as React from "react";
-import { useState } from "react";
-import "../../localization/i18n";
-import { useTranslation } from "react-i18next";
 import LocalizedLabelManagerUI from "../../../lib/localizedlabels/LocalizedLabelManagerUI";
 import { Locale } from "../../../lib/message/variants/Locale";
 import LanguageSetup from "../../compontents/languageSetup/LanguageSetup";

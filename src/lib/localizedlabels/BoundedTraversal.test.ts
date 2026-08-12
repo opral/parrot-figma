@@ -167,7 +167,10 @@ describe("bounded Figma traversal", () => {
 			messageId: node.getPluginData("mn") || undefined,
 		});
 		await manager.indexPageTextNodes(page as any, new Set());
+		for (let index = 0; index < 5_000; index++)
+			page.appendChild(new FakeTextNode(`Unrelated ${index}`, `Unrelated ${index}`, `96:${index}`));
 
+		const relinkBefore = { ...figma.counters };
 		richText.setPluginData("mn", "checkout.relinked");
 		manager.forwardDocumentChanges({
 			documentChanges: [
@@ -181,6 +184,7 @@ describe("bounded Figma traversal", () => {
 			],
 		});
 		expect(page.getPluginData(`prt_pli__${richText.id}`)).toBe("checkout.relinked");
+		expect(figma.counters.traversedNodes - relinkBefore.traversedNodes).toBe(0);
 
 		figma.moveNode(richText, destination);
 		manager.forwardDocumentChanges({
@@ -210,6 +214,62 @@ describe("bounded Figma traversal", () => {
 			],
 		});
 		expect(destination.getPluginData(`prt_pli__${richText.id}`)).toBe("");
+	});
+
+	test("indexes only a moved container when it was not previously in memory", () => {
+		const { figma, page, frameA, richText } = createTranslationFixture();
+		const destination = figma.addPage("Destination", "31:0");
+		for (let index = 0; index < 5_000; index++)
+			page.appendChild(new FakeTextNode(`Unrelated ${index}`, `Unrelated ${index}`, `97:${index}`));
+		Object.assign(globalThis, { figma });
+		Object.assign(figma, { ui: { postMessage: () => undefined } });
+		const manager = new LocalizedLabelManager();
+		(manager as any).messageStore = { messageIdToLabels: {} };
+		(manager as any).toLocalizedLabelOrUndefined = (node: FakeTextNode) => ({
+			nodeId: node.id,
+			messageId: node.getPluginData("mn") || undefined,
+		});
+		figma.moveNode(frameA, destination);
+		const before = { ...figma.counters };
+		manager.forwardDocumentChanges({
+			documentChanges: [
+				{
+					origin: "LOCAL",
+					type: "PROPERTY_CHANGE",
+					id: frameA.id,
+					node: frameA,
+					properties: ["parent"],
+				},
+			],
+		});
+		expect(figma.counters.traversedNodes - before.traversedNodes).toBe(1);
+		expect(destination.getPluginData(`prt_pli__${richText.id}`)).toBe("checkout.greeting");
+	});
+
+	test("keeps the marker invalid after a partial reconciliation and repairs on reopen", async () => {
+		const { figma, page, richText } = createTranslationFixture();
+		Object.assign(globalThis, { figma });
+		page.setPluginData("prt_pli_v", "1");
+		figma.failOnMutation = {
+			nodeId: page.id,
+			property: `pluginData:prt_pli__${richText.id}`,
+		};
+		const failedManager = new LocalizedLabelManager();
+		(failedManager as any).messageStore = { messageIdToLabels: {} };
+		await expect(failedManager.indexPageTextNodes(page as any, new Set())).rejects.toThrow(
+			"Injected failure",
+		);
+		expect(page.getPluginData("prt_pli_v")).toBe("");
+
+		const posted: any[] = [];
+		Object.assign(figma, { ui: { postMessage: (message: any) => posted.push(message) } });
+		const reopenedManager = new LocalizedLabelManager();
+		(reopenedManager as any).messageStore = { messageIdToLabels: {} };
+		await reopenedManager.fillUpCache();
+		expect(posted.at(0).keys).toEqual([]);
+		await reopenedManager.waitForBackgroundIndex();
+		expect(page.getPluginData("prt_pli_v")).toBe("1");
+		expect(page.getPluginData(`prt_pli__${richText.id}`)).toBe("checkout.greeting");
 	});
 
 	test("indexes and deletes every linked descendant of a created subtree", () => {

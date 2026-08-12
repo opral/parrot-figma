@@ -504,6 +504,19 @@ export default class LocalizedLabelManager {
 								changedNode!.id,
 								changedNode!.parent!,
 							);
+							if (changedVirtualNodes.length === 0) {
+								const movedTextNodes = (changedNode as FrameNode).findAllWithCriteria({
+									types: ["TEXT"],
+								});
+								changedVirtualNodes = movedTextNodes.map((textNode) =>
+									this.virtualTree.addNode(
+										textNode,
+										textNode.id,
+										undefined,
+										textNode.getPluginData(this.messageNameDataKey) || undefined,
+									),
+								);
+							}
 							// console.log(`Node changed - parent ${change.id} moved in vt affacted: ${JSON.stringify(changedVirtualNodes.length)}`);
 						} else if (
 							change.properties.includes("name") ||
@@ -631,7 +644,17 @@ export default class LocalizedLabelManager {
 				await new Promise((resolve) => setTimeout(resolve, 0));
 			}
 		}
-		for (const staleKey of staleDurableKeys) page.setPluginData(staleKey, "");
+		for (const staleKey of staleDurableKeys) {
+			const nodeId = staleKey.slice(LocalizedLabelManager.pageLinkIndexPrefix.length);
+			const storedMessageId = page.getPluginData(staleKey);
+			const currentNode = figma.getNodeById(nodeId);
+			const currentMessageId =
+				currentNode?.type === "TEXT" && this.pageOf(currentNode)?.id === page.id
+					? currentNode.getPluginData(this.messageNameDataKey)
+					: "";
+			if (!storedMessageId || storedMessageId !== currentMessageId)
+				page.setPluginData(staleKey, "");
+		}
 		page.setPluginData(
 			LocalizedLabelManager.pageLinkIndexVersionKey,
 			LocalizedLabelManager.pageLinkIndexVersion,

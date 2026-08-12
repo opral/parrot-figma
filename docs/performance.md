@@ -38,3 +38,11 @@ Measured in the same Figma Desktop environment after switching cold discovery to
 Fixture creation is measured separately and excluded. This initial same-fixture observation showed
 the native 5,000-node index roughly 103× faster than recursive scanning. The harness now measures
 the native path first so subsequent runs exercise cold native discovery before the comparison path.
+
+The first readiness publication is O(1): it performs no page traversal, node lookup, or plugin-data
+read. Durable hydration then runs after a task yield in O(K + L), where K is the page plugin-data
+key count and L is the number of durable linked labels, followed by an O(T + K) native
+reconciliation. In the real-Figma fixture with two linked labels, the warmed hydration observation
+was below the one-millisecond timer resolution; this is deliberately not claimed as a general
+latency bound for large L. The deterministic gate varies 0–1,000 links with 5,000 total text nodes
+and verifies zero document traversal.

@@ -126,27 +126,97 @@ export default class LocalizedLabelManager {
 	private labelToMessage = {} as {
 		[nodeId: string]: string;
 	};
+	private labelToPage = {} as { [nodeId: string]: string };
+	private static readonly pageLinkIndexPrefix = "prt_pli__";
+	private static readonly pageLinkIndexVersionKey = "prt_pli_v";
+	private static readonly pageLinkIndexVersion = "1";
+
+	private pageOf(node: BaseNode | null): PageNode | undefined {
+		let current = node;
+		while (current && current.type !== "PAGE") current = current.parent;
+		return current?.type === "PAGE" ? current : undefined;
+	}
+
+	private persistPageLink(nodeId: string, messageId: string | undefined, node?: BaseNode) {
+		const knownPageId = this.labelToPage[nodeId];
+		const nodePage = node ? this.pageOf(node) : undefined;
+		const knownPage =
+			knownPageId && knownPageId !== nodePage?.id
+				? ((figma.getNodeById(knownPageId) as PageNode | null) ?? undefined)
+				: undefined;
+		const page =
+			nodePage ??
+			knownPage ??
+			(knownPageId
+				? ((figma.getNodeById(knownPageId) as PageNode | null) ?? undefined)
+				: undefined);
+		if (!page) return;
+		const key = `${LocalizedLabelManager.pageLinkIndexPrefix}${nodeId}`;
+		if (knownPage && nodePage && knownPage.id !== nodePage.id) knownPage.setPluginData(key, "");
+		const next = messageId ?? "";
+		if (page.getPluginData(key) !== next) page.setPluginData(key, next);
+		if (messageId) this.labelToPage[nodeId] = page.id;
+		else delete this.labelToPage[nodeId];
+	}
+
+	async hydratePageLinkIndex(page: PageNode, keysLoaded: Set<string>) {
+		if (
+			page.getPluginData(LocalizedLabelManager.pageLinkIndexVersionKey) !==
+			LocalizedLabelManager.pageLinkIndexVersion
+		)
+			return { valid: false, hydrated: 0 };
+		let hydrated = 0;
+		for (const key of page.getPluginDataKeys()) {
+			if (!key.startsWith(LocalizedLabelManager.pageLinkIndexPrefix)) continue;
+			const nodeId = key.slice(LocalizedLabelManager.pageLinkIndexPrefix.length);
+			const storedMessageId = page.getPluginData(key);
+			const node = figma.getNodeById(nodeId);
+			if (
+				!node ||
+				node.type !== "TEXT" ||
+				this.pageOf(node)?.id !== page.id ||
+				node.getPluginData(this.messageNameDataKey) !== storedMessageId
+			) {
+				page.setPluginData(key, "");
+				continue;
+			}
+			this.virtualTree.addNode(node, node.id, undefined, storedMessageId);
+			this.labelToPage[nodeId] = page.id;
+			this.refreshLabelMessageLinkCache(nodeId, storedMessageId, node);
+			keysLoaded.add(storedMessageId);
+			hydrated += 1;
+		}
+		return { valid: true, hydrated };
+	}
 
 	firstTextnodeInViewport: undefined | string;
 
-	private refreshLabelMessageLinkCache(textNodeId: string, messageId: string | undefined) {
+	private refreshLabelMessageLinkCache(
+		textNodeId: string,
+		messageId: string | undefined,
+		textNode?: BaseNode,
+	) {
 		const currentKey = this.labelToMessage[textNodeId];
 		if (messageId === undefined || messageId === "") {
 			if (currentKey) {
 				this.messageStore!.messageIdToLabels[currentKey]!.delete(textNodeId);
-				return currentKey;
+				delete this.labelToMessage[textNodeId];
 			}
-			return undefined;
+			this.persistPageLink(textNodeId, undefined, textNode);
+			return currentKey;
 		}
 
 		if (!this.messageStore!.messageIdToLabels[messageId]) {
 			this.messageStore!.messageIdToLabels[messageId] = new Set<string>();
 		}
 		if (this.messageStore!.messageIdToLabels[messageId].has(textNodeId)) {
+			if (textNode) this.persistPageLink(textNodeId, messageId, textNode);
 			return undefined;
 		}
 		this.messageStore!.messageIdToLabels[messageId].add(textNodeId);
 		this.labelToMessage[textNodeId] = messageId;
+		const resolvedTextNode = textNode ?? figma.getNodeById(textNodeId);
+		if (resolvedTextNode) this.persistPageLink(textNodeId, messageId, resolvedTextNode);
 
 		// Update the messageId in the virtual tree node
 		const virtualNode = this.virtualTree.getVirtualNode(textNodeId);
@@ -280,11 +350,17 @@ export default class LocalizedLabelManager {
 					if (createdNode.type === "TEXT") {
 						const localizedLabel = this.toLocalizedLabelOrUndefined(createdNode as TextNode);
 						if (localizedLabel) {
-							this.virtualTree.addNode(createdNode, createdNode.id);
+							this.virtualTree.addNode(
+								createdNode,
+								createdNode.id,
+								undefined,
+								localizedLabel.messageId,
+							);
 							if (localizedLabel.messageId) {
 								const previousKey = this.refreshLabelMessageLinkCache(
 									localizedLabel.nodeId,
 									localizedLabel.messageId,
+									createdNode,
 								);
 								if (previousKey !== localizedLabel.messageId) {
 									if (previousKey) {
@@ -296,6 +372,7 @@ export default class LocalizedLabelManager {
 								const previousKey = this.refreshLabelMessageLinkCache(
 									localizedLabel.nodeId,
 									undefined,
+									createdNode,
 								);
 								if (previousKey) {
 									keysChanged.add(previousKey);
@@ -307,38 +384,48 @@ export default class LocalizedLabelManager {
 						// console.log(`Node created - with children ${change.id}`);
 						const skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
 						figma.skipInvisibleInstanceChildren = true;
-						const createdTextNodes = (createdNode as FrameNode).findAllWithCriteria({
-							types: ["TEXT"],
-						});
-						for (const createdTextNode of createdTextNodes) {
-							const localizedLabel = this.toLocalizedLabelOrUndefined(createdTextNode);
-							if (localizedLabel) {
-								this.virtualTree.addNode(createdNode, createdNode.id);
-								if (localizedLabel.messageId) {
-									const previousKey = this.refreshLabelMessageLinkCache(
-										localizedLabel.nodeId,
+						try {
+							const createdTextNodes = (createdNode as FrameNode).findAllWithCriteria({
+								types: ["TEXT"],
+							});
+							for (const createdTextNode of createdTextNodes) {
+								const localizedLabel = this.toLocalizedLabelOrUndefined(createdTextNode);
+								if (localizedLabel) {
+									this.virtualTree.addNode(
+										createdTextNode,
+										createdTextNode.id,
+										undefined,
 										localizedLabel.messageId,
 									);
-									if (previousKey !== localizedLabel.messageId) {
+									if (localizedLabel.messageId) {
+										const previousKey = this.refreshLabelMessageLinkCache(
+											localizedLabel.nodeId,
+											localizedLabel.messageId,
+											createdTextNode,
+										);
+										if (previousKey !== localizedLabel.messageId) {
+											if (previousKey) {
+												keysChanged.add(previousKey);
+											}
+											keysChanged.add(localizedLabel.messageId);
+										}
+									} else {
+										const previousKey = this.refreshLabelMessageLinkCache(
+											localizedLabel.nodeId,
+											undefined,
+											createdTextNode,
+										);
 										if (previousKey) {
 											keysChanged.add(previousKey);
 										}
-										keysChanged.add(localizedLabel.messageId);
 									}
-								} else {
-									const previousKey = this.refreshLabelMessageLinkCache(
-										localizedLabel.nodeId,
-										undefined,
-									);
-									if (previousKey) {
-										keysChanged.add(previousKey);
-									}
+									createdLabels.push(localizedLabel);
+									// lokalizedLabel.parentIds.forEach((parentId) => frameData.refreshTriggerIds.add(parentId));
 								}
-								createdLabels.push(localizedLabel);
-								// lokalizedLabel.parentIds.forEach((parentId) => frameData.refreshTriggerIds.add(parentId));
 							}
+						} finally {
+							figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
 						}
-						figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
 					}
 					break;
 				}
@@ -387,6 +474,7 @@ export default class LocalizedLabelManager {
 								const previousKey = this.refreshLabelMessageLinkCache(
 									localizedLabel.nodeId,
 									localizedLabel.messageId,
+									changedNode,
 								);
 								if (previousKey !== localizedLabel.messageId!) {
 									if (previousKey) {
@@ -398,6 +486,7 @@ export default class LocalizedLabelManager {
 								const previousKey = this.refreshLabelMessageLinkCache(
 									localizedLabel.nodeId,
 									undefined,
+									changedNode,
 								);
 								if (previousKey) {
 									keysChanged.add(previousKey);
@@ -406,7 +495,7 @@ export default class LocalizedLabelManager {
 							changedLabels.push(localizedLabel);
 						} else {
 							deletedIds.add(changedNode.id);
-							this.refreshLabelMessageLinkCache(changedNode.id, undefined);
+							this.refreshLabelMessageLinkCache(changedNode.id, undefined, changedNode);
 						}
 					} else if ((changedNode as FrameNode).children) {
 						let changedVirtualNodes = [] as VirtualTreeNode[];
@@ -438,6 +527,7 @@ export default class LocalizedLabelManager {
 											const previousKey = this.refreshLabelMessageLinkCache(
 												localizedLabel.nodeId,
 												localizedLabel.messageId,
+												movedFigmaNode,
 											);
 											if (previousKey !== localizedLabel.messageId) {
 												if (previousKey) {
@@ -449,6 +539,7 @@ export default class LocalizedLabelManager {
 											const previousKey = this.refreshLabelMessageLinkCache(
 												localizedLabel.nodeId,
 												undefined,
+												movedFigmaNode,
 											);
 											if (previousKey) {
 												keysChanged.add(previousKey);
@@ -458,7 +549,7 @@ export default class LocalizedLabelManager {
 										// lokalizedLabel.parentIds.forEach((parentId) => frameData.refreshTriggerIds.add(parentId));
 									} else {
 										deletedIds.add(movedFigmaNode.id);
-										this.refreshLabelMessageLinkCache(movedFigmaNode.id, undefined);
+										this.refreshLabelMessageLinkCache(movedFigmaNode.id, undefined, movedFigmaNode);
 									}
 								}
 							}
@@ -515,6 +606,14 @@ export default class LocalizedLabelManager {
 
 	async indexPageTextNodes(page: PageNode, keysLoaded: Set<string>, documentRoot = figma.root) {
 		this.virtualTree.addNode(page, page.id, documentRoot);
+		// Invalidate first: if the plugin stops mid-reconciliation, the next open must not
+		// mistake the partially rewritten entries for a complete warm hint.
+		page.setPluginData(LocalizedLabelManager.pageLinkIndexVersionKey, "");
+		const staleDurableKeys = new Set(
+			page
+				.getPluginDataKeys()
+				.filter((key) => key.startsWith(LocalizedLabelManager.pageLinkIndexPrefix)),
+		);
 		const textNodes = page.findAllWithCriteria({ types: ["TEXT"] });
 		for (let index = 0; index < textNodes.length; index++) {
 			const textNode = textNodes[index];
@@ -522,8 +621,9 @@ export default class LocalizedLabelManager {
 			this.virtualTree.addNode(textNode, textNode.id, undefined, messageId);
 			this.textNodeCount += 1;
 			if (messageId) {
+				staleDurableKeys.delete(`${LocalizedLabelManager.pageLinkIndexPrefix}${textNode.id}`);
 				this.linkedTextNodeCount += 1;
-				const previousMessage = this.refreshLabelMessageLinkCache(textNode.id, messageId);
+				const previousMessage = this.refreshLabelMessageLinkCache(textNode.id, messageId, textNode);
 				if (previousMessage) keysLoaded.add(previousMessage);
 				keysLoaded.add(messageId);
 			}
@@ -531,6 +631,11 @@ export default class LocalizedLabelManager {
 				await new Promise((resolve) => setTimeout(resolve, 0));
 			}
 		}
+		for (const staleKey of staleDurableKeys) page.setPluginData(staleKey, "");
+		page.setPluginData(
+			LocalizedLabelManager.pageLinkIndexVersionKey,
+			LocalizedLabelManager.pageLinkIndexVersion,
+		);
 		return textNodes.length;
 	}
 
@@ -551,8 +656,8 @@ export default class LocalizedLabelManager {
 			}
 			await new Promise((resolve) => setTimeout(resolve, 0));
 		}
-		figmaDocument.ui.postMessage(this.linksLoadedMessage(keysLoaded));
-		if (failures.length) throw new AggregateError(failures, "One or more Figma pages failed to index");
+		if (failures.length)
+			throw new AggregateError(failures, "One or more Figma pages failed to index");
 	}
 
 	async waitForBackgroundIndex() {
@@ -562,33 +667,51 @@ export default class LocalizedLabelManager {
 	async fillUpCache(onCurrentPageReady?: () => void) {
 		const start = Date.now();
 		const keysLoaded = new Set<string>();
-		let totalNodesProcessed = 0;
 
 		try {
-			// Start by processing the current page first
+			// Make the UI interactive before reading page metadata or discovering nodes.
 			const { currentPage } = figma;
 			this.virtualTree.addNode(figma.root, figma.root.id);
 			this.virtualTree.addNode(currentPage, currentPage.id, figma.root);
-			const nodesProcessedInCurrentPage = await this.indexPageTextNodes(currentPage, keysLoaded);
-			totalNodesProcessed += nodesProcessedInCurrentPage;
 			console.log(
-				`fillUpCache - Current page processed, processed ${nodesProcessedInCurrentPage} nodes, took ${Date.now() - start}ms`,
+				`fillUpCache - Initial readiness published without scanning, took ${Date.now() - start}ms`,
 			);
 			this.postLinksLoadedMessage(keysLoaded);
 			onCurrentPageReady?.();
 
-			// Other pages never block current-page readiness and are indexed cooperatively.
-			this.backgroundIndexPromise ??= this.indexOtherPages(figma, currentPage.id, keysLoaded).finally(
-				() => {
-					this.backgroundIndexPromise = undefined;
-				},
-			);
+			// Publish an O(1) provisional state before touching page metadata. After a task yield,
+			// hydrate the durable O(K + L) hint, then reconcile copies/closed-plugin edits.
+			this.backgroundIndexPromise = Promise.resolve()
+				.then(() => new Promise((resolve) => setTimeout(resolve, 0)))
+				.then(async () => {
+					const failures: unknown[] = [];
+					try {
+						await this.hydratePageLinkIndex(currentPage, keysLoaded);
+						this.postLinksLoadedMessage(keysLoaded);
+					} catch (error) {
+						failures.push(error);
+						console.error(`Failed to hydrate current Figma page ${currentPage.id}`, error);
+					}
+					try {
+						await this.indexPageTextNodes(currentPage, keysLoaded);
+					} catch (error) {
+						failures.push(error);
+						console.error(`Failed to reconcile current Figma page ${currentPage.id}`, error);
+					}
+					try {
+						await this.indexOtherPages(figma, currentPage.id, keysLoaded);
+					} catch (error) {
+						failures.push(error);
+					}
+					this.postLinksLoadedMessage(keysLoaded);
+					if (failures.length)
+						throw new AggregateError(failures, "Figma page-link reconciliation failed");
+				});
 			void this.backgroundIndexPromise.catch((error) =>
 				console.error("Background page indexing failed", error),
 			);
 
 			figma.root.setPluginData("loadingTime", (Date.now() - start).toString());
-
 		} catch (error) {
 			console.error("fillUpCache - Error:", error);
 		}
@@ -645,7 +768,7 @@ export default class LocalizedLabelManager {
 		this.virtualTree.addNode(textNode, textNodeId, parentNode, messageId);
 		if (messageId) {
 			this.linkedTextNodeCount += 1;
-			const previousMessage = this.refreshLabelMessageLinkCache(textNodeId, messageId);
+			const previousMessage = this.refreshLabelMessageLinkCache(textNodeId, messageId, textNode);
 			if (previousMessage) {
 				keysLoaded.add(previousMessage);
 				this.virtualTree.addNode(textNode, textNodeId);
@@ -792,7 +915,7 @@ export default class LocalizedLabelManager {
 			if (!localizedLabel || localizedLabel.messageId !== messageId) {
 				indexedIds.delete(nodeId);
 				if (localizedLabel?.messageId)
-					this.refreshLabelMessageLinkCache(nodeId, localizedLabel.messageId);
+					this.refreshLabelMessageLinkCache(nodeId, localizedLabel.messageId, figmaNode);
 				continue;
 			}
 

@@ -67,4 +67,182 @@ describe("bounded Figma traversal", () => {
 			new Set([richText.id]),
 		);
 	});
+
+	test("hydrates a complete durable page index without scanning unrelated text", async () => {
+		const { figma, page, richText, sibling } = createTranslationFixture();
+		Object.assign(globalThis, { figma });
+		page.setPluginData("prt_pli_v", "1");
+		page.setPluginData(`prt_pli__${richText.id}`, "checkout.greeting");
+		page.setPluginData(`prt_pli__${sibling.id}`, "checkout.greeting");
+		for (let index = 0; index < 1_000; index++)
+			page.appendChild(new FakeTextNode(`Unrelated ${index}`, `Unrelated ${index}`, `90:${index}`));
+		const manager = new LocalizedLabelManager();
+		(manager as any).messageStore = { messageIdToLabels: {} };
+		const before = { ...figma.counters };
+		const keys = new Set<string>();
+		expect(await manager.hydratePageLinkIndex(page as any, keys)).toEqual({
+			valid: true,
+			hydrated: 2,
+		});
+		expect(figma.counters.traversedNodes - before.traversedNodes).toBe(0);
+		expect(figma.counters.nodeLookups - before.nodeLookups).toBe(2);
+		expect(keys).toEqual(new Set(["checkout.greeting"]));
+	});
+
+	test("rejects incomplete indexes and prunes stale durable entries", async () => {
+		const { figma, page, richText } = createTranslationFixture();
+		Object.assign(globalThis, { figma });
+		page.setPluginData(`prt_pli__${richText.id}`, "checkout.greeting");
+		const manager = new LocalizedLabelManager();
+		(manager as any).messageStore = { messageIdToLabels: {} };
+		expect(await manager.hydratePageLinkIndex(page as any, new Set())).toEqual({
+			valid: false,
+			hydrated: 0,
+		});
+		page.setPluginData("prt_pli_v", "1");
+		page.setPluginData("prt_pli__missing:0", "checkout.missing");
+		expect(await manager.hydratePageLinkIndex(page as any, new Set())).toEqual({
+			valid: true,
+			hydrated: 1,
+		});
+		expect(page.getPluginData("prt_pli__missing:0")).toBe("");
+	});
+
+	test("publishes a warm hint, then reconciles links added while Parrot was closed", async () => {
+		const { figma, page, richText, sibling } = createTranslationFixture();
+		Object.assign(globalThis, { figma });
+		page.setPluginData("prt_pli_v", "1");
+		page.setPluginData(`prt_pli__${richText.id}`, "checkout.greeting");
+		sibling.setPluginData("mn", "checkout.added-while-closed");
+		const posted: any[] = [];
+		Object.assign(figma, { ui: { postMessage: (message: any) => posted.push(message) } });
+		const manager = new LocalizedLabelManager();
+		(manager as any).messageStore = { messageIdToLabels: {} };
+
+		await manager.fillUpCache();
+		expect(posted.at(0).keys).toEqual([]);
+		await manager.waitForBackgroundIndex();
+		expect(posted.at(-1).keys.sort()).toEqual(["checkout.added-while-closed", "checkout.greeting"]);
+		expect(page.getPluginData(`prt_pli__${sibling.id}`)).toBe("checkout.added-while-closed");
+	});
+
+	test("publishes readiness in O(1) before reading a large warm index", async () => {
+		const { figma, page } = createTranslationFixture();
+		Object.assign(globalThis, { figma });
+		page.setPluginData("prt_pli_v", "1");
+		for (let index = 0; index < 5_000; index++)
+			page.appendChild(new FakeTextNode(`Unrelated ${index}`, `Unrelated ${index}`, `95:${index}`));
+		for (let index = 0; index < 1_000; index++)
+			page.setPluginData(`prt_pli__missing:${index}`, `message.${index}`);
+		const posted: any[] = [];
+		Object.assign(figma, { ui: { postMessage: (message: any) => posted.push(message) } });
+		const manager = new LocalizedLabelManager();
+		(manager as any).messageStore = { messageIdToLabels: {} };
+		const before = { ...figma.counters };
+		let readsAtReady = -1;
+		let traversalsAtReady = -1;
+		let lookupsAtReady = -1;
+		await manager.fillUpCache(() => {
+			readsAtReady = figma.counters.pluginDataReads - before.pluginDataReads;
+			traversalsAtReady = figma.counters.traversedNodes - before.traversedNodes;
+			lookupsAtReady = figma.counters.nodeLookups - before.nodeLookups;
+		});
+		expect(readsAtReady).toBe(0);
+		expect(traversalsAtReady).toBe(0);
+		expect(lookupsAtReady).toBe(0);
+		expect(figma.counters.traversedNodes - before.traversedNodes).toBe(0);
+		expect(posted.at(0).keys).toEqual([]);
+		await manager.waitForBackgroundIndex();
+	});
+
+	test("maintains durable links for relink, unlink, and cross-page moves", async () => {
+		const { figma, page, richText } = createTranslationFixture();
+		const destination = figma.addPage("Destination", "30:0");
+		Object.assign(globalThis, { figma });
+		Object.assign(figma, { ui: { postMessage: () => undefined } });
+		const manager = new LocalizedLabelManager();
+		(manager as any).messageStore = { messageIdToLabels: {} };
+		(manager as any).toLocalizedLabelOrUndefined = (node: FakeTextNode) => ({
+			nodeId: node.id,
+			messageId: node.getPluginData("mn") || undefined,
+		});
+		await manager.indexPageTextNodes(page as any, new Set());
+
+		richText.setPluginData("mn", "checkout.relinked");
+		manager.forwardDocumentChanges({
+			documentChanges: [
+				{
+					origin: "LOCAL",
+					type: "PROPERTY_CHANGE",
+					id: richText.id,
+					node: richText,
+					properties: ["pluginData"],
+				},
+			],
+		});
+		expect(page.getPluginData(`prt_pli__${richText.id}`)).toBe("checkout.relinked");
+
+		figma.moveNode(richText, destination);
+		manager.forwardDocumentChanges({
+			documentChanges: [
+				{
+					origin: "LOCAL",
+					type: "PROPERTY_CHANGE",
+					id: richText.id,
+					node: richText,
+					properties: ["parent"],
+				},
+			],
+		});
+		expect(page.getPluginData(`prt_pli__${richText.id}`)).toBe("");
+		expect(destination.getPluginData(`prt_pli__${richText.id}`)).toBe("checkout.relinked");
+
+		richText.setPluginData("mn", "");
+		manager.forwardDocumentChanges({
+			documentChanges: [
+				{
+					origin: "LOCAL",
+					type: "PROPERTY_CHANGE",
+					id: richText.id,
+					node: richText,
+					properties: ["pluginData"],
+				},
+			],
+		});
+		expect(destination.getPluginData(`prt_pli__${richText.id}`)).toBe("");
+	});
+
+	test("indexes and deletes every linked descendant of a created subtree", () => {
+		const { figma, page } = createTranslationFixture();
+		Object.assign(globalThis, { figma });
+		Object.assign(figma, { ui: { postMessage: () => undefined } });
+		const manager = new LocalizedLabelManager();
+		(manager as any).messageStore = { messageIdToLabels: {} };
+		(manager as any).toLocalizedLabelOrUndefined = (node: FakeTextNode) => ({
+			nodeId: node.id,
+			messageId: node.getPluginData("mn") || undefined,
+		});
+		const createdFrame = page.appendChild(new FakeFrameNode("Created", "40:0")) as FakeFrameNode;
+		const first = createdFrame.appendChild(
+			new FakeTextNode("First", "First", "41:0"),
+		) as FakeTextNode;
+		const nested = createdFrame.appendChild(new FakeFrameNode("Nested", "42:0")) as FakeFrameNode;
+		const second = nested.appendChild(new FakeTextNode("Second", "Second", "43:0")) as FakeTextNode;
+		first.setPluginData("mn", "created.first");
+		second.setPluginData("mn", "created.second");
+
+		manager.forwardDocumentChanges({
+			documentChanges: [
+				{ origin: "LOCAL", type: "CREATE", id: createdFrame.id, node: createdFrame },
+			],
+		});
+		expect(page.getPluginData(`prt_pli__${first.id}`)).toBe("created.first");
+		expect(page.getPluginData(`prt_pli__${second.id}`)).toBe("created.second");
+
+		manager.forwardDocumentChanges({
+			documentChanges: [{ origin: "LOCAL", type: "DELETE", id: createdFrame.id }],
+		});
+		expect(page.getPluginData(`prt_pli__${first.id}`)).toBe("");
+		expect(page.getPluginData(`prt_pli__${second.id}`)).toBe("");
+	});
 });

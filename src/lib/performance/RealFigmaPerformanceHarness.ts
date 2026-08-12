@@ -5,6 +5,7 @@ export type RealFigmaPerformanceSample = {
 	creationMs: number;
 	scanMs: number;
 	nativeScanMs: number;
+	warmHydrationMs: number;
 	nodesProcessed: number;
 	lookupMs: number;
 	lookupMatches: number;
@@ -83,6 +84,14 @@ export default class RealFigmaPerformanceHarness {
 				const nativeScanStarted = monotonicNow();
 				const nativeNodesProcessed = await nativeManager.indexPageTextNodes(page, new Set());
 				const nativeScanMs = monotonicNow() - nativeScanStarted;
+				const warmManager = new LocalizedLabelManager();
+				(warmManager as any).messageStore = {
+					messageIdToLabels: {},
+					getConfigSync: () => ({ refLanguage: "en" }),
+				};
+				const warmStarted = monotonicNow();
+				const warmIndex = await warmManager.hydratePageLinkIndex(page, new Set());
+				const warmHydrationMs = monotonicNow() - warmStarted;
 				const recursiveManager = new LocalizedLabelManager();
 				(recursiveManager as any).messageStore = {
 					messageIdToLabels: {},
@@ -99,6 +108,8 @@ export default class RealFigmaPerformanceHarness {
 				if (
 					scan.nodesProcessed !== size ||
 					nativeNodesProcessed !== size ||
+					!warmIndex.valid ||
+					warmIndex.hydrated !== expectedMatches ||
 					matches.length !== expectedMatches ||
 					JSON.stringify(actualIds) !== JSON.stringify([...matchingIds].sort())
 				) {
@@ -111,6 +122,7 @@ export default class RealFigmaPerformanceHarness {
 					creationMs,
 					scanMs,
 					nativeScanMs,
+					warmHydrationMs,
 					nodesProcessed: scan.nodesProcessed,
 					lookupMs,
 					lookupMatches: matches.length,

@@ -58,7 +58,7 @@ describe("Big-O performance gates", () => {
 			expect(figma.counters.exports).toBe(0);
 			expect(figma.counters.nodeLookups).toBe(0);
 			expect(result).toBe(size);
-			expect(operations).toBe(size);
+			expect(operations).toBe(size + Math.ceil(size / 2));
 			expect(Object.values((manager as any).messageStore.messageIdToLabels)).toHaveLength(2);
 			expect((manager as any).messageStore.messageIdToLabels["message.0"].size).toBe(
 				Math.ceil(size / 4),
@@ -135,5 +135,61 @@ describe("Big-O performance gates", () => {
 		}
 		assertLinear(samples);
 		console.table(samples);
+	});
+
+	test("warm startup is O(linked labels), independent of unrelated text", async () => {
+		for (const linkedCount of [0, 1, 10, 100, 1_000]) {
+			const figma = new FakeFigmaDocument();
+			Object.assign(globalThis, { figma });
+			const page = figma.addPage("Page");
+			page.setPluginData("prt_pli_v", "1");
+			for (let index = 0; index < 5_000; index++) {
+				const text = page.appendChild(
+					new FakeTextNode(`Cell ${index}`, `Cell ${index}`, `warm:${linkedCount}:${index}`),
+				) as FakeTextNode;
+				if (index < linkedCount) {
+					text.setPluginData("mn", `message.${index}`);
+					page.setPluginData(`prt_pli__${text.id}`, `message.${index}`);
+				}
+			}
+			const manager = new LocalizedLabelManager();
+			(manager as any).messageStore = { messageIdToLabels: {} };
+			const before = { ...figma.counters };
+			const warmIndex = await manager.hydratePageLinkIndex(page as any, new Set());
+			expect(warmIndex).toEqual({ valid: true, hydrated: linkedCount });
+			expect(figma.counters.traversedNodes - before.traversedNodes).toBe(0);
+			expect(figma.counters.nodeLookups - before.nodeLookups).toBe(linkedCount);
+			expect(figma.counters.pluginDataReads - before.pluginDataReads).toBe(1 + linkedCount * 3);
+			expect(figma.counters.pluginDataKeysEnumerated - before.pluginDataKeysEnumerated).toBe(
+				linkedCount + 1,
+			);
+		}
+	});
+
+	test("warm startup key enumeration is O(page metadata), independent of text", async () => {
+		for (const unrelatedKeyCount of [0, 100, 1_000]) {
+			const figma = new FakeFigmaDocument();
+			Object.assign(globalThis, { figma });
+			const page = figma.addPage("Page");
+			page.setPluginData("prt_pli_v", "1");
+			for (let index = 0; index < 10; index++) {
+				const text = page.appendChild(new FakeTextNode(`Linked ${index}`)) as FakeTextNode;
+				text.setPluginData("mn", `message.${index}`);
+				page.setPluginData(`prt_pli__${text.id}`, `message.${index}`);
+			}
+			for (let index = 0; index < unrelatedKeyCount; index++)
+				page.setPluginData(`unrelated.${index}`, "value");
+			const manager = new LocalizedLabelManager();
+			(manager as any).messageStore = { messageIdToLabels: {} };
+			const before = { ...figma.counters };
+			expect(await manager.hydratePageLinkIndex(page as any, new Set())).toEqual({
+				valid: true,
+				hydrated: 10,
+			});
+			expect(figma.counters.pluginDataKeysEnumerated - before.pluginDataKeysEnumerated).toBe(
+				unrelatedKeyCount + 11,
+			);
+			expect(figma.counters.nodeLookups - before.nodeLookups).toBe(10);
+		}
 	});
 });

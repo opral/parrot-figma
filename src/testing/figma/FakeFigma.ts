@@ -44,7 +44,11 @@ export class FakeNode {
 	}
 
 	getPluginDataKeys() {
-		return [...this.pluginData.entries()].filter(([, value]) => value !== "").map(([key]) => key);
+		const keys = [...this.pluginData.entries()]
+			.filter(([, value]) => value !== "")
+			.map(([key]) => key);
+		if (this.document) this.document.counters.pluginDataKeysEnumerated += keys.length;
+		return keys;
 	}
 
 	setPluginData(key: string, value: string) {
@@ -96,12 +100,7 @@ export class FakeTextNode extends FakeNode {
 	private value: string;
 	readonly ranges: FakeTextRange[];
 
-	constructor(
-		characters: string,
-		name = characters,
-		id?: string,
-		ranges?: FakeTextRange[],
-	) {
+	constructor(characters: string, name = characters, id?: string, ranges?: FakeTextRange[]) {
 		super("TEXT", name, id);
 		this.value = characters;
 		this.ranges = ranges ?? [createTextRange(0, characters.length)];
@@ -141,7 +140,10 @@ export class FakeTextNode extends FakeNode {
 	}
 
 	getStyledTextSegments() {
-		return this.ranges.map((range) => ({ ...range, characters: this.value.slice(range.start, range.end) }));
+		return this.ranges.map((range) => ({
+			...range,
+			characters: this.value.slice(range.start, range.end),
+		}));
 	}
 
 	setRangeListOptions(start: number, end: number, value: FakeTextRange["listOptions"]) {
@@ -293,6 +295,7 @@ export class FakeFigmaDocument {
 	readonly counters = {
 		nodeLookups: 0,
 		pluginDataReads: 0,
+		pluginDataKeysEnumerated: 0,
 		fontLoads: 0,
 		fontLists: 0,
 		mutations: 0,
@@ -313,6 +316,16 @@ export class FakeFigmaDocument {
 		this.root.appendChild(page);
 		this.currentPage ??= page;
 		return page;
+	}
+
+	moveNode(node: FakeNode, newParent: FakeChildrenNode) {
+		const oldParent = node.parent;
+		if (!oldParent) throw new Error(`Cannot move detached fake Figma node ${node.id}`);
+		const oldIndex = oldParent.children.indexOf(node);
+		if (oldIndex === -1) throw new Error(`Fake Figma node ${node.id} is missing from its parent`);
+		oldParent.children.splice(oldIndex, 1);
+		newParent.children.push(node);
+		node.parent = newParent;
 	}
 
 	register(node: FakeNode) {
@@ -338,7 +351,10 @@ export class FakeFigmaDocument {
 		this.listeners.set(type, listeners);
 	}
 
-	off(type: "documentchange", listener: (event: { documentChanges: FakeDocumentChange[] }) => void) {
+	off(
+		type: "documentchange",
+		listener: (event: { documentChanges: FakeDocumentChange[] }) => void,
+	) {
 		this.listeners.get(type)?.delete(listener);
 	}
 
@@ -363,10 +379,7 @@ export class FakeFigmaDocument {
 
 	async loadFontAsync(font: FakeFontName) {
 		this.counters.fontLoads++;
-		if (
-			this.failOnFont?.family === font.family &&
-			this.failOnFont.style === font.style
-		) {
+		if (this.failOnFont?.family === font.family && this.failOnFont.style === font.style) {
 			throw new Error(`Missing font ${font.family} ${font.style}`);
 		}
 		this.loadedFonts.push(font);
@@ -401,7 +414,11 @@ export class FakeFigmaDocument {
 				name: node.name,
 				pluginData: Object.fromEntries([...node.pluginData.entries()].sort()),
 				...(node instanceof FakeTextNode
-					? { characters: node.characters, ranges: structuredClone(node.ranges), autoRename: node.autoRename }
+					? {
+							characters: node.characters,
+							ranges: structuredClone(node.ranges),
+							autoRename: node.autoRename,
+						}
 					: {}),
 			}))
 			.sort((a, b) => a.id.localeCompare(b.id));

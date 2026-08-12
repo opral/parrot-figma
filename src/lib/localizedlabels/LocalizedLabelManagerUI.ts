@@ -7,7 +7,10 @@ import {
 } from "../message/LegacyMessage";
 import { MessageLinkState, LocalizedLabel } from "./LocalizedLabel";
 import { Plural } from "../message/variants/Plural";
-import LocalizedLabelManager, { SandboxUpdateLabelProperties } from "./LocalizedLabelManager";
+import LocalizedLabelManager, {
+	SandboxUpdateLabelProperties,
+	type FrameMutationSnapshot,
+} from "./LocalizedLabelManager";
 import { Locale } from "../message/variants/Locale";
 import MessageStoreMemory from "../message/store/MessageStoreMemory";
 import ChangeEvent from "./ChangeEvent";
@@ -147,7 +150,10 @@ export default class LocalizedLabelManagerUI
 	}
 
 	private localizedLabelMangerSandbox: LocalizedLabelManager;
-	private readonly frameTranslationCoordinator = new FrameTranslationCoordinator();
+	private readonly frameTranslationCoordinator = new FrameTranslationCoordinator<{
+		figma: FrameMutationSnapshot;
+		messages: ReturnType<MessageStoreMemory["snapshotMessages"]>;
+	}>();
 
 	messageStore: MessageStoreMemory;
 
@@ -304,10 +310,43 @@ export default class LocalizedLabelManagerUI
 	async setFrameLanguage(frameId: string, targetLanguage: Locale, translator: TranslatorMachine) {
 		const frame = this.cachedFrames[frameId];
 		if (!frame) throw new Error(`Frame ${frameId} is no longer available`);
+		const labelIds = [...frame.localizedLabelIds];
 
 		return this.frameTranslationCoordinator.run({
 			frameId,
-			labelIds: [...frame.localizedLabelIds],
+			labelIds,
+			lockMutations: async (locked) => {
+				document.body.inert = locked;
+				document.body.dataset.parrotTransactionLocked = locked ? "true" : "false";
+				if (!locked) {
+					await this.localizedLabelMangerSandbox.finishFrameMutation();
+					this.messageStore.finishMessageTransaction();
+				}
+			},
+			capture: async () => {
+				const messages = this.messageStore.snapshotMessages(
+					labelIds.map((id) => this.cachedLocalisedLabels[id]?.messageId),
+				);
+				this.messageStore.beginMessageTransaction(messages);
+				return {
+					figma: await this.localizedLabelMangerSandbox.captureFrameMutation(frameId, [
+						...new Set([
+							...labelIds,
+							...(
+								await Promise.all(
+									labelIds.map(async (id) => {
+										const messageId = this.cachedLocalisedLabels[id]?.messageId;
+										return messageId
+											? (await this.getWithMessage(messageId)).map((label) => label.nodeId)
+											: [];
+									}),
+								)
+							).flat(),
+						]),
+					]),
+					messages,
+				};
+			},
 			applyLabel: async (localizedLabelId) => {
 				const localizedLabel = this.cachedLocalisedLabels[localizedLabelId];
 				if (!localizedLabel || localizedLabel.rootFrameId !== frameId) {
@@ -326,6 +365,12 @@ export default class LocalizedLabelManagerUI
 					language: targetLanguage,
 				}),
 			commitUndo: () => this.localizedLabelMangerSandbox.commitUndo(),
+			rollback: async (snapshot) => {
+				await this.localizedLabelMangerSandbox.assertFrameMutationUnchanged(snapshot.figma);
+				await this.messageStore.assertTransactionMessagesUnchanged();
+				await this.localizedLabelMangerSandbox.restoreFrameMutation(snapshot.figma);
+				await this.messageStore.restoreMessages(snapshot.messages);
+			},
 		});
 	}
 

@@ -61,6 +61,22 @@ export interface DeltaOp {
 	ignoreForLabelStyle?: boolean;
 }
 
+export type FrameMutationSnapshot = {
+	expectedFingerprint: string;
+	expectedById: Record<string, string>;
+	remoteConflict: boolean;
+	frameId: string;
+	framePluginData: Record<string, string>;
+	labels: Array<{
+		id: string;
+		name: string;
+		autoRename: boolean;
+		characters: string;
+		pluginData: Record<string, string>;
+		segments: any[];
+	}>;
+};
+
 interface CachedTextNode extends TextNode {
 	_cachedNode?: TextNode;
 }
@@ -69,6 +85,9 @@ export const MARKER_CHARACTER = "​";
 // eslint-disable-next-line no-irregular-whitespace -- this is on purpose to have a zero width space in figma
 // export const MARKER_CHARACTER = 'X​';
 export default class LocalizedLabelManager {
+	private transactionNodeIds = new Set<string>();
+	private transactionExpectedFingerprint: string | undefined;
+	private activeFrameMutationSnapshot: FrameMutationSnapshot | undefined;
 	private containerSizeThreashold = 3000;
 
 	public proxyClassName = "LocalizedLabelManager";
@@ -249,6 +268,10 @@ export default class LocalizedLabelManager {
 		const createdLabels = [] as LocalizedLabel[];
 		const keysChanged = new Set<string>();
 		for (const change of event.documentChanges) {
+			if (change.origin === "REMOTE" && this.transactionNodeIds.has(change.id)) {
+				if (this.activeFrameMutationSnapshot)
+					this.activeFrameMutationSnapshot.remoteConflict = true;
+			}
 			switch (change.type) {
 				case "CREATE": {
 					if (change.node.removed) {
@@ -848,6 +871,7 @@ export default class LocalizedLabelManager {
 				frame.setPluginData(this.sampleValuesDataKey, "");
 			}
 		}
+		this.refreshTransactionExpectation(frameNodeId);
 
 		// console.log((new Date()).getTime() + 'execution finished - puting result into message');
 	}
@@ -1158,6 +1182,7 @@ export default class LocalizedLabelManager {
 				);
 			}
 		} finally {
+			this.refreshTransactionExpectation(nodeId);
 			// allow this function to return sucessfully before we start the next update in the queue
 			setTimeout(() => {
 				const nextUpdateResolver = this.labelUpdateQueue[nodeId].shift();
@@ -1174,6 +1199,202 @@ export default class LocalizedLabelManager {
 
 	async commitUndo() {
 		return figma.commitUndo();
+	}
+
+	async captureFrameMutation(frameId: string, labelIds: string[]): Promise<FrameMutationSnapshot> {
+		this.transactionNodeIds = new Set([frameId, ...labelIds]);
+		const frame = figma.getNodeById(frameId)! as FrameNode;
+		const snapshot: FrameMutationSnapshot = {
+			expectedFingerprint: "",
+			expectedById: {},
+			remoteConflict: false,
+			frameId,
+			framePluginData: Object.fromEntries(
+				frame.getPluginDataKeys().map((key) => [key, frame.getPluginData(key)]),
+			),
+			labels: labelIds.map((id) => {
+				const node = figma.getNodeById(id)! as TextNode;
+				const segments = node.getStyledTextSegments([
+					"fontName",
+					"fontSize",
+					"fills",
+					"textCase",
+					"letterSpacing",
+					"textStyleId",
+					"fillStyleId",
+					"textDecoration",
+					"textDecorationStyle",
+					"textDecorationOffset",
+					"textDecorationThickness",
+					"textDecorationColor",
+					"textDecorationSkipInk",
+					"hyperlink",
+					"listOptions",
+					"listSpacing",
+					"indentation",
+					"paragraphIndent",
+					"lineHeight",
+					"paragraphSpacing",
+					"boundVariables",
+					"openTypeFeatures",
+					"textStyleOverrides",
+				]);
+				if (
+					segments.some(
+						(segment) =>
+							Object.keys(segment.openTypeFeatures ?? {}).length > 0 ||
+							segment.textStyleOverrides?.length > 0 ||
+							Boolean(segment.textStyleId) ||
+							Boolean(segment.fillStyleId) ||
+							Object.keys(segment.boundVariables ?? {}).length > 0,
+					)
+				) {
+					throw new Error(
+						`Label ${id} uses a text/fill style, variable binding, OpenType feature, or style override that cannot be rolled back safely. Detach it before translating the frame.`,
+					);
+				}
+				return {
+					id,
+					name: node.name,
+					autoRename: node.autoRename,
+					characters: node.characters,
+					pluginData: Object.fromEntries(
+						node.getPluginDataKeys().map((key) => [key, node.getPluginData(key)]),
+					),
+					segments,
+				};
+			}),
+		};
+		snapshot.expectedFingerprint = this.frameMutationFingerprint(snapshot);
+		for (const id of this.transactionNodeIds) snapshot.expectedById[id] = this.nodeFingerprint(id);
+		this.transactionExpectedFingerprint = snapshot.expectedFingerprint;
+		this.activeFrameMutationSnapshot = snapshot;
+		return snapshot;
+	}
+
+	async restoreFrameMutation(snapshot: FrameMutationSnapshot) {
+		await Promise.all(
+			snapshot.labels.flatMap((saved) =>
+				saved.segments.map((segment) => figma.loadFontAsync(segment.fontName as FontName)),
+			),
+		);
+		if (
+			snapshot.remoteConflict ||
+			this.frameMutationFingerprint(snapshot) !== this.transactionExpectedFingerprint
+		) {
+			throw new Error("Translation rollback conflicted with a newer canvas or collaborator edit");
+		}
+		const frame = figma.getNodeById(snapshot.frameId)! as FrameNode;
+		this.restorePluginData(frame, snapshot.framePluginData);
+		for (const saved of snapshot.labels) {
+			const node = figma.getNodeById(saved.id)! as TextNode;
+			node.characters = saved.characters;
+			for (const segment of saved.segments) {
+				const { start, end } = segment;
+				node.setRangeFontName(start, end, segment.fontName);
+				node.setRangeFontSize(start, end, segment.fontSize);
+				node.setRangeFills(start, end, segment.fills);
+				node.setRangeTextCase(start, end, segment.textCase);
+				node.setRangeLetterSpacing(start, end, segment.letterSpacing);
+				node.setRangeTextDecoration(start, end, segment.textDecoration);
+				if (segment.textDecorationStyle)
+					node.setRangeTextDecorationStyle(start, end, segment.textDecorationStyle);
+				if (segment.textDecorationOffset)
+					node.setRangeTextDecorationOffset(start, end, segment.textDecorationOffset);
+				if (segment.textDecorationThickness)
+					node.setRangeTextDecorationThickness(start, end, segment.textDecorationThickness);
+				if (segment.textDecorationColor)
+					node.setRangeTextDecorationColor(start, end, segment.textDecorationColor);
+				if (segment.textDecorationSkipInk !== null)
+					node.setRangeTextDecorationSkipInk(start, end, segment.textDecorationSkipInk);
+				node.setRangeHyperlink(start, end, segment.hyperlink);
+				node.setRangeListOptions(start, end, segment.listOptions);
+				node.setRangeListSpacing(start, end, segment.listSpacing);
+				node.setRangeIndentation(start, end, segment.indentation);
+				node.setRangeParagraphIndent(start, end, segment.paragraphIndent);
+				node.setRangeLineHeight(start, end, segment.lineHeight);
+				node.setRangeParagraphSpacing(start, end, segment.paragraphSpacing);
+				node.setRangeTextStyleId(start, end, segment.textStyleId);
+				node.setRangeFillStyleId(start, end, segment.fillStyleId);
+			}
+			node.name = saved.name;
+			node.autoRename = saved.autoRename;
+			this.restorePluginData(node, saved.pluginData);
+		}
+	}
+
+	async assertFrameMutationUnchanged(snapshot: FrameMutationSnapshot) {
+		if (
+			snapshot.remoteConflict ||
+			this.frameMutationFingerprint(snapshot) !== this.transactionExpectedFingerprint
+		)
+			throw new Error("Translation rollback conflicted with a newer canvas or collaborator edit");
+	}
+
+	private refreshTransactionExpectation(nodeId: string) {
+		if (!this.activeFrameMutationSnapshot) return;
+		this.activeFrameMutationSnapshot.expectedById[nodeId] = this.nodeFingerprint(nodeId);
+		this.transactionExpectedFingerprint = JSON.stringify(
+			[...this.transactionNodeIds].map((id) => this.activeFrameMutationSnapshot!.expectedById[id]),
+		);
+	}
+
+	private frameMutationFingerprint(snapshot: FrameMutationSnapshot) {
+		return JSON.stringify([...this.transactionNodeIds].map((id) => this.nodeFingerprint(id)));
+	}
+
+	private nodeFingerprint(id: string) {
+		const node = figma.getNodeById(id);
+		if (!node) return JSON.stringify([id, null]);
+		return JSON.stringify([
+			id,
+			node.name,
+			node.type === "TEXT" ? (node as TextNode).autoRename : null,
+			Object.fromEntries(node.getPluginDataKeys().map((key) => [key, node.getPluginData(key)])),
+			node.type === "TEXT"
+				? [
+						(node as TextNode).characters,
+						(node as TextNode).getStyledTextSegments([
+							"fontName",
+							"fontSize",
+							"fills",
+							"textCase",
+							"letterSpacing",
+							"textStyleId",
+							"fillStyleId",
+							"textDecoration",
+							"textDecorationStyle",
+							"textDecorationOffset",
+							"textDecorationThickness",
+							"textDecorationColor",
+							"textDecorationSkipInk",
+							"hyperlink",
+							"listOptions",
+							"listSpacing",
+							"indentation",
+							"paragraphIndent",
+							"lineHeight",
+							"paragraphSpacing",
+							"boundVariables",
+							"openTypeFeatures",
+							"textStyleOverrides",
+						]),
+					]
+				: null,
+		]);
+	}
+
+	async finishFrameMutation() {
+		this.transactionNodeIds.clear();
+		this.transactionExpectedFingerprint = undefined;
+		this.activeFrameMutationSnapshot = undefined;
+	}
+
+	private restorePluginData(node: BaseNode, values: Record<string, string>) {
+		for (const key of node.getPluginDataKeys()) {
+			if (!(key in values)) node.setPluginData(key, "");
+		}
+		for (const [key, value] of Object.entries(values)) node.setPluginData(key, value);
 	}
 
 	async fixLabelLints(textNodeId: string, lintsToFix: string[]) {

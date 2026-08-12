@@ -90,6 +90,7 @@ document.addEventListener(
 window.addEventListener("keydown", (e) => {
 	if (
 		e.key === "z" &&
+		document.body.dataset.parrotTransactionLocked !== "true" &&
 		!e.shiftKey &&
 		!e.altKey &&
 		!(e.target! as any).classList.contains("cm-content")

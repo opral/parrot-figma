@@ -83,6 +83,15 @@ export class InlangMessageStore {
 		this.getBundleStore().delete(id);
 	}
 
+	async compareAndSwapMessage(expected: Message | undefined, replacement: Message | undefined) {
+		const id = expected?.id ?? replacement?.id;
+		if (!id) return false;
+		if (JSON.stringify(this.getMessage(id)) !== JSON.stringify(expected)) return false;
+		if (replacement) this.getBundleStore().put(legacyMessageToBundle(replacement));
+		else this.getBundleStore().delete(id);
+		return true;
+	}
+
 	async getMessageAsync(messageId: string) {
 		return this.getMessage(messageId);
 	}

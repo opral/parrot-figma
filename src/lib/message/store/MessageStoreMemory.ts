@@ -55,6 +55,8 @@ export type SearchResult = {
 };
 
 export default class MessageStoreMemory extends EventTarget {
+	private transactionMessageIds = new Set<string>();
+	private transactionExpectedMessages: Array<{ id: string; message: Message | undefined }> = [];
 	config: Config | undefined;
 
 	inlangProject: InlangV3Project | undefined;
@@ -508,6 +510,65 @@ export default class MessageStoreMemory extends EventTarget {
 		return this.inlangProject?.getAll();
 	}
 
+	snapshotMessages(ids: Array<string | undefined>) {
+		const uniqueIds = new Set(ids.filter((id): id is string => id !== undefined));
+		return [...uniqueIds].map((id) => ({ id, message: this.inlangProject?.get(id) }));
+	}
+
+	beginMessageTransaction(snapshot: Array<{ id: string; message: Message | undefined }>) {
+		this.transactionMessageIds = new Set(snapshot.map(({ id }) => id));
+		this.transactionExpectedMessages = structuredClone(snapshot);
+	}
+
+	finishMessageTransaction() {
+		this.transactionMessageIds.clear();
+		this.transactionExpectedMessages = [];
+	}
+
+	private setMessageTransactionExpectation(id: string, message: Message | undefined) {
+		if (!this.transactionMessageIds.has(id)) return;
+		const index = this.transactionExpectedMessages.findIndex((saved) => saved.id === id);
+		const expected = { id, message: message ? structuredClone(message) : undefined };
+		if (index === -1) this.transactionExpectedMessages.push(expected);
+		else this.transactionExpectedMessages[index] = expected;
+	}
+
+	async assertTransactionMessagesUnchanged() {
+		await this.assertMessagesMatch(this.transactionExpectedMessages);
+	}
+
+	async assertMessagesMatch(expected: readonly { id: string; message: Message | undefined }[]) {
+		for (const saved of expected) {
+			const live = this.inlangProject?.get(saved.id);
+			const durable = await this.parentKeyStore.getMessageAsync(saved.id);
+			if (
+				JSON.stringify(live) !== JSON.stringify(saved.message) ||
+				JSON.stringify(durable) !== JSON.stringify(saved.message)
+			) {
+				throw new Error(`Translation rollback conflicted with a newer edit to message ${saved.id}`);
+			}
+		}
+	}
+
+	async restoreMessages(snapshot: readonly { id: string; message: Message | undefined }[]) {
+		if (!this.inlangProject) return;
+		for (const saved of snapshot) {
+			const expected =
+				this.transactionExpectedMessages?.find((entry) => entry.id === saved.id) ?? saved;
+			const swapped = await this.parentKeyStore.compareAndSwapMessage(
+				expected.message,
+				saved.message,
+			);
+			if (!swapped)
+				throw new Error(`Translation rollback conflicted with a newer edit to message ${saved.id}`);
+			if (saved.message) {
+				await this.inlangProject.upsert(saved.message);
+			} else {
+				await this.inlangProject.delete(saved.id);
+			}
+		}
+	}
+
 	async createTag() {
 		/* TODO #17 versioning we skip this in inlang for now
     // TODO #18 we update the messages here - shouldn't we wait for the messaage bus instead?
@@ -539,6 +600,7 @@ export default class MessageStoreMemory extends EventTarget {
 			added: [] as string[],
 			changedKeys: [] as string[],
 		};
+		this.setMessageTransactionExpectation(message.id, message);
 
 		changes.changedKeys.push(message.id);
 
@@ -556,6 +618,7 @@ export default class MessageStoreMemory extends EventTarget {
 		await this.parentKeyStore.deleteMessage(id);
 		try {
 			await this.inlangProject?.delete(id);
+			this.setMessageTransactionExpectation(id, undefined);
 		} catch (error) {
 			if (previous) await this.parentKeyStore.saveMessage(previous);
 			throw error;

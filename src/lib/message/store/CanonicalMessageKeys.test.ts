@@ -109,4 +109,47 @@ describe("canonical message keys", () => {
 			await session.close();
 		}
 	});
+
+	test("restores live Inlang messages after a failed Figma transaction", async () => {
+		const original = message("checkout.title");
+		const generated = {
+			...original,
+			variants: [
+				...original.variants,
+				{ languageTag: "de", match: [], pattern: [{ type: "Text" as const, value: "Kasse" }] },
+			],
+		};
+		const session = await InlangV3Project.open({
+			settings: { baseLocale: "en", locales: ["en", "de"], modules: [] },
+			messages: [original],
+		});
+		try {
+			const store = Object.create(MessageStoreMemory.prototype) as MessageStoreMemory;
+			store.inlangProject = session;
+			const durable = new Map([[original.id, original]]);
+			store.parentKeyStore = {
+				saveMessage: async (saved: Message) => void durable.set(saved.id, structuredClone(saved)),
+				deleteMessage: async (id: string) => void durable.delete(id),
+				getMessageAsync: async (id: string) => durable.get(id),
+				compareAndSwapMessage: async (
+					expected: Message | undefined,
+					replacement: Message | undefined,
+				) => {
+					const id = expected?.id ?? replacement?.id;
+					if (!id || JSON.stringify(durable.get(id)) !== JSON.stringify(expected)) return false;
+					if (replacement) durable.set(id, structuredClone(replacement));
+					else durable.delete(id);
+					return true;
+				},
+			} as any;
+			await session.upsert(generated);
+			durable.set(generated.id, generated);
+			store.beginMessageTransaction([{ id: generated.id, message: generated }]);
+			await store.restoreMessages([{ id: original.id, message: original }]);
+			expect(store.getMessage(original.id)).toEqual(original);
+			expect(durable.get(original.id)).toEqual(original);
+		} finally {
+			await session.close();
+		}
+	});
 });

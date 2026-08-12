@@ -197,11 +197,7 @@ export function validateBundleNested(value: unknown): asserts value is BundleNes
 		throw new Error(`Bundle "${value.id}" is missing declarations or messages`);
 	}
 	for (const declaration of value.declarations) {
-		if (
-			!isRecord(declaration) ||
-			declaration.type !== "input-variable" ||
-			typeof declaration.name !== "string"
-		) {
+		if (!isDeclaration(declaration)) {
 			throw new Error(`Bundle "${value.id}" contains an invalid declaration`);
 		}
 	}
@@ -265,20 +261,82 @@ export function validateBundleNested(value: unknown): asserts value is BundleNes
 				throw new Error(`Variant "${variant.id}" must match every selector exactly once`);
 			}
 			for (const element of variant.pattern) {
-				if (
-					!isRecord(element) ||
-					(element.type === "text"
-						? typeof element.value !== "string"
-						: element.type !== "expression" ||
-							!isRecord(element.arg) ||
-							element.arg.type !== "variable-reference" ||
-							typeof element.arg.name !== "string")
-				) {
+				if (!isPatternElement(element)) {
 					throw new Error(`Variant "${variant.id}" contains an invalid pattern`);
 				}
 			}
 		}
 	}
+}
+
+function isDeclaration(value: unknown) {
+	if (!isRecord(value) || typeof value.name !== "string") return false;
+	if (value.type === "input-variable") {
+		return value.annotation === undefined || isFunctionReference(value.annotation);
+	}
+	return value.type === "local-variable" && isExpression(value.value);
+}
+
+function isPatternElement(value: unknown) {
+	if (!isRecord(value)) return false;
+	if (value.type === "text") return typeof value.value === "string";
+	if (value.type === "expression") return isExpression(value);
+	if (
+		value.type === "markup-start" ||
+		value.type === "markup-end" ||
+		value.type === "markup-standalone"
+	) {
+		return (
+			typeof value.name === "string" &&
+			(value.options === undefined ||
+				(Array.isArray(value.options) && value.options.every(isOption))) &&
+			(value.attributes === undefined ||
+				(Array.isArray(value.attributes) && value.attributes.every(isAttribute)))
+		);
+	}
+	return false;
+}
+
+function isExpression(value: unknown) {
+	return (
+		isRecord(value) &&
+		value.type === "expression" &&
+		isExpressionArgument(value.arg) &&
+		(value.annotation === undefined || isFunctionReference(value.annotation))
+	);
+}
+
+function isExpressionArgument(value: unknown) {
+	return (
+		isRecord(value) &&
+		((value.type === "variable-reference" && typeof value.name === "string") ||
+			(value.type === "literal" && typeof value.value === "string"))
+	);
+}
+
+function isFunctionReference(value: unknown) {
+	return (
+		isRecord(value) &&
+		value.type === "function-reference" &&
+		typeof value.name === "string" &&
+		Array.isArray(value.options) &&
+		value.options.every(isOption)
+	);
+}
+
+function isOption(value: unknown) {
+	return isRecord(value) && typeof value.name === "string" && isExpressionArgument(value.value);
+}
+
+function isAttribute(value: unknown) {
+	return (
+		isRecord(value) &&
+		typeof value.name === "string" &&
+		(value.value === true ||
+			(isRecord(value.value) &&
+				value.value.type === "literal" &&
+				typeof value.value.value === "string"))
+	);
 }
 
 function hash(raw: string) {

@@ -52,3 +52,25 @@ reconciliation. In the real-Figma fixture with two linked labels, the warmed hyd
 was below the one-millisecond timer resolution; this is deliberately not claimed as a general
 latency bound for large L. The deterministic gate varies 0–1,000 links with 5,000 total text nodes
 and verifies zero document traversal.
+
+## Batched durable index
+
+The version-3 page index persists reconciliation as bounded base-snapshot shards plus small
+per-label mutation overlays. A fresh cold scan therefore performs O(snapshot bytes / 90KB)
+page-level plugin-data writes; it no longer performs one Figma write per link, and every value stays
+below Figma's 100KB limit. Incremental document changes remain O(C), and a later reconciliation
+folds their overlays into the next snapshot. The deterministic gate covers 5,000 long, multibyte
+message IDs, bounds each shard at 90KB, reopens all 5,000 links, and preserves overlays authored
+while a yielded scan is running.
+
+Measured in Figma Desktop on August 12, 2026, with three fresh fixture pages per size and 1,001
+linked labels in the 5,000-node fixture:
+
+| Text nodes | O(1) readiness | Cold index | Warm hydration | Indexed lookup |
+| ---------- | -------------- | ---------- | -------------- | -------------- |
+| 500        | 0 ms           | 12 ms      | 16 ms          | 1 ms           |
+| 5,000      | 0 ms           | 1,620 ms   | 35 ms          | 1 ms           |
+
+Before batching, the same 5,000-node/1,001-link trial took 4,621 ms in cold indexing. Batching cuts
+that component by about 2.9× and places it below the two-second cold-start target. Fixture creation
+is excluded from every startup number.

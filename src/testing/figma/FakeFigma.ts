@@ -52,6 +52,8 @@ export class FakeNode {
 	}
 
 	setPluginData(key: string, value: string) {
+		const valueBytes = new TextEncoder().encode(value).byteLength;
+		if (valueBytes > 100_000) throw new Error(`Fake Figma plugin data exceeds 100000 bytes`);
 		this.document?.beforeMutation(this, `pluginData:${key}`);
 		if (value === "") this.pluginData.delete(key);
 		else this.pluginData.set(key, value);
@@ -299,6 +301,8 @@ export class FakeFigmaDocument {
 		fontLoads: 0,
 		fontLists: 0,
 		mutations: 0,
+		pluginDataBytesWritten: 0,
+		maxPluginDataValueBytes: 0,
 		undoCommits: 0,
 		traversedNodes: 0,
 		exports: 0,
@@ -404,6 +408,14 @@ export class FakeFigmaDocument {
 	recordMutation(node: FakeNode, property: string, value: unknown) {
 		this.counters.mutations++;
 		this.mutations.push({ nodeId: node.id, property, value });
+		if (property.startsWith("pluginData:") && typeof value === "string") {
+			const bytes = new TextEncoder().encode(value).byteLength;
+			this.counters.pluginDataBytesWritten += bytes;
+			this.counters.maxPluginDataValueBytes = Math.max(
+				this.counters.maxPluginDataValueBytes,
+				bytes,
+			);
+		}
 	}
 
 	snapshot() {

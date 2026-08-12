@@ -130,7 +130,20 @@ export default class LocalizedLabelManager {
 	private labelToPage = {} as { [nodeId: string]: string };
 	private static readonly pageLinkIndexPrefix = "prt_pli__";
 	private static readonly pageLinkIndexVersionKey = "prt_pli_v";
-	private static readonly pageLinkIndexVersion = "1";
+	private static readonly pageLinkIndexSnapshotKey = "prt_pli_s";
+	private static readonly pageLinkIndexSnapshotShardPrefix = "prt_pli_s_";
+	private static readonly pageLinkIndexVersion = "3";
+	private static readonly maxSnapshotShardBytes = 90_000;
+	private static readonly deletedPageLink = "null";
+	private pageLinkOverlayEpoch = new Map<string, number>();
+	private static utf8ByteLength(value: string) {
+		let bytes = 0;
+		for (const character of value) {
+			const codePoint = character.codePointAt(0)!;
+			bytes += codePoint <= 0x7f ? 1 : codePoint <= 0x7ff ? 2 : codePoint <= 0xffff ? 3 : 4;
+		}
+		return bytes;
+	}
 
 	private pageOf(node: BaseNode | null): PageNode | undefined {
 		let current = node;
@@ -153,24 +166,61 @@ export default class LocalizedLabelManager {
 				: undefined);
 		if (!page) return;
 		const key = `${LocalizedLabelManager.pageLinkIndexPrefix}${nodeId}`;
-		if (knownPage && nodePage && knownPage.id !== nodePage.id) knownPage.setPluginData(key, "");
-		const next = messageId ?? "";
-		if (page.getPluginData(key) !== next) page.setPluginData(key, next);
+		const bumpOverlayEpoch = (changedPage: PageNode) => {
+			const epochKey = `${changedPage.id}:${key}`;
+			this.pageLinkOverlayEpoch.set(epochKey, (this.pageLinkOverlayEpoch.get(epochKey) ?? 0) + 1);
+		};
+		if (knownPage && nodePage && knownPage.id !== nodePage.id) {
+			bumpOverlayEpoch(knownPage);
+			knownPage.setPluginData(key, LocalizedLabelManager.deletedPageLink);
+		}
+		const next = messageId ? JSON.stringify(messageId) : LocalizedLabelManager.deletedPageLink;
+		if (page.getPluginData(key) !== next) {
+			bumpOverlayEpoch(page);
+			page.setPluginData(key, next);
+		}
 		if (messageId) this.labelToPage[nodeId] = page.id;
 		else delete this.labelToPage[nodeId];
 	}
 
 	async hydratePageLinkIndex(page: PageNode, keysLoaded: Set<string>) {
-		if (
-			page.getPluginData(LocalizedLabelManager.pageLinkIndexVersionKey) !==
-			LocalizedLabelManager.pageLinkIndexVersion
-		)
+		const version = page.getPluginData(LocalizedLabelManager.pageLinkIndexVersionKey);
+		if (!["1", "2", LocalizedLabelManager.pageLinkIndexVersion].includes(version))
 			return { valid: false, hydrated: 0 };
 		let hydrated = 0;
+		const snapshotEntries = new Map<string, string>();
+		const overlayKeys = new Set<string>();
+		if (version === "2") {
+			const snapshot = page.getPluginData(LocalizedLabelManager.pageLinkIndexSnapshotKey);
+			if (snapshot)
+				for (const entry of JSON.parse(snapshot) as Array<[string, string]>)
+					snapshotEntries.set(entry[0], entry[1]);
+		} else if (version === LocalizedLabelManager.pageLinkIndexVersion) {
+			const manifest = JSON.parse(
+				page.getPluginData(LocalizedLabelManager.pageLinkIndexSnapshotKey),
+			) as { shards: number };
+			if (!Number.isSafeInteger(manifest.shards) || manifest.shards < 0)
+				return { valid: false, hydrated: 0 };
+			for (let index = 0; index < manifest.shards; index++) {
+				const shard = page.getPluginData(
+					`${LocalizedLabelManager.pageLinkIndexSnapshotShardPrefix}${index}`,
+				);
+				if (!shard) return { valid: false, hydrated: 0 };
+				for (const entry of JSON.parse(shard) as Array<[string, string]>)
+					snapshotEntries.set(entry[0], entry[1]);
+			}
+		}
 		for (const key of page.getPluginDataKeys()) {
 			if (!key.startsWith(LocalizedLabelManager.pageLinkIndexPrefix)) continue;
+			overlayKeys.add(key);
 			const nodeId = key.slice(LocalizedLabelManager.pageLinkIndexPrefix.length);
-			const storedMessageId = page.getPluginData(key);
+			const overlay = page.getPluginData(key);
+			if (!overlay) continue;
+			const messageId = version === "1" ? overlay : (JSON.parse(overlay) as string | null);
+			if (messageId) snapshotEntries.set(nodeId, messageId);
+			else snapshotEntries.delete(nodeId);
+		}
+		for (const [nodeId, storedMessageId] of snapshotEntries) {
 			const node = figma.getNodeById(nodeId);
 			if (
 				!node ||
@@ -178,12 +228,13 @@ export default class LocalizedLabelManager {
 				this.pageOf(node)?.id !== page.id ||
 				node.getPluginData(this.messageNameDataKey) !== storedMessageId
 			) {
-				page.setPluginData(key, "");
+				if (overlayKeys.has(`${LocalizedLabelManager.pageLinkIndexPrefix}${nodeId}`))
+					page.setPluginData(`${LocalizedLabelManager.pageLinkIndexPrefix}${nodeId}`, "");
 				continue;
 			}
 			this.virtualTree.addNode(node, node.id, undefined, storedMessageId);
 			this.labelToPage[nodeId] = page.id;
-			this.refreshLabelMessageLinkCache(nodeId, storedMessageId, node);
+			this.refreshLabelMessageLinkCacheInMemory(nodeId, storedMessageId);
 			keysLoaded.add(storedMessageId);
 			hydrated += 1;
 		}
@@ -232,6 +283,19 @@ export default class LocalizedLabelManager {
 			return currentKey;
 		}
 		return undefined;
+	}
+
+	private refreshLabelMessageLinkCacheInMemory(textNodeId: string, messageId: string) {
+		const currentKey = this.labelToMessage[textNodeId];
+		if (!this.messageStore!.messageIdToLabels[messageId])
+			this.messageStore!.messageIdToLabels[messageId] = new Set<string>();
+		this.messageStore!.messageIdToLabels[messageId].add(textNodeId);
+		this.labelToMessage[textNodeId] = messageId;
+		const virtualNode = this.virtualTree.getVirtualNode(textNodeId);
+		if (virtualNode) virtualNode.messageId = messageId;
+		if (currentKey && currentKey !== messageId)
+			this.messageStore!.messageIdToLabels[currentKey]?.delete(textNodeId);
+		return currentKey === messageId ? undefined : currentKey;
 	}
 
 	messageStore: InlangMessageStore | undefined;
@@ -625,14 +689,20 @@ export default class LocalizedLabelManager {
 
 	async indexPageTextNodes(page: PageNode, keysLoaded: Set<string>, documentRoot = figma.root) {
 		this.virtualTree.addNode(page, page.id, documentRoot);
+		const overlaysAtStart = new Map<string, string>();
+		const overlayEpochsAtStart = new Map<string, number>();
+		const oldShardKeys = new Set<string>();
+		for (const key of page.getPluginDataKeys()) {
+			if (key.startsWith(LocalizedLabelManager.pageLinkIndexPrefix)) {
+				overlaysAtStart.set(key, page.getPluginData(key));
+				overlayEpochsAtStart.set(key, this.pageLinkOverlayEpoch.get(`${page.id}:${key}`) ?? 0);
+			} else if (key.startsWith(LocalizedLabelManager.pageLinkIndexSnapshotShardPrefix))
+				oldShardKeys.add(key);
+		}
 		// Invalidate first: if the plugin stops mid-reconciliation, the next open must not
 		// mistake the partially rewritten entries for a complete warm hint.
 		page.setPluginData(LocalizedLabelManager.pageLinkIndexVersionKey, "");
-		const staleDurableKeys = new Set(
-			page
-				.getPluginDataKeys()
-				.filter((key) => key.startsWith(LocalizedLabelManager.pageLinkIndexPrefix)),
-		);
+		const snapshotEntries: Array<[string, string]> = [];
 		const textNodes = page.findAllWithCriteria({ types: ["TEXT"] });
 		for (let index = 0; index < textNodes.length; index++) {
 			const textNode = textNodes[index];
@@ -640,9 +710,9 @@ export default class LocalizedLabelManager {
 			this.virtualTree.addNode(textNode, textNode.id, undefined, messageId);
 			this.textNodeCount += 1;
 			if (messageId) {
-				staleDurableKeys.delete(`${LocalizedLabelManager.pageLinkIndexPrefix}${textNode.id}`);
+				snapshotEntries.push([textNode.id, messageId]);
 				this.linkedTextNodeCount += 1;
-				const previousMessage = this.refreshLabelMessageLinkCache(textNode.id, messageId, textNode);
+				const previousMessage = this.refreshLabelMessageLinkCacheInMemory(textNode.id, messageId);
 				if (previousMessage) keysLoaded.add(previousMessage);
 				keysLoaded.add(messageId);
 			}
@@ -650,17 +720,43 @@ export default class LocalizedLabelManager {
 				await new Promise((resolve) => setTimeout(resolve, 0));
 			}
 		}
-		for (const staleKey of staleDurableKeys) {
-			const nodeId = staleKey.slice(LocalizedLabelManager.pageLinkIndexPrefix.length);
-			const storedMessageId = page.getPluginData(staleKey);
-			const currentNode = figma.getNodeById(nodeId);
-			const currentMessageId =
-				currentNode?.type === "TEXT" && this.pageOf(currentNode)?.id === page.id
-					? currentNode.getPluginData(this.messageNameDataKey)
-					: "";
-			if (!storedMessageId || storedMessageId !== currentMessageId)
-				page.setPluginData(staleKey, "");
+		const shards: Array<Array<[string, string]>> = [];
+		let shard: Array<[string, string]> = [];
+		let shardBytes = 2;
+		for (const entry of snapshotEntries) {
+			const entryBytes = LocalizedLabelManager.utf8ByteLength(JSON.stringify(entry));
+			if (entryBytes + 2 > LocalizedLabelManager.maxSnapshotShardBytes)
+				throw new Error(`Page-link index entry for ${entry[0]} exceeds Figma plugin-data limits`);
+			if (
+				shard.length &&
+				shardBytes + 1 + entryBytes > LocalizedLabelManager.maxSnapshotShardBytes
+			) {
+				shards.push(shard);
+				shard = [];
+				shardBytes = 2;
+			}
+			shard.push(entry);
+			shardBytes += (shard.length > 1 ? 1 : 0) + entryBytes;
 		}
+		if (shard.length) shards.push(shard);
+		for (let index = 0; index < shards.length; index++) {
+			const key = `${LocalizedLabelManager.pageLinkIndexSnapshotShardPrefix}${index}`;
+			page.setPluginData(key, JSON.stringify(shards[index]));
+			oldShardKeys.delete(key);
+		}
+		for (const key of oldShardKeys) page.setPluginData(key, "");
+		page.setPluginData(
+			LocalizedLabelManager.pageLinkIndexSnapshotKey,
+			JSON.stringify({ shards: shards.length }),
+		);
+		// Clear only overlays that were unchanged throughout reconciliation. A documentchange
+		// handler may author a newer overlay while this scan yields; that value must win over
+		// the base snapshot instead of being erased here.
+		for (const key of overlaysAtStart.keys())
+			if (
+				(this.pageLinkOverlayEpoch.get(`${page.id}:${key}`) ?? 0) === overlayEpochsAtStart.get(key)
+			)
+				page.setPluginData(key, "");
 		page.setPluginData(
 			LocalizedLabelManager.pageLinkIndexVersionKey,
 			LocalizedLabelManager.pageLinkIndexVersion,

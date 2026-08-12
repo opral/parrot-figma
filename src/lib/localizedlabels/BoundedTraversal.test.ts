@@ -1,7 +1,26 @@
 import { afterEach, describe, expect, test } from "vitest";
 import LocalizedLabelManager from "./LocalizedLabelManager";
-import { FakeFrameNode, FakeTextNode } from "../../testing/figma/FakeFigma";
+import {
+	FakeFigmaDocument,
+	FakeFrameNode,
+	FakePageNode,
+	FakeTextNode,
+} from "../../testing/figma/FakeFigma";
 import { createTranslationFixture } from "../../testing/figma/translationFixtures";
+
+function snapshotLinks(page: FakePageNode) {
+	const manifest = JSON.parse(page.getPluginData("prt_pli_s") || '{"shards":0}') as {
+		shards: number;
+	};
+	const entries: Array<[string, string]> = [];
+	for (let index = 0; index < manifest.shards; index++)
+		entries.push(...(JSON.parse(page.getPluginData(`prt_pli_s_${index}`)) as typeof entries));
+	return new Map<string, string>(entries);
+}
+
+function overlayLink(page: FakePageNode, nodeId: string) {
+	return JSON.parse(page.getPluginData(`prt_pli__${nodeId}`) || "null") as string | null;
+}
 
 describe("bounded Figma traversal", () => {
 	afterEach(() => Reflect.deleteProperty(globalThis, "figma"));
@@ -108,6 +127,27 @@ describe("bounded Figma traversal", () => {
 		expect(page.getPluginData("prt_pli__missing:0")).toBe("");
 	});
 
+	test("migrates v1 message IDs as literal strings", async () => {
+		for (const [index, messageId] of ["null", "true", "123", '"quoted"', "member.你好"].entries()) {
+			const figma = new FakeFigmaDocument();
+			Object.assign(globalThis, { figma });
+			const page = figma.addPage("Page");
+			const text = page.appendChild(
+				new FakeTextNode("Text", "Text", `v1:${index}`),
+			) as FakeTextNode;
+			text.setPluginData("mn", messageId);
+			page.setPluginData("prt_pli_v", "1");
+			page.setPluginData(`prt_pli__${text.id}`, messageId);
+			const manager = new LocalizedLabelManager();
+			(manager as any).messageStore = { messageIdToLabels: {} };
+			expect(await manager.hydratePageLinkIndex(page as any, new Set())).toEqual({
+				valid: true,
+				hydrated: 1,
+			});
+			expect((manager as any).labelToMessage[text.id]).toBe(messageId);
+		}
+	});
+
 	test("publishes a warm hint, then reconciles links added while Parrot was closed", async () => {
 		const { figma, page, richText, sibling } = createTranslationFixture();
 		Object.assign(globalThis, { figma });
@@ -123,7 +163,7 @@ describe("bounded Figma traversal", () => {
 		expect(posted.at(0).keys).toEqual([]);
 		await manager.waitForBackgroundIndex();
 		expect(posted.at(-1).keys.sort()).toEqual(["checkout.added-while-closed", "checkout.greeting"]);
-		expect(page.getPluginData(`prt_pli__${sibling.id}`)).toBe("checkout.added-while-closed");
+		expect(snapshotLinks(page).get(sibling.id)).toBe("checkout.added-while-closed");
 	});
 
 	test("publishes readiness in O(1) before reading a large warm index", async () => {
@@ -183,7 +223,7 @@ describe("bounded Figma traversal", () => {
 				},
 			],
 		});
-		expect(page.getPluginData(`prt_pli__${richText.id}`)).toBe("checkout.relinked");
+		expect(overlayLink(page, richText.id)).toBe("checkout.relinked");
 		expect(figma.counters.traversedNodes - relinkBefore.traversedNodes).toBe(0);
 
 		figma.moveNode(richText, destination);
@@ -198,8 +238,8 @@ describe("bounded Figma traversal", () => {
 				},
 			],
 		});
-		expect(page.getPluginData(`prt_pli__${richText.id}`)).toBe("");
-		expect(destination.getPluginData(`prt_pli__${richText.id}`)).toBe("checkout.relinked");
+		expect(overlayLink(page, richText.id)).toBeNull();
+		expect(overlayLink(destination, richText.id)).toBe("checkout.relinked");
 
 		richText.setPluginData("mn", "");
 		manager.forwardDocumentChanges({
@@ -213,7 +253,7 @@ describe("bounded Figma traversal", () => {
 				},
 			],
 		});
-		expect(destination.getPluginData(`prt_pli__${richText.id}`)).toBe("");
+		expect(overlayLink(destination, richText.id)).toBeNull();
 	});
 
 	test("indexes only a moved container when it was not previously in memory", () => {
@@ -243,7 +283,7 @@ describe("bounded Figma traversal", () => {
 			],
 		});
 		expect(figma.counters.traversedNodes - before.traversedNodes).toBe(1);
-		expect(destination.getPluginData(`prt_pli__${richText.id}`)).toBe("checkout.greeting");
+		expect(overlayLink(destination, richText.id)).toBe("checkout.greeting");
 	});
 
 	test("keeps the marker invalid after a partial reconciliation and repairs on reopen", async () => {
@@ -252,7 +292,7 @@ describe("bounded Figma traversal", () => {
 		page.setPluginData("prt_pli_v", "1");
 		figma.failOnMutation = {
 			nodeId: page.id,
-			property: `pluginData:prt_pli__${richText.id}`,
+			property: "pluginData:prt_pli_s_0",
 		};
 		const failedManager = new LocalizedLabelManager();
 		(failedManager as any).messageStore = { messageIdToLabels: {} };
@@ -268,8 +308,97 @@ describe("bounded Figma traversal", () => {
 		await reopenedManager.fillUpCache();
 		expect(posted.at(0).keys).toEqual([]);
 		await reopenedManager.waitForBackgroundIndex();
-		expect(page.getPluginData("prt_pli_v")).toBe("1");
-		expect(page.getPluginData(`prt_pli__${richText.id}`)).toBe("checkout.greeting");
+		expect(page.getPluginData("prt_pli_v")).toBe("3");
+		expect(snapshotLinks(page).get(richText.id)).toBe("checkout.greeting");
+	});
+
+	test("preserves an incremental overlay authored while snapshot reconciliation yields", async () => {
+		const figma = new FakeFigmaDocument();
+		Object.assign(globalThis, { figma });
+		Object.assign(figma, { ui: { postMessage: () => undefined } });
+		const page = figma.addPage("Page");
+		let changedNode: FakeTextNode | undefined;
+		for (let index = 0; index < 1_001; index++) {
+			const text = page.appendChild(new FakeTextNode(`Cell ${index}`)) as FakeTextNode;
+			text.setPluginData("mn", `message.${index}`);
+			if (index === 0) changedNode = text;
+		}
+		page.setPluginData(`prt_pli__${changedNode!.id}`, JSON.stringify("message.0"));
+		const manager = new LocalizedLabelManager();
+		(manager as any).messageStore = { messageIdToLabels: {} };
+		(manager as any).toLocalizedLabelOrUndefined = (node: FakeTextNode) => ({
+			nodeId: node.id,
+			messageId: node.getPluginData("mn") || undefined,
+		});
+		const indexing = manager.indexPageTextNodes(page as any, new Set());
+		changedNode!.setPluginData("mn", "message.concurrent");
+		manager.forwardDocumentChanges({
+			documentChanges: [
+				{
+					origin: "LOCAL",
+					type: "PROPERTY_CHANGE",
+					id: changedNode!.id,
+					node: changedNode!,
+					properties: ["pluginData"],
+				},
+			],
+		});
+		await indexing;
+		expect(overlayLink(page, changedNode!.id)).toBe("message.concurrent");
+		const reopened = new LocalizedLabelManager();
+		(reopened as any).messageStore = { messageIdToLabels: {} };
+		expect(await reopened.hydratePageLinkIndex(page as any, new Set())).toEqual({
+			valid: true,
+			hydrated: 1_001,
+		});
+		expect((reopened as any).labelToMessage[changedNode!.id]).toBe("message.concurrent");
+	});
+
+	test("folds unchanged overlays while preserving another label changed during reconciliation", async () => {
+		const figma = new FakeFigmaDocument();
+		Object.assign(globalThis, { figma });
+		Object.assign(figma, { ui: { postMessage: () => undefined } });
+		const page = figma.addPage("Page");
+		let unchanged!: FakeTextNode;
+		let changed!: FakeTextNode;
+		for (let index = 0; index < 1_001; index++) {
+			const text = page.appendChild(new FakeTextNode(`Cell ${index}`)) as FakeTextNode;
+			text.setPluginData("mn", `message.${index}`);
+			if (index === 0) unchanged = text;
+			if (index === 1) changed = text;
+		}
+		page.setPluginData(`prt_pli__${unchanged.id}`, JSON.stringify("message.stale"));
+		page.setPluginData(`prt_pli__${changed.id}`, JSON.stringify("message.1"));
+		const manager = new LocalizedLabelManager();
+		(manager as any).messageStore = { messageIdToLabels: {} };
+		(manager as any).toLocalizedLabelOrUndefined = (node: FakeTextNode) => ({
+			nodeId: node.id,
+			messageId: node.getPluginData("mn") || undefined,
+		});
+		const indexing = manager.indexPageTextNodes(page as any, new Set());
+		changed.setPluginData("mn", "message.concurrent");
+		manager.forwardDocumentChanges({
+			documentChanges: [
+				{
+					origin: "LOCAL",
+					type: "PROPERTY_CHANGE",
+					id: changed.id,
+					node: changed,
+					properties: ["pluginData"],
+				},
+			],
+		});
+		await indexing;
+		expect(page.getPluginData(`prt_pli__${unchanged.id}`)).toBe("");
+		expect(overlayLink(page, changed.id)).toBe("message.concurrent");
+		const reopened = new LocalizedLabelManager();
+		(reopened as any).messageStore = { messageIdToLabels: {} };
+		expect(await reopened.hydratePageLinkIndex(page as any, new Set())).toEqual({
+			valid: true,
+			hydrated: 1_001,
+		});
+		expect((reopened as any).labelToMessage[unchanged.id]).toBe("message.0");
+		expect((reopened as any).labelToMessage[changed.id]).toBe("message.concurrent");
 	});
 
 	test("indexes and deletes every linked descendant of a created subtree", () => {
@@ -296,13 +425,13 @@ describe("bounded Figma traversal", () => {
 				{ origin: "LOCAL", type: "CREATE", id: createdFrame.id, node: createdFrame },
 			],
 		});
-		expect(page.getPluginData(`prt_pli__${first.id}`)).toBe("created.first");
-		expect(page.getPluginData(`prt_pli__${second.id}`)).toBe("created.second");
+		expect(overlayLink(page, first.id)).toBe("created.first");
+		expect(overlayLink(page, second.id)).toBe("created.second");
 
 		manager.forwardDocumentChanges({
 			documentChanges: [{ origin: "LOCAL", type: "DELETE", id: createdFrame.id }],
 		});
-		expect(page.getPluginData(`prt_pli__${first.id}`)).toBe("");
-		expect(page.getPluginData(`prt_pli__${second.id}`)).toBe("");
+		expect(overlayLink(page, first.id)).toBeNull();
+		expect(overlayLink(page, second.id)).toBeNull();
 	});
 });

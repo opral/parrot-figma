@@ -49,8 +49,12 @@ describe("Big-O performance gates", () => {
 			(manager as any).messageStore = { messageIdToLabels: {} };
 			figma.counters.pluginDataReads = 0;
 			figma.counters.nodeLookups = 0;
+			figma.counters.mutations = 0;
+			figma.counters.pluginDataBytesWritten = 0;
+			figma.counters.maxPluginDataValueBytes = 0;
 			const result = await manager.indexPageTextNodes(page as any, new Set());
 			const operations = figma.counters.pluginDataReads;
+			const persistenceWrites = figma.counters.mutations;
 			const elapsedMs = await medianElapsed(async () => {
 				await manager.indexPageTextNodes(page as any, new Set());
 			});
@@ -58,7 +62,11 @@ describe("Big-O performance gates", () => {
 			expect(figma.counters.exports).toBe(0);
 			expect(figma.counters.nodeLookups).toBe(0);
 			expect(result).toBe(size);
-			expect(operations).toBe(size + Math.ceil(size / 2));
+			expect(operations).toBe(size);
+			// Bounded snapshot shards + manifest replace one expensive write per linked label.
+			expect(persistenceWrites).toBeLessThan(10);
+			expect(figma.counters.maxPluginDataValueBytes).toBeLessThanOrEqual(90_000);
+			expect(figma.counters.pluginDataBytesWritten).toBeGreaterThanOrEqual(size);
 			expect(Object.values((manager as any).messageStore.messageIdToLabels)).toHaveLength(2);
 			expect((manager as any).messageStore.messageIdToLabels["message.0"].size).toBe(
 				Math.ceil(size / 4),
@@ -142,16 +150,19 @@ describe("Big-O performance gates", () => {
 			const figma = new FakeFigmaDocument();
 			Object.assign(globalThis, { figma });
 			const page = figma.addPage("Page");
-			page.setPluginData("prt_pli_v", "1");
+			page.setPluginData("prt_pli_v", "3");
+			const snapshot: Array<[string, string]> = [];
 			for (let index = 0; index < 5_000; index++) {
 				const text = page.appendChild(
 					new FakeTextNode(`Cell ${index}`, `Cell ${index}`, `warm:${linkedCount}:${index}`),
 				) as FakeTextNode;
 				if (index < linkedCount) {
 					text.setPluginData("mn", `message.${index}`);
-					page.setPluginData(`prt_pli__${text.id}`, `message.${index}`);
+					snapshot.push([text.id, `message.${index}`]);
 				}
 			}
+			page.setPluginData("prt_pli_s_0", JSON.stringify(snapshot));
+			page.setPluginData("prt_pli_s", JSON.stringify({ shards: 1 }));
 			const manager = new LocalizedLabelManager();
 			(manager as any).messageStore = { messageIdToLabels: {} };
 			const before = { ...figma.counters };
@@ -159,10 +170,8 @@ describe("Big-O performance gates", () => {
 			expect(warmIndex).toEqual({ valid: true, hydrated: linkedCount });
 			expect(figma.counters.traversedNodes - before.traversedNodes).toBe(0);
 			expect(figma.counters.nodeLookups - before.nodeLookups).toBe(linkedCount);
-			expect(figma.counters.pluginDataReads - before.pluginDataReads).toBe(1 + linkedCount * 3);
-			expect(figma.counters.pluginDataKeysEnumerated - before.pluginDataKeysEnumerated).toBe(
-				linkedCount + 1,
-			);
+			expect(figma.counters.pluginDataReads - before.pluginDataReads).toBe(3 + linkedCount);
+			expect(figma.counters.pluginDataKeysEnumerated - before.pluginDataKeysEnumerated).toBe(3);
 		}
 	});
 
@@ -191,5 +200,26 @@ describe("Big-O performance gates", () => {
 			);
 			expect(figma.counters.nodeLookups - before.nodeLookups).toBe(10);
 		}
+	});
+
+	test("shards 5,000 long multibyte links below Figma's per-value limit", async () => {
+		const figma = new FakeFigmaDocument();
+		Object.assign(globalThis, { figma });
+		const page = figma.addPage("Page");
+		for (let index = 0; index < 5_000; index++) {
+			const text = page.appendChild(new FakeTextNode(`Linked ${index}`)) as FakeTextNode;
+			text.setPluginData("mn", `member.你好.${index}.${"x".repeat(48)}`);
+		}
+		const manager = new LocalizedLabelManager();
+		(manager as any).messageStore = { messageIdToLabels: {} };
+		figma.counters.maxPluginDataValueBytes = 0;
+		await manager.indexPageTextNodes(page as any, new Set());
+		expect(figma.counters.maxPluginDataValueBytes).toBeLessThanOrEqual(90_000);
+		const reopened = new LocalizedLabelManager();
+		(reopened as any).messageStore = { messageIdToLabels: {} };
+		expect(await reopened.hydratePageLinkIndex(page as any, new Set())).toEqual({
+			valid: true,
+			hydrated: 5_000,
+		});
 	});
 });

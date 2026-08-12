@@ -1,0 +1,297 @@
+import TextEncoding from "text-encoding";
+import blake from "blakejs";
+
+export const FIGMA_BUNDLE_PREFIX = "prt_ib__";
+export const FIGMA_BUNDLE_MIGRATION_KEY = "prt_ib_migration_v1";
+export const LEGACY_MESSAGE_PREFIX = "prt_im__";
+
+const MAX_PLUGIN_DATA_BYTES = 100_000;
+const encoder = new TextEncoding.TextEncoder();
+
+export type BundleDeclaration = {
+	type: "input-variable";
+	name: string;
+};
+
+export type BundleSelector = {
+	type: "variable-reference";
+	name: string;
+};
+
+export type BundleMatch =
+	| { type: "literal-match"; key: string; value: string }
+	| { type: "catchall-match"; key: string };
+
+export type BundlePatternElement =
+	| { type: "text"; value: string }
+	| {
+			type: "expression";
+			arg: { type: "variable-reference"; name: string };
+	  };
+
+export type BundleNested = {
+	id: string;
+	declarations: BundleDeclaration[];
+	messages: Array<{
+		id: string;
+		bundleId: string;
+		locale: string;
+		selectors: BundleSelector[];
+		variants: Array<{
+			id: string;
+			messageId: string;
+			matches: BundleMatch[];
+			pattern: BundlePatternElement[];
+		}>;
+	}>;
+};
+
+export type BundleChangeSet = {
+	added: string[];
+	updated: string[];
+	deleted: string[];
+};
+
+type PluginDataRoot = Pick<
+	DocumentNode,
+	"id" | "getPluginData" | "getPluginDataKeys" | "setPluginData"
+>;
+
+type DocumentChangeSource = {
+	on(type: "documentchange", callback: (event: any) => void): void;
+	off?(type: "documentchange", callback: (event: any) => void): void;
+};
+
+export class FigmaBundleStore {
+	private readonly root: PluginDataRoot;
+
+	private readonly documentChanges?: DocumentChangeSource;
+
+	private readonly listeners = new Set<(changes: BundleChangeSet) => void>();
+
+	private hashes = new Map<string, string>();
+
+	private readonly handleDocumentChange = (event: any) => {
+		if (!event.documentChanges.some((change: any) => this.isRemoteRootPluginDataChange(change))) {
+			return;
+		}
+
+		try {
+			const changes = this.refreshHashes();
+			if (changes.added.length || changes.updated.length || changes.deleted.length) {
+				for (const listener of this.listeners) listener(changes);
+			}
+		} catch (error) {
+			console.error("Failed to apply a remote Parrot bundle update", error);
+		}
+	};
+
+	constructor(args: { root: PluginDataRoot; documentChanges?: DocumentChangeSource }) {
+		this.root = args.root;
+		this.documentChanges = args.documentChanges;
+		this.refreshHashes();
+		this.documentChanges?.on("documentchange", this.handleDocumentChange);
+	}
+
+	dispose() {
+		this.documentChanges?.off?.("documentchange", this.handleDocumentChange);
+		this.listeners.clear();
+	}
+
+	subscribe(listener: (changes: BundleChangeSet) => void) {
+		this.listeners.add(listener);
+		return () => this.listeners.delete(listener);
+	}
+
+	get(bundleId: string): BundleNested | undefined {
+		const raw = this.root.getPluginData(this.key(bundleId));
+		if (!raw) return undefined;
+		return parseBundle(raw, bundleId);
+	}
+
+	load(): BundleNested[] {
+		return this.bundleKeys()
+			.map((key) => parseBundle(this.root.getPluginData(key), this.idFromKey(key)))
+			.sort((left, right) => left.id.localeCompare(right.id));
+	}
+
+	put(bundle: BundleNested) {
+		const raw = serializeBundle(bundle);
+		this.root.setPluginData(this.key(bundle.id), raw);
+		this.hashes.set(bundle.id, hash(raw));
+	}
+
+	delete(bundleId: string) {
+		this.root.setPluginData(this.key(bundleId), "");
+		this.hashes.delete(bundleId);
+	}
+
+	private refreshHashes(): BundleChangeSet {
+		const next = new Map<string, string>();
+		const added: string[] = [];
+		const updated: string[] = [];
+
+		for (const key of this.bundleKeys()) {
+			const id = this.idFromKey(key);
+			const raw = this.root.getPluginData(key);
+			parseBundle(raw, id);
+			const nextHash = hash(raw);
+			next.set(id, nextHash);
+			if (!this.hashes.has(id)) added.push(id);
+			else if (this.hashes.get(id) !== nextHash) updated.push(id);
+		}
+
+		const deleted = [...this.hashes.keys()].filter((id) => !next.has(id));
+		this.hashes = next;
+		return { added, updated, deleted };
+	}
+
+	private bundleKeys() {
+		return this.root
+			.getPluginDataKeys()
+			.filter((key) => key.startsWith(FIGMA_BUNDLE_PREFIX))
+			.sort();
+	}
+
+	private key(bundleId: string) {
+		return FIGMA_BUNDLE_PREFIX + bundleId;
+	}
+
+	private idFromKey(key: string) {
+		return key.slice(FIGMA_BUNDLE_PREFIX.length);
+	}
+
+	private isRemoteRootPluginDataChange(change: any) {
+		return (
+			change.origin === "REMOTE" &&
+			change.type === "PROPERTY_CHANGE" &&
+			change.node.id === this.root.id &&
+			change.properties.includes("pluginData")
+		);
+	}
+}
+
+export function serializeBundle(bundle: BundleNested): string {
+	validateBundleNested(bundle);
+	const raw = JSON.stringify(bundle);
+	if (encoder.encode(raw).byteLength > MAX_PLUGIN_DATA_BYTES) {
+		throw new Error(
+			`Bundle "${bundle.id}" exceeds Figma's ${MAX_PLUGIN_DATA_BYTES} byte plugin-data limit`,
+		);
+	}
+	return raw;
+}
+
+export function parseBundle(raw: string, expectedId?: string): BundleNested {
+	let value: unknown;
+	try {
+		value = JSON.parse(raw);
+	} catch (cause) {
+		throw new Error(`Stored Parrot bundle is not valid JSON`, { cause });
+	}
+	validateBundleNested(value);
+	if (expectedId !== undefined && value.id !== expectedId) {
+		throw new Error(`Bundle key "${expectedId}" contains bundle "${value.id}"`);
+	}
+	return value;
+}
+
+export function validateBundleNested(value: unknown): asserts value is BundleNested {
+	if (!isRecord(value) || typeof value.id !== "string" || value.id.length === 0) {
+		throw new Error("Bundle must have a non-empty id");
+	}
+	if (!Array.isArray(value.declarations) || !Array.isArray(value.messages)) {
+		throw new Error(`Bundle "${value.id}" is missing declarations or messages`);
+	}
+	for (const declaration of value.declarations) {
+		if (
+			!isRecord(declaration) ||
+			declaration.type !== "input-variable" ||
+			typeof declaration.name !== "string"
+		) {
+			throw new Error(`Bundle "${value.id}" contains an invalid declaration`);
+		}
+	}
+
+	const messageIds = new Set<string>();
+	for (const message of value.messages) {
+		if (
+			!isRecord(message) ||
+			typeof message.id !== "string" ||
+			message.bundleId !== value.id ||
+			typeof message.locale !== "string" ||
+			!Array.isArray(message.selectors) ||
+			!Array.isArray(message.variants)
+		) {
+			throw new Error(`Bundle "${value.id}" contains an invalid message`);
+		}
+		if (messageIds.has(message.id)) throw new Error(`Duplicate message id "${message.id}"`);
+		messageIds.add(message.id);
+
+		const selectorNames = message.selectors.map((selector) => {
+			if (
+				!isRecord(selector) ||
+				selector.type !== "variable-reference" ||
+				typeof selector.name !== "string"
+			) {
+				throw new Error(`Message "${message.id}" contains an invalid selector`);
+			}
+			return selector.name;
+		});
+
+		const variantIds = new Set<string>();
+		for (const variant of message.variants) {
+			if (
+				!isRecord(variant) ||
+				typeof variant.id !== "string" ||
+				variant.messageId !== message.id ||
+				!Array.isArray(variant.matches) ||
+				!Array.isArray(variant.pattern)
+			) {
+				throw new Error(`Message "${message.id}" contains an invalid variant`);
+			}
+			if (variantIds.has(variant.id)) throw new Error(`Duplicate variant id "${variant.id}"`);
+			variantIds.add(variant.id);
+
+			const matchKeys = variant.matches.map((match) => {
+				if (
+					!isRecord(match) ||
+					typeof match.key !== "string" ||
+					(match.type !== "literal-match" && match.type !== "catchall-match") ||
+					(match.type === "literal-match" && typeof match.value !== "string")
+				) {
+					throw new Error(`Variant "${variant.id}" contains an invalid match`);
+				}
+				return match.key;
+			});
+			if (
+				matchKeys.length !== selectorNames.length ||
+				selectorNames.some((name) => !matchKeys.includes(name)) ||
+				new Set(matchKeys).size !== matchKeys.length
+			) {
+				throw new Error(`Variant "${variant.id}" must match every selector exactly once`);
+			}
+			for (const element of variant.pattern) {
+				if (
+					!isRecord(element) ||
+					(element.type === "text"
+						? typeof element.value !== "string"
+						: element.type !== "expression" ||
+							!isRecord(element.arg) ||
+							element.arg.type !== "variable-reference" ||
+							typeof element.arg.name !== "string")
+				) {
+					throw new Error(`Variant "${variant.id}" contains an invalid pattern`);
+				}
+			}
+		}
+	}
+}
+
+function hash(raw: string) {
+	return blake.blake2sHex(encoder.encode(raw));
+}
+
+function isRecord(value: unknown): value is Record<string, any> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}

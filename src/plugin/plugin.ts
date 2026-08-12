@@ -82,8 +82,11 @@ const remoteLocalizedLabelManager = new LocalizedLabelManager(inlangMessageStore
 asyncFunctionProxy.registerInstance(remoteLocalizedLabelManager);
 
 const developmentUiUrl = import.meta.env.VITE_CUSTOM_URL;
-const developmentUiHost = developmentUiUrl ? new URL(developmentUiUrl).hostname : undefined;
-if (developmentUiHost === "localhost" || developmentUiHost === "127.0.0.1" || developmentUiHost === "::1") {
+const isLocalDevelopmentUi =
+	developmentUiUrl?.startsWith("http://localhost:") ||
+	developmentUiUrl?.startsWith("http://127.0.0.1:") ||
+	developmentUiUrl?.startsWith("http://[::1]:");
+if (isLocalDevelopmentUi) {
 	installRealFigmaPerformanceHarness();
 	void figma.clientStorage.getAsync(REAL_FIGMA_PERFORMANCE_RESULT_KEY).then((samples) => {
 		if (samples) console.log(`PARROT_REAL_FIGMA_RESULT ${JSON.stringify(samples)}`);

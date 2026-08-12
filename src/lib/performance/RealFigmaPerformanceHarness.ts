@@ -4,6 +4,7 @@ export type RealFigmaPerformanceSample = {
 	size: number;
 	creationMs: number;
 	scanMs: number;
+	nativeScanMs: number;
 	nodesProcessed: number;
 	lookupMs: number;
 	lookupMatches: number;
@@ -72,23 +73,32 @@ export default class RealFigmaPerformanceHarness {
 				}
 
 				const creationMs = monotonicNow() - creationStarted;
-				const manager = new LocalizedLabelManager();
-				(manager as any).messageStore = {
+				const nativeManager = new LocalizedLabelManager();
+				(nativeManager as any).messageStore = {
 					messageIdToLabels: {},
 					getConfigSync: () => ({ refLanguage: "en" }),
 				};
 				// Let Figma deliver the fixture's documentchange batch before timing the isolated scan.
 				await new Promise((resolve) => setTimeout(resolve, 0));
+				const nativeScanStarted = monotonicNow();
+				const nativeNodesProcessed = await nativeManager.indexPageTextNodes(page, new Set());
+				const nativeScanMs = monotonicNow() - nativeScanStarted;
+				const recursiveManager = new LocalizedLabelManager();
+				(recursiveManager as any).messageStore = {
+					messageIdToLabels: {},
+					getConfigSync: () => ({ refLanguage: "en" }),
+				};
 				const scanStarted = monotonicNow();
-				const scan = await manager.processNodeRecursively(page, figma.root, new Set(), 0);
+				const scan = await recursiveManager.processNodeRecursively(page, figma.root, new Set(), 0);
 				const scanMs = monotonicNow() - scanStarted;
 				const lookupStarted = monotonicNow();
-				const matches = await manager.getWithMessage("performance.target");
+				const matches = await nativeManager.getWithMessage("performance.target");
 				const lookupMs = monotonicNow() - lookupStarted;
 				const expectedMatches = size === 1 ? 1 : 2;
 				const actualIds = matches.map(({ nodeId }) => nodeId).sort();
 				if (
 					scan.nodesProcessed !== size ||
+					nativeNodesProcessed !== size ||
 					matches.length !== expectedMatches ||
 					JSON.stringify(actualIds) !== JSON.stringify([...matchingIds].sort())
 				) {
@@ -100,6 +110,7 @@ export default class RealFigmaPerformanceHarness {
 					size,
 					creationMs,
 					scanMs,
+					nativeScanMs,
 					nodesProcessed: scan.nodesProcessed,
 					lookupMs,
 					lookupMatches: matches.length,

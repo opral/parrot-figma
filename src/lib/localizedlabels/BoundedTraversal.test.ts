@@ -23,6 +23,7 @@ describe("bounded Figma traversal", () => {
 		await manager.fillUpCache(() => {
 			lookupsAtReady = figma.counters.pluginDataReads;
 		});
+		await manager.waitForBackgroundIndex();
 		expect(lookupsAtReady).toBeLessThan(20);
 		expect(figma.counters.exports).toBe(0);
 		expect(figma.counters.pluginDataReads).toBeGreaterThan(500);

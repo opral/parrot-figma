@@ -23,3 +23,18 @@ Measured in Figma Desktop on August 11, 2026, before the next traversal optimiza
 
 The lookup remains independent of unrelated document size. The startup scan is linear in node
 count, but this baseline identifies its real-Figma constant factor as the next bottleneck.
+
+## Native current-page indexing
+
+Measured in the same Figma Desktop environment after switching cold discovery to
+`findAllWithCriteria({ types: ["TEXT"] })` and deferring other pages:
+
+| Text nodes | Recursive scan | Native index | Indexed lookup |
+| ---------- | -------------- | ------------ | -------------- |
+| 100        | 193 ms         | 2 ms         | 1 ms           |
+| 1,000      | 1,916 ms       | 25 ms        | 2 ms           |
+| 5,000      | 13,024 ms      | 126 ms       | 2 ms           |
+
+Fixture creation is measured separately and excluded. This initial same-fixture observation showed
+the native 5,000-node index roughly 103× faster than recursive scanning. The harness now measures
+the native path first so subsequent runs exercise cold native discovery before the comparison path.

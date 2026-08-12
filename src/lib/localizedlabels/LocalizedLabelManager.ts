@@ -511,6 +511,53 @@ export default class LocalizedLabelManager {
 
 	private frameCount = 0;
 	private availableFontsPromise: Promise<readonly Font[]> | undefined;
+	private backgroundIndexPromise: Promise<void> | undefined;
+
+	async indexPageTextNodes(page: PageNode, keysLoaded: Set<string>, documentRoot = figma.root) {
+		this.virtualTree.addNode(page, page.id, documentRoot);
+		const textNodes = page.findAllWithCriteria({ types: ["TEXT"] });
+		for (let index = 0; index < textNodes.length; index++) {
+			const textNode = textNodes[index];
+			const messageId = textNode.getPluginData(this.messageNameDataKey);
+			this.virtualTree.addNode(textNode, textNode.id, undefined, messageId);
+			this.textNodeCount += 1;
+			if (messageId) {
+				this.linkedTextNodeCount += 1;
+				const previousMessage = this.refreshLabelMessageLinkCache(textNode.id, messageId);
+				if (previousMessage) keysLoaded.add(previousMessage);
+				keysLoaded.add(messageId);
+			}
+			if (index > 0 && index % 1_000 === 0) {
+				await new Promise((resolve) => setTimeout(resolve, 0));
+			}
+		}
+		return textNodes.length;
+	}
+
+	private async indexOtherPages(
+		figmaDocument: PluginAPI,
+		currentPageId: string,
+		keysLoaded: Set<string>,
+	) {
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		const failures: unknown[] = [];
+		for (const page of figmaDocument.root.children) {
+			if (page.id === currentPageId) continue;
+			try {
+				await this.indexPageTextNodes(page, keysLoaded, figmaDocument.root);
+			} catch (error) {
+				failures.push(error);
+				console.error(`Failed to index Figma page ${page.id}`, error);
+			}
+			await new Promise((resolve) => setTimeout(resolve, 0));
+		}
+		figmaDocument.ui.postMessage(this.linksLoadedMessage(keysLoaded));
+		if (failures.length) throw new AggregateError(failures, "One or more Figma pages failed to index");
+	}
+
+	async waitForBackgroundIndex() {
+		await this.backgroundIndexPromise;
+	}
 
 	async fillUpCache(onCurrentPageReady?: () => void) {
 		const start = Date.now();
@@ -522,46 +569,26 @@ export default class LocalizedLabelManager {
 			const { currentPage } = figma;
 			this.virtualTree.addNode(figma.root, figma.root.id);
 			this.virtualTree.addNode(currentPage, currentPage.id, figma.root);
-			const { nodesProcessed: nodesProcessedInCurrentPage, maxDepth: maxDepthInCurrentPage } =
-				await this.processNodeRecursively(currentPage, figma.root, keysLoaded, 0);
+			const nodesProcessedInCurrentPage = await this.indexPageTextNodes(currentPage, keysLoaded);
 			totalNodesProcessed += nodesProcessedInCurrentPage;
 			console.log(
-				`fillUpCache - Current page processed, processed ${nodesProcessedInCurrentPage} nodes, max depth ${maxDepthInCurrentPage}, took ${Date.now() - start}ms`,
+				`fillUpCache - Current page processed, processed ${nodesProcessedInCurrentPage} nodes, took ${Date.now() - start}ms`,
 			);
 			this.postLinksLoadedMessage(keysLoaded);
 			onCurrentPageReady?.();
 
-			// Now process the other pages
-			const otherPages = figma.root.children.filter((page) => page.id !== currentPage.id);
-			for (const page of otherPages) {
-				this.virtualTree.addNode(page, page.id);
-				const startPage = Date.now();
-				const { nodesProcessed: nodesProcessedInPage, maxDepth: maxDepthInPage } =
-					await this.processNodeRecursively(page, figma.root, keysLoaded, 0);
-				totalNodesProcessed += nodesProcessedInPage;
-				const endPage = Date.now();
-				console.log(
-					`fillUpCache - Page ${page.name} processed, processed ${nodesProcessedInPage} nodes, max depth ${maxDepthInPage}, took ${endPage - startPage}ms`,
-				);
-			}
-			console.log(
-				`fillUpCache - All pages processed, total nodes processed: ${totalNodesProcessed}, total time: ${Date.now() - start}ms`,
+			// Other pages never block current-page readiness and are indexed cooperatively.
+			this.backgroundIndexPromise ??= this.indexOtherPages(figma, currentPage.id, keysLoaded).finally(
+				() => {
+					this.backgroundIndexPromise = undefined;
+				},
 			);
-
-			figma.root.setPluginData("numberOfLinkedMessages", keysLoaded.size.toString());
-
-			figma.root.setPluginData("numberOfTextNodes", this.textNodeCount.toString());
-			figma.root.setPluginData("numberOfLinkedTextNodes", this.linkedTextNodeCount.toString());
-			figma.root.setPluginData(
-				"numberOfAnonymousTextNodes",
-				this.numberOfAnonymousTextNodes.toString(),
+			void this.backgroundIndexPromise.catch((error) =>
+				console.error("Background page indexing failed", error),
 			);
-			figma.root.setPluginData("numberOfParrotTextNodes", this.parrotTextNodesCount.toString());
 
 			figma.root.setPluginData("loadingTime", (Date.now() - start).toString());
-			figma.root.setPluginData("numberOfFrames", this.frameCount.toString());
 
-			this.postLinksLoadedMessage(keysLoaded);
 		} catch (error) {
 			console.error("fillUpCache - Error:", error);
 		}
@@ -643,14 +670,16 @@ export default class LocalizedLabelManager {
 		this.nodeCount += 1;
 	}
 
-	postLinksLoadedMessage(keysLoaded: Set<string>) {
-		const message = {
+	private linksLoadedMessage(keysLoaded: Set<string>) {
+		return {
 			target: "LocalizedLabelManager",
 			type: "linksLoaded",
 			keys: [...keysLoaded],
 		} as LinksLoadedEvent;
+	}
 
-		figma.ui.postMessage(message);
+	postLinksLoadedMessage(keysLoaded: Set<string>) {
+		figma.ui.postMessage(this.linksLoadedMessage(keysLoaded));
 	}
 
 	async getSelection() {

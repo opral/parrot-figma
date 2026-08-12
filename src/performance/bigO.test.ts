@@ -49,21 +49,16 @@ describe("Big-O performance gates", () => {
 			(manager as any).messageStore = { messageIdToLabels: {} };
 			figma.counters.pluginDataReads = 0;
 			figma.counters.nodeLookups = 0;
-			const result = await manager.processNodeRecursively(
-				page as any,
-				figma.root as any,
-				new Set(),
-				0,
-			);
+			const result = await manager.indexPageTextNodes(page as any, new Set());
 			const operations = figma.counters.pluginDataReads;
 			const elapsedMs = await medianElapsed(async () => {
-				await manager.processNodeRecursively(page as any, figma.root as any, new Set(), 0);
+				await manager.indexPageTextNodes(page as any, new Set());
 			});
 			samples.push({ size, operations, elapsedMs });
 			expect(figma.counters.exports).toBe(0);
 			expect(figma.counters.nodeLookups).toBe(0);
-			expect(result.nodesProcessed).toBe(size);
-			expect(operations).toBe(size * 2);
+			expect(result).toBe(size);
+			expect(operations).toBe(size);
 			expect(Object.values((manager as any).messageStore.messageIdToLabels)).toHaveLength(2);
 			expect((manager as any).messageStore.messageIdToLabels["message.0"].size).toBe(
 				Math.ceil(size / 4),

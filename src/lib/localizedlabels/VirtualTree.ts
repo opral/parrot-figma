@@ -11,12 +11,12 @@ export class VirtualTreeNode {
 
 	public messageId: string | undefined = undefined;
 
-	constructor(baseNode: BaseNode, nodeId: string) {
+	constructor(baseNode: BaseNode, nodeId: string, messageId?: string) {
 		this.id = nodeId;
 		this.type = baseNode.type;
 		this.cacheRelevant = this.type === "TEXT";
-		if (this.type === "TEXT" && baseNode.getPluginData("mn") !== "")
-			this.messageId = baseNode.getPluginData("mn");
+		this.messageId =
+			messageId ?? (this.type === "TEXT" ? baseNode.getPluginData("mn") || undefined : undefined);
 		this.parent = null;
 		this.children = [];
 	}
@@ -37,13 +37,18 @@ export default class VirtualTree {
 		return this.lookupTable.get(id);
 	}
 
-	public addNode(node: BaseNode, nodeId: string, parentNode?: BaseNode): VirtualTreeNode {
+	public addNode(
+		node: BaseNode,
+		nodeId: string,
+		parentNode?: BaseNode,
+		messageId?: string,
+	): VirtualTreeNode {
 		let virtualNode = this.getVirtualNode(nodeId);
 		if (virtualNode) {
 			return virtualNode;
 		}
 
-		virtualNode = new VirtualTreeNode(node, nodeId);
+		virtualNode = new VirtualTreeNode(node, nodeId, messageId);
 		this.lookupTable.set(virtualNode.id, virtualNode);
 
 		const parent = parentNode !== undefined ? parentNode : node.parent;

@@ -42,7 +42,8 @@ describe("Big-O performance gates", () => {
 					index % 10 === 0
 						? (frame.appendChild(new FakeFrameNode(`Group ${index}`)) as FakeFrameNode)
 						: frame;
-				parent.appendChild(new FakeTextNode(`Cell ${index}`));
+				const text = parent.appendChild(new FakeTextNode(`Cell ${index}`)) as FakeTextNode;
+				if (index % 2 === 0) text.setPluginData("mn", `message.${index % 4}`);
 			}
 			const manager = new LocalizedLabelManager();
 			(manager as any).messageStore = { messageIdToLabels: {} };
@@ -54,14 +55,19 @@ describe("Big-O performance gates", () => {
 				new Set(),
 				0,
 			);
-			const operations = figma.counters.pluginDataReads + figma.counters.nodeLookups;
+			const operations = figma.counters.pluginDataReads;
 			const elapsedMs = await medianElapsed(async () => {
 				await manager.processNodeRecursively(page as any, figma.root as any, new Set(), 0);
 			});
 			samples.push({ size, operations, elapsedMs });
 			expect(figma.counters.exports).toBe(0);
+			expect(figma.counters.nodeLookups).toBe(0);
 			expect(result.nodesProcessed).toBe(size);
-			expect(operations).toBe(size * 3);
+			expect(operations).toBe(size * 2);
+			expect(Object.values((manager as any).messageStore.messageIdToLabels)).toHaveLength(2);
+			expect((manager as any).messageStore.messageIdToLabels["message.0"].size).toBe(
+				Math.ceil(size / 4),
+			);
 		}
 		assertLinear(samples);
 		console.table(samples);
@@ -88,7 +94,7 @@ describe("Big-O performance gates", () => {
 			const labels = await manager.getWithMessage("checkout.greeting");
 			const operations = figma.counters.nodeLookups - before.nodeLookups;
 			expect(figma.counters.traversedNodes - before.traversedNodes).toBe(0);
-			expect(figma.counters.pluginDataReads - before.pluginDataReads).toBe(6);
+			expect(figma.counters.pluginDataReads - before.pluginDataReads).toBe(4);
 			const elapsedMs = await medianElapsed(async () => {
 				await manager.getWithMessage("checkout.greeting");
 			});

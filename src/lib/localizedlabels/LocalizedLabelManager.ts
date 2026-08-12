@@ -614,9 +614,8 @@ export default class LocalizedLabelManager {
 
 	async processTextNode(textNode: CachedTextNode, keysLoaded: Set<string>, parentNode?: BaseNode) {
 		const textNodeId = textNode.id;
-		this.virtualTree.addNode(textNode, textNodeId, parentNode);
-
 		const messageId = textNode.getPluginData(this.messageNameDataKey);
+		this.virtualTree.addNode(textNode, textNodeId, parentNode, messageId);
 		if (messageId) {
 			this.linkedTextNodeCount += 1;
 			const previousMessage = this.refreshLabelMessageLinkCache(textNodeId, messageId);

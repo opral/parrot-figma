@@ -102,7 +102,7 @@ export function migrateLegacyMessagesToBundles(root: PluginDataRoot): BundleMigr
 			try {
 				root.setPluginData(key, value);
 				if (root.getPluginData(key) !== value) {
-					throw new Error(`Rollback verification failed for "${key}"`);
+					rollbackErrors.push(new Error(`Rollback verification failed for "${key}"`));
 				}
 			} catch (rollbackCause) {
 				rollbackErrors.push(rollbackCause);

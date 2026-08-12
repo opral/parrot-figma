@@ -1234,23 +1234,14 @@ export default class LocalizedLabelManager {
 	helperDomain = "https://relativeUrl";
 
 	private toLocalizedLabelOrUndefined(node: TextNode): LocalizedLabel | undefined {
-		let derivable = true;
-
-		if (node.autoRename) {
-			derivable = false;
-		}
-
 		// we skip nodes that are not visible
 		if (!node.visible) {
 			return;
 		}
 
 		let derivedName = this.extractKeyName(node.name);
-		derivable = false;
-
-		if (derivable && derivedName === "") {
-			derivable = false;
-		}
+		// Derived keys are intentionally disabled until their naming behavior is restored.
+		const derivable = false;
 
 		let page: PageNode | null = null;
 		let rootFrame: FrameNode | null = null;

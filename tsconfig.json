@@ -8,15 +8,12 @@
 		// strict ES module
 		"moduleResolution": "Bundler",
 		"skipLibCheck": true,
+		"types": ["@figma/plugin-typings", "node", "vite/client"],
 
     "resolveJsonModule": true,
-    "jsx": "react",
+    "jsx": "react-jsx",
     "noImplicitThis": false,
     "allowSyntheticDefaultImports": true,
-    "typeRoots": [
-      "./node_modules/@types",
-      "./node_modules/@figma"
-    ],
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "manifest.figma.ts"],
   "exclude": ["snipets/**"]

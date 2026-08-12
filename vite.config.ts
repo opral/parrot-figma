@@ -1,10 +1,6 @@
 import path from "node:path";
 import { defineConfig } from "vite";
-import { viteSingleFile } from "vite-plugin-singlefile";
-import generateFile from "vite-plugin-generate-file";
 import react from "@vitejs/plugin-react";
-import richSvg from "vite-plugin-react-rich-svg";
-import { viteStaticCopy } from "vite-plugin-static-copy"
 import rawPlugin from 'vite-raw-plugin';
 
 import { exec } from "child_process";
@@ -62,7 +58,6 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
-    richSvg() as any /* any to avoid type problem*/,
     rawPlugin({fileRegex: /\.ejs$/ }),
     // viteSingleFile(),
     
@@ -105,10 +100,15 @@ export default defineConfig(({ mode }) => ({
   //   },
   // },
   resolve: {
-    alias: {
-      // "@common": path.resolve("src/common"),
-      "@ui": path.resolve("src/ui"),
-      // "@plugin": path.resolve("src/sandbox"),
-    },
+    alias: [
+      {
+        // The custom Quill fork ships a development webpack bundle whose nested
+        // CommonJS runtime is incompatible with Vite 8's Rolldown optimizer.
+        // Its source entry is native ESM and avoids that compatibility layer.
+        find: /^quill$/,
+        replacement: path.resolve("node_modules/quill/quill.js"),
+      },
+      { find: "@ui", replacement: path.resolve("src/ui") },
+    ],
   },
 }));

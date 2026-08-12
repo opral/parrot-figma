@@ -5,7 +5,7 @@ import posthog from "posthog-js";
 import { Locale } from "../../../lib/message/variants/Locale";
 import "./LanguageSetup.css";
 import ReactSelect, { MultiValueRemoveProps, components } from "react-select";
-import OutsideClickHandler from "react-outside-click-handler";
+import OutsideClickHandler from "../outsideClickHandler/OutsideClickHandler";
 import FileSelect from "../fileselect/FileSelect";
 import MessageImporter, { ImportResult, ImportType } from "../../../lib/import/MessageImporter";
 import LocalizedLabelManagerUI from "../../../lib/localizedlabels/LocalizedLabelManagerUI";

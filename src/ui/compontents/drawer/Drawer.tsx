@@ -1,5 +1,5 @@
 import React, { ReactNode, useRef, useEffect, useState } from "react";
-import OutsideClickHandler from "react-outside-click-handler";
+import OutsideClickHandler from "../outsideClickHandler/OutsideClickHandler";
 import "./Drawer.css";
 
 type ButtonConfig = {

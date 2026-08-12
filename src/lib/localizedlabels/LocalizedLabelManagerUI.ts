@@ -71,16 +71,11 @@ export default class LocalizedLabelManagerUI
 
 		// flag that signals if the parents of a node have changed (it was moved to another parent for example)
 		let rootFrameDiffers = true;
-		let stateDiffers = true;
 
 		const cachedLabel = this.cachedLocalisedLabels[label.nodeId];
 		if (cachedLabel) {
 			rootFrameDiffers = false;
-			stateDiffers = false;
-
-			if (cachedLabel.state!.modified !== label.state!.modified) {
-				stateDiffers = true;
-			}
+			const stateDiffers = cachedLabel.state!.modified !== label.state!.modified;
 
 			if (cachedLabel.rootFrameId !== label.rootFrameId) {
 				rootFrameDiffers = true;

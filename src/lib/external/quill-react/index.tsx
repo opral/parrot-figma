@@ -4,7 +4,6 @@ https://github.com/zenoamaro/react-quill
 */
 
 import React from "react";
-import ReactDOM from "react-dom";
 import isEqual from "lodash/isEqual";
 
 import Quill, {
@@ -124,7 +123,7 @@ export default class ReactQuill extends React.Component<ReactQuillProps, ReactQu
 	/*
   Reference to the element holding the Quill editing area.
   */
-	editingArea?: React.ReactInstance | null;
+	editingArea?: Element | null;
 
 	/*
   Tracks the internal value of the Quill editor
@@ -406,26 +405,19 @@ export default class ReactQuill extends React.Component<ReactQuillProps, ReactQu
 		if (!this.editingArea) {
 			throw new Error("Instantiating on missing editing area");
 		}
-		const element = ReactDOM.findDOMNode(this.editingArea);
-		if (!element) {
-			throw new Error("Cannot find element for editing area");
-		}
-		if (element.nodeType === 3) {
-			throw new Error("Editing area cannot be a text node");
-		}
-		return element as Element;
+		return this.editingArea;
 	}
 
 	/*
   Renders an editor area, unless it has been provided one to clone.
   */
-	renderEditingArea(): JSX.Element {
+	renderEditingArea(): React.JSX.Element {
 		const { children, preserveWhitespace } = this.props;
 		const { generation } = this.state;
 
 		const properties = {
 			key: generation,
-			ref: (instance: React.ReactInstance | null) => {
+			ref: (instance: Element | null) => {
 				this.editingArea = instance;
 			},
 		};

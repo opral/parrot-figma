@@ -35,7 +35,7 @@ export default function AsyncImage({
 				const base64url = await new Promise<string>((resolve) => {
 					const reader = new FileReader();
 					reader.onload = () => resolve(reader.result as string);
-					reader.readAsDataURL(new Blob([data]));
+					reader.readAsDataURL(new Blob([Uint8Array.from(data)]));
 				});
 
 				setImageEncoded(base64url);

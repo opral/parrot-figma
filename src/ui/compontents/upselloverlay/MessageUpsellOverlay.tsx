@@ -18,9 +18,9 @@ export default function MessageUpsellOverlay({
 
 	const messagesCreditsUsed = messageCreditsTotal - availableTranslations;
 
-	let progress = 1;
-	let upsellType: "info" | "warning" | "error" = "info";
-	let message = `${availableTranslations} machine translations left`;
+	let progress: number;
+	let upsellType: "info" | "warning" | "error";
+	let message: string;
 
 	function syncState(stateData: { credits: TranslationCredit[]; availableMessages: number }) {
 		let currentMessageCreditsTotal = 0;
@@ -58,7 +58,9 @@ export default function MessageUpsellOverlay({
 	}, []);
 
 	if (availableTranslations > 30) {
+		progress = 1;
 		upsellType = "info";
+		message = `${availableTranslations} machine translations left`;
 	} else if (availableTranslations <= 50 && availableTranslations > 0) {
 		upsellType = "warning";
 		if (availableTranslations < 13) {
@@ -73,6 +75,7 @@ export default function MessageUpsellOverlay({
 			message = `${availableTranslations} translations left`;
 		}
 	} else {
+		progress = 1;
 		upsellType = "error";
 		if (freeTier) {
 			message = `All ${messagesCreditsUsed} free translations used.`;

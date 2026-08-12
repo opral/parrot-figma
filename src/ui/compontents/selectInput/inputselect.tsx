@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, MouseEvent } from "react";
-import OutsideClickHandler from "react-outside-click-handler";
+import OutsideClickHandler from "../outsideClickHandler/OutsideClickHandler";
 import "./inputselect.css";
 import { Plural } from "../../../lib/message/variants/Plural";
 import { Locale } from "../../../lib/message/variants/Locale";

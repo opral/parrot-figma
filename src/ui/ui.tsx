@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
-import * as ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 import TimeAgo from "javascript-time-ago";
 import en from "javascript-time-ago/locale/en.json";
 import * as Sentry from "@sentry/react";
@@ -562,4 +562,6 @@ function App() {
 	);
 }
 
-ReactDOM.render(<App />, document.getElementById("react-page"));
+const rootElement = document.getElementById("react-page");
+if (!rootElement) throw new Error("Missing #react-page mount element");
+createRoot(rootElement).render(<App />);

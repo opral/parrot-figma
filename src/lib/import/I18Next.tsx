@@ -99,7 +99,7 @@ export default class I18NextKeyValueImporter {
 			return undefined;
 		}
 
-		let json = {} as any;
+		let json: any;
 
 		try {
 			json = JSON.parse(stringsFileContent);

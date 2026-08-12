@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Parrot
+        uses: actions/checkout@v4
+        with:
+          path: parrot-figma
+
+      # Remove this checkout and the link step once @inlang/sdk v3 is
+      # available from npm and committed to Parrot's lockfile.
+      - name: Check out Inlang v3
+        uses: actions/checkout@v4
+        with:
+          repository: opral/inlang
+          ref: v3
+          path: inlang
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.23.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: |
+            inlang/pnpm-lock.yaml
+            parrot-figma/pnpm-lock.yaml
+
+      - name: Build the local Inlang SDK
+        working-directory: inlang
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @inlang/sdk build
+
+      - name: Link the local Inlang SDK
+        working-directory: parrot-figma
+        run: |
+          pnpm link ../inlang/packages/sdk
+          pnpm install --no-frozen-lockfile
+
+      - name: Typecheck
+        working-directory: parrot-figma
+        run: pnpm tsc
+
+      - name: Test
+        working-directory: parrot-figma
+        run: pnpm test
+
+      - name: Lint
+        working-directory: parrot-figma
+        run: pnpm lint
+
+      - name: Build
+        working-directory: parrot-figma
+        run: pnpm build

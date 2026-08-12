@@ -5,7 +5,7 @@ import {
 	type BundleNested,
 	type InlangProject,
 	type ProjectSettings,
-} from "@inlang/sdk";
+} from "@inlang/sdk/browser";
 import { openLix, type Lix } from "@inlang/sdk/lix";
 import type { Message } from "../LegacyMessage";
 import { bundleToLegacyMessage, legacyMessageToBundle } from "./LegacyMessageBundleConverter";

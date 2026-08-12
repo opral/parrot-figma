@@ -1,8 +1,8 @@
 import TextEncoding from "text-encoding";
 import blake from "blakejs";
-import type { BundleNested } from "@inlang/sdk";
+import type { BundleNested } from "@inlang/sdk/browser";
 
-export type { BundleNested } from "@inlang/sdk";
+export type { BundleNested } from "@inlang/sdk/browser";
 
 export const FIGMA_BUNDLE_PREFIX = "prt_ib__";
 export const FIGMA_BUNDLE_MIGRATION_KEY = "prt_ib_migration_v1";

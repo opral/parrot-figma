@@ -12,6 +12,7 @@ pnpm --filter @inlang/sdk build
 pnpm --filter @inlang/plugin-i18next build
 pnpm --filter @inlang/plugin-android build
 pnpm --filter @inlang/plugin-apple-strings build
+pnpm --filter @inlang/plugin-apple-xcstrings build
 
 cd ../parrot-figma
 corepack pnpm install --frozen-lockfile

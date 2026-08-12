@@ -111,6 +111,10 @@ export default function Export({ labelManager, userManager }: ExportProps) {
 			label: "iOS - .strings File",
 			value: "apple-strings",
 		},
+		{
+			label: "Apple - String Catalog (.xcstrings)",
+			value: "apple-xcstrings",
+		},
 	] as SelectOption[];
 
 	const downloadFile = (fileName: string, fileType: string, content: string) => {

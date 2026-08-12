@@ -87,6 +87,21 @@ describe("plugin-driven message export", () => {
 		});
 	});
 
+	test("exports an Apple String Catalog with exact keys, variables, and plurals", async () => {
+		await withProject(async (store) => {
+			const file = await MessageExporter.export(store, Locale.EN, "apple-xcstrings");
+			expect(file?.fileName).toBe("Localizable.xcstrings");
+			const catalog = JSON.parse(file!.content);
+			expect(catalog.strings["ManageSale.PricePlaceholder"].localizations.en.stringUnit.value).toBe(
+				"Hello %1$@",
+			);
+			expect(
+				catalog.strings.cart_items.localizations.en.substitutions.countPlural.variations.plural
+					.other.stringUnit.value,
+			).toBe("%1$lld items");
+		});
+	});
+
 	test("rejects multiple files instead of silently dropping output", async () => {
 		const store = {
 			exportFiles: async () => [

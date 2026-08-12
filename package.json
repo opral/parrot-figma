@@ -47,6 +47,7 @@
   "dependencies": {
     "@inlang/plugin-android": "link:../inlang/packages/plugins/android",
     "@inlang/plugin-apple-strings": "link:../inlang/packages/plugins/apple-strings",
+    "@inlang/plugin-apple-xcstrings": "link:../inlang/packages/plugins/apple-xcstrings",
     "@inlang/plugin-i18next": "link:../inlang/packages/plugins/i18next",
     "@inlang/sdk": "link:../inlang/packages/sdk",
     "@ungap/url-search-params": "^0.2.2",

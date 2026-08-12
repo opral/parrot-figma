@@ -14,6 +14,10 @@ export const EXPORT_TARGETS = {
 		pluginKey: "plugin.inlang.apple-strings",
 		fileType: "text/plain",
 	},
+	"apple-xcstrings": {
+		pluginKey: "plugin.inlang.apple-xcstrings",
+		fileType: "application/json",
+	},
 } as const;
 
 export type ExportTarget = keyof typeof EXPORT_TARGETS;

@@ -12,6 +12,7 @@ import type { Message } from "../LegacyMessage";
 import i18nextPlugin from "@inlang/plugin-i18next";
 import androidPlugin from "@inlang/plugin-android";
 import appleStringsPlugin from "@inlang/plugin-apple-strings";
+import appleXcstringsPlugin from "@inlang/plugin-apple-xcstrings";
 import { bundleToLegacyMessage, legacyMessageToBundle } from "./LegacyMessageBundleConverter";
 
 /**
@@ -39,7 +40,12 @@ export class InlangV3Project {
 			const project = await openProject({
 				lix,
 				settings: args.settings,
-				providePlugins: [i18nextPlugin, androidPlugin, appleStringsPlugin] as InlangPlugin[],
+				providePlugins: [
+					i18nextPlugin,
+					androidPlugin,
+					appleStringsPlugin,
+					appleXcstringsPlugin,
+				] as InlangPlugin[],
 			});
 			const session = new InlangV3Project(project, lix);
 			for (const message of args.messages) await session.upsert(message);

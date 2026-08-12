@@ -102,6 +102,30 @@ describe("plugin-driven message export", () => {
 		});
 	});
 
+	test("exports one catalog containing every locale from a target-locale request", async () => {
+		const project = await InlangV3Project.open({
+			settings: { baseLocale: "en", locales: ["en", "de"], modules: [] },
+			messages: [
+				{
+					id: "greeting",
+					selectors: [],
+					variants: [
+						{ languageTag: "en", match: [], pattern: [{ type: "Text", value: "Hello" }] },
+						{ languageTag: "de", match: [], pattern: [{ type: "Text", value: "Hallo" }] },
+					],
+				},
+			],
+		});
+		try {
+			const file = await MessageExporter.export(testStore(project), Locale.DE, "apple-xcstrings");
+			const catalog = JSON.parse(file!.content);
+			expect(catalog.strings.greeting.localizations.en.stringUnit.value).toBe("Hello");
+			expect(catalog.strings.greeting.localizations.de.stringUnit.value).toBe("Hallo");
+		} finally {
+			await project.close();
+		}
+	});
+
 	test("rejects multiple files instead of silently dropping output", async () => {
 		const store = {
 			exportFiles: async () => [

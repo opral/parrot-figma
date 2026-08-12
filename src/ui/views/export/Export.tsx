@@ -95,6 +95,7 @@ export default function Export({ labelManager, userManager }: ExportProps) {
 	const [featureEnabled, setFeatureEnabled] = useState(false);
 
 	const [exportTarget, setExportTarget] = useState<string | undefined>(undefined);
+	const exportsWholeCatalog = exportTarget === "apple-xcstrings";
 	const [exporting, setExporting] = useState(false);
 	const [exportError, setExportError] = useState<string | undefined>();
 
@@ -290,7 +291,7 @@ export default function Export({ labelManager, userManager }: ExportProps) {
 									<div className="language-export-action">
 										<button
 											className="button button--buttonSecondary"
-											disabled={exportTarget === undefined || exporting}
+											disabled={exportTarget === undefined || exporting || exportsWholeCatalog}
 											type="button"
 											onClick={() => {
 												doExport(languageOption.value as Locale, exportTarget!);

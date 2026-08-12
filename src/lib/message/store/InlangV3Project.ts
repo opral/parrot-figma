@@ -108,6 +108,7 @@ export class InlangV3Project {
 
 	async exportFiles(pluginKey: string, locale: string) {
 		const files = await this.project.exportFiles({ pluginKey });
+		if (pluginKey === "plugin.inlang.apple-xcstrings") return files;
 		return files.filter((file) => file.locale === locale);
 	}
 	async close(): Promise<void> {

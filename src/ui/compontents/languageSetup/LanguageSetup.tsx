@@ -1,11 +1,10 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import type { Message, Variant } from "../../../lib/message/LegacyMessage";
-import posthog from "posthog-js";
 import { Locale } from "../../../lib/message/variants/Locale";
 import "./LanguageSetup.css";
 import ReactSelect, { MultiValueRemoveProps, components } from "react-select";
-import OutsideClickHandler from "react-outside-click-handler";
+import OutsideClickHandler from "../outsideClickHandler/OutsideClickHandler";
 import FileSelect from "../fileselect/FileSelect";
 import MessageImporter, { ImportResult, ImportType } from "../../../lib/import/MessageImporter";
 import LocalizedLabelManagerUI from "../../../lib/localizedlabels/LocalizedLabelManagerUI";
@@ -192,17 +191,10 @@ export default function LanguageSetup({
 						key: "enter",
 						disabled: importResult && importResult!.type === ImportType.UNSUPPORTED,
 						callback: () => {
-							labelManager.import(importResult!.messages!, importResult!.language);
-							setImportResult(undefined);
-							setimportKeysByState(undefined);
-							posthog.capture("PARROT import messages", {
-								importResults: {
-									format: importResult?.type,
-									language: importResult?.language,
-									numberOfMessages: importResult?.messages?.length,
-								},
-							});
-						},
+								labelManager.import(importResult!.messages!, importResult!.language);
+								setImportResult(undefined);
+								setimportKeysByState(undefined);
+							},
 					},
 				]}
 				shown={importResult !== undefined}

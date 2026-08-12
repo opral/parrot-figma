@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useEffect, useRef } from "react";
 import useState from "react-usestateref";
-import OutsideClickHandler from "react-outside-click-handler";
+import OutsideClickHandler from "../outsideClickHandler/OutsideClickHandler";
 import "./TextField.css";
 
 type TextFieldProps = {

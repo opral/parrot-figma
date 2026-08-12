@@ -42,7 +42,7 @@ export default class MigrationManager {
 
 				if (legacyConfigRaw === "") {
 					// file is not yet configured for parrot - skip migration
-					return true;
+				return true;
 				}
 				const config = JSON.parse(legacyConfigRaw);
 
@@ -53,10 +53,6 @@ export default class MigrationManager {
 					this.setPluginData(figma.root, legacyConfigDataKey, "");
 				}
 
-				let migratedMessages = 0;
-				let migratedAnonymousLabels = 0;
-				let migratedLinkedLabels = 0;
-				let migratedPlaceholders = 0;
 
 				const patternHtmlToPattern = (patternHtml: string): any[] => {
 					const result = [] as any[];
@@ -139,7 +135,6 @@ export default class MigrationManager {
 						if (legacyMessage.ref !== undefined) {
 							// skip referencing messages - edgecase can be fixed by the usere easyly
 						} else {
-							migratedMessages += 1;
 							const inlangMessage = migrateParrotMessageToInlangMessage(legacyMessage);
 							if (inlangMessage) {
 								this.setPluginData(
@@ -185,7 +180,6 @@ export default class MigrationManager {
 						continue; // skip labels that have a message reference
 					}
 
-					migratedAnonymousLabels += 1;
 
 					// drop plural and gender properties in favour of future parameter
 					this.setPluginData(textNodeWitAnonymMessageToMigrate, "mp", "");
@@ -210,7 +204,6 @@ export default class MigrationManager {
 					if (fillinRaw !== "") {
 						const legacyFillin = JSON.parse(fillinRaw);
 						const fillinToPlaceholder = migrateFillins(legacyFillin);
-						migratedPlaceholders += Object.keys(fillinToPlaceholder.parameterValues).length;
 						this.setPluginData(
 							textNodeWitAnonymMessageToMigrate,
 							"fitp",
@@ -240,7 +233,6 @@ export default class MigrationManager {
 						this.setPluginData(textNodeWithReferenceToMigrate, `mn_${messageName}`, messageName);
 					}
 
-					migratedLinkedLabels += 1;
 
 					// reset old mi - message id proerty
 					this.setPluginData(textNodeWithReferenceToMigrate, "mi", "");
@@ -260,7 +252,6 @@ export default class MigrationManager {
 					if (fillinRaw !== "") {
 						const legacyFillin = JSON.parse(fillinRaw);
 						const fillinToPlaceholder = migrateFillins(legacyFillin);
-						migratedPlaceholders += Object.keys(fillinToPlaceholder.parameterValues).length;
 
 						this.setPluginData(
 							textNodeWithReferenceToMigrate,
@@ -276,12 +267,7 @@ export default class MigrationManager {
 					}
 				}
 
-				this.figmaUtil.addMigrationReport(
-					version,
-					`Migration successfull: Migrated Messages: ${migratedMessages} Migrated Linked labels ${migratedLinkedLabels} Migrated Labels with anonym Messages ${migratedAnonymousLabels} Parameters: ${migratedPlaceholders}`,
-				);
-
-				return true;
+					return true;
 			},
 		},
 	];

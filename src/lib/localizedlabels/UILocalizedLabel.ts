@@ -1,4 +1,4 @@
-import Quill, { Delta as DeltaType, DeltaOperation } from "quill";
+import Quill, { Delta as DeltaType, type Op } from "quill";
 import blake from "blakejs";
 import type { Message } from "../message/LegacyMessage";
 import { unset } from "lodash";
@@ -183,7 +183,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 			return "";
 		}
 
-		const deltaOps = [] as DeltaOperation[];
+		const deltaOps: Op[] = [];
 		const lastTwoCharsBreaks =
 			text.length > 1 && text[text.length - 1] === "\n" && text[text.length - 2] === "\n";
 

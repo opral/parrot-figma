@@ -4,17 +4,21 @@ https://github.com/zenoamaro/react-quill
 */
 
 import React from "react";
-import ReactDOM from "react-dom";
 import isEqual from "lodash/isEqual";
 
 import Quill, {
-	QuillOptionsStatic,
-	DeltaStatic,
-	RangeStatic,
-	BoundsStatic,
-	StringMap,
-	Sources,
+	Delta,
+	Range as QuillRange,
+	type Bounds,
+	type EmitterSource,
+	type QuillOptions as BaseQuillOptions,
 } from "quill";
+
+type DeltaStatic = Delta;
+type RangeStatic = QuillRange;
+type BoundsStatic = Bounds;
+type StringMap = Record<string, unknown>;
+type Sources = EmitterSource;
 
 // Re-import everything from namespace into scope for comfort
 import Value = ReactQuill.Value;
@@ -30,7 +34,7 @@ namespace ReactQuill {
 	export type Value = string | DeltaStatic;
 	export type Range = RangeStatic | null;
 
-	export interface QuillOptions extends QuillOptionsStatic {
+	export interface QuillOptions extends BaseQuillOptions {
 		tabIndex?: number;
 	}
 
@@ -52,7 +56,6 @@ namespace ReactQuill {
 		placeholder?: string;
 		preserveWhitespace?: boolean;
 		readOnly?: boolean;
-		scrollingContainer?: string | HTMLElement;
 		style?: React.CSSProperties;
 		tabIndex?: number;
 		theme?: string;
@@ -63,8 +66,8 @@ namespace ReactQuill {
 		getLength(): number;
 		getText(index?: number, length?: number): string;
 		getHTML(): string;
-		getBounds(index: number, length?: number): BoundsStatic;
-		getSelection(focus?: boolean): RangeStatic;
+		getBounds(index: number, length?: number): BoundsStatic | null;
+		getSelection(focus?: boolean): RangeStatic | null;
 		getContents(index?: number, length?: number): DeltaStatic;
 	}
 }
@@ -124,7 +127,7 @@ export default class ReactQuill extends React.Component<ReactQuillProps, ReactQu
 	/*
   Reference to the element holding the Quill editing area.
   */
-	editingArea?: React.ReactInstance | null;
+	editingArea?: HTMLElement | null;
 
 	/*
   Tracks the internal value of the Quill editor
@@ -284,7 +287,6 @@ export default class ReactQuill extends React.Component<ReactQuillProps, ReactQu
 			modules: this.props.modules,
 			placeholder: this.props.placeholder,
 			readOnly: this.props.readOnly,
-			scrollingContainer: this.props.scrollingContainer,
 			tabIndex: this.props.tabIndex,
 			theme: this.props.theme,
 		};
@@ -299,7 +301,7 @@ export default class ReactQuill extends React.Component<ReactQuillProps, ReactQu
   Creates an editor on the given element. The editor will be passed the
   configuration, have its events bound,
   */
-	createEditor(element: Element, config: QuillOptions) {
+	createEditor(element: HTMLElement, config: QuillOptions) {
 		const editor = new Quill(element, config);
 		if (config.tabIndex != null) {
 			this.setEditorTabIndex(editor, config.tabIndex);
@@ -354,7 +356,7 @@ export default class ReactQuill extends React.Component<ReactQuillProps, ReactQu
 		this.value = value;
 		const sel = this.getEditorSelection();
 		if (typeof value === "string") {
-			editor.setContents(editor.clipboard.convert(value));
+			editor.setContents(editor.clipboard.convert({ html: value }));
 		} else {
 			editor.setContents(value);
 		}
@@ -402,30 +404,23 @@ export default class ReactQuill extends React.Component<ReactQuillProps, ReactQu
 		};
 	}
 
-	getEditingArea(): Element {
+	getEditingArea(): HTMLElement {
 		if (!this.editingArea) {
 			throw new Error("Instantiating on missing editing area");
 		}
-		const element = ReactDOM.findDOMNode(this.editingArea);
-		if (!element) {
-			throw new Error("Cannot find element for editing area");
-		}
-		if (element.nodeType === 3) {
-			throw new Error("Editing area cannot be a text node");
-		}
-		return element as Element;
+		return this.editingArea;
 	}
 
 	/*
   Renders an editor area, unless it has been provided one to clone.
   */
-	renderEditingArea(): JSX.Element {
+	renderEditingArea(): React.JSX.Element {
 		const { children, preserveWhitespace } = this.props;
 		const { generation } = this.state;
 
 		const properties = {
 			key: generation,
-			ref: (instance: React.ReactInstance | null) => {
+			ref: (instance: HTMLElement | null) => {
 				this.editingArea = instance;
 			},
 		};

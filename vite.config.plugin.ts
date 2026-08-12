@@ -1,6 +1,5 @@
 import path from "node:path";
 import { defineConfig } from "vite";
-import generateFile from "vite-plugin-generate-file";
 import { viteSingleFile } from "vite-plugin-singlefile";
 import { viteStaticCopy } from "vite-plugin-static-copy"
 

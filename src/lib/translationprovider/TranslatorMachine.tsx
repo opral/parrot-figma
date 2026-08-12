@@ -306,10 +306,8 @@ export default class TranslatorMachine {
 			}
 		}
 
-		let translation: string | null = null;
-
 		// call google translate
-		translation = await GoogleTranslator.translate(text, sourceLange, targetLanguage);
+		const translation = await GoogleTranslator.translate(text, sourceLange, targetLanguage);
 
 		// lets not wait for the results here ;-)
 		if (figma.currentUser && FeatureFlags.features.payment) {

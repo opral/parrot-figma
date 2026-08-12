@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
-import * as Sentry from "@sentry/react";
+import { reportError } from "../../utils/errorReporting";
 
 import "../../localization/i18n";
 
@@ -221,7 +221,7 @@ export default function TranslationKeyListItem({
 						disabled: messageIdToDelete === undefined,
 						callback: () => {
 							localizedLabelManager.deleteMessage(message.id).catch((e: Error) => {
-								Sentry.captureException(e);
+									reportError(e);
 								figmaRemote.notifyError(e.message);
 							});
 							setMessageIdToDelete(undefined);

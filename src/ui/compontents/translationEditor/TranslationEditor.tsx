@@ -1,11 +1,15 @@
 import * as React from "react";
 import { useEffect, useRef, useState } from "react";
-import OutsideClickHandler from "react-outside-click-handler";
+import OutsideClickHandler from "../outsideClickHandler/OutsideClickHandler";
 
 import "./quill.bubble.css";
 import "./TranslationEditor.css";
 
-import Quill, { DeltaStatic, Sources, Delta as DeltaType } from "quill";
+import Quill, {
+	Delta,
+	Range as QuillRange,
+	type EmitterSource,
+} from "quill";
 
 import Emitter from "quill/core/emitter";
 import { createPortal } from "react-dom";
@@ -33,14 +37,15 @@ Quill.register(PlaceholderBlot, true);
 Quill.register(MyListContainer, true);
 
 Quill.register(TextDecorationBlot);
-const icons = Quill.import("ui/icons");
+const icons = Quill.import("ui/icons") as Record<string, any>;
 icons.textDecoration = {
 	UNDERLINE: icons.underline,
 	STRIKETHROUGH: icons.strike,
 };
 const saveOnEnter = true;
 
-const Delta = Quill.import("delta") as typeof DeltaType;
+type DeltaStatic = Delta;
+type Sources = EmitterSource;
 
 type TranslationEditorProps = {
 	language: Locale;
@@ -131,8 +136,8 @@ export default function TranslationEditor({
 
 	const onEditorChange = (
 		eventName: "text-change" | "selection-change",
-		rangeOrDelta: Range | DeltaStatic,
-		oldRangeOrDelta: Range | DeltaStatic,
+		rangeOrDelta: QuillRange | DeltaStatic,
+		oldRangeOrDelta: QuillRange | DeltaStatic,
 		source: Sources,
 	) => {
 		if (eventName === "text-change" && source !== "silent") {

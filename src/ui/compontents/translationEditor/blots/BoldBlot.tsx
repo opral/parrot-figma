@@ -1,6 +1,5 @@
 import Quill from "quill";
-
-const Inline = Quill.import("blots/inline");
+import Inline from "quill/blots/inline";
 
 export default class BoldBlot extends Inline {}
 BoldBlot.blotName = "bold";

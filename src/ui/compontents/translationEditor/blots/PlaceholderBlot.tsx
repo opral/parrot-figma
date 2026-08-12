@@ -1,8 +1,6 @@
-import Quill from "quill";
+import Inline from "quill/blots/inline";
 import { ParameterType } from "../../../../lib/message/MessageExtnesions";
 import { Placeholder } from "../../../../lib/message/Placeholder";
-
-const Inline = Quill.import("blots/inline");
 
 export default class PlaceholderBlot extends Inline {
 	static create(value: Placeholder) {

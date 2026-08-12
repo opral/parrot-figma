@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import OutsideClickHandler from "react-outside-click-handler";
+import OutsideClickHandler from "../outsideClickHandler/OutsideClickHandler";
 import "./select.css";
 import { createPortal } from "react-dom";
 import { Plural } from "../../../lib/message/variants/Plural";

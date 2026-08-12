@@ -42,6 +42,7 @@ export default abstract class BaseTextNodeLintRule {
 		} catch (e) {
 			throw new Error(
 				`${field} inline styles can't get fixed automatically at the Moment. please remvoe those styles manually from the TextNode to use within Parrot.`,
+				{ cause: e },
 			);
 		}
 	}

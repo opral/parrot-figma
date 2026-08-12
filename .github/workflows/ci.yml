@@ -1,9 +1,9 @@
 name: CI
 
+# Restore pull_request and dev push triggers once @inlang/sdk v3 is published
+# and Parrot can commit a registry-backed lockfile.
 on:
-  pull_request:
-  push:
-    branches: [dev]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -44,10 +44,10 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm --filter @inlang/sdk build
 
-      - name: Link the local Inlang SDK
+      - name: Install with the local Inlang SDK
         working-directory: parrot-figma
         run: |
-          pnpm link ../inlang/packages/sdk
+          node -e "const fs = require('node:fs'); const pkg = require('./package.json'); pkg.pnpm ??= {}; pkg.pnpm.overrides ??= {}; pkg.pnpm.overrides['@inlang/sdk'] = 'link:../inlang/packages/sdk'; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n')"
           pnpm install --no-frozen-lockfile
 
       - name: Typecheck

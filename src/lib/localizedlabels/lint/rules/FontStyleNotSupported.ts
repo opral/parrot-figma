@@ -75,6 +75,7 @@ export default class FontStyleNotSuppoorted extends BaseTextNodeLintRule {
 		} catch (e) {
 			throw new Error(
 				`${this.fontNameStyleField} inline styles can't get fixed automatically for font family ${fontFamily}. please remvoe those styles manually from the TextNode to use within Parrot.`,
+				{ cause: e },
 			);
 		}
 	}

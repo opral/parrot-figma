@@ -177,7 +177,6 @@ export class WindowManagerSandbox {
 
 			// const patchedHtml = "<sc"+"ript>window.location.href = 'http://127.0.0.1:8080/dist/ui.html?nocache="+ (new Date()).getTime() +"';</scr"+"ipt>";
 
-			// @ts-expect-error -- figma does not expose the showUI method
 			const uiUrl = import.meta.env.VITE_CUSTOM_URL;
 
 			figma.showUI(

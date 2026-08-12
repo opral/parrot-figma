@@ -104,7 +104,7 @@ export default function LocalizedFrameGroup({
 		} catch (e: any) {
 			if (!(e instanceof NoMoreTranslationsLeftError)) {
 				figmaRemote.notify(`Something went wrong with translation - ${e.message}`);
-					reportError(e);
+				reportError(e);
 			}
 		}
 	}

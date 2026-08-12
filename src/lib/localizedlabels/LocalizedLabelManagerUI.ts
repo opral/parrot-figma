@@ -22,6 +22,7 @@ import MessageImporter from "../import/MessageImporter";
 import TranslatorMachine from "../translationprovider/TranslatorMachine";
 import { captureLoadProjectEvent } from "../../ui/utils/analytics";
 import FigmaUtil from "../../shared/FigmaUtil";
+import { FrameTranslationCoordinator } from "./FrameTranslationCoordinator";
 
 export default class LocalizedLabelManagerUI
 	extends EventTarget
@@ -146,6 +147,7 @@ export default class LocalizedLabelManagerUI
 	}
 
 	private localizedLabelMangerSandbox: LocalizedLabelManager;
+	private readonly frameTranslationCoordinator = new FrameTranslationCoordinator();
 
 	messageStore: MessageStoreMemory;
 
@@ -300,14 +302,17 @@ export default class LocalizedLabelManagerUI
 	}
 
 	async setFrameLanguage(frameId: string, targetLanguage: Locale, translator: TranslatorMachine) {
-		const version = undefined as undefined | number; // todo fill with fixed version of the frame if set
+		const frame = this.cachedFrames[frameId];
+		if (!frame) throw new Error(`Frame ${frameId} is no longer available`);
 
-		let lastError: undefined | Error;
-
-		for (const localizedLabelId of this.cachedFrames[frameId].localizedLabelIds) {
-			const localizedLabel = this.cachedLocalisedLabels[localizedLabelId]!;
-
-			try {
+		return this.frameTranslationCoordinator.run({
+			frameId,
+			labelIds: [...frame.localizedLabelIds],
+			applyLabel: async (localizedLabelId) => {
+				const localizedLabel = this.cachedLocalisedLabels[localizedLabelId];
+				if (!localizedLabel || localizedLabel.rootFrameId !== frameId) {
+					throw new Error(`Label ${localizedLabelId} moved outside frame ${frameId}`);
+				}
 				await this.setLabelLanguage(
 					localizedLabel,
 					targetLanguage,
@@ -315,19 +320,13 @@ export default class LocalizedLabelManagerUI
 					false,
 					false /** CTA is triggered not every time */,
 				);
-			} catch (e: any) {
-				lastError = e;
-			}
-		}
-
-		await this.localizedLabelMangerSandbox.updateFrameProperties(frameId, {
-			language: targetLanguage,
+			},
+			commitFrame: () =>
+				this.localizedLabelMangerSandbox.updateFrameProperties(frameId, {
+					language: targetLanguage,
+				}),
+			commitUndo: () => this.localizedLabelMangerSandbox.commitUndo(),
 		});
-
-		if (lastError) {
-			throw lastError;
-		}
-		// await this.localizedLabelMangerSandbox.updateFrameById(frameId);
 	}
 
 	async updateMessage(message: Message, defaultParameters: MessageParameterValues) {

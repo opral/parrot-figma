@@ -1,4 +1,4 @@
-import { Message } from "@inlang/sdk";
+import type { Message } from "../message/LegacyMessage";
 import { Locale } from "../message/variants/Locale";
 import { LabelStyle, LocalizedLabel } from "./LocalizedLabel";
 import ChangeEvent from "./ChangeEvent";

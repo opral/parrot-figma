@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
-import { Message } from "@inlang/sdk";
+import type { Message } from "../../../lib/message/LegacyMessage";
 import { Locale } from "../../../lib/message/variants/Locale";
 import TranslationEditor from "../../compontents/translationEditor/TranslationEditor";
 import { MessageParameterValues } from "../../../lib/message/MessageParameterValues";

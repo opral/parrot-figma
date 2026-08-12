@@ -1,6 +1,5 @@
 import Parchment from "parchment";
 import Quill from "quill";
-import Scroll from "quill/blots/scroll";
 
 const Block = Quill.import("blots/block");
 const Container = Quill.import("blots/container");
@@ -63,7 +62,7 @@ class List extends Container {
 		return undefined;
 	}
 
-	constructor(scroll: Scroll, domNode: HTMLElement) {
+	constructor(scroll: any, domNode: HTMLElement) {
 		super(scroll, domNode);
 		const listEventHandler = (e: any) => {
 			if (e.target.parentNode !== domNode) return;

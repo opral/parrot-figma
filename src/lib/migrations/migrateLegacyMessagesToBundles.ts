@@ -1,4 +1,4 @@
-import type { Message } from "@inlang/sdk";
+import type { Message } from "../message/LegacyMessage";
 import {
 	FIGMA_BUNDLE_MIGRATION_KEY,
 	FIGMA_BUNDLE_PREFIX,

@@ -1,6 +1,6 @@
 import Quill, { Delta as DeltaType, DeltaOperation } from "quill";
 import blake from "blakejs";
-import { Message } from "@inlang/message";
+import type { Message } from "../message/LegacyMessage";
 import { unset } from "lodash";
 import { Locale } from "../message/variants/Locale";
 import { MessageLinkState, LabelStyle, LocalizedLabel } from "./LocalizedLabel";

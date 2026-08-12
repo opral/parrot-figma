@@ -1,5 +1,5 @@
 import ejs from "ejs";
-import { getVariant } from "@inlang/sdk";
+import { getVariant } from "../message/LegacyMessage";
 import { Locale } from "../message/variants/Locale";
 import MessageStoreMemory from "../message/store/MessageStoreMemory";
 

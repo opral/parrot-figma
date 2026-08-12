@@ -40,7 +40,6 @@ import { InlangMessageStore } from "../lib/message/store/InlangMessageStoreFigma
 import { OverlayScrollbarsComponent } from "./compontents/overlayscrollbar";
 
 import TranslatorMachine from "../lib/translationprovider/TranslatorMachine";
-import MessageUpsellOverlay from "./compontents/upselloverlay/MessageUpsellOverlay";
 import Monitoring from "../lib/monitoring/MonitoringProxy";
 import FeatureFlags from "../lib/featureflags/FeatureFlags";
 
@@ -288,17 +287,11 @@ function App() {
 			setUser(userStateManagerUi.getCurrentUser());
 		};
 
-		const onPlanUpgradeNeeded = (event: any) => {
-			setCunsumptionPayWallFeature(event.detail as string);
-		};
-
-		userStateManagerUi.addEventListener("planUpgradeNeeded", onPlanUpgradeNeeded);
 		userStateManagerUi.addEventListener("usersUpdated", onUsersUpdated);
 		userStateManagerUi.addEventListener("currentUserUpdated", onCurrentUserUpdated);
 		return () => {
 			userStateManagerUi.removeEventListener("usersUpdated", onUsersUpdated);
 			userStateManagerUi.removeEventListener("currentUserUpdated", onCurrentUserUpdated);
-			userStateManagerUi.removeEventListener("planUpgradeNeeded", onPlanUpgradeNeeded);
 		};
 	}, []);
 

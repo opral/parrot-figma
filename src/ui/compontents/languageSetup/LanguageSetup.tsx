@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
-import { Message, Variant } from "@inlang/sdk";
+import type { Message, Variant } from "../../../lib/message/LegacyMessage";
 import posthog from "posthog-js";
 import { Locale } from "../../../lib/message/variants/Locale";
 import "./LanguageSetup.css";

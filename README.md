@@ -1,6 +1,23 @@
 
 # Project assets and resources for figma
 
+## Local Inlang v3 development
+
+Until `@inlang/sdk` v3 is published, build and link the sibling Inlang checkout:
+
+```sh
+cd ../inlang
+pnpm --filter @inlang/sdk build
+cd packages/sdk
+npm link
+
+cd ../../../parrot-figma
+pnpm link ../inlang/packages/sdk
+pnpm install
+```
+
+The consumer-side `pnpm link` is necessary because Parrot's dependencies are managed by pnpm; `npm link @inlang/sdk` cannot safely rewrite its pnpm-managed `node_modules`. The temporary local `pnpm.overrides` entry created by `pnpm link` must not be committed. Once v3 is released, install it normally and regenerate `pnpm-lock.yaml`.
+
 MVP 
  - define sharedPluginDataFormat
  - store key / values in one blob in the plugin data

@@ -1,5 +1,4 @@
 import Quill from "quill";
-import Scroll from "quill/blots/scroll";
 
 const Block = Quill.import("blots/block");
 const ListContainer = Quill.import("formats/list-container");

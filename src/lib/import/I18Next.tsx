@@ -1,4 +1,4 @@
-import { Message } from "@inlang/sdk";
+import type { Message } from "../message/LegacyMessage";
 import { Gender } from "../message/variants/Gender";
 import { Plural } from "../message/variants/Plural";
 import { ImportMessage } from "./ImportMessage";

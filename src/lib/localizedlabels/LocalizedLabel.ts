@@ -1,4 +1,4 @@
-import { Message } from "@inlang/sdk";
+import type { Message } from "../message/LegacyMessage";
 import { FillinToPlaceholder } from "../message/MessageExtnesions";
 import { Locale } from "../message/variants/Locale";
 import { DeltaOp } from "./LocalizedLabelManager";

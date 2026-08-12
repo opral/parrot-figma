@@ -1,4 +1,4 @@
-import { Message, Variant, getVariant } from "@inlang/sdk";
+import { getVariant, type Message, type Variant } from "../message/LegacyMessage";
 import MessageStoreMemory from "../message/store/MessageStoreMemory";
 
 import AppleStringsFileImporter from "./AppleStringsFileImporter";

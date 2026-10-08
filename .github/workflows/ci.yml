@@ -1,8 +1,9 @@
 name: CI
 
-# Restore pull_request and dev push triggers once @inlang/sdk v3 is published
-# and Parrot can commit a registry-backed lockfile.
 on:
+  pull_request:
+  push:
+    branches: [dev]
   workflow_dispatch:
 
 permissions:
@@ -12,56 +13,28 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out Parrot
-        uses: actions/checkout@v4
-        with:
-          path: parrot-figma
-
-      # Remove this checkout and the link step once @inlang/sdk v3 is
-      # available from npm and committed to Parrot's lockfile.
-      - name: Check out Inlang v3
-        uses: actions/checkout@v4
-        with:
-          repository: opral/inlang
-          ref: v3
-          path: inlang
+      - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.23.0
+          version: 10
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: |
-            inlang/pnpm-lock.yaml
-            parrot-figma/pnpm-lock.yaml
 
-      - name: Build the local Inlang SDK
-        working-directory: inlang
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm --filter @inlang/sdk build
-
-      - name: Install with the local Inlang SDK
-        working-directory: parrot-figma
-        run: |
-          node -e "const fs = require('node:fs'); const pkg = require('./package.json'); pkg.pnpm ??= {}; pkg.pnpm.overrides ??= {}; pkg.pnpm.overrides['@inlang/sdk'] = 'link:../inlang/packages/sdk'; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n')"
-          pnpm install --no-frozen-lockfile
+      - name: Install
+        run: pnpm install --frozen-lockfile
 
       - name: Typecheck
-        working-directory: parrot-figma
         run: pnpm tsc
 
-      - name: Test
-        working-directory: parrot-figma
-        run: pnpm test
-
       - name: Lint
-        working-directory: parrot-figma
         run: pnpm lint
 
+      - name: Test
+        run: pnpm test
+
       - name: Build
-        working-directory: parrot-figma
         run: pnpm build

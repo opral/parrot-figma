@@ -11,6 +11,8 @@ import InputSelect, {
 import { SelectOption } from "../../compontents/select/select";
 import MessageStoreMemory from "../../../lib/message/store/MessageStoreMemory";
 import { Locale } from "../../../lib/message/variants/Locale";
+import { htmlToPlainText } from "../../../lib/message/editor/HtmlText";
+import { hasMessageWithText, suggestMessageKey } from "../../../lib/localizedlabels/KeySuggestion";
 import TranslationEditor from "../../compontents/translationEditor/TranslationEditor";
 import LocalizedLabelManagerUI from "../../../lib/localizedlabels/LocalizedLabelManagerUI";
 import TextField from "../../compontents/textfield/TextField";
@@ -22,7 +24,46 @@ import { MessageParameterValues } from "../../../lib/message/MessageParameterVal
 import TranslatorMachine, {
 	NoMoreTranslationsLeftError,
 } from "../../../lib/translationprovider/TranslatorMachine";
-import FeatureFlags from "../../../lib/featureflags/FeatureFlags";
+
+/**
+ * The text the "Select a message" drawer starts its search with: plain words (no query syntax) of the
+ * layer text - in a frame that is not in the reference language the reference text of the layer, which
+ * is what the messages to link contain.
+ */
+function messageSearchSeed(label: UILocalizedLabel, refLanguage: string | undefined) {
+	let text = label.characters;
+	if (
+		refLanguage !== undefined &&
+		label.rootFrameLanguage !== refLanguage &&
+		label.unlinkedMessage
+	) {
+		const refHtml = MessageStoreMemory.htmlForPattern(label.unlinkedMessage, refLanguage, []);
+		if (refHtml) text = htmlToPlainText(refHtml.replace(/<[^>]*>/g, ""));
+	}
+	return (text.split(/\r?\n|\u2028/).find((line) => line.trim() !== "") ?? "").trim().slice(0, 40);
+}
+
+// What "Fix styles" does for each lint rule, in plain words (see lint/rules/*.fix) - shown before anything is changed.
+const lintFixDescriptions: { [ruleName: string]: string } = {
+	MixedStyleNotSupportedForFills:
+		"Several text colors - the whole text gets its most used color (a colored word turns into the main color).",
+	MixedStyleNotSupportedForFontSize: "Several font sizes - the whole text gets its most used size.",
+	MixedStyleNotSupportedForTextCase:
+		"Several letter cases (e.g. upper case) - the whole text gets the most used one.",
+	MixedStyleNotSupportedForLetterSpacing:
+		"Several letter spacings - the whole text gets the most used one.",
+	MixedStyleNotSupportedForLineHeight:
+		"Several line heights - the whole text gets the most used one.",
+	MixedStyleNotSupportedForLeadingTrim:
+		"Several leading trim settings - the whole text gets the most used one.",
+	MixedStyleNotSupportedOpenTypeFace:
+		"Several OpenType features - the whole text gets the most used setting.",
+	FontStyleNotSupported:
+		"Font styles other than Regular, Bold and Italic (e.g. Medium or Semi Bold) - the whole text gets its most used supported style, bold and italic ranges are lost.",
+	IndentationNotSupported:
+		"Indentation outside of lists or deeper than one level - it is reduced to what Parrot supports.",
+	TextDecorationUnknown: "Unsupported text decorations - they are removed.",
+};
 
 type LocalizedLabelListItemProps = {
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO specify type
@@ -54,6 +95,8 @@ export default function LocalizedLabelListItem({
 
 	const [showMessageInDrawer, setShowMessageInDrawer] = useState(undefined as any);
 
+	const [confirmFixStyles, setConfirmFixStyles] = useState(false);
+
 	const drawerSelectedKey = useRef<string | undefined>(undefined);
 	// Dummy state variable to trigger re-render when currentHighlightIndex.current changes
 	const [, setDummyState] = useState<any>();
@@ -68,10 +111,11 @@ export default function LocalizedLabelListItem({
 	}
 
 	async function fixLints() {
+		setConfirmFixStyles(false);
 		await localizedLabelManager
 			.fixLabelLints(localizedLabel, localizedLabel.matchingLabelLints)
 			.catch((e: Error) => {
-					reportError(e);
+				reportError(e);
 				figmaRemote.notifyError(e.message);
 			});
 	}
@@ -124,6 +168,47 @@ export default function LocalizedLabelListItem({
 		setDummyState({});
 	}, [localizedLabel]);
 
+	const isLinked =
+		localizedLabel.messageLinkState === MessageLinkState.Linked ||
+		localizedLabel.messageLinkState === MessageLinkState.MissingMessage;
+	const isUnmanaged = localizedLabel.messageLinkState === MessageLinkState.Unmanaged;
+
+	// computed when the key field opens - not on every render of the row
+	// A message with exactly this text is offered under "Text matches" - suggesting a new key for the
+	// same text (login.sign_in_2) would only create a duplicate.
+	const suggestedKey = () =>
+		isLinked ||
+		isUnmanaged ||
+		hasMessageWithText(messageStore.getAllMessages() ?? [], localizedLabel.characters)
+			? undefined
+			: suggestMessageKey({
+					frameName: localizedLabel.rootFrameName,
+					layerName: localizedLabel.name,
+					characters: localizedLabel.characters,
+					existingKeys: new Set((messageStore.getAllMessages() ?? []).map((m) => m.id)),
+				});
+
+	let rowAction: { label: string; icon: string; run: () => Promise<void> };
+	if (isLinked) {
+		rowAction = {
+			label: "Unlink from message (keeps the text)",
+			icon: "unlinked-svg",
+			run: () => localizedLabelManager.unsetLabel(localizedLabel),
+		};
+	} else if (isUnmanaged) {
+		rowAction = {
+			label: "Translate this layer again",
+			icon: "with-message-small-svg",
+			run: () => localizedLabelManager.unsetLabel(localizedLabel),
+		};
+	} else {
+		rowAction = {
+			label: "Do not translate this layer",
+			icon: "not-localized-small-svg",
+			run: () => localizedLabelManager.setLabelToUnmanaged(localizedLabel),
+		};
+	}
+
 	return (
 		<>
 			<Drawer
@@ -150,7 +235,7 @@ export default function LocalizedLabelListItem({
 								.linkMessage(localizedLabel, messageToLink.id, localizedLabel.rootFrameLanguage!)
 								.catch((e) => {
 									figmaRemote.notifyError(`could not set message${e.message}`);
-										reportError(e);
+									reportError(e);
 								});
 							setMessageSearch(undefined);
 						},
@@ -160,7 +245,7 @@ export default function LocalizedLabelListItem({
 				shown={messageSearch !== undefined}
 			>
 				<div className="modal-title" style={{ width: "1000px" }}>
-					Select a Message
+					Select a message
 				</div>
 				{messageSearch !== undefined && (
 					<MessageListView
@@ -169,7 +254,7 @@ export default function LocalizedLabelListItem({
 						localizedLabelManager={localizedLabelManager}
 						figmaRemote={figmaRemote}
 						selectedMessageId={drawerSelectedKey.current}
-						initialSearchQuery={MessageStoreMemory.toQueryObject(`name:* ${messageSearch.search}`)}
+						initialSearchQuery={MessageStoreMemory.toQueryObject(messageSearch.search)}
 						select={(key: string, language: Locale, plural: Plural) => {
 							drawerSelectedKey.current = key;
 							setDummyState({});
@@ -178,6 +263,43 @@ export default function LocalizedLabelListItem({
 					/>
 				)}
 			</Drawer>
+
+			{localizedLabel.matchingLabelLints.length > 0 && (
+				<Drawer
+					position="top"
+					buttons={[
+						{
+							type: "secondary",
+							text: "Cancel",
+							key: "escape",
+							callback: () => {
+								setConfirmFixStyles(false);
+							},
+						},
+						{
+							type: "primary",
+							text: "Fix styles",
+							key: "enter",
+							callback: fixLints,
+						},
+					]}
+					shown={confirmFixStyles}
+				>
+					<div className="drawer-header">Fix styles of “{localizedLabel.name}”?</div>
+					<div className="drawer-body">
+						<p>
+							This text uses styles that cannot be kept while it is translated. Fixing changes the
+							text in your design:
+						</p>
+						<ul>
+							{localizedLabel.matchingLabelLints.map((lint) => (
+								<li key={lint}>{lintFixDescriptions[lint] ?? lint}</li>
+							))}
+						</ul>
+						<p>You can undo this with Cmd/Ctrl + Z.</p>
+					</div>
+				</Drawer>
+			)}
 
 			<Drawer
 				className="message-editor-drawer"
@@ -195,7 +317,7 @@ export default function LocalizedLabelListItem({
 				shown={showMessageInDrawer !== undefined}
 			>
 				<div className="modal-title" style={{ width: "1000px" }}>
-					Edit Message
+					Edit message
 				</div>
 				{showMessageInDrawer !== undefined && (
 					<MessageListView
@@ -205,10 +327,6 @@ export default function LocalizedLabelListItem({
 						figmaRemote={figmaRemote}
 						selectedMessageId={showMessageInDrawer}
 						initialSearchQuery={MessageStoreMemory.toQueryObject(`name:${showMessageInDrawer}`)}
-						select={(key: string, language: Locale, plural: Plural) => {
-							// drawerSelectedKey.current = showMessage;
-							setDummyState({});
-						}}
 						highlightSelectedNodes={false}
 					/>
 				)}
@@ -231,7 +349,7 @@ export default function LocalizedLabelListItem({
 						onSave={async (labelName: string) => {
 							await localizedLabelManager.updateLabelName(localizedLabel, labelName).catch((e) => {
 								figmaRemote.notifyError(`could not set message${e.message}`);
-									reportError(e);
+								reportError(e);
 							});
 						}}
 						text={localizedLabel.name}
@@ -249,7 +367,8 @@ export default function LocalizedLabelListItem({
 							}
 							isDisabled={localizedLabel.matchingLabelLints.length > 0}
 							iconClass={iconClass}
-							inputPlaceholder="e.g. home__tagline"
+							inputPlaceholder="e.g. home.tagline"
+							getSuggestedValue={suggestedKey}
 							onCancel={() => {
 								setDummyState({});
 							}}
@@ -257,7 +376,10 @@ export default function LocalizedLabelListItem({
 								if (selectedOption.type === InputSelectionOptionType.ACTION) {
 									if (selectedOption.value === "select-message") {
 										setMessageSearch({
-											search: localizedLabel.characters,
+											search: messageSearchSeed(
+												localizedLabel,
+												localizedLabelManager.messageStore.getRefLanugage(),
+											),
 										});
 									} else if (selectedOption.value === "show-message") {
 										setShowMessageInDrawer(localizedLabel.getMessageName());
@@ -299,9 +421,7 @@ export default function LocalizedLabelListItem({
                       localizedLabelManager.linkKey(localizedLabel, selectedOption.value as string, selectedOption.language!, selectedOption.plural!);
                     } */
 							}}
-							valueReplaceFn={(value) =>
-								value.replace(/[ .]/g, (match) => (match === "." ? "__" : "_"))
-							}
+							valueReplaceFn={(value) => value.replace(/ /g, "_")}
 							defaultValue={messageName}
 							getOptions={(enteredValue: string) => {
 								let options = [] as InputSelectOption[];
@@ -327,6 +447,23 @@ export default function LocalizedLabelListItem({
 										value: enteredValue,
 										label: "",
 									});
+								}
+
+								const suggestion = enteredValue === "" ? suggestedKey() : undefined;
+								if (suggestion) {
+									options.push(
+										{
+											type: InputSelectionOptionType.DIVIDER,
+											value: "",
+											label: "Suggested key",
+										},
+										{
+											type: InputSelectionOptionType.SUGGESTION,
+											icon: "plus-svg",
+											value: suggestion,
+											label: suggestion,
+										},
+									);
 								}
 
 								if (suggestedKeys.size > 0) {
@@ -448,7 +585,7 @@ export default function LocalizedLabelListItem({
 											localizedLabelManager
 												.updateLabelPatternHtml(localizedLabel, patternHtml, parameters)
 												.catch((e: Error) => {
-														reportError(e);
+													reportError(e);
 													figmaRemote.notifyError(e.message);
 													reset();
 												});
@@ -461,16 +598,15 @@ export default function LocalizedLabelListItem({
 									{localizedLabel.language !==
 										localizedLabelManager.messageStore.getRefLanugage() &&
 										(localizedLabel.currentPatternHTML === undefined ||
-											localizedLabel.currentPatternHTML === "") &&
-										FeatureFlags.features.payment && (
+											localizedLabel.currentPatternHTML === "") && (
 											<button
 												type="button"
 												disabled={!localizedLabel.isTranslatable()}
-												onClick={() => {
+												onClick={async () => {
 													const translationProvider = TranslatorMachine.instance;
 
 													try {
-														localizedLabelManager.setLabelLanguage(
+														await localizedLabelManager.setLabelLanguage(
 															localizedLabel,
 															localizedLabel.language,
 															translationProvider,
@@ -479,10 +615,11 @@ export default function LocalizedLabelListItem({
 														);
 													} catch (e: any) {
 														if (!(e instanceof NoMoreTranslationsLeftError)) {
-															figmaRemote.notify(
+															figmaRemote.notifyError(
 																`Something went wrong with translation - ${e.message}`,
+																8000,
 															);
-																	reportError(e);
+															reportError(e);
 														}
 													}
 												}}
@@ -501,7 +638,7 @@ export default function LocalizedLabelListItem({
 											localizedLabel.language !== localizedLabel.rootFrameLanguage) && ( // allow the user to catch up with the keys version
 											<button
 												type="button"
-												data-tooltip-content="Reset to text from Message"
+												data-tooltip-content="Reset this layer to the text stored in the message"
 												onClick={updateToLatestKeyVersion}
 											>
 												Revert
@@ -513,22 +650,22 @@ export default function LocalizedLabelListItem({
 											<button
 												type="button"
 												onClick={createNewVersionFromDesign}
-												data-tooltip-content="Use Text in Message"
+												data-tooltip-content="Save the text of this layer as the message text"
 											>
-												Use
+												Update message
 											</button>
 										)}
 
 									{localizedLabel.matchingLabelLints.length > 0 && (
-										<div
-											className="layerIcon iconWrapper button"
-											data-tooltip-content={`Label contains unsupported inline styles: ${localizedLabel.matchingLabelLints.join(
-												", ",
-											)}`}
-											onClick={fixLints}
+										<button
+											type="button"
+											className="lint-fix-button"
+											data-tooltip-content="This text uses styles that cannot be translated. Click to see what Fix styles will change."
+											onClick={() => setConfirmFixStyles(true)}
 										>
 											<div className="svg-container warning-svg" />
-										</div>
+											Fix styles
+										</button>
 									)}
 								</TranslationEditor>
 								{/* TODO #18 make paramter editable again when we have selectors in place - variables only used as selectors can't be accesed otherwise
@@ -560,6 +697,25 @@ export default function LocalizedLabelListItem({
 							</div>
 						</div>
 					</div>
+				</div>
+
+				<div className="layer-row-actions">
+					<button
+						type="button"
+						className={`layer-row-action${isUnmanaged ? " layer-row-action--active" : ""}`}
+						aria-label={rowAction.label}
+						data-tooltip-content={rowAction.label}
+						onClick={(e) => {
+							// a click on the row selects the layer on the canvas - the action must not
+							e.stopPropagation();
+							rowAction.run().catch((error: Error) => {
+								reportError(error);
+								figmaRemote.notifyError(error.message);
+							});
+						}}
+					>
+						<span className={`svg-container ${rowAction.icon}`} />
+					</button>
 				</div>
 
 				<div className="layer-spacer" />

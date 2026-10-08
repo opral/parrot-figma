@@ -137,14 +137,35 @@ export class UILocalizedLabel implements LocalizedLabel {
 			this.messageLinkState = MessageLinkState.Unlinked;
 
 			const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
+			// A label that still shows text of another language than its frame's (the reference text or the
+			// only text a message has) was not translated (e.g. the machine translation failed or there
+			// is no reference text to translate from) - it must not be stored as the translation of the
+			// frame language, otherwise switching to the language again would never retry the translation.
+			const stillShowsOtherLanguageText =
+				!MessageStoreMemory.hasTranslationInVariant(
+					localizedLabel.unlinkedMessage,
+					this.rootFrameLanguage,
+					[],
+				) &&
+				localizedLabel.unlinkedMessage.variants.some(
+					(variant) =>
+						variant.languageTag !== this.rootFrameLanguage &&
+						MessageStoreMemory.htmlForPattern(
+							localizedLabel.unlinkedMessage,
+							variant.languageTag,
+							[],
+						) === this.currentPatternHTML,
+				);
 			// override the currents label variant with state form label
-			this.unlinkedMessage = MessageStoreMemory.upsertVariantPatternHtml(
-				localizedLabel.unlinkedMessage,
-				refLanguage,
-				this.rootFrameLanguage,
-				[],
-				this.currentPatternHTML,
-			);
+			this.unlinkedMessage = stillShowsOtherLanguageText
+				? localizedLabel.unlinkedMessage
+				: MessageStoreMemory.upsertVariantPatternHtml(
+						localizedLabel.unlinkedMessage,
+						refLanguage,
+						this.rootFrameLanguage,
+						[],
+						this.currentPatternHTML,
+					);
 		} else if (localizedLabel.messageId) {
 			this.messageId = localizedLabel.messageId;
 			if (!this.manager.messageStore.getMessage(this.messageId)) {
@@ -232,7 +253,11 @@ export class UILocalizedLabel implements LocalizedLabel {
 		htmlContent = htmlContent.split("</p>").join("\n");
 
 		htmlContent = htmlContent.split("<p>").join("");
-		htmlContent = htmlContent.slice(0, htmlContent.length - 1);
+		// Drop the helper newline. A text that ends in a list has no trailing paragraph, so there is
+		// no helper newline to drop and slicing would cut the closing list tag.
+		if (htmlContent.endsWith("\n")) {
+			htmlContent = htmlContent.slice(0, htmlContent.length - 1);
+		}
 		return htmlContent;
 	}
 
@@ -290,7 +315,9 @@ export class UILocalizedLabel implements LocalizedLabel {
 			removeLastCR = true;
 		}
 
-		htmlWithFilledPlaceholders += "<br>";
+		// The HTML parser drops whitespace at the very start of the document - an empty element in front
+		// keeps leading spaces of the text.
+		htmlWithFilledPlaceholders = `<span></span>${htmlWithFilledPlaceholders}<br>`;
 
 		const contents = (quill.clipboard as any).convert({ html: htmlWithFilledPlaceholders }) as any;
 		let text = contents
@@ -353,9 +380,12 @@ export class UILocalizedLabel implements LocalizedLabel {
 				throw new Error("Message does not exist");
 			}
 
-			const variantPatternHtml = MessageStoreMemory.htmlForPattern(message, this.language, [
-				/** TODO #18 selectors build selectors based on variableValues */
-			]);
+			const variantPatternHtml = MessageStoreMemory.htmlForPatternWithFallback(
+				message,
+				this.language,
+				this.manager.messageStore.getRefLanugage(),
+				[/** TODO #18 selectors build selectors based on variableValues */],
+			);
 			state.modified = variantPatternHtml !== this.currentPatternHTML;
 			if (variantPatternHtml !== this.currentPatternHTML) {
 				// debugger;
@@ -608,6 +638,14 @@ export class UILocalizedLabel implements LocalizedLabel {
 		enforceTranslation: boolean,
 		triggersCTA: boolean,
 	) {
+		if (this.matchingLabelLints.length > 0) {
+			// The row is locked ("Fix styles") because its text uses styles that cannot be written back
+			// (nested lists, mixed fonts/colors, ...). Translating it would silently rewrite the design.
+			// just trigger cache update to propagate the changed root language
+			await this.manager.updateLabelProperties(this.nodeId, {});
+			return;
+		}
+
 		switch (this.messageLinkState) {
 			case MessageLinkState.MissingMessage:
 				// we don't change any label that is in this state - got to be manually fixed by the user

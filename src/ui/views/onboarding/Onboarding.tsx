@@ -58,11 +58,12 @@ export default function Onboarding({ labelManager, onFinishSetup }: OnboardingPr
 		<div className="view-wrapper">
 			<div className="view filesetup" ref={scrollContainerRef}>
 				<div className="setup-header">
-					<div className="setup-header-title">Set up your file</div>
+					<div className="setup-header-title onboarding-title">Welcome to Parrot</div>
 				</div>
 				<div className="setup-text">
-					Let Parrot know which language your design file is mainly using. You can then define
-					target locales to translate to.
+					Parrot switches the text of your frames between languages. Start by choosing the language
+					this file is written in and the languages you want to translate to. You can change this
+					later in the Setup tab.
 				</div>
 				<LanguageSetup
 					labelManager={labelManager}
@@ -83,7 +84,7 @@ export default function Onboarding({ labelManager, onFinishSetup }: OnboardingPr
 						type="button"
 						onClick={finishSetupClick}
 					>
-						<span data-tooltip-type="text">Finish Setup</span>
+						<span data-tooltip-type="text">Finish setup</span>
 					</button>
 				</div>
 			</div>

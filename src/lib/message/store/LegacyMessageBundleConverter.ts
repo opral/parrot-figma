@@ -5,6 +5,8 @@ import { validateBundleNested } from "./FigmaBundleStore";
 type LegacyPatternElement = Message["variants"][number]["pattern"][number];
 
 export function legacyMessageToBundle(message: Message): BundleNested {
+	// Declarations of a plain native bundle that survive when the legacy view is edited.
+	const keptDeclarationNames: string[] = [];
 	if (message.nativeBundle) {
 		const projected = bundleToLegacyMessage(message.nativeBundle);
 		if (
@@ -12,9 +14,18 @@ export function legacyMessageToBundle(message: Message): BundleNested {
 			JSON.stringify(projected.variants) !== JSON.stringify(message.variants) ||
 			message.id !== message.nativeBundle.id
 		) {
-			throw new Error("Edit this message in the Messages tab to preserve its Inlang metadata.");
+			// The legacy view was edited (machine translation, Layers tab, ...). Only a bundle with real
+			// Inlang metadata (annotations, local declarations, ...) cannot be rebuilt from it. A plain
+			// bundle is fully described by the legacy view - without this, every message that was
+			// imported or edited in the Messages tab could not be translated or edited again until the
+			// plugin was reopened.
+			if (needsNativeBundle(message.nativeBundle)) {
+				throw new Error("Edit this message in the Messages tab to preserve its Inlang metadata.");
+			}
+			keptDeclarationNames.push(...message.nativeBundle.declarations.map((d) => d.name));
+		} else {
+			return cloneBundle(message.nativeBundle);
 		}
-		return cloneBundle(message.nativeBundle);
 	}
 	if (message.alias && Object.keys(message.alias).length > 0) {
 		throw new Error(
@@ -27,7 +38,7 @@ export function legacyMessageToBundle(message: Message): BundleNested {
 			`Message "${message.id}" has selectors but no variants; the Inlang bundle model cannot preserve them without a locale message`,
 		);
 	}
-	const variableNames = new Set(selectorNames);
+	const variableNames = new Set([...selectorNames, ...keptDeclarationNames]);
 	const selectors: BundleSelector[] = selectorNames.map((name) => ({
 		type: "variable-reference",
 		name,
@@ -130,6 +141,11 @@ function bundlePatternElementToLegacy(element: BundlePatternElement): LegacyPatt
 	if (element.type === "expression" && element.arg.type === "variable-reference") {
 		return { type: "VariableReference", name: element.arg.name };
 	}
+	// Parrot texts are HTML: formats whose plugin parses "<b>bold</b>" into markup nodes (i18next, ...)
+	// keep the tags as text here - dropping them lost the markup of the imported text.
+	if (element.type === "markup-start") return { type: "Text", value: `<${element.name}>` };
+	if (element.type === "markup-end") return { type: "Text", value: `</${element.name}>` };
+	if (element.type === "markup-standalone") return { type: "Text", value: `<${element.name}/>` };
 	return {
 		type: "Text",
 		value: element.type === "expression" && element.arg.type === "literal" ? element.arg.value : "",
@@ -146,6 +162,7 @@ function needsNativeBundle(bundle: BundleNested): boolean {
 					v.pattern.some(
 						(e) =>
 							e.type !== "text" &&
+							!e.type.startsWith("markup-") &&
 							(e.type !== "expression" || e.arg.type !== "variable-reference" || e.annotation),
 					),
 				),

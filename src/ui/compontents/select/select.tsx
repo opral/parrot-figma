@@ -58,47 +58,13 @@ export default function Select({
 	const wrapperMaxHeightBelow = useRef(30);
 	const wrapperMenuEntryHeight = useRef(30);
 	const lastScrollPos = useRef(0);
+	const expandedAt = useRef(0);
 
 	const [wrapperScrollTop, setWrapperScrollTop] = useState({ scrollTop: 30 });
-	const [viewPortHeight, setViewPortHeight] = useState(0);
 
 	const initialPositioning = useRef(false);
 	const startScrollDownTimeInterval = useRef<any>(-1);
 	const startScrollUpTimeInterval = useRef<any>(-1);
-
-	// synchronize visibile height
-	useEffect(() => {
-		const threshol = [];
-		for (let i = 0; i <= 1.0; i += 0.01) {
-			threshol.push(i);
-		}
-
-		const intersectionObserver = new IntersectionObserver(
-			(entries: IntersectionObserverEntry[]) => {
-				setViewPortHeight(entries[0].intersectionRect.height);
-			},
-			{
-				root: null, // default is the viewport
-				threshold: threshol, // percentage of target's visible area. Triggers "onIntersection"
-			},
-		);
-
-		const resizeObserver = new ResizeObserver(() => {
-			// reobserve the intersection to get the correct sizing
-			intersectionObserver.disconnect();
-			intersectionObserver.observe(window.document.body);
-		});
-
-		if (window) {
-			intersectionObserver.observe(window.document.body);
-			resizeObserver.observe(window.document.body, { box: "border-box" });
-		}
-
-		return () => {
-			intersectionObserver.disconnect();
-			resizeObserver.disconnect();
-		};
-	}, []);
 
 	useEffect(() => {
 		if (onExpand !== undefined) {
@@ -136,6 +102,10 @@ export default function Select({
 		if (isExpanded && menuWrapperRef.current !== undefined) {
 			// on expand calculate starting position
 			const rect = buttonRef.current!.getBoundingClientRect();
+			// The plugin window is its own document: its height is what the menu can use. (An
+			// IntersectionObserver on the body reports the part visible in the *Figma* viewport, which
+			// is 0 or stale while the window is moved/resized/partly hidden -> a menu without height.)
+			const viewPortHeight = window.innerHeight || document.documentElement.clientHeight;
 
 			let moveToLeft = 0;
 			if (iconClass !== "" && checkmark === true) {
@@ -176,12 +146,20 @@ export default function Select({
 
 			let top = maxSpaceAbove - spaceNeededOnTop;
 
+			let scrollTop = spaceNeededOnTop - maxSpaceAbove;
+
 			if (top < 0) {
 				height = maxSpaceAbove + menuEntryHeight + Math.min(maxSpaceBelow, spaceNeededOnBottom);
 				top = 0;
-			}
 
-			const scrollTop = spaceNeededOnTop - maxSpaceAbove;
+				// The selected entry is too far down for the options above it to fit. Rather than hiding
+				// them behind a scroll arrow, show the list from its first entry if it fits the viewport.
+				const fullHeight = spaceNeededOnTop + menuEntryHeight + spaceNeededOnBottom;
+				if (fullHeight <= viewPortHeight) {
+					height = fullHeight;
+					scrollTop = 0;
+				}
+			}
 
 			menuContainerRef.current!.style.height = `${height}px`;
 			menuContainerRef.current!.style.top = `${top}px`;
@@ -299,7 +277,7 @@ export default function Select({
 		return () => {
 			menuWrapperRef.current?.removeEventListener("scroll", scrollHandler);
 		};
-	}, [options, isExpanded, viewPortHeight, menuWrapperRef]);
+	}, [options, isExpanded, menuWrapperRef]);
 
 	/* useEffect(() => {
     if (menuWrapperRef.current !== undefined) {
@@ -398,6 +376,7 @@ export default function Select({
 	}, [scrollDownRef]);
 
 	const handleExpandClick = () => {
+		if (!isExpanded) expandedAt.current = Date.now();
 		onExpandedStateChange(!isExpanded);
 	};
 
@@ -406,6 +385,9 @@ export default function Select({
 	};
 
 	const handleSelectClick = (value: any) => {
+		// The menu opens on top of its button (the selected entry sits where the button was), so the
+		// second click of a double click on the button would pick the entry below the pointer.
+		if (Date.now() - expandedAt.current < 350) return;
 		const newOption = options.find(({ value: v }) => v === value);
 		onExpandedStateChange(false);
 		onSelectOption(newOption);
@@ -495,10 +477,11 @@ export default function Select({
 									options.map(({ value, label: optionLabel, divider, title, icon, tag }, i) =>
 										divider ? (
 											<React.Fragment key={`select-option-divider--${i}`}>
+												{/* a labelled divider starts a group: line first (not above the first group), then the label */}
+												{(divider === true || i > 0) && <div className="select-menu__divider" />}
 												{divider !== true && (
 													<span className="select-menu__divider-label">{divider}</span>
 												)}
-												<div className="select-menu__divider" />
 											</React.Fragment>
 										) : (
 											<li

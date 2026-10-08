@@ -35,6 +35,8 @@ export interface InputSelectProps {
 	onChange?: (option: InputSelectOption, reset: () => void) => void;
 	onCancel?: () => void;
 	valueReplaceFn?: (value: string) => string;
+	/** a value offered as ghost text while the field is empty - Tab or → takes it over */
+	getSuggestedValue?: () => string | undefined;
 }
 
 function positiveModulo(a: number, b: number) {
@@ -54,6 +56,7 @@ export default function InputSelect({
 	onChange,
 	onCancel,
 	valueReplaceFn,
+	getSuggestedValue,
 }: InputSelectProps) {
 	const menuRef = useRef<HTMLUListElement>(null);
 	const menuWrapperRef = useRef<HTMLDivElement>(null);
@@ -76,6 +79,7 @@ export default function InputSelect({
 	const [highlightUpdated, setDummyState] = useState<any>();
 
 	const [options, setOptions] = useState<InputSelectOption[]>([] as InputSelectOption[]);
+	const [suggestedValue, setSuggestedValue] = useState<string | undefined>(undefined);
 
 	const wrapperMaxHeight = useRef(30);
 	const wrapperMaxHeightTop = useRef(30);
@@ -298,6 +302,12 @@ export default function InputSelect({
 	}, [isExpanded, value]);
 
 	useEffect(() => {
+		setSuggestedValue(isExpanded ? getSuggestedValue?.() : undefined);
+	}, [isExpanded]);
+
+	const showSuggestedValue = suggestedValue !== undefined && (value === undefined || value === "");
+
+	useEffect(() => {
 		if (isExpanded && inputFieldRef.current !== document.activeElement) {
 			inputFieldRef.current?.focus();
 			inputFieldRef.current?.select();
@@ -489,7 +499,7 @@ export default function InputSelect({
 		(currentMouseOverHighlightIndex.current !== undefined &&
 			currentMouseOverHighlightIndex.current === addOptionIndex);
 
-	let suggestionFieldValue = inputPlaceholder;
+	let suggestionFieldValue = showSuggestedValue ? suggestedValue : inputPlaceholder;
 	if (suggestion !== undefined) {
 		suggestionFieldValue = suggestion;
 	} else if (value !== undefined && value !== "") {
@@ -544,9 +554,19 @@ export default function InputSelect({
 							<div className={`svg-container ${"with-message-svg"}`} />
 						</div>
 						<div className="input-select-menu__input__wrapper">
-							<p className={` ${addOptionIndex !== -1 ? "suggestion addVisible" : "suggestion"}`}>
+							<p
+								className={` ${addOptionIndex !== -1 ? "suggestion addVisible" : "suggestion"}${showSuggestedValue ? " suggestion--ghost" : ""}`}
+							>
 								{suggestionFieldValue}
 							</p>
+							{showSuggestedValue && (
+								<kbd
+									className="input-select-menu__accept-hint"
+									title="Press Tab to use the suggested key"
+								>
+									Tab
+								</kbd>
+							)}
 							<input
 								ref={inputFieldRef}
 								className={` ${addOptionIndex !== -1 ? "addVisible" : ""}`}
@@ -570,6 +590,12 @@ export default function InputSelect({
 								onKeyDown={(evt: React.KeyboardEvent<HTMLInputElement>) => {
 									// Get the name of the pressed key
 									const keyName = evt.key;
+
+									if (showSuggestedValue && (keyName === "Tab" || keyName === "ArrowRight")) {
+										setValue(suggestedValue);
+										evt.preventDefault();
+										return;
+									}
 
 									switch (keyName) {
 										case "ArrowDown":

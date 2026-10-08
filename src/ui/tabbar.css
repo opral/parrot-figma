@@ -1,5 +1,4 @@
 .tabHeader {
-	padding-left: 16px;
 	padding: 0 8px;
 	display: flex;
 	align-items: center;
@@ -16,15 +15,22 @@
 	align-items: center;
 	flex-shrink: 0;
 	height: 40px;
+	box-sizing: border-box;
 	color: var(--figma-color-text-secondary);
+	user-select: none;
 }
 
 .tab:hover {
-	color: var(--figma-color-text-hover);
+	color: var(--figma-color-text);
+}
+
+.tab:focus-visible {
+	outline: 1px solid var(--figma-color-border-selected);
+	outline-offset: -2px;
+	border-radius: 5px;
 }
 
 .tab.active {
-	box-sizing: border-box;
 	border-bottom: 2px solid var(--figma-color-text);
 	padding-top: 2px;
 	color: var(--figma-color-text);

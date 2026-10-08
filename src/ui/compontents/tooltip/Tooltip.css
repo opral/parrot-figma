@@ -43,7 +43,14 @@
 	color: var(--color-text-tooltip, white);
 	z-index: 400;
 	border-radius: 2px;
-	white-space: nowrap;
+	font:
+		11px/16px Inter,
+		sans-serif;
+	box-sizing: border-box;
+	width: max-content;
+	max-width: min(260px, calc(100vw - 16px));
+	white-space: normal;
+	overflow-wrap: anywhere;
 	box-shadow: var(--elevation-300-tooltip, 0 2px 7px rgba(0, 0, 0, 0.15));
 }
 
@@ -54,5 +61,5 @@
 
 .tooltip--text {
 	display: inline-block;
-	text-align: center;
+	text-align: left;
 }

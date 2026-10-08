@@ -14,6 +14,7 @@ import {
 	legacyMessageToBundle,
 } from "../../../lib/message/store/LegacyMessageBundleConverter";
 import { applyEditorChanges } from "../../../lib/message/editor/EditorChanges";
+import { fromEditorBundle, toEditorBundle } from "../../../lib/message/editor/HtmlText";
 import "./InlangEditor.css";
 
 const shadowTheme = `
@@ -29,6 +30,7 @@ const shadowTheme = `
  --sl-panel-border-color: var(--figma-color-border) !important;
 }
 sl-button::part(base) { color: var(--figma-color-text-brand) !important; }
+sl-button[variant="primary"]::part(base) { color: var(--figma-color-text-onbrand, #fff) !important; }
 .header { background: var(--figma-color-bg) !important; }
 
 :host { font-family: Inter, sans-serif; color: var(--figma-color-text); }
@@ -51,11 +53,19 @@ div, span, p { font-size: 11px !important; }
 sl-input::part(base) { background: var(--figma-color-bg); color: var(--figma-color-text); }
 .ref-tag::part(base) { background: var(--figma-color-bg-tertiary); color: var(--figma-color-text-secondary); border: 1px solid var(--figma-color-border); }
 
-.language-container { width: 72px; padding: 8px; }
+.language-container { box-sizing: border-box; width: 72px; padding: 9px 8px; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 2px 4px; line-height: 16px; color: var(--figma-color-text-secondary); font-weight: 500; }
+.header { position: absolute !important; top: 0; right: 36px; z-index: 3; min-height: 28px !important; height: 28px !important; padding: 0 !important; pointer-events: none; opacity: var(--parrot-add-variable-opacity, 0); transition: opacity 0.1s; background: transparent !important; }
+.header:focus-within { opacity: 1; }
+.header sl-button, .header sl-tooltip, .header inlang-add-variable { pointer-events: auto; }
 .selector, .match { width: 104px; }
 .new-variant { padding-left: 8px; }
 sl-button::part(base), sl-input::part(input), sl-tag::part(base) { font-family: Inter, sans-serif; font-size: 11px; border-radius: 2px; }
 .match::part(base), .match::part(input) { min-height: 32px !important; }
+.match::part(base) { box-sizing: border-box; height: 24px !important; min-height: 24px !important; margin: 4px 0 4px 8px; width: calc(100% - 8px); border: 1px solid var(--figma-color-border); border-radius: 2px; }
+.match::part(base):hover { border-color: var(--figma-color-border-strong); }
+.match:focus-within::part(base) { border-color: var(--figma-color-border-brand-strong); outline: 1px solid var(--figma-color-border-brand-strong); outline-offset: -1px; }
+.match::part(input)::placeholder { color: var(--figma-color-text-secondary); opacity: 1; }
+.match::part(input) { height: 22px !important; min-height: 0 !important; padding: 0 6px; line-height: 16px; }
 .ref-tag::part(base) { height: 16px; font-size: 9px; }
 .dropdown-container { padding: 8px !important; gap: 8px !important; }
 .dropdown-title { margin: 0 !important; font-size: 11px !important; }
@@ -81,8 +91,139 @@ async function theme(element: HTMLElement & { updateComplete: Promise<unknown> }
 	const sheet = new CSSStyleSheet();
 	sheet.replaceSync(shadowTheme);
 	element.shadowRoot.adoptedStyleSheets = [...element.shadowRoot.adoptedStyleSheets, sheet];
+	// the match cell of a selector variant is an input: say so (it is an empty cell for a new variant)
+	for (const match of element.shadowRoot.querySelectorAll("sl-input.match")) {
+		match.setAttribute("placeholder", "match, e.g. *");
+		match.setAttribute(
+			"title",
+			"The value of the selector this text is used for. * matches every other value.",
+		);
+	}
 	for (const nested of element.shadowRoot.querySelectorAll("inlang-add-variable")) {
 		void theme(nested as HTMLElement & { updateComplete: Promise<unknown> });
+	}
+}
+
+/**
+ * The pattern editor renders a light DOM <style> with the global selectors `div` and `p`
+ * (`div { font-size: 14px }`). While a message editor is mounted that restyles every div of the
+ * plugin (the tab bar jumps from 11px to 14px). Scope those two rules to the editor itself.
+ */
+function scopePatternEditorStyles(editor: HTMLElement) {
+	for (const style of editor.querySelectorAll("style")) {
+		const text = style.textContent ?? "";
+		if (!/(^|\})\s*(div|p)\s*\{/.test(text)) continue;
+		style.textContent = text.replace(
+			/(^|\})(\s*)(div|p)(\s*\{)/g,
+			"$1$2inlang-pattern-editor $3$4",
+		);
+	}
+}
+
+/**
+ * Replaces the text of a field the user is not typing in. When the field had a selection before (the
+ * user typed in it once) the Lexical editor of the component focuses it again after every external
+ * change (e.g. Cmd+Z in Figma, a late save): the focus - and the key presses of the field the user had
+ * moved on to - were taken, and Figma lost the keyboard.
+ */
+async function setVariantWithoutFocus(editor: InlangPatternEditor, variant: EditorVariant) {
+	const field = editor.querySelector<HTMLElement>("[contenteditable]");
+	if (field) field.focus = () => undefined;
+	try {
+		editor.variant = variant;
+		await editor.updateComplete;
+	} finally {
+		if (field) delete (field as Partial<HTMLElement>).focus;
+	}
+}
+
+type EditorVariant = BundleNested["messages"][number]["variants"][number];
+
+/** Only plain text and plain variable references can be edited in the text editor. */
+function isRepresentable(variant: EditorVariant, rich: ReadonlySet<string>) {
+	return (
+		!rich.has(variant.id) &&
+		variant.pattern.every(
+			(e) => e.type === "text" || (e.type === "expression" && e.arg.type === "variable-reference"),
+		)
+	);
+}
+
+const richTags = new Set([
+	"strong",
+	"b",
+	"em",
+	"i",
+	"u",
+	"s",
+	"strike",
+	"br",
+	"ol",
+	"ul",
+	"li",
+	"p",
+]);
+
+/** Copies the formatting that a text layer can have (nothing else, in particular no attributes). */
+function appendRichContent(target: Element, source: Node) {
+	for (const child of Array.from(source.childNodes)) {
+		if (child.nodeType === Node.TEXT_NODE) {
+			target.append(document.createTextNode(child.textContent ?? ""));
+		} else if (child instanceof HTMLElement) {
+			const tag = child.tagName.toLowerCase();
+			if (tag === "script" || tag === "style" || child.classList.contains("ql-ui")) continue;
+			if (!richTags.has(tag) && tag !== "a") {
+				appendRichContent(target, child);
+				continue;
+			}
+			const element = document.createElement(tag === "a" ? "u" : tag);
+			if (tag === "li")
+				element.dataset.list = child.dataset.list === "ordered" ? "ordered" : "bullet";
+			appendRichContent(element, child);
+			target.append(element);
+		}
+	}
+}
+
+/** Read-only, formatted view of a variant whose text contains markup. */
+function renderRichPreview(preview: HTMLElement, variant: EditorVariant) {
+	const html = variant.pattern.map((e) => (e.type === "text" ? e.value : elementText(e))).join("");
+	const content = document.createElement("div");
+	content.className = "inlang-rich-preview-content";
+	appendRichContent(content, new DOMParser().parseFromString(html, "text/html").body);
+	preview.replaceChildren(content);
+}
+
+function elementText(element: EditorVariant["pattern"][number]) {
+	return element.type === "expression"
+		? element.arg.type === "literal"
+			? element.arg.value
+			: `{${element.arg.name}}`
+		: "";
+}
+
+function previewText(variant: EditorVariant) {
+	return variant.pattern.map((e) => (e.type === "text" ? e.value : elementText(e))).join("");
+}
+
+/** "Translate" is only offered for an empty translation whose reference text is a single plain message. */
+function syncTranslateButtons(
+	root: HTMLElement,
+	messages: BundleNested["messages"],
+	baseLocale: string,
+) {
+	const reference = messages.find((m) => m.locale === baseLocale);
+	const hasReferenceText =
+		reference?.variants.length === 1 &&
+		reference.selectors.length === 0 &&
+		reference.variants[0]!.pattern.some((e) => e.type !== "text" || e.value.trim() !== "");
+	for (const button of root.querySelectorAll<HTMLButtonElement>(".inlang-translate-variant")) {
+		const variant = messages
+			.flatMap((m) => m.variants)
+			.find((v) => v.id === button.dataset.variantId);
+		const isEmpty =
+			!variant || variant.pattern.every((e) => e.type === "text" && e.value.trim() === "");
+		button.hidden = !(isEmpty && hasReferenceText);
 	}
 }
 
@@ -91,22 +232,33 @@ export default function InlangEditor({
 	locales,
 	baseLocale,
 	onSave,
+	onTranslate,
 }: {
 	message: Message;
 	locales: string[];
 	baseLocale: string;
 	onSave: (message: Message) => Promise<void>;
+	/** Fills the (empty) translation of a locale from the reference language by machine translation. */
+	onTranslate?: (locale: string) => Promise<void>;
 }) {
 	const container = useRef<HTMLDivElement>(null);
-	const current = useRef<BundleNested>(legacyMessageToBundle(message));
+	// both are set by the effect below, before any edit can happen
+	const current = useRef<BundleNested>(undefined as never);
+	// the message as stored (HTML text) and the variants that contain markup (see HtmlText.ts)
+	const stored = useRef<BundleNested>(undefined as never);
+	const richVariants = useRef<ReadonlySet<string>>(new Set());
 	const save = useRef(onSave);
+	const translate = useRef(onTranslate);
+	translate.current = onTranslate;
 	const drafts = useRef<BundleNested["messages"]>([]);
 	save.current = onSave;
 	const [error, setError] = useState<string>();
 	const [reset, setReset] = useState(0);
 	useEffect(() => {
 		const root = container.current!;
-		const bundle = legacyMessageToBundle(message);
+		stored.current = legacyMessageToBundle(message);
+		const { bundle, rich } = toEditorBundle(stored.current);
+		richVariants.current = rich;
 		current.current = bundle;
 		drafts.current = locales
 			.filter((locale) => !bundle.messages.some((m) => m.locale === locale))
@@ -121,21 +273,16 @@ export default function InlangEditor({
 				};
 			});
 		const renderedMessages = [...bundle.messages, ...drafts.current];
+		// Only changes that need a new slot tree may rebuild the editors. A rebuild drops the focus, so
+		// typing a {variable} (which changes the pattern and the declarations) must be updated in place.
 		const structure = JSON.stringify([
-			bundle.declarations,
 			locales,
 			baseLocale,
 			reset,
-			renderedMessages.map((m) => [
-				m.id,
-				m.selectors,
-				m.variants.map((v) => [
-					v.id,
-					v.pattern
-						.filter((e) => e.type !== "text")
-						.map((e) => (e.type === "expression" ? [e.arg.type, e.annotation] : e)),
-				]),
-			]),
+			// the order of the messages changes when a draft (empty locale) becomes a real message
+			renderedMessages
+				.map((m) => [m.id, m.selectors, m.variants.map((v) => [v.id, isRepresentable(v, rich)])])
+				.sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
 		]);
 		const existing = root.querySelector("inlang-bundle") as InlangBundle | null;
 		if (existing) {
@@ -158,8 +305,18 @@ export default function InlangEditor({
 					const editor = component.querySelector(
 						"inlang-pattern-editor",
 					) as InlangPatternEditor | null;
-					if (editor && !editor.contains(document.activeElement)) editor.variant = variant;
+					if (editor && !editor.contains(document.activeElement)) {
+						void setVariantWithoutFocus(editor, variant);
+					}
+					const preview = component.querySelector<HTMLElement>(".inlang-structured-preview");
+					if (preview) preview.textContent = previewText(variant);
+					const richPreview = component.querySelector<HTMLElement>(".inlang-rich-preview");
+					if (richPreview) renderRichPreview(richPreview, variant);
 				}
+			}
+			syncTranslateButtons(root, renderedMessages, baseLocale);
+			for (const details of root.querySelectorAll("details.inlang-selector-details")) {
+				(details as HTMLDetailsElement).hidden = !bundle.declarations.length;
 			}
 			// Structural edits need a new slot tree; normal text edits retain focus.
 			for (const element of root.querySelectorAll("inlang-add-selector")) {
@@ -188,8 +345,10 @@ export default function InlangEditor({
 			messageElement.settings = { baseLocale, locales, modules: [] };
 			bundleElement.append(messageElement);
 			void theme(messageElement);
-			if (bundle.declarations.length && !drafts.current.some((m) => m.id === data.id)) {
+			if (!drafts.current.some((m) => m.id === data.id)) {
 				const details = document.createElement("details");
+				// selectors need a variable: declaring the first one only has to reveal this element
+				details.hidden = !bundle.declarations.length;
 				details.slot = "variant";
 				details.className = "inlang-selector-details";
 				const summary = document.createElement("summary");
@@ -209,16 +368,53 @@ export default function InlangEditor({
 				element.variant = variant;
 				messageElement.append(element);
 				void theme(element);
-				const representable = variant.pattern.every(
-					(e) =>
-						e.type === "text" || (e.type === "expression" && e.arg.type === "variable-reference"),
-				);
-				if (representable) {
+				// the editor has no built-in way to remove a variant (e.g. after its selector was deleted)
+				if (data.variants.length > 1) {
+					const remove = document.createElement("button");
+					remove.slot = "variant-action";
+					remove.type = "button";
+					remove.className = "inlang-delete-variant";
+					remove.textContent = "Delete";
+					remove.title = "Delete this variant";
+					remove.setAttribute("aria-label", `Delete ${locale} variant`);
+					remove.addEventListener("click", () =>
+						remove.dispatchEvent(
+							new CustomEvent<ChangeEventDetail>("change", {
+								bubbles: true,
+								composed: true,
+								detail: { entityId: variant.id, entity: "variant" },
+							}),
+						),
+					);
+					element.append(remove);
+				}
+				// machine translation fills an empty translation from the reference language
+				if (translate.current && locale !== baseLocale && data.variants.length === 1) {
+					const button = document.createElement("button");
+					button.slot = "variant-action";
+					button.type = "button";
+					button.className = "inlang-translate-variant";
+					button.dataset.locale = locale;
+					button.dataset.variantId = variant.id;
+					button.textContent = `Translate from ${baseLocale}`;
+					button.title = `Fill this translation from the ${baseLocale} text with machine translation`;
+					button.addEventListener("click", () => {
+						button.disabled = true;
+						button.textContent = "Translating…";
+						void (translate.current?.(locale) ?? Promise.resolve()).finally(() => {
+							button.disabled = false;
+							button.textContent = `Translate from ${baseLocale}`;
+						});
+					});
+					element.append(button);
+				}
+				if (isRepresentable(variant, rich)) {
 					const editor = new InlangPatternEditor();
 					editor.variant = variant;
 					editor.slot = "pattern-editor";
 					element.append(editor);
 					void editor.updateComplete.then(() => {
+						scopePatternEditorStyles(editor);
 						const placeholder = editor.querySelector(".inlang-pattern-editor-placeholder");
 						if (placeholder) placeholder.textContent = "Enter translation…";
 						const field = editor.querySelector("[contenteditable]");
@@ -226,66 +422,87 @@ export default function InlangEditor({
 						field?.setAttribute("aria-label", `${locale} translation`);
 					});
 				}
-				if (!representable) {
+				if (rich.has(variant.id)) {
+					// formatted text: shown as it looks, never rewritten by the plain-text editor
+					const preview = document.createElement("div");
+					preview.slot = "pattern-editor";
+					preview.className = "inlang-rich-preview";
+					preview.title =
+						"This text has formatting (bold, lists, ...). The Messages tab shows it read-only so that the formatting is not lost - edit it on the canvas or in the Layers tab.";
+					renderRichPreview(preview, variant);
+					element.append(preview);
+				} else if (!isRepresentable(variant, rich)) {
 					const preview = document.createElement("div");
 					preview.slot = "pattern-editor";
 					preview.className = "inlang-structured-preview";
-					preview.textContent = variant.pattern
-						.map((e) =>
-							e.type === "text"
-								? e.value
-								: e.type === "expression"
-									? e.arg.type === "literal"
-										? e.arg.value
-										: `{${e.arg.name}}`
-									: "",
-						)
-						.join("");
+					preview.textContent = previewText(variant);
 					preview.title = "This translation uses formatting that the text editor cannot edit yet.";
 					element.append(preview);
 				}
 			}
 		}
+		syncTranslateButtons(root, renderedMessages, baseLocale);
 	}, [message, baseLocale, locales.join("|"), reset]);
 	useEffect(() => {
 		const root = container.current!;
 		let pending: ChangeEventDetail[] = [];
+		const fromPatternEditor = new Set<ChangeEventDetail>();
 		let queued = false;
 		let saving = Promise.resolve();
+		// Saving an edit also rewrites the linked layers (~100 ms) and typing is faster than that: edits
+		// that arrive while a save runs are merged into the next one. Replaying every keystroke kept the
+		// rows busy for seconds after typing, and each late result (an older text) was pushed back into the
+		// row, which took the focus from the field the user had already moved on to.
 		const handler = (event: Event) => {
 			if (!(event instanceof CustomEvent) || !event.detail?.entity) return;
 			pending.push(event.detail);
+			// The pattern editor reports the whole variant but only knows the text: its copy of the
+			// matches can be stale (e.g. right after a match was edited while it had the focus).
+			if (event.target instanceof InlangPatternEditor) fromPatternEditor.add(event.detail);
 			event.stopPropagation();
 			if (queued) return;
 			queued = true;
-			queueMicrotask(() => {
+			saving = saving.then(async () => {
 				queued = false;
-				const changes = pending;
+				const batch = pending;
 				pending = [];
-				saving = saving.then(async () => {
-					const previous = structuredClone(current.current);
-					for (const draft of drafts.current) {
-						if (
-							changes.some(
-								(change) =>
-									change.entityId === draft.id ||
-									draft.variants.some((v) => v.id === change.entityId),
-							) &&
-							!previous.messages.some((m) => m.id === draft.id)
-						) {
-							previous.messages.push(structuredClone(draft));
-						}
-					}
-					try {
-						const next = applyEditorChanges(previous, changes);
-						await save.current(bundleToLegacyMessage(next, true));
-						current.current = next;
-						setError(undefined);
-					} catch (e) {
-						setError(e instanceof Error ? e.message : String(e));
-						setReset((v) => v + 1);
-					}
+				const previous = structuredClone(current.current);
+				const changes = batch.map((change) => {
+					if (!fromPatternEditor.delete(change)) return change;
+					const variant = previous.messages
+						.flatMap((m) => m.variants)
+						.find((v) => v.id === change.entityId);
+					const edited = change.newData as BundleNested["messages"][number]["variants"][number];
+					return variant && edited
+						? { ...change, newData: { ...variant, pattern: edited.pattern } }
+						: change;
 				});
+				for (const draft of drafts.current) {
+					if (
+						changes.some(
+							(change) =>
+								change.entityId === draft.id ||
+								draft.variants.some((v) => v.id === change.entityId),
+						) &&
+						!previous.messages.some((m) => m.id === draft.id)
+					) {
+						previous.messages.push(structuredClone(draft));
+					}
+				}
+				try {
+					const next = applyEditorChanges(previous, changes);
+					await save.current(
+						bundleToLegacyMessage(
+							fromEditorBundle(next, richVariants.current, stored.current),
+							true,
+						),
+					);
+					current.current = next;
+					setError(undefined);
+				} catch (e) {
+					setError(e instanceof Error ? e.message : String(e));
+					setReset((v) => v + 1);
+				}
 			});
 		};
 		root.addEventListener("change", handler);

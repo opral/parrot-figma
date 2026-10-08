@@ -65,8 +65,19 @@
 	display: flex;
 	position: sticky;
 	flex-direction: row;
-	bottom: 16px;
-	margin: 16px;
+	gap: 8px;
+	bottom: 0;
+	margin: 0;
+	padding: 12px 16px;
+	background-color: var(--figma-color-bg);
+	border-top: 1px solid var(--figma-color-border);
+}
+
+.buttonGroup .button {
+	margin-left: 0;
+	height: 32px;
+	min-width: 64px;
+	justify-content: center;
 }
 
 .buttonGroup-reversed {
@@ -74,11 +85,13 @@
 }
 
 .top-drawer.open {
-	box-shadow: 1px 0px 7px rgba(48, 43, 43, 0.5);
 	transform: translateY(0);
 	transition:
-		box-shadow 0.3s ease-out,
-		transform 0.3s ease-out;
+		box-shadow 0.2s ease-out,
+		transform 0.2s ease-out;
+	box-shadow:
+		0 5px 17px rgba(0, 0, 0, 0.2),
+		0 2px 7px rgba(0, 0, 0, 0.15);
 }
 
 .figma-dark .top-drawer.open {
@@ -87,4 +100,86 @@
 		0px 3px 5px rgba(0, 0, 0, 0.35),
 		inset 0px 0.5px 0px rgba(255, 255, 255, 0.08),
 		inset 0px 0px 0.5px rgba(255, 255, 255, 0.35);
+}
+
+.top-drawer:focus,
+.left-drawer:focus,
+.right-drawer:focus {
+	outline: none;
+}
+
+/* shared content of the small confirm drawers (delete a message, review an import) */
+.drawer-header {
+	padding: 16px 16px 0;
+	font-size: 12px;
+	line-height: 16px;
+	font-weight: 600;
+	color: var(--figma-color-text);
+	overflow-wrap: anywhere;
+}
+
+.drawer-body {
+	padding: 8px 16px 16px;
+	line-height: 16px;
+	max-width: 420px;
+	color: var(--figma-color-text-secondary);
+	overflow-wrap: anywhere;
+	user-select: text;
+}
+
+.drawer-body p {
+	margin: 0 0 8px;
+}
+
+.drawer-body ul {
+	margin: 0 0 8px;
+	padding-left: 16px;
+}
+
+.drawer-body li {
+	margin-bottom: 4px;
+}
+
+.drawer-body p:last-child {
+	margin-bottom: 0;
+}
+
+.drawer-stats {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 4px 16px;
+	margin: 0 0 12px;
+}
+
+.drawer-stats dt {
+	color: var(--figma-color-text-secondary);
+}
+
+.drawer-stats dd {
+	margin: 0;
+	color: var(--figma-color-text);
+	font-weight: 500;
+}
+
+.drawer-keys {
+	margin: 4px 0 8px;
+	padding: 0;
+	list-style: none;
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 10px;
+	color: var(--figma-color-text);
+}
+
+.drawer-alert {
+	margin: 0 0 8px;
+	padding: 8px;
+	border-radius: 5px;
+	color: var(--figma-color-text);
+	background-color: var(--figma-color-bg-warning-tertiary);
+}
+.drawer-alert p {
+	margin: 0 0 8px;
+}
+.drawer-alert > :last-child {
+	margin-bottom: 0;
 }

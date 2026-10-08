@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import Select from "../../compontents/select/select";
-import { Locale } from "../../../lib/message/variants/Locale";
+import { Locale, languageDisplayName } from "../../../lib/message/variants/Locale";
 import LocalizedLabelManagerUI from "../../../lib/localizedlabels/LocalizedLabelManagerUI";
 import "./Export.css";
 import "../transfer/TransferPanel.css";
@@ -11,18 +11,24 @@ import {
 	translationPlugins,
 } from "../../../lib/transfer/TranslationFormats";
 import { exportWithPlugin } from "../../../lib/transfer/ExportWithPlugin";
+import type FigmaUtil from "../../../shared/FigmaUtil";
+import { useTransferFormat } from "../transfer/useTransferFormat";
 
-export default function Export({ labelManager }: { labelManager: LocalizedLabelManagerUI }) {
+export default function Export({
+	labelManager,
+	figmaRemote,
+}: {
+	labelManager: LocalizedLabelManagerUI;
+	figmaRemote?: FigmaUtil;
+}) {
 	const store = labelManager.messageStore;
-	const [format, setFormat] = useState(formats[0].value);
+	const [format, setFormat, formatLoaded] = useTransferFormat(figmaRemote);
 	const [messages, setMessages] = useState(store.getAllMessages() ?? []);
 	const [notice, setNotice] = useState<string>();
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string>();
 	const baseLanguage = store.getRefLanugage();
-	const languages = [...new Set([baseLanguage, ...store.getLanugages()!])].filter(
-		(language): language is Locale => language !== undefined,
-	);
+	const languages = store.getOrderedLanguages();
 	useEffect(() => {
 		const update = () => setMessages(store.getAllMessages() ?? []);
 		store.addEventListener("updated", update);
@@ -42,6 +48,7 @@ export default function Export({ labelManager }: { labelManager: LocalizedLabelM
 				selectedPlugin.plugin,
 				store.getAllMessages() ?? [],
 				language,
+				baseLanguage,
 			);
 			if (!file) throw new Error("Choose a supported export format.");
 			fileUrl = URL.createObjectURL(new Blob([file.content], { type: file.fileType }));
@@ -67,14 +74,17 @@ export default function Export({ labelManager }: { labelManager: LocalizedLabelM
 		<div className="transfer-view">
 			<div className="transfer-format">
 				<span>Format</span>
-				<Select
-					checkmark
-					placeholder="Choose format"
-					isDisabled={busy}
-					getOptions={() => formats}
-					defaultValue={formats.find((option) => option.value === format)}
-					onChange={(option) => setFormat(String(option.value))}
-				/>
+				{formatLoaded && (
+					<Select
+						key={format}
+						checkmark
+						placeholder="Choose format"
+						isDisabled={busy}
+						getOptions={() => formats}
+						defaultValue={formats.find((option) => option.value === format)}
+						onChange={(option) => setFormat(String(option.value))}
+					/>
+				)}
 			</div>
 			<p className="transfer-help">Choose a format, then export a file for its language.</p>
 			<div className="transfer-languages">
@@ -86,11 +96,11 @@ export default function Export({ labelManager }: { labelManager: LocalizedLabelM
 						<div className="transfer-language-row" key={language}>
 							<div>
 								<div className="transfer-language-name">
-									{new Intl.DisplayNames("en", { type: "language" }).of(language)} · {language}
+									{languageDisplayName(language)} · {language}
 								</div>
 								<div className="transfer-language-detail">
 									{language === baseLanguage ? "Reference · " : ""}
-									{count} {count === 1 ? "message" : "messages"}
+									{count} of {messages.length} {messages.length === 1 ? "message" : "messages"}
 								</div>
 							</div>
 							<button

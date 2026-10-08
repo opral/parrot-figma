@@ -24,6 +24,8 @@ import TranslatorMachine from "../translationprovider/TranslatorMachine";
 import { captureLoadProjectEvent } from "../../ui/utils/analytics";
 import FigmaUtil from "../../shared/FigmaUtil";
 
+const UNDO_COMMIT_IDLE_MS = 800;
+
 export default class LocalizedLabelManagerUI
 	extends EventTarget
 	implements ILocalizedLabelManagerUI
@@ -42,7 +44,26 @@ export default class LocalizedLabelManagerUI
 		};
 	};
 
-	private frameLanguageUpdates = new Map<string, Promise<void>>();
+	/**
+	 * Operations that rewrite the layers of a frame (language switch, linking/unlinking a layer, fixing
+	 * styles) run one after the other per frame. Otherwise a language switch that starts while a link is
+	 * still being written reads the layer as unlinked and the two writes overwrite each other (blank or
+	 * unlinked layers).
+	 */
+	private frameOperations = new Map<string, Promise<unknown>>();
+
+	private runFrameOperation<T>(frameId: string, operation: () => Promise<T>): Promise<T> {
+		const previous = this.frameOperations.get(frameId) ?? Promise.resolve();
+		const current = previous.catch(() => undefined).then(operation);
+		this.frameOperations.set(frameId, current);
+		const cleanup = () => {
+			if (this.frameOperations.get(frameId) === current) {
+				this.frameOperations.delete(frameId);
+			}
+		};
+		current.then(cleanup, cleanup);
+		return current;
+	}
 
 	private removeCachedLabel(labelId: string) {
 		const cachedLabel = this.cachedLocalisedLabels[labelId];
@@ -195,6 +216,20 @@ export default class LocalizedLabelManagerUI
 		this.localizedLabelMangerSandbox.startFillupCache();
 	}
 
+	/** While a bulk update (e.g. switching the language of a frame) runs, "updated" events are held back - it dispatches one when done. */
+	private updateBatchDepth = 0;
+
+	/**
+	 * Every "updated" event re-renders the whole label list. Bulk updates would do that once per label,
+	 * which freezes the panel for frames with many texts - they dispatch a single event when done.
+	 */
+	private dispatchUpdated() {
+		if (this.updateBatchDepth > 0) {
+			return;
+		}
+		this.dispatchEvent(new CustomEvent("updated", {}));
+	}
+
 	private handleMessageUpdate(messageId: string) {
 		let cacheUpdated = false;
 
@@ -207,8 +242,7 @@ export default class LocalizedLabelManagerUI
 		}
 
 		if (cacheUpdated) {
-			const event = new CustomEvent("updated", {});
-			this.dispatchEvent(event);
+			this.dispatchUpdated();
 		}
 	}
 
@@ -241,8 +275,7 @@ export default class LocalizedLabelManagerUI
 		}
 
 		if (cacheUpdated) {
-			const event = new CustomEvent("updated", {});
-			this.dispatchEvent(event);
+			this.dispatchUpdated();
 		}
 	}
 
@@ -267,7 +300,11 @@ export default class LocalizedLabelManagerUI
 	}
 
 	async getWithMessage(messageId: string) {
-		const labelsWithMessage = await this.localizedLabelMangerSandbox.getWithMessage(messageId);
+		return this.getWithMessages([messageId]);
+	}
+
+	async getWithMessages(messageIds: string[]) {
+		const labelsWithMessage = await this.localizedLabelMangerSandbox.getWithMessages(messageIds);
 		const uiLabels = [] as UILocalizedLabel[];
 		for (const freshLocalizedLabel of labelsWithMessage) {
 			this.refreshCachedLabel(freshLocalizedLabel);
@@ -303,43 +340,82 @@ export default class LocalizedLabelManagerUI
 	}
 
 	async setFrameLanguage(frameId: string, targetLanguage: Locale, translator: TranslatorMachine) {
-		const previousUpdate = this.frameLanguageUpdates.get(frameId) ?? Promise.resolve();
-		const update = previousUpdate
-			.catch(() => undefined)
-			.then(() => this.applyFrameLanguage(frameId, targetLanguage, translator));
-		this.frameLanguageUpdates.set(frameId, update);
-
-		try {
-			await update;
-		} finally {
-			if (this.frameLanguageUpdates.get(frameId) === update) {
-				this.frameLanguageUpdates.delete(frameId);
-			}
-		}
+		return this.runFrameOperation(frameId, () =>
+			this.applyFrameLanguage(frameId, targetLanguage, translator),
+		);
 	}
 
+	/** The frames of the current page that "Switch page" changes. */
+	async getPageRootFrames() {
+		return this.localizedLabelMangerSandbox.getPageRootFrames();
+	}
+
+	/**
+	 * Switches several frames one after the other - a single undo step. The other frames are still
+	 * switched when one fails, the last error is thrown at the end.
+	 * @returns the number of layers left unchanged because their styles cannot be translated ("Fix styles")
+	 */
+	async setFramesLanguage(
+		frameIds: string[],
+		targetLanguage: Locale,
+		translator: TranslatorMachine,
+		onProgress?: (doneFrames: number, totalFrames: number) => void,
+	) {
+		let lastError: unknown;
+		let lockedLabels = 0;
+		for (const [index, frameId] of frameIds.entries()) {
+			onProgress?.(index, frameIds.length);
+			try {
+				lockedLabels += await this.runFrameOperation(frameId, () =>
+					this.applyFrameLanguage(frameId, targetLanguage, translator, false),
+				);
+			} catch (e) {
+				lastError = e;
+			}
+		}
+		onProgress?.(frameIds.length, frameIds.length);
+		await this.localizedLabelMangerSandbox.commitUndo();
+
+		if (lastError) {
+			throw lastError;
+		}
+		return { lockedLabels };
+	}
+
+	/** @returns the number of layers left unchanged because their styles cannot be translated */
 	private async applyFrameLanguage(
 		frameId: string,
 		targetLanguage: Locale,
 		translator: TranslatorMachine,
+		commitUndo = true,
 	) {
 		let lastError: undefined | Error;
 
 		// Hydrate the frame cache here as well as in the view. This keeps the language
 		// command safe when it is triggered before the selection list finished loading.
 		const localizedLabels = await this.getLocalizedLabelsByFrame(frameId);
-		for (const localizedLabel of localizedLabels) {
-			try {
-				await this.setLabelLanguage(
-					localizedLabel,
-					targetLanguage,
-					translator,
-					false,
-					false /** CTA is triggered not every time */,
-				);
-			} catch (e: any) {
-				lastError = e;
+		const lockedLabels = localizedLabels.filter(
+			(label) =>
+				(label.matchingLabelLints?.length ?? 0) > 0 &&
+				label.messageLinkState !== MessageLinkState.Unmanaged,
+		).length;
+		this.updateBatchDepth = (this.updateBatchDepth ?? 0) + 1;
+		try {
+			for (const localizedLabel of localizedLabels) {
+				try {
+					await this.setLabelLanguage(
+						localizedLabel,
+						targetLanguage,
+						translator,
+						false,
+						false /** CTA is triggered not every time */,
+					);
+				} catch (e: any) {
+					lastError = e;
+				}
 			}
+		} finally {
+			this.updateBatchDepth -= 1;
 		}
 
 		await this.localizedLabelMangerSandbox.updateFrameProperties(frameId, {
@@ -351,9 +427,15 @@ export default class LocalizedLabelManagerUI
 		await this.getLocalizedLabelsByFrame(frameId);
 		this.dispatchEvent(new CustomEvent("updated", {}));
 
+		// one language switch = one undo step (otherwise Cmd+Z reverts everything since the last commit)
+		if (commitUndo) {
+			await this.localizedLabelMangerSandbox.commitUndo();
+		}
+
 		if (lastError) {
 			throw lastError;
 		}
+		return lockedLabels;
 	}
 
 	async updateMessage(message: Message, defaultParameters: MessageParameterValues) {
@@ -396,9 +478,11 @@ export default class LocalizedLabelManagerUI
 	}
 
 	async fixLabelLints(localizedLabel: LocalizedLabel, lintsToFix: string[]) {
-		await this.localizedLabelMangerSandbox.fixLabelLints(localizedLabel.nodeId, lintsToFix);
+		await this.runFrameOperation(localizedLabel.rootFrameId, async () => {
+			await this.localizedLabelMangerSandbox.fixLabelLints(localizedLabel.nodeId, lintsToFix);
 
-		await this.localizedLabelMangerSandbox.commitUndo();
+			await this.localizedLabelMangerSandbox.commitUndo();
+		});
 	}
 
 	async updateToMessageHead(localizedLabels: LocalizedLabel[]) {
@@ -458,6 +542,73 @@ export default class LocalizedLabelManagerUI
 	}
 
 	async linkMessage(localizedLabel: UILocalizedLabel, messageNameToLinkTo: string, locale: Locale) {
+		await this.runFrameOperation(localizedLabel.rootFrameId, async () => {
+			// The layer may have changed while this link waited for an earlier operation of the frame
+			// (e.g. a language switch): link the layer as it is now.
+			const label = this.cachedLocalisedLabels[localizedLabel.nodeId] ?? localizedLabel;
+			await this.applyLinkMessage(label, messageNameToLinkTo, label.rootFrameLanguage ?? locale);
+		});
+		this.dispatchEvent(
+			new CustomEvent("labelLinked", {
+				detail: { nodeId: localizedLabel.nodeId, messageName: messageNameToLinkTo },
+			}),
+		);
+	}
+
+	/**
+	 * Unlinked layers on the current page with exactly the same text as the given layer, in a frame of
+	 * the same language - the layers that can be linked to the same message.
+	 */
+	async findUnlinkedLabelsWithSameText(nodeId: string) {
+		const label = this.cachedLocalisedLabels[nodeId];
+		if (!label || label.characters.trim() === "") return [];
+
+		const candidates = await this.localizedLabelMangerSandbox.findLabelsWithText(label.characters, [
+			nodeId,
+		]);
+		const matches = [] as UILocalizedLabel[];
+		for (const candidate of candidates) {
+			this.refreshCachedLabel(candidate);
+			const cached = this.cachedLocalisedLabels[candidate.nodeId];
+			if (
+				cached &&
+				(cached.messageLinkState === MessageLinkState.Unset ||
+					cached.messageLinkState === MessageLinkState.Unlinked) &&
+				cached.rootFrameLanguage === label.rootFrameLanguage &&
+				cached.matchingLabelLints.length === 0
+			) {
+				matches.push(cached);
+			}
+		}
+		return matches;
+	}
+
+	/** Links all given layers to an existing message - a single undo step. */
+	async linkLabelsToMessage(labels: UILocalizedLabel[], messageName: string) {
+		const labelsByFrame = new Map<string, UILocalizedLabel[]>();
+		for (const label of labels) {
+			labelsByFrame.set(label.rootFrameId, [
+				...(labelsByFrame.get(label.rootFrameId) ?? []),
+				label,
+			]);
+		}
+		for (const [frameId, frameLabels] of labelsByFrame) {
+			await this.runFrameOperation(frameId, async () => {
+				for (const frameLabel of frameLabels) {
+					const label = this.cachedLocalisedLabels[frameLabel.nodeId] ?? frameLabel;
+					await this.applyLinkMessage(label, messageName, label.rootFrameLanguage, false);
+				}
+			});
+		}
+		await this.localizedLabelMangerSandbox.commitUndo();
+	}
+
+	private async applyLinkMessage(
+		localizedLabel: UILocalizedLabel,
+		messageNameToLinkTo: string,
+		locale: Locale,
+		commitUndo = true,
+	) {
 		let message = this.messageStore.getMessageByName(messageNameToLinkTo);
 
 		if (message !== undefined) {
@@ -505,27 +656,48 @@ export default class LocalizedLabelManagerUI
 			});
 		}
 
-		await this.localizedLabelMangerSandbox.commitUndo();
+		if (commitUndo) {
+			await this.localizedLabelMangerSandbox.commitUndo();
+		}
 	}
 
 	async unsetLabel(localizedLabel: LocalizedLabel) {
-		await this.updateLabelProperties(localizedLabel.nodeId, {
-			messageState: { type: "unset" },
-		});
+		await this.runFrameOperation(localizedLabel.rootFrameId, async () => {
+			await this.updateLabelProperties(localizedLabel.nodeId, {
+				messageState: { type: "unset" },
+			});
 
-		await this.localizedLabelMangerSandbox.commitUndo();
+			await this.localizedLabelMangerSandbox.commitUndo();
+		});
 	}
 
 	async setLabelToUnmanaged(localizedLabel: LocalizedLabel) {
-		await this.updateLabelProperties(localizedLabel.nodeId, {
-			messageState: { type: "unmanaged", unmanaged: true },
-		});
+		await this.runFrameOperation(localizedLabel.rootFrameId, async () => {
+			await this.updateLabelProperties(localizedLabel.nodeId, {
+				messageState: { type: "unmanaged", unmanaged: true },
+			});
 
-		await this.localizedLabelMangerSandbox.commitUndo();
+			await this.localizedLabelMangerSandbox.commitUndo();
+		});
 	}
 
 	async commitUndo() {
 		await this.localizedLabelMangerSandbox.commitUndo();
+	}
+
+	private undoCommitTimer: ReturnType<typeof setTimeout> | undefined;
+
+	/**
+	 * Editing a message by typing is a burst of small writes without an undo boundary of its own, so a
+	 * single Cmd+Z reverted every edit since the last link / language switch. The step is closed once
+	 * the typing pauses: Cmd+Z then reverts the last edit only.
+	 */
+	commitUndoWhenIdle(delayMs = UNDO_COMMIT_IDLE_MS) {
+		clearTimeout(this.undoCommitTimer);
+		this.undoCommitTimer = setTimeout(() => {
+			this.undoCommitTimer = undefined;
+			this.commitUndo().catch(() => undefined);
+		}, delayMs);
 	}
 
 	// TODO #18 add again to allow to change parameter values without touching the message it self
@@ -658,7 +830,13 @@ export default class LocalizedLabelManagerUI
 
         variantHTML = MessageStoreMemory.patternToHtml(bestMatchingVariant.pattern);
         */
-				variantHTML = MessageStoreMemory.htmlForPattern(updatedMessage!, language, []) ?? "";
+				variantHTML =
+					MessageStoreMemory.htmlForPatternWithFallback(
+						updatedMessage!,
+						language,
+						this.messageStore.getRefLanugage(),
+						[],
+					) ?? "";
 				textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(
 					variantHTML,
 					changedProperties.messageState.parameterValues,
@@ -671,7 +849,13 @@ export default class LocalizedLabelManagerUI
 		} else if (changedProperties.messageState?.type === "unlinked") {
 			const updatedMessage = changedProperties.messageState.unlinkedMessage;
 
-			const variantHTML = MessageStoreMemory.htmlForPattern(updatedMessage!, language, []) ?? "";
+			const variantHTML =
+				MessageStoreMemory.htmlForPatternWithFallback(
+					updatedMessage!,
+					language,
+					this.messageStore.getRefLanugage(),
+					[],
+				) ?? "";
 
 			textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(
 				variantHTML,
@@ -702,8 +886,7 @@ export default class LocalizedLabelManagerUI
 				forceCacheRefresh = true;
 			}
 			if (this.refreshCachedLabel(localizedLabel!, forceCacheRefresh)) {
-				const event = new CustomEvent("updated", {});
-				this.dispatchEvent(event);
+				this.dispatchUpdated();
 			}
 		}
 	}
@@ -715,9 +898,26 @@ export default class LocalizedLabelManagerUI
 
 	async import(messagesToImport: Message[], language: Locale) {
 		// Validate the entire preview before the first durable write.
-		const merged = messagesToImport.map((incoming) =>
-			mergeImportedMessage(this.messageStore.getMessage(incoming.id), incoming, language),
+		const languageVariants = (message: Message | undefined) =>
+			JSON.stringify(message?.variants.filter((variant) => variant.languageTag === language));
+		const changedMessageIds = new Set<string>();
+		const merged = messagesToImport.map((incoming) => {
+			const existing = this.messageStore.getMessage(incoming.id);
+			const message = mergeImportedMessage(existing, incoming, language);
+			if (languageVariants(existing) !== languageVariants(message))
+				changedMessageIds.add(message.id);
+			return message;
+		});
+		for (const message of merged) await this.messageStore.upsertMessage(message, {});
+
+		// Refresh the linked layers once for all changed messages. Only layers that show the imported
+		// language can change - looking them up and updating them per message made big imports take minutes.
+		if (changedMessageIds.size === 0) return;
+		const linkedLabels = await this.getWithMessages([...changedMessageIds]);
+		await this.updateToMessageHead(
+			linkedLabels.filter(
+				(label) => label.language === language || label.rootFrameLanguage === language,
+			),
 		);
-		for (const message of merged) await this.updateMessage(message, {});
 	}
 }

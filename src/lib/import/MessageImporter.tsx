@@ -107,11 +107,13 @@ export default class MessageImporter {
 				JSON.stringify(current.declarations) === JSON.stringify(incoming.declarations)
 			)
 				return { type: "equal" };
+			// a language the message did not have yet is a new translation, not a changed one
+			const isNewTranslation = oldLocale.every((message) => message.variants.length === 0);
 			return {
 				type: "updated",
 				message: importMessage,
-				addedVariants: [],
-				updatedVariants: importMessage.variants,
+				addedVariants: isNewTranslation ? importMessage.variants : [],
+				updatedVariants: isNewTranslation ? [] : importMessage.variants,
 			};
 		}
 

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import type { Message, Variant } from "../../../lib/message/LegacyMessage";
-import { Locale } from "../../../lib/message/variants/Locale";
+import { Locale, languageDisplayName } from "../../../lib/message/variants/Locale";
 import FileSelect from "../../compontents/fileselect/FileSelect";
 import Select from "../../compontents/select/select";
 import MessageImporter, { ImportResult, ImportType } from "../../../lib/import/MessageImporter";
@@ -10,12 +10,37 @@ import Drawer from "../../compontents/drawer/Drawer";
 import { importPlugins, importWithPlugin } from "../../../lib/import/InlangPluginImporter";
 import "../transfer/TransferPanel.css";
 import { translationFormats } from "../../../lib/transfer/TranslationFormats";
+import i18nextPlugin from "@inlang/plugin-i18next";
+import type FigmaUtil from "../../../shared/FigmaUtil";
+import { useTransferFormat } from "../transfer/useTransferFormat";
 
-export default function ImportView({ labelManager }: { labelManager: LocalizedLabelManagerUI }) {
-	const [importFormat, setImportFormat] = useState(importPlugins[0].plugin.key);
+const i18nextPluginKey = i18nextPlugin.key;
+
+// {{variable}} placeholders and key_one/key_other plurals only exist in i18next JSON files
+function looksLikeI18next(content: string) {
+	return (
+		/\{\{[^{}\s]+\}\}/.test(content) || /"[^"]+_(?:zero|one|two|few|many|other)"\s*:/.test(content)
+	);
+}
+
+export default function ImportView({
+	labelManager,
+	figmaRemote,
+}: {
+	labelManager: LocalizedLabelManagerUI;
+	figmaRemote?: FigmaUtil;
+}) {
+	// the format used last in this file (shared with Export) - not every file is "inlang JSON"
+	const [importFormat, setImportFormat, formatLoaded] = useTransferFormat(figmaRemote);
+	// the file of the open review: lets the warning below re-read it with the suggested format
+	const [pendingFile, setPendingFile] = useState<{
+		files: Record<string, string>;
+		language: Locale;
+	}>();
 	const [importBusy, setImportBusy] = useState(false);
 	const [importError, setImportError] = useState<string>();
 	const [importNotice, setImportNotice] = useState<string>();
+	const [importWarning, setImportWarning] = useState<string>();
 	const [importResult, setImportResult] = useState(undefined as ImportResult | undefined);
 
 	const [importKeysByState, setimportKeysByState] = useState<
@@ -42,16 +67,22 @@ export default function ImportView({ labelManager }: { labelManager: LocalizedLa
 		};
 	}, [labelManager]);
 
-	const previewImport = async (files: Record<string, string>, language: Locale) => {
+	const previewImport = async (
+		files: Record<string, string>,
+		language: Locale,
+		formatKey: string = importFormat,
+	) => {
+		setPendingFile({ files, language });
 		setImportBusy(true);
 		setImportError(undefined);
 		setImportNotice(undefined);
+		setImportWarning(undefined);
 		setimportKeysByState(undefined);
+		const selectedPlugin = importPlugins.find(({ plugin }) => plugin.key === formatKey);
 		try {
 			const entry = Object.entries(files)[0];
 			if (!entry) return;
 			const [fileName, content] = entry;
-			const selectedPlugin = importPlugins.find(({ plugin }) => plugin.key === importFormat);
 			if (!selectedPlugin) throw new Error("Choose a supported import format.");
 			const result: ImportResult = {
 				fileName,
@@ -74,9 +105,19 @@ export default function ImportView({ labelManager }: { labelManager: LocalizedLa
 			);
 			setImportResult(result);
 			setimportKeysByState(stats);
+			setImportWarning(
+				selectedPlugin.plugin.key !== i18nextPluginKey && looksLikeI18next(content)
+					? 'This file looks like i18next JSON ({{variables}} or _one/_other plurals). With this format placeholders and plurals are not read correctly - e.g. {{name}} becomes a variable named "{name". Read it as i18next JSON, or cancel if it is not.'
+					: undefined,
+			);
 		} catch (error) {
 			setImportResult(undefined);
-			setImportError(error instanceof Error ? error.message : String(error));
+			const reason = error instanceof Error ? error.message : String(error);
+			// parse errors usually mean "wrong format selected" - say so, the raw parser message is cryptic
+			const formatHint = /no translations for|conflicting variable/.test(reason)
+				? ""
+				: `. Is "${selectedPlugin?.label ?? formatKey}" the right format for this file?`;
+			setImportError(`${reason}${formatHint}`);
 		} finally {
 			setImportBusy(false);
 		}
@@ -103,26 +144,28 @@ export default function ImportView({ labelManager }: { labelManager: LocalizedLa
 	};
 
 	const baseLanguage = labelManager.messageStore.getRefLanugage();
-	const languages = [
-		...new Set([baseLanguage, ...labelManager.messageStore.getLanugages()!]),
-	].filter((language): language is Locale => language !== undefined);
+	const languages = labelManager.messageStore.getOrderedLanguages();
 	const formats = translationFormats;
 	return (
 		<div className="transfer-view">
 			<div className="transfer-format">
 				<span>Format</span>
-				<Select
-					checkmark
-					placeholder="Choose format"
-					getOptions={() => formats}
-					defaultValue={formats.find((format) => format.value === importFormat)}
-					isDisabled={importBusy}
-					onChange={(option) => setImportFormat(String(option.value))}
-				/>
+				{formatLoaded && (
+					<Select
+						key={importFormat}
+						checkmark
+						placeholder="Choose format"
+						getOptions={() => formats}
+						defaultValue={formats.find((format) => format.value === importFormat)}
+						isDisabled={importBusy}
+						onChange={(option) => setImportFormat(String(option.value))}
+					/>
+				)}
 			</div>
 			<p className="transfer-help">Choose a format, then import a file for its language.</p>
 			<div className="transfer-languages">
 				{languages.map((language) => {
+					// messages that have text in this language, out of all messages (the number Setup shows)
 					const count = keySummary.filter((message) =>
 						message.variants.some((variant) => variant.languageTag === language),
 					).length;
@@ -130,11 +173,11 @@ export default function ImportView({ labelManager }: { labelManager: LocalizedLa
 						<div className="transfer-language-row" key={language}>
 							<div>
 								<div className="transfer-language-name">
-									{new Intl.DisplayNames("en", { type: "language" }).of(language)} · {language}
+									{languageDisplayName(language)} · {language}
 								</div>
 								<div className="transfer-language-detail">
 									{language === baseLanguage ? "Reference · " : ""}
-									{count} {count === 1 ? "message" : "messages"}
+									{count} of {keySummary.length} {keySummary.length === 1 ? "message" : "messages"}
 								</div>
 							</div>
 							<div className="transfer-file-action">
@@ -171,7 +214,7 @@ export default function ImportView({ labelManager }: { labelManager: LocalizedLa
 					},
 					{
 						type: "primary",
-						text: importBusy ? "Importing…" : "Import Keys",
+						text: importBusy ? "Importing…" : "Import",
 						key: "enter",
 						disabled: importBusy || !importResult?.messages,
 						callback: applyImport,
@@ -179,32 +222,55 @@ export default function ImportView({ labelManager }: { labelManager: LocalizedLa
 				]}
 				shown={importResult !== undefined}
 			>
-				<div className="history_view--topHeader">Import keys</div>
-				<div>
+				<div className="drawer-header">Review import</div>
+				<div className="drawer-body">
 					{importResult && importResult.type === ImportType.UNSUPPORTED && (
-						<div>
-							File Type currently not supported.
-							<br /> Supported are l18next Json Files, Apple's
-							<b>.stringsdict</b>,<b>.strings</b> and Android's <b>.xml</b> file.{" "}
-						</div>
+						<p>
+							This file type is not supported. Supported are i18next JSON, Apple .strings and
+							.stringsdict, and Android .xml files.
+						</p>
 					)}
 
 					{importResult && importResult.type !== ImportType.UNSUPPORTED && importKeysByState && (
-						<div>
-							Detected Format: {importResult.formatName ?? importResult.type}
-							<br />
-							Filename: {importResult.fileName}
-							<br />
-							Language: {importKeysByState.language}
-							<br />
-							New Keys: {importKeysByState.newMessages.length}
-							<br />
-							New messages: {importKeysByState.newVariants.length}
-							<br />
-							Updated messages: {importKeysByState.updatedVariants.length}
-							<br />
-							<p>Existing translations in this language will be replaced where the keys match.</p>
-							<ul>
+						<>
+							{importWarning && (
+								<div className="drawer-alert" role="alert">
+									<p>{importWarning}</p>
+									{pendingFile && (
+										<button
+											type="button"
+											className="transfer-action"
+											disabled={importBusy}
+											onClick={() => {
+												setImportFormat(i18nextPluginKey);
+												void previewImport(
+													pendingFile.files,
+													pendingFile.language,
+													i18nextPluginKey,
+												);
+											}}
+										>
+											Read as i18next JSON
+										</button>
+									)}
+								</div>
+							)}
+							<dl className="drawer-stats">
+								<dt>File</dt>
+								<dd>{importResult.fileName}</dd>
+								<dt>Format</dt>
+								<dd>{importResult.formatName ?? importResult.type}</dd>
+								<dt>Language</dt>
+								<dd>{importKeysByState.language}</dd>
+								<dt>New messages</dt>
+								<dd>{importKeysByState.newMessages.length}</dd>
+								<dt>New translations</dt>
+								<dd>{importKeysByState.newVariants.length}</dd>
+								<dt>Changed translations</dt>
+								<dd>{importKeysByState.updatedVariants.length}</dd>
+							</dl>
+							<p>Existing translations in this language are replaced where the keys match.</p>
+							<ul className="drawer-keys">
 								{importResult.messages!.slice(0, 10).map((message) => (
 									<li key={message.id}>{message.id}</li>
 								))}
@@ -212,7 +278,7 @@ export default function ImportView({ labelManager }: { labelManager: LocalizedLa
 							{importResult.messages!.length > 10 && (
 								<p>And {importResult.messages!.length - 10} more keys.</p>
 							)}
-						</div>
+						</>
 					)}
 				</div>
 			</Drawer>

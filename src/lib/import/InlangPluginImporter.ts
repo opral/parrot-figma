@@ -13,6 +13,24 @@ import { pluginSettings } from "../transfer/TranslationFormats";
 
 export { translationPlugins as importPlugins } from "../transfer/TranslationFormats";
 
+const APPLE_STRINGS_PLUGIN_KEY = "plugin.inlang.apple-strings";
+// A private-use character that stands in for an escaped backslash while the plugin reads the file.
+const ESCAPED_BACKSLASH = "\uE000";
+
+// @inlang/plugin-apple-strings (0.2.7) rejects its own output: its escape check
+// (/\\(?![\\"nrtuU]|$)/) looks at every backslash on its own, so the second backslash of an escaped
+// backslash (two characters) followed by anything but another escape throws "Unsupported Apple .strings escape".
+// Escaped backslashes are replaced by a placeholder before the plugin parses the file and restored after.
+function protectEscapedBackslashes(content: string) {
+	return content.includes(ESCAPED_BACKSLASH)
+		? content
+		: content.replace(/\\\\/g, ESCAPED_BACKSLASH);
+}
+
+function restoreEscapedBackslashes<T>(value: T): T {
+	return JSON.parse(JSON.stringify(value).split(ESCAPED_BACKSLASH).join("\\\\"));
+}
+
 export async function importWithPlugin(args: {
 	plugin: InlangPlugin<any>;
 	fileName: string;
@@ -48,9 +66,20 @@ export async function importWithPlugin(args: {
 		});
 		await project.importFiles({
 			pluginKey: args.plugin.key,
-			files: [{ locale: args.locale, content: new TextEncoder().encode(args.content) }],
+			files: [
+				{
+					locale: args.locale,
+					content: new TextEncoder().encode(
+						args.plugin.key === APPLE_STRINGS_PLUGIN_KEY
+							? protectEscapedBackslashes(args.content)
+							: args.content,
+					),
+				},
+			],
 		});
-		const imported: BundleNested[] = await selectBundleNested(project.db).selectAll().execute();
+		let imported: BundleNested[] = await selectBundleNested(project.db).selectAll().execute();
+		if (args.plugin.key === APPLE_STRINGS_PLUGIN_KEY && !args.content.includes(ESCAPED_BACKSLASH))
+			imported = restoreEscapedBackslashes(imported);
 		// Catalogs can contain many languages. Only the row selected by the user is imported.
 		const bundles = imported
 			.map((bundle) => ({

@@ -27,22 +27,30 @@ export class InlangV3Project {
 		private readonly lix: Lix,
 	) {}
 
+	/**
+	 * Takes ownership of `messages` (they are not copied). Starting Lix takes a while, so it runs
+	 * while the messages are still being loaded when a promise is passed.
+	 */
 	static async open(args: {
 		settings: ProjectSettings;
-		messages: readonly Message[];
+		messages: readonly Message[] | Promise<readonly Message[]>;
 	}): Promise<InlangV3Project> {
-		const lix = await openLix();
+		const lixPromise = openLix();
+		let messages: readonly Message[];
+		try {
+			messages = await args.messages;
+		} catch (error) {
+			await (await lixPromise).close();
+			throw error;
+		}
+		const lix = await lixPromise;
 		try {
 			const project = await openProject({ lix, settings: args.settings });
 			const session = new InlangV3Project(project, lix);
-			const bundles = args.messages.map(legacyMessageToBundle);
-			await replaceBundlesNested(project, bundles, []);
-			for (const bundle of bundles) {
-				session.bundles.set(bundle.id, structuredClone(bundle));
-			}
-			for (const message of args.messages) {
-				session.messages.set(message.id, structuredClone(message));
-			}
+			const bundles = messages.map(legacyMessageToBundle);
+			await insertBundlesNested(project, bundles);
+			for (const bundle of bundles) session.bundles.set(bundle.id, bundle);
+			for (const message of messages) session.messages.set(message.id, message);
 			return session;
 		} catch (error) {
 			await lix.close();
@@ -57,6 +65,11 @@ export class InlangV3Project {
 
 	getAll(): Message[] {
 		return [...this.messages.values()].map((message) => structuredClone(message));
+	}
+
+	/** Snapshot without copying every message - callers must not mutate the returned messages. */
+	getAllReadonly(): Message[] {
+		return [...this.messages.values()];
 	}
 
 	subscribe(id: string, listener: (message: Message) => void) {
@@ -80,10 +93,44 @@ export class InlangV3Project {
 		}
 	}
 
+	/** One batch per chunk instead of one database round trip per message (an undone import has thousands). */
+	async upsertMany(messages: Message[]): Promise<void> {
+		const chunkSize = 200;
+		for (let i = 0; i < messages.length; i += chunkSize) {
+			const chunk = messages.slice(i, i + chunkSize);
+			const bundles = chunk.map(legacyMessageToBundle);
+			const currentBundles = bundles.flatMap((bundle) => this.bundles.get(bundle.id) ?? []);
+			await replaceBundlesNested(this.project, bundles, currentBundles);
+			bundles.forEach((bundle, index) => {
+				this.bundles.set(bundle.id, structuredClone(bundle));
+				this.messages.set(chunk[index]!.id, structuredClone(chunk[index]!));
+			});
+			chunk.forEach((message) => {
+				for (const listener of this.listeners.get(message.id) ?? []) {
+					listener(structuredClone(message));
+				}
+			});
+		}
+	}
+
 	async delete(id: string): Promise<void> {
-		await deleteBundleNested(this.project, id, this.bundles.get(id));
-		this.bundles.delete(id);
-		this.messages.delete(id);
+		await this.deleteMany([id]);
+	}
+
+	async deleteMany(ids: string[]): Promise<void> {
+		const chunkSize = 200;
+		for (let i = 0; i < ids.length; i += chunkSize) {
+			const chunk = ids.slice(i, i + chunkSize);
+			await deleteBundlesNested(
+				this.project,
+				chunk.flatMap((id) => this.bundles.get(id) ?? []),
+				chunk,
+			);
+			for (const id of chunk) {
+				this.bundles.delete(id);
+				this.messages.delete(id);
+			}
+		}
 	}
 
 	async settings(): Promise<ProjectSettings> {
@@ -115,12 +162,12 @@ export class InlangV3Project {
 	}
 }
 
-async function deleteBundleNested(
+async function deleteBundlesNested(
 	project: InlangProject,
-	bundleId: string,
-	bundle: BundleNested | undefined,
+	bundles: BundleNested[],
+	bundleIds: string[],
 ) {
-	const messageIds = bundle?.messages.map((message) => message.id) ?? [];
+	const messageIds = bundles.flatMap((bundle) => bundle.messages.map((message) => message.id));
 	const statements = [];
 	if (messageIds.length > 0) {
 		statements.push(
@@ -128,8 +175,59 @@ async function deleteBundleNested(
 			project.db.deleteFrom("message").where("id", "in", messageIds).compile(),
 		);
 	}
-	statements.push(project.db.deleteFrom("bundle").where("id", "=", bundleId).compile());
+	statements.push(project.db.deleteFrom("bundle").where("id", "in", bundleIds).compile());
 	await executeLixBatch(project.db, statements);
+}
+
+/** Fills an empty project. Multi-row inserts keep the number of statements small for big files. */
+async function insertBundlesNested(project: InlangProject, bundles: BundleNested[]) {
+	const chunkSize = 200;
+	const statements = [];
+	const messages = bundles.flatMap((bundle) =>
+		bundle.messages.map((message) => ({
+			id: message.id,
+			bundleId: bundle.id,
+			locale: message.locale,
+			selectors: message.selectors,
+		})),
+	);
+	const variants = bundles.flatMap((bundle) =>
+		bundle.messages.flatMap((message) =>
+			message.variants.map((variant) => ({
+				id: variant.id,
+				messageId: message.id,
+				matches: variant.matches,
+				pattern: variant.pattern,
+			})),
+		),
+	);
+	for (let i = 0; i < bundles.length; i += chunkSize) {
+		statements.push(
+			project.db
+				.insertInto("bundle")
+				.values(
+					bundles.slice(i, i + chunkSize).map(({ id, declarations }) => ({ id, declarations })),
+				)
+				.compile(),
+		);
+	}
+	for (let i = 0; i < messages.length; i += chunkSize) {
+		statements.push(
+			project.db
+				.insertInto("message")
+				.values(messages.slice(i, i + chunkSize))
+				.compile(),
+		);
+	}
+	for (let i = 0; i < variants.length; i += chunkSize) {
+		statements.push(
+			project.db
+				.insertInto("variant")
+				.values(variants.slice(i, i + chunkSize))
+				.compile(),
+		);
+	}
+	if (statements.length > 0) await executeLixBatch(project.db, statements);
 }
 
 async function replaceBundlesNested(

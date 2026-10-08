@@ -95,6 +95,9 @@ export default function Drawer({
 			const firstInputElement = drawerDiv.current?.querySelector("input");
 			if (firstInputElement instanceof HTMLElement) {
 				firstInputElement.focus();
+			} else {
+				// without a focused element inside the drawer Enter/Escape would never reach it
+				drawerDiv.current?.focus();
 			}
 		}
 	}, [isShown]);
@@ -131,6 +134,7 @@ export default function Drawer({
 		>
 			<div
 				ref={drawerDiv}
+				tabIndex={-1}
 				className={`${position}-drawer${isShown ? " open" : " "} ${className ?? ""}`}
 			>
 				{children}

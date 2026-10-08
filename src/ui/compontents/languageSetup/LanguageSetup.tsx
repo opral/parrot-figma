@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
-import { Locale } from "../../../lib/message/variants/Locale";
+import { Locale, SelectableLocales, languageDisplayName } from "../../../lib/message/variants/Locale";
 import "./LanguageSetup.css";
 import ReactSelect, { MultiValueRemoveProps, components } from "react-select";
 import OutsideClickHandler from "../outsideClickHandler/OutsideClickHandler";
@@ -30,23 +30,8 @@ function DropdownIndicator(props: any) {
 }
 
 function toLanguageOption(language: string, baseLanguage?: string) {
-	let languageNameInCurrentLanguage = "no name found";
-	try {
-		languageNameInCurrentLanguage =
-			new Intl.DisplayNames("en", { type: "language" }).of(language) ??
-			languageNameInCurrentLanguage;
-	} catch (e) {
-		/* empty */
-	}
-
-	let languageNameInForeignLanguage = "no name found";
-	try {
-		languageNameInForeignLanguage =
-			new Intl.DisplayNames(language, { type: "language" }).of(language) ??
-			languageNameInForeignLanguage;
-	} catch (e) {
-		/* empty */
-	}
+	const languageNameInCurrentLanguage = languageDisplayName(language) ?? "no name found";
+	const languageNameInForeignLanguage = languageDisplayName(language, language) ?? "no name found";
 
 	if (baseLanguage && language === baseLanguage) {
 		return {
@@ -90,7 +75,7 @@ export default function LanguageSetup({
 	const [changeLanguages, setChangeLanguages] = useState(activeLanguages.length === 0);
 
 	const availableLanguages = toLanguageOptions(
-		Object.values(Locale),
+		SelectableLocales,
 		selectedBaseLanguage !== undefined ? selectedBaseLanguage.value : undefined,
 	);
 
@@ -159,7 +144,7 @@ export default function LanguageSetup({
 		<div>
 			<div className={selectedBaseLanguage === undefined ? "no-base-language" : undefined}>
 				<div className="setup-header">
-					<div className="setup-header-title">Reference Language</div>
+					<div className="setup-header-title">Reference language</div>
 					{!changeBaseLanguage && (
 						<div
 							className="choosen-language-change"
@@ -171,6 +156,7 @@ export default function LanguageSetup({
 						</div>
 					)}
 				</div>
+				<div className="setup-text">The language your design is written in.</div>
 				{changeBaseLanguage && (
 					<div className="choose-language single-value">
 						<OutsideClickHandler
@@ -207,7 +193,7 @@ export default function LanguageSetup({
 									<div>{selectedBaseLanguage?.label}</div>
 								</div>
 								<div className="language-summary">
-									{keySummary.matchingNames.size} Messages
+									{keySummary.matchingNames.size} messages
 									{keySummary.withMissingVariantsPerLanguage[
 										selectedBaseLanguage!.value as Locale
 									] &&
@@ -221,7 +207,7 @@ export default function LanguageSetup({
 														selectedBaseLanguage!.value as Locale
 													]!.size
 												}{" "}
-												Missing Variants)
+												missing translations)
 											</div>
 										)}
 								</div>
@@ -229,8 +215,7 @@ export default function LanguageSetup({
 						</div>
 					</div>
 				)}
-				<div style={{ height: "8px" }} />
-				<div className="setup-header needs-base-language">
+								<div className="setup-header needs-base-language">
 					<div className="setup-header-title">Target languages</div>
 					{!changeLanguages && (
 						<div
@@ -244,7 +229,7 @@ export default function LanguageSetup({
 					)}
 				</div>
 				<div className="setup-text needs-base-language">
-					Select languages to translate to from the main language.
+					Parrot translates from the reference language into these languages.
 				</div>
 				{changeLanguages && (
 					<div className="choose-language needs-base-language">
@@ -282,7 +267,7 @@ export default function LanguageSetup({
 					<div className="choosen-language-control">
 						<div className="change-control">
 							<div className="svg-container world-svg" />
-							<div className="choosen-languages">
+							<div className="choosen-languages choosen-languages-list">
 								{selectedLanguages.map((languageOption) => (
 									<React.Fragment key={languageOption.value}>
 										<div className="language-name-wrapper">

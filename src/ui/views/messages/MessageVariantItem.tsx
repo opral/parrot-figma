@@ -6,13 +6,17 @@ import TranslationEditor from "../../compontents/translationEditor/TranslationEd
 import { MessageParameterValues } from "../../../lib/message/MessageParameterValues";
 import MessageStoreMemory from "../../../lib/message/store/MessageStoreMemory";
 import LocalizedLabelManagerUI from "../../../lib/localizedlabels/LocalizedLabelManagerUI";
-import TranslatorMachine from "../../../lib/translationprovider/TranslatorMachine";
+import TranslatorMachine, {
+	NoMoreTranslationsLeftError,
+} from "../../../lib/translationprovider/TranslatorMachine";
+import type FigmaUtil from "../../../shared/FigmaUtil";
 import FeatureFlags from "../../../lib/featureflags/FeatureFlags";
 
 type MessageVariantItemProps = {
 	language: Locale;
 	refLanguage: Locale;
 	localizedLabelManager: LocalizedLabelManagerUI;
+	figmaRemote: FigmaUtil;
 	messageStore: MessageStoreMemory;
 	searchMatch: any;
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO define proper types
@@ -27,6 +31,7 @@ export default function MessageVariantItem({
 	language,
 	refLanguage,
 	localizedLabelManager,
+	figmaRemote,
 	messageStore,
 	searchMatch,
 	focusedMessageVariant,
@@ -113,23 +118,32 @@ export default function MessageVariantItem({
 								disabled={refVariantHtml === undefined}
 								onClick={async () => {
 									// TODO #29 check if we apply the ne message to all text layers as we do for manual input
-									const translation = await TranslatorMachine.instance.translate(
-										refVariantHtml!,
-										refLanguage,
-										language,
-										true,
-									);
-
-									if (translation) {
-										const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(
-											message,
-											undefined,
+									try {
+										const translation = await TranslatorMachine.instance.translate(
+											refVariantHtml!,
+											refLanguage,
 											language,
-											[],
-											translation,
+											true,
 										);
-										await localizedLabelManager.updateMessage(updatedMessage, parameterValues);
-										setEmpty(false);
+
+										if (translation) {
+											const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(
+												message,
+												undefined,
+												language,
+												[],
+												translation,
+											);
+											await localizedLabelManager.updateMessage(updatedMessage, parameterValues);
+											setEmpty(false);
+										}
+									} catch (e: any) {
+										if (!(e instanceof NoMoreTranslationsLeftError)) {
+											figmaRemote.notifyError(
+												`Something went wrong with translation - ${e.message}`,
+												8000,
+											);
+										}
 									}
 								}}
 								data-tooltip-content={

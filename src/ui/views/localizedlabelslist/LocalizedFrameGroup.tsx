@@ -1,12 +1,12 @@
 import * as React from "react";
 import { reportError } from "../../utils/errorReporting";
-import { LocalizedLabel } from "../../../lib/localizedlabels/LocalizedLabel";
+import { LocalizedLabel, MessageLinkState } from "../../../lib/localizedlabels/LocalizedLabel";
 import LocalizedLabelListItem from "./LocalizedLabelListItem";
 import Select, { SelectOption } from "../../compontents/select/select";
 import FigmaUtil from "../../../shared/FigmaUtil";
 import MessageStoreMemory from "../../../lib/message/store/MessageStoreMemory";
 import LocalizedLabelManagerUI from "../../../lib/localizedlabels/LocalizedLabelManagerUI";
-import { Locale } from "../../../lib/message/variants/Locale";
+import { Locale, languageDisplayName } from "../../../lib/message/variants/Locale";
 import { UILocalizedLabel } from "../../../lib/localizedlabels/UILocalizedLabel";
 import { NodeSelection } from "../../../lib/localizedlabels/LocalizedLabelManager";
 import GoogleTranslator from "../../../lib/translationprovider/google";
@@ -24,23 +24,7 @@ type LocalizedFrameGroupProps = {
 };
 
 function toLanguageOption(language: string, baseLanguage?: string) {
-	let languageNameInCurrentLanguage = "no name found";
-	try {
-		languageNameInCurrentLanguage =
-			new Intl.DisplayNames("en", { type: "language" }).of(language) ??
-			languageNameInCurrentLanguage;
-	} catch (e) {
-		/* empty */
-	}
-
-	let languageNameInForeignLanguage = "no name found";
-	try {
-		languageNameInForeignLanguage =
-			new Intl.DisplayNames(language, { type: "language" }).of(language) ??
-			languageNameInForeignLanguage;
-	} catch (e) {
-		/* empty */
-	}
+	const languageNameInCurrentLanguage = languageDisplayName(language) ?? "no name found";
 
 	if (baseLanguage && language === baseLanguage) {
 		return {
@@ -70,23 +54,24 @@ export default function LocalizedFrameGroup({
 	let rootFrameLanguage: SelectOption | undefined;
 	const languageOptiones = [] as SelectOption[];
 
-	const languages = localizedLabelManager.messageStore.getLanugages()!.sort();
-
-	languageOptiones.push(
-		toLanguageOption(
-			localizedLabelManager.messageStore.getRefLanugage()!,
-			localizedLabelManager.messageStore.getRefLanugage()!,
-		),
-	);
-
-	for (const language of languages) {
-		const currentLanguageOption = toLanguageOption(language);
+	// reference language first, then the Setup order (the same order in every view)
+	for (const language of localizedLabelManager.messageStore.getOrderedLanguages()) {
+		const currentLanguageOption = toLanguageOption(
+			language,
+			language === localizedLabelManager.messageStore.getRefLanugage() ? language : undefined,
+		);
 		if (language === firstTranslationState.rootFrameLanguage) {
 			rootFrameLanguage = currentLanguageOption;
 		}
-		if (localizedLabelManager.messageStore.getRefLanugage()! !== language) {
-			languageOptiones.push(currentLanguageOption);
-		}
+		languageOptiones.push(currentLanguageOption);
+	}
+
+	// A frame can still be in a language that was removed in Setup. Keep it selectable so the
+	// layers stay visible and the user can switch the frame to a language that is configured.
+	const frameLanguage = firstTranslationState.rootFrameLanguage;
+	if (rootFrameLanguage === undefined && frameLanguage) {
+		rootFrameLanguage = { ...toLanguageOption(frameLanguage), tag: "not in Setup" };
+		languageOptiones.push(rootFrameLanguage);
 	}
 
 	async function onLanguageSelectionClick(
@@ -103,8 +88,8 @@ export default function LocalizedFrameGroup({
 			);
 		} catch (e: any) {
 			if (!(e instanceof NoMoreTranslationsLeftError)) {
-				figmaRemote.notify(`Something went wrong with translation - ${e.message}`);
-					reportError(e);
+				figmaRemote.notifyError(`Something went wrong with translation - ${e.message}`, 8000);
+				reportError(e);
 			}
 		}
 	}
@@ -119,7 +104,11 @@ export default function LocalizedFrameGroup({
 				className={`column-1 layer-group-header nodes-parent${
 					selectedNodes[rootFrameId]?.directSelection ? " selected" : ""
 				}`}
-				onClick={() => {
+				onClick={(e) => {
+					// The language menu is rendered in a portal, so its clicks bubble through React to
+					// this header. Using it must not collapse a multi-frame selection to this frame.
+					const target = e.target as HTMLElement;
+					if (!e.currentTarget.contains(target) || target.closest(".row-actions")) return;
 					onNodeSelect(rootFrameId);
 				}}
 			>
@@ -130,7 +119,7 @@ export default function LocalizedFrameGroup({
 				<div className="element-name font-body-24-bold">{rootFrameName}</div>
 				<div className="row-actions">
 					<Select
-						tooltip="Container Frame Langueage"
+						tooltip="Frame language"
 						placeholder="Select item"
 						checkmark
 						iconClass="switch-language-svg"
@@ -143,6 +132,18 @@ export default function LocalizedFrameGroup({
 				</div>
 			</div>
 			<div className="layer-group-header-sticky-border" />
+
+			{rootFrameLanguage?.value &&
+				!localizedLabels.some(
+					(label) =>
+						label.messageLinkState === MessageLinkState.Linked ||
+						label.messageLinkState === MessageLinkState.Unmanaged,
+				) && (
+					<div className="frame-hint" role="note">
+						Link each text to a message: type a key like <code>home.title</code> in its “Link a
+						message…” field. Linked texts follow the language of this frame.
+					</div>
+				)}
 
 			{rootFrameLanguage?.value &&
 				localizedLabels.map((translationState) => {
@@ -167,7 +168,11 @@ export default function LocalizedFrameGroup({
 					);
 				})}
 
-			{rootFrameLanguage?.value === undefined && <div>choose current design language</div>}
+			{rootFrameLanguage?.value === undefined && (
+				<div className="frame-hint" role="note">
+					Choose the language this frame is currently designed in (menu above).
+				</div>
+			)}
 		</>
 	);
 }

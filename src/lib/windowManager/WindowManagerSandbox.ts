@@ -191,8 +191,12 @@ export class WindowManagerSandbox {
           // Get the value of the CSS variable
           const colorValue = computedStyle.getPropertyValue('--figma-color-bg').trim();
 
+          // Figma reports the white of the light theme as "#fff" (and adds the class figma-light)
           let figmaTheme = 'figma-dark'
-          if (colorValue === '#ffffff') {
+          if (
+            rootElement.classList.contains('figma-light') ||
+            ['#fff', '#ffffff', 'white', 'rgb(255, 255, 255)'].includes(colorValue.toLowerCase())
+          ) {
               figmaTheme = 'figma-light'
           }
 

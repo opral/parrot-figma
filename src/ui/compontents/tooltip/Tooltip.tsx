@@ -10,7 +10,8 @@ interface Placement {
 	top: number;
 	left: number;
 	position: string;
-	transformX?: number;
+	/** left edge of the tooltip box (`left` is the x of the arrow) */
+	contentLeft?: number;
 }
 
 export default function Tooltip({ contentAttribute }: TooltipProps) {
@@ -22,6 +23,7 @@ export default function Tooltip({ contentAttribute }: TooltipProps) {
 	});
 	const [tooltipSourceRect, setTooltipSourceRect] = useState<DOMRect | undefined>(undefined);
 	const tooltipContentEl = useRef<HTMLDivElement | null>(null);
+	const tooltipSourceRef = useRef<HTMLElement | undefined>(undefined);
 
 	const tooltipVisibleRef = useRef(tooltipVisible);
 	tooltipVisibleRef.current = tooltipVisible;
@@ -55,6 +57,7 @@ export default function Tooltip({ contentAttribute }: TooltipProps) {
 		}
 
 		const content = target.getAttribute(contentAttribute)!;
+		tooltipSourceRef.current = target;
 		setTooltipSourceRect(target.getBoundingClientRect());
 		setTooltipVisible(true);
 		setTooltipContent(content);
@@ -79,62 +82,43 @@ export default function Tooltip({ contentAttribute }: TooltipProps) {
 		const elementRect = element.getBoundingClientRect();
 		const height = elementRect.height + 8;
 
-		const parent = document.getElementById("react-page")!;
-		const parentRect = parent.getBoundingClientRect();
+		// the tooltip stays inside the plugin window, the arrow keeps pointing at the source
+		const margin = 8;
+		const windowWidth = document.documentElement.clientWidth || window.innerWidth;
+		const parent = document.getElementById("react-page");
+		const parentRect = parent?.getBoundingClientRect();
+		const windowBottom = parentRect?.bottom ?? window.innerHeight;
+		const minLeft = margin;
+		const maxLeft = Math.max(minLeft, windowWidth - elementRect.width - margin);
+		const center = tooltipSourceRect.left + tooltipSourceRect.width / 2;
+		const contentLeft = Math.min(maxLeft, Math.max(minLeft, center - elementRect.width / 2));
+		const arrowLeft = Math.min(
+			contentLeft + elementRect.width - margin - 4,
+			Math.max(contentLeft + margin + 4, center),
+		);
 
-		// console.log('rects: parent, tooltip');
-		// console.log(JSON.stringify(parentRect));
-		// console.log(JSON.stringify(elementRect));
-
-		// console.log('right:');
-		// console.log(parentRect.right - (tooltipSourceRect.left! + (elementRect.width / 2)));
-
-		// console.log('left:');
-		// console.log(parentRect.left - (tooltipSourceRect.left! + (elementRect.width / 2)));
-
-		if (parentRect.bottom - tooltipSourceRect.bottom > height) {
-			// great if fits below
-			const placement = {
-				top: tooltipSourceRect.bottom,
-				left: tooltipSourceRect.left + tooltipSourceRect.width / 2,
-				position: "bottom-center",
-			} as Placement;
-
-			if (parentRect.right - (tooltipSourceRect.left! + elementRect.width / 2) < 0) {
-				console.log("overlapping right1");
-				placement.transformX =
-					parentRect.right - (tooltipSourceRect.left! + (elementRect.width + 16));
-			} else if (parentRect.left - (tooltipSourceRect.left! - elementRect.width / 2) > 0) {
-				console.log("overlapping left1");
-				placement.transformX = parentRect.left - (tooltipSourceRect.left! + 16);
-			}
-
-			setTooltipPlacement(placement);
-			if (placement.top === 0 && placement.left === 0) {
-				setTooltipVisible(false);
-			}
-		} else {
-			// ok we have to put it on top
-			const placement = {
-				top: tooltipSourceRect.top - height,
-				left: tooltipSourceRect.left + tooltipSourceRect.width / 2,
-				position: "top-center",
-			} as Placement;
-
-			if (parentRect.right - (tooltipSourceRect.left! + elementRect.width / 2) < 0) {
-				console.log("overlapping right1");
-				placement.transformX =
-					parentRect.right - (tooltipSourceRect.left! + (elementRect.width + 16));
-			} else if (parentRect.left - (tooltipSourceRect.left! - elementRect.width / 2) > 0) {
-				console.log("overlapping left1");
-				placement.transformX = parentRect.left - (tooltipSourceRect.left! + 16);
-			}
-			setTooltipPlacement(placement);
-			if (placement.top === 0 && placement.left === 0) {
-				setTooltipVisible(false);
-			}
+		// fits below the source? else place it on top
+		const below = windowBottom - tooltipSourceRect.bottom > height;
+		const placement: Placement = {
+			top: below ? tooltipSourceRect.bottom : tooltipSourceRect.top - height,
+			left: arrowLeft,
+			contentLeft,
+			position: below ? "bottom-center" : "top-center",
+		};
+		setTooltipPlacement(placement);
+		if (placement.top === 0 && placement.left === 0) {
+			setTooltipVisible(false);
 		}
 	}, [tooltipPlacement]);
+
+	// a tooltip must not outlive its element (e.g. a row that disappears under the resting mouse)
+	useEffect(() => {
+		if (!tooltipVisible) return;
+		const interval = setInterval(() => {
+			if (!tooltipSourceRef.current?.isConnected) setTooltipVisible(false);
+		}, 250);
+		return () => clearInterval(interval);
+	}, [tooltipVisible]);
 
 	useEffect(() => {
 		const handleMouseOver = (event: MouseEvent) => {
@@ -190,9 +174,21 @@ export default function Tooltip({ contentAttribute }: TooltipProps) {
 
 		document.addEventListener("wheel", onScroll);
 
+		// pressing a control acts on it: its tooltip must not stay on top of what opens next
+		function onPress() {
+			if (showTooltipTimeoutRef.current !== undefined) {
+				clearTimeout(showTooltipTimeoutRef.current);
+				showTooltipTimeoutRef.current = undefined;
+			}
+			setTooltipVisible(false);
+		}
+
+		document.addEventListener("mousedown", onPress, true);
+
 		return () => {
 			document.removeEventListener("mouseover", handleMouseOver);
 			document.removeEventListener("wheel", onScroll);
+			document.removeEventListener("mousedown", onPress, true);
 		};
 	}, []);
 
@@ -224,10 +220,8 @@ export default function Tooltip({ contentAttribute }: TooltipProps) {
 					className={`tooltip--content tooltip--content-${arrowDirection}`}
 					style={{
 						top: tooltipPlacement?.top ?? 0,
-						left: tooltipPlacement?.left ?? 0,
-						transform: tooltipPlacement?.transformX
-							? `translate(${tooltipPlacement.transformX}px, 0)`
-							: "translate(-50%, 0)",
+						left: tooltipPlacement?.contentLeft ?? tooltipPlacement?.left ?? 0,
+						transform: "none",
 					}}
 					dir="auto"
 				>

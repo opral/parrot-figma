@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import type { Message } from "../LegacyMessage";
 import {
 	FIGMA_BUNDLE_MIGRATION_KEY,
@@ -45,11 +45,11 @@ class FakeDocumentChanges {
 		this.listener = undefined;
 	}
 
-	emit() {
+	emit(origin: "REMOTE" | "LOCAL" = "REMOTE") {
 		this.listener?.({
 			documentChanges: [
 				{
-					origin: "REMOTE",
+					origin,
 					type: "PROPERTY_CHANGE",
 					node: { id: "0:0" },
 					properties: ["pluginData"],
@@ -94,6 +94,30 @@ describe("FigmaBundleStore", () => {
 		).toThrow("aliases that cannot be represented");
 	});
 
+	test("only reports bundles that changed after the store was created", () => {
+		const root = new FakeRoot();
+		const documentChanges = new FakeDocumentChanges();
+		const bundle = legacyMessageToBundle(legacyMessage);
+		root.setPluginData(FIGMA_BUNDLE_PREFIX + bundle.id, JSON.stringify(bundle));
+		const store = new FigmaBundleStore({ root, documentChanges });
+		const events: any[] = [];
+		store.subscribe((changes) => events.push(changes));
+
+		documentChanges.emit();
+		expect(events).toEqual([]);
+
+		// writes of this plugin are not remote changes
+		bundle.messages[0]!.variants[0]!.pattern = [{ type: "text", value: "Mine" }];
+		store.put(bundle);
+		documentChanges.emit();
+		expect(events).toEqual([]);
+
+		bundle.messages[0]!.variants[0]!.pattern = [{ type: "text", value: "Theirs" }];
+		root.setPluginData(FIGMA_BUNDLE_PREFIX + bundle.id, JSON.stringify(bundle));
+		documentChanges.emit();
+		expect(events).toEqual([{ added: [], updated: ["welcome"], deleted: [] }]);
+	});
+
 	test("emits remote add, update, and delete changes", () => {
 		const root = new FakeRoot();
 		const documentChanges = new FakeDocumentChanges();
@@ -115,6 +139,44 @@ describe("FigmaBundleStore", () => {
 			{ added: [], updated: ["welcome"], deleted: [] },
 			{ added: [], updated: [], deleted: ["welcome"] },
 		]);
+	});
+});
+
+describe("FigmaBundleStore local changes (undo / redo)", () => {
+	afterEach(() => vi.useRealTimers());
+
+	test("reports bundles that an undo changed once the changes stopped, not the writes of the store", () => {
+		vi.useFakeTimers();
+		const root = new FakeRoot();
+		const documentChanges = new FakeDocumentChanges();
+		const bundle = legacyMessageToBundle(legacyMessage);
+		const key = FIGMA_BUNDLE_PREFIX + bundle.id;
+		root.setPluginData(key, JSON.stringify(bundle));
+		const store = new FigmaBundleStore({ root, documentChanges });
+		const events: any[] = [];
+		store.subscribe((changes) => events.push(changes));
+
+		// the store's own writes fire local events too - nothing differs from what it remembers
+		const written = structuredClone(bundle);
+		written.messages[0]!.variants[0]!.pattern = [{ type: "text", value: "Translation" }];
+		store.put(written);
+		documentChanges.emit("LOCAL");
+		vi.advanceTimersByTime(1000);
+		expect(events).toEqual([]);
+
+		// Cmd+Z restores the old plugin data behind the store's back
+		root.setPluginData(key, JSON.stringify(bundle));
+		documentChanges.emit("LOCAL");
+		documentChanges.emit("LOCAL");
+		expect(events).toEqual([]);
+		vi.advanceTimersByTime(1000);
+		expect(events).toEqual([{ added: [], updated: ["welcome"], deleted: [] }]);
+
+		// and a link that was undone disappears
+		root.setPluginData(key, "");
+		documentChanges.emit("LOCAL");
+		vi.advanceTimersByTime(1000);
+		expect(events[1]).toEqual({ added: [], updated: [], deleted: ["welcome"] });
 	});
 });
 

@@ -370,21 +370,95 @@ body {
 	mask-size: cover;
 }
 
+.startup-message {
+	padding: 24px 16px;
+	line-height: 16px;
+	color: var(--figma-color-text-secondary);
+	user-select: text;
+}
+
+.startup-message-title {
+	margin-bottom: 8px;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--figma-color-text);
+}
+
+.startup-message p {
+	margin: 0 0 16px;
+}
+
 .emptyState {
-	height: 100%;
+	box-sizing: border-box;
+	min-height: 100%;
+	padding: 24px 24px 40px;
 	display: flex;
 	flex-direction: column;
-	text-align: center;
+	align-items: center;
 	justify-content: center;
+	text-align: left;
+	color: var(--figma-color-text);
+}
+
+.emptyState > * {
+	width: 100%;
+	max-width: 340px;
 }
 
 .emptyStateTitle {
-	font-size: 14px;
+	font-size: 12px;
+	line-height: 16px;
+	font-weight: 600;
 }
 
 .emptyStateSubtitle {
-	margin-top: 18px;
-	color: var(--figma-color-text-secondary, #b3b3b3);
+	margin-top: 8px;
+	line-height: 16px;
+	color: var(--figma-color-text-secondary);
+}
+
+.emptyStateSteps {
+	margin: 12px 0 0;
+	padding: 0;
+	list-style: none;
+	counter-reset: step;
+	line-height: 16px;
+	color: var(--figma-color-text-secondary);
+}
+
+.emptyStateSteps li {
+	counter-increment: step;
+	position: relative;
+	padding: 0 0 8px 24px;
+}
+
+.emptyStateSteps li::before {
+	content: counter(step);
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 16px;
+	height: 16px;
+	border-radius: 8px;
+	text-align: center;
+	font-size: 10px;
+	font-weight: 600;
+	background-color: var(--figma-color-bg-tertiary);
+	color: var(--figma-color-text);
+}
+
+.emptyStateSteps b {
+	font-weight: 600;
+	color: var(--figma-color-text);
+}
+
+.emptyStateSteps code {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 10px;
+	padding: 0 4px;
+	border-radius: 3px;
+	background-color: var(--figma-color-bg-secondary);
+	color: var(--figma-color-text);
 }
 
 button.button {
@@ -476,16 +550,6 @@ button:focus:not(:disabled),
 	display: none;
 }
 
-.modal-drawer-header {
-	margin: 16;
-	color: var(--figma-color-text);
-	font-weight: 600;
-}
-
-.modal-drawer-body {
-	margin: 16;
-	color: var(--figma-color-text);
-}
 
 .scroll_container--track--HEzfy:hover {
 	border-left: 1px solid var(--color-border, #efefef);
@@ -562,8 +626,10 @@ div:hover > .os-scrollbar.os-scrollbar-vertical {
 }
 
 .modal-title {
+	font-size: 12px;
+	line-height: 16px;
 	font-weight: 600;
-	padding: 16px;
+	padding: 16px 16px 8px;
 }
 
 .start-staging-ui {

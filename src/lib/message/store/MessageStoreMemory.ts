@@ -24,6 +24,8 @@ export type SearchQuery = {
 	oneLabelOf?: string[] | undefined;
 	unverified?: boolean | undefined;
 	missingTranslation?: boolean | undefined;
+	/** with missingTranslation: only this language counts - otherwise any configured language */
+	missingTranslationLanguage?: Locale | undefined;
 	name?: string | undefined;
 	nameAtEnd?: boolean | undefined;
 	text?: string | undefined;
@@ -98,7 +100,7 @@ export default class MessageStoreMemory extends EventTarget {
 	}
 
 	subscribeMessage(messageId: string, cb: (message: Message) => void) {
-		this.inlangProject?.subscribe(messageId, cb);
+		return this.inlangProject?.subscribe(messageId, cb);
 	}
 
 	static UPDATE_EVENT = "updated";
@@ -115,32 +117,22 @@ export default class MessageStoreMemory extends EventTarget {
 			changedKeys: [] as string[],
 		};
 
-		for (const deltedMessageId of changedMessages.deleted) {
-			await this.inlangProject?.delete(deltedMessageId);
-			changes.deleted.push(deltedMessageId);
-			changes.changedKeys.push(deltedMessageId);
-		}
+		// An undo / redo of an import changes thousands of messages: handle them in batches, not one by one.
+		await this.inlangProject?.deleteMany(changedMessages.deleted);
+		changes.deleted.push(...changedMessages.deleted);
+		changes.changedKeys.push(...changedMessages.deleted);
 
-		for (const updatedMessageId of changedMessages.updated) {
-			const freshMessage = await this.parentKeyStore.getMessageAsync(updatedMessageId);
-			if (!freshMessage) {
-				throw new Error(`fresh message does not exist... [${updatedMessageId}]`);
+		const changedIds = [...changedMessages.updated, ...changedMessages.added];
+		const freshMessages = await this.parentKeyStore.getMessagesAsync(changedIds);
+		for (const messageId of changedIds) {
+			if (!freshMessages[messageId]) {
+				throw new Error(`fresh message does not exist... [${messageId}]`);
 			}
-
-			await this.inlangProject?.upsert(freshMessage);
-			changes.updated.push(updatedMessageId);
-			changes.changedKeys.push(updatedMessageId);
 		}
-
-		for (const addedMessageId of changedMessages.added) {
-			const freshMessage = await this.parentKeyStore.getMessageAsync(addedMessageId);
-			if (!freshMessage) {
-				throw new Error(`fresh message does not exist... [${addedMessageId}]`);
-			}
-			await this.inlangProject?.upsert(freshMessage);
-			changes.added.push(addedMessageId);
-			changes.changedKeys.push(addedMessageId);
-		}
+		await this.inlangProject?.upsertMany(changedIds.map((messageId) => freshMessages[messageId]!));
+		changes.updated.push(...changedMessages.updated);
+		changes.added.push(...changedMessages.added);
+		changes.changedKeys.push(...changedIds);
 
 		const event = new CustomEvent<any>(MessageStoreMemory.UPDATE_EVENT, { detail: changes });
 		this.dispatchEvent(event);
@@ -148,6 +140,16 @@ export default class MessageStoreMemory extends EventTarget {
 
 	getLanugages(): Locale[] | undefined {
 		return this.config!.enabledLanguages;
+	}
+
+	/**
+	 * The languages in the one order every view uses: the reference language first, then the target
+	 * languages in the order of the Setup tab.
+	 */
+	getOrderedLanguages(): Locale[] {
+		const refLanguage = this.config?.refLanguage;
+		const targets = (this.config?.enabledLanguages ?? []).filter((l) => l !== refLanguage);
+		return [...new Set([...(refLanguage ? [refLanguage] : []), ...targets])];
 	}
 
 	async setLanguages(languages: Locale[]) {
@@ -214,7 +216,9 @@ export default class MessageStoreMemory extends EventTarget {
 			searchString += `unverified:${searchQuery.unverified ? "true" : "false"} `;
 		}
 
-		if (searchQuery.missingTranslation !== undefined) {
+		if (searchQuery.missingTranslation === true && searchQuery.missingTranslationLanguage) {
+			searchString += `missing_translation:${searchQuery.missingTranslationLanguage} `;
+		} else if (searchQuery.missingTranslation !== undefined) {
 			searchString += `missing_translation:${searchQuery.missingTranslation ? "true" : "false"} `;
 		}
 
@@ -261,7 +265,7 @@ export default class MessageStoreMemory extends EventTarget {
 		}
 
 		// extract and remove all filters
-		const filterRe = /((\b\w+:[\w,*:]+))\s/g;
+		const filterRe = /((\b\w+:[^\s]+))\s/g;
 		const filterMatches = processedInputString.match(filterRe);
 		const filters = [] as string[];
 
@@ -279,13 +283,17 @@ export default class MessageStoreMemory extends EventTarget {
 				} else if (filterParts[0] === "one_label_of" && filterParts.length > 1) {
 					searchQueryObj.oneLabelOf = searchQueryObj.oneLabelOf!.concat(filterParts[1].split(","));
 				} else if (filterParts[0] === "missing_translation" && filterParts.length > 1) {
-					searchQueryObj.missingTranslation = filterParts[1] === "true";
+					// missing_translation:true|false or missing_translation:<language>
+					searchQueryObj.missingTranslation = filterParts[1] !== "false";
+					if (filterParts[1] !== "true" && filterParts[1] !== "false") {
+						searchQueryObj.missingTranslationLanguage = filterParts[1] as Locale;
+					}
 				} else if (filterParts[0] === "unverified" && filterParts.length > 1) {
 					searchQueryObj.unverified = filterParts[1] === "true";
 				} else if (filterParts[0] === "exact_text" && filterParts.length > 1) {
 					searchQueryObj.exactText = filterParts[1] === "true";
 				} else if (filterParts[0] === "name" && filterParts.length > 1) {
-					searchQueryObj.name = filterParts[1];
+					searchQueryObj.name = filterParts.slice(1).join(":");
 				} else {
 					continue;
 				}
@@ -299,10 +307,10 @@ export default class MessageStoreMemory extends EventTarget {
 			// the regex expects a leading space - if we haven't found the name filter yet - try to find it at
 			// the very end
 
-			const nameAtTheEnd = /name:([\w,*:]+)$/g;
+			const nameAtTheEnd = /name:([^\s]+)$/g;
 			const matches = processedInputString.match(nameAtTheEnd);
 			if (matches) {
-				searchQueryObj.name = matches[0].split(":")[1];
+				searchQueryObj.name = matches[0].slice("name:".length);
 				processedInputString = processedInputString.split(matches[0]).join("");
 				searchQueryObj.nameAtEnd = true;
 			}
@@ -386,7 +394,21 @@ export default class MessageStoreMemory extends EventTarget {
 			return results;
 		}
 
-		for (const message of this.inlangProject!.getAll()) {
+		const languagesThatMustBeTranslated =
+			query.missingTranslation === undefined
+				? []
+				: query.missingTranslationLanguage
+					? [query.missingTranslationLanguage]
+					: this.getOrderedLanguages();
+
+		for (const message of this.inlangProject!.getAllReadonly()) {
+			for (const language of languagesThatMustBeTranslated) {
+				if (!MessageStoreMemory.hasTranslation(message, language)) {
+					results.withMissingVariants.add(message.id);
+					break;
+				}
+			}
+
 			if (query.text === undefined || query.text === "") {
 				results.matchingNames.add(message.id);
 			} else {
@@ -505,7 +527,16 @@ export default class MessageStoreMemory extends EventTarget {
 	}
 
 	getAllMessages() {
-		return this.inlangProject?.getAll();
+		return this.inlangProject?.getAllReadonly();
+	}
+
+	/** true if the message has a non-empty text in the language (in any of its variants) */
+	static hasTranslation(message: Message, language: Locale) {
+		return message.variants.some(
+			(variant) =>
+				variant.languageTag === language &&
+				variant.pattern.some((part) => part.type !== "Text" || part.value.trim() !== ""),
+		);
 	}
 
 	async createTag() {
@@ -541,6 +572,7 @@ export default class MessageStoreMemory extends EventTarget {
 		};
 
 		changes.changedKeys.push(message.id);
+		(previous ? changes.updated : changes.added).push(message.id);
 
 		// make sure the event is fired after the messages returned the updated message
 		setTimeout(() => {
@@ -560,11 +592,19 @@ export default class MessageStoreMemory extends EventTarget {
 			if (previous) await this.parentKeyStore.saveMessage(previous);
 			throw error;
 		}
+
+		// views listing the messages (e.g. the Messages tab) have to drop the deleted row
+		this.dispatchEvent(
+			new CustomEvent<any>(MessageStoreMemory.UPDATE_EVENT, {
+				detail: { deleted: [id], updated: [], added: [], changedKeys: [id] },
+			}),
+		);
 	}
 
 	private async loadInlangProject() {
 		await this.inlangProject?.close();
-		const messages = await this.parentKeyStore.load();
+		// Lix starts while the messages are transferred from the plugin
+		const messages = this.parentKeyStore.load();
 		this.inlangProject = await InlangV3Project.open({
 			settings: {
 				baseLocale: this.config!.refLanguage!,
@@ -578,7 +618,7 @@ export default class MessageStoreMemory extends EventTarget {
 			"inlangProjectSettings",
 			JSON.stringify(inlangProjectSettings),
 		);
-		const numberOfLinkedMessages = this.inlangProject.getAll().length.toString();
+		const numberOfLinkedMessages = this.inlangProject.getAllReadonly().length.toString();
 		await this.figmaRemote.setRootPluginData("numberOfMessages", numberOfLinkedMessages ?? "0");
 	}
 
@@ -705,7 +745,9 @@ export default class MessageStoreMemory extends EventTarget {
 			match,
 		);
 		if (sourceVariantPatternHTML === undefined) {
-			throw new Error(`Pattern did not exist for source language: ${sourceLanguage}`);
+			throw new Error(
+				`There is no text in the reference language (${sourceLanguage}) to translate from`,
+			);
 		}
 
 		const translatedPattern = await translator.translate(
@@ -795,6 +837,37 @@ export default class MessageStoreMemory extends EventTarget {
 			return undefined;
 		}
 		return this.patternToHtml(variant!.pattern);
+	}
+
+	/**
+	 * The text a text layer shows for a language: the translation if there is one, otherwise (missing,
+	 * cleared, or a machine translation that failed) the text of the fallback language - normally
+	 * the reference language, else any text the message has - so a layer never ends up blank only
+	 * because a translation is missing.
+	 */
+	static htmlForPatternWithFallback(
+		message: Message,
+		languageTag: string,
+		fallbackLanguageTag: string | undefined,
+		match?: string[],
+	) {
+		const html = this.htmlForPattern(message, languageTag, match);
+		if ((html === undefined || html === "") && fallbackLanguageTag !== undefined) {
+			const fallbackHtml = this.htmlForPattern(message, fallbackLanguageTag, match);
+			if (fallbackHtml) {
+				return fallbackHtml;
+			}
+			// A message created from a layer in a non-reference frame has no reference text: show the text
+			// that exists instead of blanking the layer.
+			for (const variant of message.variants) {
+				const existingHtml = this.htmlForPattern(message, variant.languageTag, match);
+				if (existingHtml) {
+					return existingHtml;
+				}
+			}
+			return fallbackHtml ?? html;
+		}
+		return html;
 	}
 
 	static getBestExistingVariant(

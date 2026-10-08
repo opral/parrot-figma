@@ -67,6 +67,8 @@ document.execCommand = function () {
 	return monkeyPatchCommandExec.apply(document, arguments as any);
 };
 
+const undoHandledByTextField = new WeakSet<Event>();
+
 document.addEventListener(
 	"keydown",
 	(e) => {
@@ -78,10 +80,22 @@ document.addEventListener(
 		) {
 			document.execCommand("selectAll");
 		} else if (e.keyCode === 90 /* Z */ && e.metaKey) {
-			if (e.shiftKey) {
-				document.execCommand("redoForce");
-			} else {
-				document.execCommand("undoForce");
+			// In a text field Cmd+Z is the undo of that field and nothing else: if Figma undid the
+			// document as well (see the listener below) the layers, the message and the field would no
+			// longer match. Outside of a text field it is Figma's undo only - the document-wide text undo
+			// (execCommand) would silently revert the last typed text of a field that has no focus.
+			const target = e.composedPath()[0] as HTMLElement | undefined;
+			if (
+				target instanceof HTMLInputElement ||
+				target instanceof HTMLTextAreaElement ||
+				target?.isContentEditable
+			) {
+				undoHandledByTextField.add(e);
+				if (e.shiftKey) {
+					document.execCommand("redoForce");
+				} else {
+					document.execCommand("undoForce");
+				}
 			}
 		}
 	},
@@ -91,6 +105,7 @@ document.addEventListener(
 window.addEventListener("keydown", (e) => {
 	if (
 		e.key === "z" &&
+		!undoHandledByTextField.has(e) &&
 		!e.shiftKey &&
 		!e.altKey &&
 		!(e.target! as any).classList.contains("cm-content")
@@ -311,15 +326,28 @@ function App() {
 	}, []);
 
 	if (startupError) {
-		return <div role="alert" style={{ padding: 16 }}>
-			<p>Parrot could not open this file.</p>
-			<p>{startupError}</p>
-			<button type="button" onClick={() => window.location.reload()}>Retry</button>
-		</div>;
+		return (
+			<div role="alert" className="startup-message">
+				<div className="startup-message-title">Parrot could not open this file</div>
+				<p>{startupError}</p>
+				<button
+					type="button"
+					className="button button-primary"
+					style={{ marginLeft: 0 }}
+					onClick={() => window.location.reload()}
+				>
+					Retry
+				</button>
+			</div>
+		);
 	}
 
 	if (!appScreen || !user) {
-		return <>Loading Plugin</>;
+		return (
+			<div className="startup-message" role="status">
+				Loading Parrot…
+			</div>
+		);
 	}
 	let view;
 
@@ -389,6 +417,11 @@ function App() {
 		);
 	}
 
+	const openTab = (screen: string) => {
+		if (screen === "messages") setKeyQuery(MessageStoreMemory.toQueryObject(""));
+		setAppScreen(screen);
+	};
+
 	switch (appScreen) {
 		case "onboarding":
 			return (
@@ -409,7 +442,7 @@ function App() {
 			view = (
 				<>
 					<MessageListView
-						showSearchBar={false}
+						showSearchBar
 						initialSearchQuery={keyQuery}
 						messageStore={memoryTranslationKeyStore}
 						localizedLabelManager={localizedLabelManager}
@@ -428,10 +461,10 @@ function App() {
 			break;
 
 		case "import":
-			view = <ImportView labelManager={localizedLabelManager} />;
+			view = <ImportView labelManager={localizedLabelManager} figmaRemote={figmaRemote} />;
 			break;
 		case "export":
-			view = <Export labelManager={localizedLabelManager} />;
+			view = <Export labelManager={localizedLabelManager} figmaRemote={figmaRemote} />;
 			break;
 		case "design":
 			view = (
@@ -458,37 +491,33 @@ function App() {
 		<>
 			<Tooltip contentAttribute="data-tooltip-content" />
 			<div className="toolbar">
-				<div className="tabHeader">
-					<div
-						className={`tab ${appScreen === "design" ? "active" : ""}`}
-						onClick={() => setAppScreen("design")}
-					>
-						Layers
-					</div>
-					<div
-						className={`tab ${appScreen === "messages" ? "active" : ""}`}
-						onClick={() => {
-							setKeyQuery(MessageStoreMemory.toQueryObject(""));
-							setAppScreen("messages");
-						}}
-					>
-						Messages
-					</div>
-					<div className={`tab ${appScreen === "import" ? "active" : ""}`} onClick={() => setAppScreen("import")}>Import</div>
-					{FEATURES_FLAGS.export && (
+				<div className="tabHeader" role="tablist">
+					{[
+						["design", "Layers"],
+						["messages", "Messages"],
+						["import", "Import"],
+						...(FEATURES_FLAGS.export
+							? [["export", FEATURES_FLAGS.versioning ? "Versions & Export" : "Export"]]
+							: []),
+						["settings", "Setup"],
+					].map(([screen, label]) => (
 						<div
-							className={`tab ${appScreen === "export" ? "active" : ""}`}
-							onClick={() => setAppScreen("export")}
+							key={screen}
+							role="tab"
+							tabIndex={0}
+							aria-selected={appScreen === screen}
+							className={`tab ${appScreen === screen ? "active" : ""}`}
+							onClick={() => openTab(screen)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" || e.key === " ") {
+									e.preventDefault();
+									openTab(screen);
+								}
+							}}
 						>
-							{FEATURES_FLAGS.versioning ? "Versions & Export" : "Export"}
+							{label}
 						</div>
-					)}
-					<div
-						className={`tab ${appScreen === "settings" ? "active" : ""}`}
-						onClick={() => setAppScreen("settings")}
-					>
-						Setup
-					</div>
+					))}
 					{/* <div className={`tab ${appScreen === 'users' ? 'active' : ''}`} onClick={() => setAppScreen('users')}>Users</div> */}
 				</div>
 
@@ -519,12 +548,12 @@ function App() {
 							{
 								iconName: "window-mode-window-svg",
 								value: WindowMode.Window,
-								tooltip: "Use as Window",
+								tooltip: "Window",
 							},
 							{
 								iconName: "window-mode-fullscreen-svg",
 								value: WindowMode.Fullscreen,
-								tooltip: "Switch to Fullscreen",
+								tooltip: "Fullscreen",
 							},
 						]}
 						selectedSegment={windowMode}

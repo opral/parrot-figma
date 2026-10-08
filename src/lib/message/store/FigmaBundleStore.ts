@@ -1,4 +1,3 @@
-import blake from "blakejs";
 import type { BundleNested } from "@inlang/sdk/browser";
 
 export type { BundleNested } from "@inlang/sdk/browser";
@@ -8,6 +7,8 @@ export const FIGMA_BUNDLE_MIGRATION_KEY = "prt_ib_migration_v1";
 export const LEGACY_MESSAGE_PREFIX = "prt_im__";
 
 const MAX_PLUGIN_DATA_BYTES = 100_000;
+
+const LOCAL_CHANGE_CHECK_DELAY_MS = 300;
 
 function encodeUtf8(value: string): Uint8Array {
 	const bytes: number[] = [];
@@ -62,31 +63,60 @@ export class FigmaBundleStore {
 
 	private readonly listeners = new Set<(changes: BundleChangeSet) => void>();
 
-	private hashes = new Map<string, string>();
+	/** The stored JSON of every bundle - comparing the strings is far cheaper than hashing them. */
+	private stored = new Map<string, string>();
+
+	/** Local plugin-data changes are checked once when they stop coming (see `scheduleLocalChangeCheck`). */
+	private localChangeTimer: ReturnType<typeof setTimeout> | undefined;
 
 	private readonly handleDocumentChange = (event: any) => {
 		if (!event.documentChanges.some((change: any) => this.isRemoteRootPluginDataChange(change))) {
+			if (event.documentChanges.some((change: any) => this.isRootPluginDataChange(change))) {
+				this.scheduleLocalChangeCheck();
+			}
 			return;
 		}
 
+		this.refreshAndNotify(true);
+	};
+
+	private refreshAndNotify(validate: boolean) {
 		try {
-			const changes = this.refreshHashes();
+			const changes = this.refreshHashes(validate);
 			if (changes.added.length || changes.updated.length || changes.deleted.length) {
 				for (const listener of this.listeners) listener(changes);
 			}
 		} catch (error) {
 			console.error("Failed to apply a remote Parrot bundle update", error);
 		}
-	};
+	}
+
+	/**
+	 * Cmd+Z / Cmd+Shift+Z change the plugin data of the document without this store writing it. The
+	 * writes of this store are already remembered in `stored`, so a difference means the data was
+	 * changed from the outside (an undo/redo) and whoever holds a copy has to follow. Reading every
+	 * bundle is not free for big files and a language switch writes plugin data many times: check once
+	 * the changes stopped coming.
+	 */
+	private scheduleLocalChangeCheck() {
+		clearTimeout(this.localChangeTimer);
+		this.localChangeTimer = setTimeout(() => {
+			this.localChangeTimer = undefined;
+			this.refreshAndNotify(false);
+		}, LOCAL_CHANGE_CHECK_DELAY_MS);
+	}
 
 	constructor(args: { root: PluginDataRoot; documentChanges?: DocumentChangeSource }) {
 		this.root = args.root;
 		this.documentChanges = args.documentChanges;
-		this.refreshHashes();
+		// A big file has thousands of bundles and the sandbox shares Figma's main thread: only remember
+		// what is stored now. Validation happens when the bundles are loaded.
+		this.refreshHashes(false);
 		this.documentChanges?.on("documentchange", this.handleDocumentChange);
 	}
 
 	dispose() {
+		clearTimeout(this.localChangeTimer);
 		this.documentChanges?.off?.("documentchange", this.handleDocumentChange);
 		this.listeners.clear();
 	}
@@ -111,15 +141,15 @@ export class FigmaBundleStore {
 	put(bundle: BundleNested) {
 		const raw = serializeBundle(bundle);
 		this.root.setPluginData(this.key(bundle.id), raw);
-		this.hashes.set(bundle.id, hash(raw));
+		this.stored.set(bundle.id, raw);
 	}
 
 	delete(bundleId: string) {
 		this.root.setPluginData(this.key(bundleId), "");
-		this.hashes.delete(bundleId);
+		this.stored.delete(bundleId);
 	}
 
-	private refreshHashes(): BundleChangeSet {
+	private refreshHashes(validate: boolean): BundleChangeSet {
 		const next = new Map<string, string>();
 		const added: string[] = [];
 		const updated: string[] = [];
@@ -127,15 +157,14 @@ export class FigmaBundleStore {
 		for (const key of this.bundleKeys()) {
 			const id = this.idFromKey(key);
 			const raw = this.root.getPluginData(key);
-			parseBundle(raw, id);
-			const nextHash = hash(raw);
-			next.set(id, nextHash);
-			if (!this.hashes.has(id)) added.push(id);
-			else if (this.hashes.get(id) !== nextHash) updated.push(id);
+			if (validate) parseBundle(raw, id);
+			next.set(id, raw);
+			if (!this.stored.has(id)) added.push(id);
+			else if (this.stored.get(id) !== raw) updated.push(id);
 		}
 
-		const deleted = [...this.hashes.keys()].filter((id) => !next.has(id));
-		this.hashes = next;
+		const deleted = [...this.stored.keys()].filter((id) => !next.has(id));
+		this.stored = next;
 		return { added, updated, deleted };
 	}
 
@@ -154,13 +183,16 @@ export class FigmaBundleStore {
 		return key.slice(FIGMA_BUNDLE_PREFIX.length);
 	}
 
-	private isRemoteRootPluginDataChange(change: any) {
+	private isRootPluginDataChange(change: any) {
 		return (
-			change.origin === "REMOTE" &&
 			change.type === "PROPERTY_CHANGE" &&
 			change.node.id === this.root.id &&
 			change.properties.includes("pluginData")
 		);
+	}
+
+	private isRemoteRootPluginDataChange(change: any) {
+		return change.origin === "REMOTE" && this.isRootPluginDataChange(change);
 	}
 }
 
@@ -282,10 +314,6 @@ export function validateBundleNested(value: unknown): asserts value is BundleNes
 			}
 		}
 	}
-}
-
-function hash(raw: string) {
-	return blake.blake2sHex(encodeUtf8(raw));
 }
 
 function isRecord(value: unknown): value is Record<string, any> {

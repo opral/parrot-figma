@@ -162,8 +162,9 @@
 	border-radius: 2px;
 }
 .figma-inlang-editor .inlang-pattern-editor-placeholder {
-	top: 8px !important;
+	top: 5px !important;
 	left: 14px !important;
+	line-height: 16px;
 }
 
 .figma-inlang-editor inlang-message {
@@ -180,4 +181,161 @@
 	font:
 		11px/16px Inter,
 		sans-serif;
+}
+.figma-inlang-editor .inlang-selector-details[hidden] {
+	display: none;
+}
+
+/* messages are separated by a hairline; the language rows align with the header text */
+.message-group-inlang {
+	border-bottom: 1px solid var(--figma-color-border);
+}
+.message-group-inlang .message-group-header-actions {
+	padding-right: 8px;
+}
+.message-group-inlang .message-group-header-actions .button.layerIcon {
+	width: 24px;
+	height: 24px;
+	border-radius: 5px;
+}
+.message-group-inlang .message-group-header-actions .button.iconWrapper .svg-container {
+	width: 24px;
+	height: 24px;
+}
+
+/* "New variable" is an advanced action: show it on the message header only while the message is hovered */
+.message-group-inlang inlang-bundle {
+	--parrot-add-variable-opacity: 0;
+}
+.message-group-inlang:hover inlang-bundle,
+.message-group-inlang:focus-within inlang-bundle {
+	--parrot-add-variable-opacity: 1;
+}
+
+/* the delete icon only shows while the message is hovered or focused (plain CSS, so it still works
+   while the pointer is over the floating "New variable" button) */
+.message-group-inlang:hover .message-group-header-actions .button.iconWrapper .svg-container,
+.message-group-inlang:focus-within
+	.message-group-header-actions
+	.button.iconWrapper
+	.svg-container {
+	background-color: var(--figma-color-icon-secondary);
+}
+.message-group-inlang .message-group-header-actions .button.iconWrapper:hover .svg-container {
+	background-color: var(--figma-color-icon);
+}
+
+/* formatted (rich) text is previewed, not edited: it keeps its markup untouched */
+.figma-inlang-editor .inlang-rich-preview {
+	box-sizing: border-box;
+	display: block;
+	width: calc(100% - 16px);
+	margin: 4px 8px;
+	padding: 4px 6px;
+	min-height: 24px;
+	border: 1px dashed var(--figma-color-border);
+	border-radius: 2px;
+	font:
+		11px/16px Inter,
+		sans-serif;
+	color: var(--figma-color-text);
+	overflow-wrap: anywhere;
+	cursor: default;
+}
+.figma-inlang-editor .inlang-rich-preview-content {
+	white-space: pre-wrap;
+}
+/* the global reset removes the browser styles of these elements */
+.figma-inlang-editor .inlang-rich-preview-content :is(strong, b) {
+	font-weight: 700;
+}
+.figma-inlang-editor .inlang-rich-preview-content :is(em, i) {
+	font-style: italic;
+}
+.figma-inlang-editor .inlang-rich-preview-content u {
+	text-decoration: underline;
+}
+.figma-inlang-editor .inlang-rich-preview-content :is(s, strike) {
+	text-decoration: line-through;
+}
+.figma-inlang-editor .inlang-rich-preview-content :is(ol, ul) {
+	margin: 0;
+	padding: 0;
+	counter-reset: parrot-list;
+}
+.figma-inlang-editor .inlang-rich-preview-content li {
+	list-style: none;
+	padding-left: 16px;
+	position: relative;
+}
+.figma-inlang-editor .inlang-rich-preview-content li[data-list="ordered"] {
+	counter-increment: parrot-list;
+}
+.figma-inlang-editor .inlang-rich-preview-content li::before {
+	position: absolute;
+	left: 2px;
+	content: "•";
+}
+.figma-inlang-editor .inlang-rich-preview-content li[data-list="ordered"]::before {
+	content: counter(parrot-list) ".";
+	left: 0;
+}
+.figma-inlang-editor .inlang-rich-preview::after {
+	content: "Formatted text – edit it on the canvas or in the Layers tab";
+	display: block;
+	margin-top: 2px;
+	font-size: 10px;
+	line-height: 14px;
+	color: var(--figma-color-text-secondary);
+}
+
+/* variant buttons sit on the right end of the translation: keep long text clear of "Delete" */
+.figma-inlang-editor
+	inlang-variant:has(> .inlang-delete-variant:not([hidden]))
+	.inlang-pattern-editor-contenteditable {
+	padding-right: 52px !important;
+}
+.figma-inlang-editor :is(.inlang-translate-variant, .inlang-delete-variant) {
+	box-sizing: border-box;
+	height: 22px;
+	margin-top: 6px;
+	font:
+		11px/16px Inter,
+		sans-serif;
+}
+.figma-inlang-editor .inlang-delete-variant {
+	padding: 0 6px;
+	border-radius: 2px;
+	color: var(--figma-color-text-secondary);
+}
+.figma-inlang-editor .inlang-delete-variant:hover {
+	color: var(--figma-color-text-danger);
+	background: var(--figma-color-bg-hover);
+}
+.figma-inlang-editor .inlang-delete-variant:focus-visible {
+	outline: 1px solid var(--figma-color-border-brand-strong);
+	outline-offset: -1px;
+}
+/* a text button inside the field: no second border around it */
+.figma-inlang-editor .inlang-translate-variant {
+	padding: 0 6px;
+	white-space: nowrap;
+	border: none;
+	border-radius: 2px;
+	color: var(--figma-color-text-brand);
+	background: transparent;
+}
+.figma-inlang-editor .inlang-translate-variant:hover:not(:disabled) {
+	background: var(--figma-color-bg-hover);
+}
+.figma-inlang-editor .inlang-translate-variant:focus-visible {
+	outline: 1px solid var(--figma-color-border-brand-strong);
+	outline-offset: -1px;
+}
+.figma-inlang-editor .inlang-translate-variant:disabled {
+	color: var(--figma-color-text-disabled);
+	cursor: default;
+}
+.figma-inlang-editor .inlang-translate-variant[hidden] {
+	display: none;
 }

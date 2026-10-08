@@ -273,3 +273,71 @@ describe("LocalizedLabelManagerUI.commitUndoWhenIdle", () => {
 		}
 	});
 });
+
+describe("LocalizedLabelManagerUI.linkLabelsToMessages", () => {
+	test("links all layers with one sandbox call, one view refresh and one undo step", async () => {
+		const { manager } = createManager();
+		const label = (nodeId: string, rootFrameId: string) => ({
+			nodeId,
+			rootFrameId,
+			rootFrameLanguage: Locale.EN,
+			parameterValues: {},
+		});
+		const labels = [label("a", "frame-1"), label("b", "frame-1"), label("c", "frame-2")];
+		manager.updateBatchDepth = 0;
+		manager.messageStore = { getMessageByName: (name: string) => ({ id: name }) };
+		manager.toSandboxUpdate = vi.fn((nodeId: string) => ({ nodeId }));
+		manager.refreshCachedLabel = vi.fn(() => true);
+		manager.localizedLabelMangerSandbox.updateLabelsProperties = vi.fn(async (updates: any[]) =>
+			updates.map(({ nodeId }) => ({ label: { nodeId } })),
+		);
+
+		await manager.linkLabelsToMessages(
+			labels.map((l) => ({ label: l, messageName: "login.sign_in" })),
+		);
+
+		expect(manager.localizedLabelMangerSandbox.updateLabelsProperties).toHaveBeenCalledTimes(1);
+		expect(
+			manager.localizedLabelMangerSandbox.updateLabelsProperties.mock.calls[0][0],
+		).toHaveLength(3);
+		expect(manager.dispatchEvent).toHaveBeenCalledTimes(1);
+		expect(manager.localizedLabelMangerSandbox.commitUndo).toHaveBeenCalledTimes(1);
+		expect(manager.frameOperations.size).toBe(0);
+	});
+
+	test("waits for a running operation of its frames and holds back the next one", async () => {
+		const { manager } = createManager();
+		const order: string[] = [];
+		let finishSwitch!: () => void;
+		const switching = manager.runFrameOperation(
+			"frame-1",
+			() =>
+				new Promise<void>((resolve) => {
+					finishSwitch = () => {
+						order.push("switch done");
+						resolve();
+					};
+				}),
+		);
+		manager.updateBatchDepth = 0;
+		manager.messageStore = { getMessageByName: (name: string) => ({ id: name }) };
+		manager.toSandboxUpdate = vi.fn((nodeId: string) => ({ nodeId }));
+		manager.refreshCachedLabel = vi.fn(() => true);
+		manager.localizedLabelMangerSandbox.updateLabelsProperties = vi.fn(async (updates: any[]) => {
+			order.push("link written");
+			return updates.map(({ nodeId }: any) => ({ label: { nodeId } }));
+		});
+		const label = { nodeId: "a", rootFrameId: "frame-1", rootFrameLanguage: Locale.EN };
+
+		const linking = manager.linkLabelsToMessages([{ label, messageName: "login.cancel" }]);
+		const nextSwitch = manager.runFrameOperation("frame-1", async () => {
+			order.push("next operation");
+		});
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		expect(order).toEqual([]);
+
+		finishSwitch();
+		await Promise.all([switching, linking, nextSwitch]);
+		expect(order).toEqual(["switch done", "link written", "next operation"]);
+	});
+});

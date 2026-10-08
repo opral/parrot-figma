@@ -164,7 +164,10 @@ export default function LocalizedLabelsListView({
 				figmaRemote={figmaRemote}
 				localizedLabelManager={localizedLabelManager}
 			/>
-			<LinkIdenticalTextsToast figmaRemote={figmaRemote} localizedLabelManager={localizedLabelManager} />
+			<LinkIdenticalTextsToast
+				figmaRemote={figmaRemote}
+				localizedLabelManager={localizedLabelManager}
+			/>
 			{localizedLabels.length === 0 && (
 				<div className="emptyState">
 					{Object.keys(selection).length === 0 && (

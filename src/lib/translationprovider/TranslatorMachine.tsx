@@ -3,7 +3,7 @@ import ParrotApi, { TranslationCredit, TranslationCreditUsage } from "../api/Par
 import { Locale } from "../message/variants/Locale";
 import getKey from "./TranslationCredit";
 
-import GoogleTranslator from "./google";
+import { MachineTranslationUnavailableError } from "./MachineTranslationContact";
 import FeatureFlags from "../featureflags/FeatureFlags";
 import Monitoring from "../monitoring/MonitoringProxy";
 
@@ -283,42 +283,15 @@ export default class TranslatorMachine {
 		// return translationCredits;
 	}
 
-	async translate(text: string, sourceLange: Locale, targetLanguage: Locale, triggersCTA: boolean) {
-		// make sure the state is loaded from the local storage
-		await this.ensureStateLoaded;
-
-		// For now don't use the owner of the file
-		const userId = figma.currentUser!.id!;
-
-		if (FeatureFlags.features.payment) {
-			const availableTranslations = calculateAvailableMessages(
-				this.state!,
-				userId,
-				new Date().getTime(),
-			);
-
-			if (availableTranslations <= 0 && FeatureFlags.features.payment) {
-				if (triggersCTA) {
-					await this.fireCreditsUpdateEvent(true);
-				}
-				// TODO #29 activate again
-				throw new NoMoreTranslationsLeftError("No Machine Translations left");
-			}
-		}
-
-		// call google translate
-		const translation = await GoogleTranslator.translate(text, sourceLange, targetLanguage);
-
-		// lets not wait for the results here ;-)
-		if (figma.currentUser && FeatureFlags.features.payment) {
-			try {
-				await this.addTranslationCreditUse(userId, text.length, triggersCTA);
-			} catch (e: any) {
-				// we won't fail if the backend is down...
-				await Monitoring.instance?.sentryCaptureException(e, {});
-			}
-		}
-		return translation;
+	async translate(
+		text: string,
+		sourceLange: Locale,
+		targetLanguage: Locale,
+		triggersCTA: boolean,
+	): Promise<string | null> {
+		// Machine translation needs a paid, hosted service. Until Parrot has one it is available on
+		// request (MachineTranslationContact) - ./google stays for that service.
+		throw new MachineTranslationUnavailableError();
 	}
 
 	async getCreditStateAsync() {

@@ -14,10 +14,8 @@ import LocalizedLabelManagerUI from "../../../lib/localizedlabels/LocalizedLabel
 
 import Drawer from "../../compontents/drawer/Drawer";
 import MessageVariantItem from "./MessageVariantItem";
+import { showMachineTranslationContact } from "../../compontents/machineTranslation/MachineTranslationContact";
 import InlangEditor from "./InlangEditor";
-import TranslatorMachine, {
-	NoMoreTranslationsLeftError,
-} from "../../../lib/translationprovider/TranslatorMachine";
 // import ReactQuill from 'react-quill';
 
 type TranslationKeyListItemProps = {
@@ -191,41 +189,7 @@ function TranslationKeyListItem({
 						localizedLabelManager.commitUndoWhenIdle();
 						setMessage(updated);
 					}}
-					onTranslate={async (language) => {
-						const refVariant = message.variants.find(
-							(variant) => variant.languageTag === refLanguage,
-						);
-						if (!refVariant) return;
-						try {
-							// the same machine translation (and quota, if there is one) as switching a frame to a language
-							const translation = await TranslatorMachine.instance.translate(
-								MessageStoreMemory.patternToHtml(refVariant.pattern),
-								refLanguage!,
-								language as Locale,
-								true,
-							);
-							if (translation) {
-								const updated = MessageStoreMemory.upsertVariantPatternHtml(
-									message,
-									undefined,
-									language as Locale,
-									[],
-									translation,
-								);
-								await localizedLabelManager.updateMessage(updated, {});
-								localizedLabelManager.commitUndoWhenIdle();
-								setMessage(updated);
-							}
-						} catch (e: any) {
-							if (!(e instanceof NoMoreTranslationsLeftError)) {
-								reportError(e);
-								figmaRemote.notifyError(
-									`Something went wrong with translation - ${e.message}`,
-									8000,
-								);
-							}
-						}
-					}}
+					onTranslate={async () => showMachineTranslationContact()}
 				/>
 			) : (
 				languages.map((language) => (

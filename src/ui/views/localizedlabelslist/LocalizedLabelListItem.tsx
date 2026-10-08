@@ -16,14 +16,11 @@ import { hasMessageWithText, suggestMessageKey } from "../../../lib/localizedlab
 import TranslationEditor from "../../compontents/translationEditor/TranslationEditor";
 import LocalizedLabelManagerUI from "../../../lib/localizedlabels/LocalizedLabelManagerUI";
 import TextField from "../../compontents/textfield/TextField";
+import { showMachineTranslationContact } from "../../compontents/machineTranslation/MachineTranslationContact";
 import MessageListView from "../messages/MessageListView";
 import { UILocalizedLabel } from "../../../lib/localizedlabels/UILocalizedLabel";
-import { track } from "../../utils/analytics";
 import Drawer from "../../compontents/drawer/Drawer";
 import { MessageParameterValues } from "../../../lib/message/MessageParameterValues";
-import TranslatorMachine, {
-	NoMoreTranslationsLeftError,
-} from "../../../lib/translationprovider/TranslatorMachine";
 
 /**
  * The text the "Select a message" drawer starts its search with: plain words (no query syntax) of the
@@ -121,7 +118,6 @@ export default function LocalizedLabelListItem({
 	}
 
 	async function updateToLatestKeyVersion() {
-		track("updateToLatestKeyVersion");
 		await localizedLabelManager.updateToMessageHead([localizedLabel]).catch((e: Error) => {
 			reportError(e);
 			figmaRemote.notifyError(e.message);
@@ -601,33 +597,8 @@ export default function LocalizedLabelListItem({
 											localizedLabel.currentPatternHTML === "") && (
 											<button
 												type="button"
-												disabled={!localizedLabel.isTranslatable()}
-												onClick={async () => {
-													const translationProvider = TranslatorMachine.instance;
-
-													try {
-														await localizedLabelManager.setLabelLanguage(
-															localizedLabel,
-															localizedLabel.language,
-															translationProvider,
-															true,
-															true,
-														);
-													} catch (e: any) {
-														if (!(e instanceof NoMoreTranslationsLeftError)) {
-															figmaRemote.notifyError(
-																`Something went wrong with translation - ${e.message}`,
-																8000,
-															);
-															reportError(e);
-														}
-													}
-												}}
-												data-tooltip-content={
-													localizedLabel.isTranslatable()
-														? "Translate this message using machine translation."
-														: "Can`t machine translate - reference text missing"
-												}
+												onClick={showMachineTranslationContact}
+												data-tooltip-content="Machine translation is available on request"
 											>
 												Translate
 											</button>

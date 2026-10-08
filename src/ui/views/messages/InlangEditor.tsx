@@ -84,6 +84,22 @@ sl-button::part(base) { min-height: 24px !important; height: 24px !important; li
 sl-button::part(label) { line-height: 16px !important; display: flex; align-items: center; }
 .message-actions, .add-selector-container { height: 24px !important; padding: 0 4px !important; }
 
+/* no table: each text field has its own border, so rows and cells need no lines or grey cells */
+:host(inlang-message), :host(inlang-variant) { border: none !important; }
+.language-container, .match, .message-header, .new-variant { border: none !important; background-color: transparent !important; }
+
+/* selector message: without the table lines the selector is a small chip (it opens the "Delete selector" menu) and the
+   match inputs are a narrow column in front of the text field */
+.selector-container { min-height: 0 !important; }
+.selector, .match { width: 80px; }
+.selector { position: relative; box-sizing: border-box; display: block !important; width: auto !important; min-width: 72px; max-width: 160px; flex: none; height: 24px !important; min-height: 24px !important; margin: 4px 0 0 8px; padding: 0 20px 0 6px !important; line-height: 22px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background-color: transparent !important; border: 1px solid var(--figma-color-border) !important; border-radius: 2px; }
+.selector::after { content: ""; position: absolute; right: 7px; top: 7px; width: 4px; height: 4px; border: solid var(--figma-color-icon-secondary); border-width: 0 1px 1px 0; transform: rotate(45deg); }
+.selector:hover { background-color: var(--figma-color-bg-hover) !important; border-color: var(--figma-color-border-strong) !important; }
+.new-variant { box-sizing: border-box; min-height: 24px !important; margin: 2px 8px 6px 8px; padding: 0 6px !important; width: auto !important; border-radius: 2px; }
+.new-variant:hover { background-color: var(--figma-color-bg-hover) !important; }
+/* a plain row with the "Add selector" line above its field: the language label follows the field */
+.language-container { padding-top: calc(9px + var(--parrot-label-offset, 0px)); }
+
 `;
 async function theme(element: HTMLElement & { updateComplete: Promise<unknown> }) {
 	await element.updateComplete;
@@ -93,15 +109,24 @@ async function theme(element: HTMLElement & { updateComplete: Promise<unknown> }
 	element.shadowRoot.adoptedStyleSheets = [...element.shadowRoot.adoptedStyleSheets, sheet];
 	// the match cell of a selector variant is an input: say so (it is an empty cell for a new variant)
 	for (const match of element.shadowRoot.querySelectorAll("sl-input.match")) {
-		match.setAttribute("placeholder", "match, e.g. *");
+		match.setAttribute("placeholder", "match");
 		match.setAttribute(
 			"title",
 			"The value of the selector this text is used for. * matches every other value.",
 		);
 	}
+	// the selector chip is cut off when its name is long
+	for (const selector of element.shadowRoot.querySelectorAll(".selector")) {
+		selector.setAttribute("title", selector.textContent?.trim() ?? "");
+	}
 	for (const nested of element.shadowRoot.querySelectorAll("inlang-add-variable")) {
 		void theme(nested as HTMLElement & { updateComplete: Promise<unknown> });
 	}
+}
+
+/** The message component renders a header row (selectors, "Add selector" button) above the variants. */
+function hasMessageHeader(message: { selectors: unknown[]; variants: unknown[] }) {
+	return message.selectors.length > 0 || message.variants.length > 1;
 }
 
 /**
@@ -293,6 +318,7 @@ export default function InlangEditor({
 				if (data) {
 					component.message = data;
 					component.variants = data.variants;
+					component.toggleAttribute("data-header", hasMessageHeader(data));
 				}
 			}
 			for (const element of root.querySelectorAll("inlang-variant")) {
@@ -343,6 +369,7 @@ export default function InlangEditor({
 			messageElement.message = data;
 			messageElement.variants = data.variants;
 			messageElement.settings = { baseLocale, locales, modules: [] };
+			messageElement.toggleAttribute("data-header", hasMessageHeader(data));
 			bundleElement.append(messageElement);
 			void theme(messageElement);
 			if (!drafts.current.some((m) => m.id === data.id)) {
@@ -397,7 +424,7 @@ export default function InlangEditor({
 					button.dataset.locale = locale;
 					button.dataset.variantId = variant.id;
 					button.textContent = `Translate from ${baseLocale}`;
-					button.title = `Fill this translation from the ${baseLocale} text with machine translation`;
+					button.title = "Machine translation is available on request";
 					button.addEventListener("click", () => {
 						button.disabled = true;
 						button.textContent = "Translating…";

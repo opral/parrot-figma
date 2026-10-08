@@ -257,7 +257,6 @@
 	align-items: flex-start;
 }
 
-
 .header .column-1 {
 	grid-column: 1 / 3;
 }
@@ -329,7 +328,6 @@
 	min-width: 0;
 }
 
-
 .message-variant .message-variant-language {
 	min-width: 0;
 	padding-left: 4px;
@@ -383,7 +381,6 @@
 .layer-message-state__linked .input-select-menu__label {
 	color: var(--figma-color-icon-component);
 }
-
 
 .layer-message-state__linked .message-select .input-select-menu__item-icon .svg-container {
 	width: 24px;
@@ -706,4 +703,205 @@
 .link-identical-toast button:focus-visible {
 	outline: 1px solid var(--figma-color-text-oninverse);
 	outline-offset: 1px;
+}
+
+/* "Generate keys" for the unlinked texts of a frame */
+.frame-generate-keys {
+	display: flex;
+	align-items: center;
+	gap: 0;
+	height: 24px;
+	margin-right: 4px;
+	padding: 0 8px 0 0;
+	border: 1px solid transparent;
+	border-radius: 5px;
+	background-color: transparent;
+	color: var(--figma-color-text-secondary);
+	font-size: 11px;
+	cursor: default;
+}
+
+.frame-generate-keys:hover {
+	border-color: var(--figma-color-border);
+	background-color: var(--figma-color-bg-hover);
+	color: var(--figma-color-text);
+}
+
+.frame-generate-keys:focus-visible {
+	outline: 1px solid var(--figma-color-border-selected);
+	outline-offset: -1px;
+}
+
+.frame-generate-keys .svg-container {
+	width: 24px;
+	height: 24px;
+	background-color: var(--figma-color-icon-secondary);
+	-webkit-mask-size: 14px 14px;
+	mask-size: 14px 14px;
+	-webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-position: center;
+}
+
+.frame-hint-action {
+	display: inline;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--figma-color-text-brand);
+	font-size: inherit;
+	cursor: default;
+}
+
+.frame-hint-action:hover {
+	text-decoration: underline;
+}
+
+/* Review table: layer text | message key */
+.link-review-drawer.top-drawer {
+	width: min(640px, calc(100% - 16px));
+}
+
+.link-review-drawer .drawer-body {
+	max-width: none;
+}
+
+.link-review-table {
+	display: flex;
+	flex-direction: column;
+	margin-top: 8px;
+	border: 1px solid var(--figma-color-border);
+	border-radius: 5px;
+	max-height: 320px;
+	overflow: auto;
+}
+
+.link-review-row {
+	display: grid;
+	grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr);
+	align-items: center;
+	gap: 8px;
+	min-height: 32px;
+	padding-right: 8px;
+	border-bottom: 1px solid var(--figma-color-border);
+}
+
+.link-review-row:last-child {
+	border-bottom: none;
+}
+
+.link-review-head {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	min-height: 28px;
+	background-color: var(--figma-color-bg-secondary);
+	color: var(--figma-color-text-secondary);
+	font-weight: 500;
+}
+
+.link-review-row--off .link-review-text,
+.link-review-row--off .link-review-static {
+	color: var(--figma-color-text-tertiary);
+}
+
+.link-review-check {
+	display: flex;
+	justify-content: center;
+}
+
+.link-review-check input {
+	margin: 0;
+	accent-color: var(--figma-color-bg-brand);
+}
+
+.link-review-text {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.link-review-label,
+.link-review-frame {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.link-review-frame {
+	font-size: 10px;
+	color: var(--figma-color-text-tertiary);
+}
+
+.link-review-key {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+}
+
+.link-review-input {
+	flex: 1;
+	min-width: 0;
+	height: 24px;
+	box-sizing: border-box;
+	padding: 0 6px;
+	border: 1px solid var(--figma-color-border);
+	border-radius: 5px;
+	background-color: var(--figma-color-bg);
+	color: var(--figma-color-icon-component);
+	font-family: inherit;
+	font-size: 11px;
+	outline: none;
+}
+
+.link-review-input:hover {
+	border-color: var(--figma-color-border-strong, var(--figma-color-border));
+}
+
+.link-review-input:focus {
+	border-color: var(--figma-color-border-selected);
+}
+
+.link-review-input--invalid,
+.link-review-input--invalid:focus {
+	border-color: var(--figma-color-border-danger, #f24822);
+}
+
+.link-review-static {
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	color: var(--figma-color-icon-component);
+}
+
+.link-review-tag {
+	flex: none;
+	padding: 0 4px;
+	border-radius: 3px;
+	font-size: 10px;
+	color: var(--figma-color-text-secondary);
+	background-color: var(--figma-color-bg-tertiary);
+}
+
+.link-review-error {
+	margin: 8px 0 0;
+	color: var(--figma-color-text-danger, #f24822);
+}
+
+@media (max-width: 420px) {
+	.link-review-row {
+		grid-template-columns: 28px minmax(0, 1fr);
+		padding: 4px 8px 4px 0;
+	}
+
+	.link-review-key {
+		grid-column: 2;
+	}
+
+	.link-review-head span:last-child {
+		display: none;
+	}
 }

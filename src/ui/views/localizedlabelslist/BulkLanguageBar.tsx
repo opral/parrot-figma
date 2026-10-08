@@ -6,6 +6,7 @@ import Drawer from "../../compontents/drawer/Drawer";
 import FigmaUtil from "../../../shared/FigmaUtil";
 import LocalizedLabelManagerUI from "../../../lib/localizedlabels/LocalizedLabelManagerUI";
 import { Locale, languageDisplayName } from "../../../lib/message/variants/Locale";
+import { untranslatedNotice } from "../../../lib/translationprovider/MachineTranslationContact";
 import TranslatorMachine, {
 	NoMoreTranslationsLeftError,
 } from "../../../lib/translationprovider/TranslatorMachine";
@@ -51,7 +52,7 @@ export default function BulkLanguageBar({
 	async function switchFrames(frameIds: string[], language: Locale) {
 		setProgress({ done: 0, total: frameIds.length });
 		try {
-			const { lockedLabels } = await localizedLabelManager.setFramesLanguage(
+			const { lockedLabels, untranslatedLabels } = await localizedLabelManager.setFramesLanguage(
 				frameIds,
 				language,
 				TranslatorMachine.instance,
@@ -59,13 +60,17 @@ export default function BulkLanguageBar({
 			);
 			const frames = frameIds.length === 1 ? "1 frame" : `${frameIds.length} frames`;
 			const languageName = languageDisplayName(language) ?? language;
-			figmaRemote.notify(
-				lockedLabels === 0
-					? `Switched ${frames} to ${languageName}.`
-					: `Switched ${frames} to ${languageName}. ${lockedLabels === 1 ? "1 text was" : `${lockedLabels} texts were`} not changed: use “Fix styles” on ${lockedLabels === 1 ? "it" : "them"} in the Layers list first.`,
-				// the longer message needs more time to be read than the default 3 s
-				lockedLabels === 0 ? undefined : 7000,
-			);
+			const notes = [`Switched ${frames} to ${languageName}.`];
+			if (lockedLabels > 0) {
+				notes.push(
+					`${lockedLabels === 1 ? "1 text was" : `${lockedLabels} texts were`} not changed: use “Fix styles” on ${lockedLabels === 1 ? "it" : "them"} in the Layers list first.`,
+				);
+			}
+			if (untranslatedLabels > 0) {
+				notes.push(untranslatedNotice(untranslatedLabels, languageName));
+			}
+			// the longer message needs more time to be read than the default 3 s
+			figmaRemote.notify(notes.join(" "), notes.length === 1 ? undefined : 8000);
 		} catch (e: any) {
 			if (!(e instanceof NoMoreTranslationsLeftError)) {
 				figmaRemote.notifyError(`Something went wrong with translation - ${e.message}`, 8000);
@@ -146,9 +151,9 @@ export default function BulkLanguageBar({
 						</div>
 						<div className="drawer-body">
 							<p>
-								Linked texts show their {languageName} message. Texts without a message are machine
-								translated ({pageSwitch.textCount} {pageSwitch.textCount === 1 ? "text" : "texts"}{" "}
-								in total).
+								Linked texts show their {languageName} message ({pageSwitch.textCount}{" "}
+								{pageSwitch.textCount === 1 ? "text" : "texts"} in total). Texts without a{" "}
+								{languageName} translation keep their current text.
 								{pageSwitch.alreadyInLanguage > 0 &&
 									(pageSwitch.alreadyInLanguage === 1
 										? ` 1 frame is already in ${languageName} and stays as it is.`

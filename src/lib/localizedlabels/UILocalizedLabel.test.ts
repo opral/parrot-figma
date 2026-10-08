@@ -128,3 +128,41 @@ describe("UILocalizedLabel unlinked labels that show text of another language", 
 		expect(label.unlinkedMessage.variants.map((v) => v.languageTag).sort()).toEqual(["de", "es"]);
 	});
 });
+
+describe("UILocalizedLabel.setLanguageOnUnsetLabel", () => {
+	test("writes the label once when the translation is unavailable and keeps the text untranslated", async () => {
+		const { label, manager } = createLabel(englishMessage);
+		Object.assign(label, { language: "en", currentPatternHTML: "Hello" });
+		const error = new Error("Machine translation is available on request");
+		const translator = {
+			translate: vi.fn(async () => {
+				throw error;
+			}),
+		} as any;
+
+		await expect(label.setLanguageOnUnsetLabel(Locale.DE, translator, false)).rejects.toBe(error);
+
+		expect(manager.updateLabelProperties).toHaveBeenCalledTimes(1);
+		const [, changes] = (manager.updateLabelProperties as any).mock.calls[0];
+		expect(changes.language).toBe(Locale.DE);
+		expect(changes.messageState.type).toBe("unlinked");
+		// no German variant: the English text must not be stored as the German translation
+		expect(changes.messageState.unlinkedMessage.variants.map((v: any) => v.languageTag)).toEqual([
+			"en",
+		]);
+	});
+
+	test("writes the label once with the translation when it succeeds", async () => {
+		const { label, manager } = createLabel(englishMessage);
+		Object.assign(label, { language: "en", currentPatternHTML: "Hello" });
+		const translator = { translate: vi.fn(async () => "Hallo") } as any;
+
+		await label.setLanguageOnUnsetLabel(Locale.DE, translator, false);
+
+		expect(manager.updateLabelProperties).toHaveBeenCalledTimes(1);
+		const [, changes] = (manager.updateLabelProperties as any).mock.calls[0];
+		expect(
+			changes.messageState.unlinkedMessage.variants.map((v: any) => v.languageTag).sort(),
+		).toEqual(["de", "en"]);
+	});
+});

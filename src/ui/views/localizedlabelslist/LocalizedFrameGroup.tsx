@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useState } from "react";
 import { reportError } from "../../utils/errorReporting";
 import { LocalizedLabel, MessageLinkState } from "../../../lib/localizedlabels/LocalizedLabel";
 import LocalizedLabelListItem from "./LocalizedLabelListItem";
@@ -9,10 +10,12 @@ import LocalizedLabelManagerUI from "../../../lib/localizedlabels/LocalizedLabel
 import { Locale, languageDisplayName } from "../../../lib/message/variants/Locale";
 import { UILocalizedLabel } from "../../../lib/localizedlabels/UILocalizedLabel";
 import { NodeSelection } from "../../../lib/localizedlabels/LocalizedLabelManager";
-import GoogleTranslator from "../../../lib/translationprovider/google";
 import TranslatorMachine, {
 	NoMoreTranslationsLeftError,
 } from "../../../lib/translationprovider/TranslatorMachine";
+import { buildMessageTextIndex, proposeKeys } from "../../../lib/localizedlabels/LinkSuggestions";
+import { untranslatedNotice } from "../../../lib/translationprovider/MachineTranslationContact";
+import LinkReviewDrawer, { LinkReviewRow } from "./LinkReviewDrawer";
 
 type LocalizedFrameGroupProps = {
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO specify type
@@ -46,6 +49,8 @@ export default function LocalizedFrameGroup({
 	figmaRemote,
 	localizedLabelManager,
 }: LocalizedFrameGroupProps) {
+	const [keyRows, setKeyRows] = useState<LinkReviewRow[] | undefined>();
+
 	if (localizedLabels.length === 0) return null;
 
 	const firstTranslationState = localizedLabels[0];
@@ -81,11 +86,17 @@ export default function LocalizedFrameGroup({
 		const translationProvider = TranslatorMachine.instance;
 
 		try {
-			await localizedLabelManager.setFrameLanguage(
+			const { untranslatedLabels } = await localizedLabelManager.setFrameLanguage(
 				firstLocalizedLabelInFrame.rootFrameId,
 				language,
 				translationProvider,
 			);
+			if (untranslatedLabels > 0) {
+				figmaRemote.notify(
+					untranslatedNotice(untranslatedLabels, languageDisplayName(language) ?? language),
+					8000,
+				);
+			}
 		} catch (e: any) {
 			if (!(e instanceof NoMoreTranslationsLeftError)) {
 				figmaRemote.notifyError(`Something went wrong with translation - ${e.message}`, 8000);
@@ -98,8 +109,63 @@ export default function LocalizedFrameGroup({
 		await figmaRemote.scrollIntoViewIfNeeded(nodeId, true);
 	}
 
+	// texts that "Generate keys" links: not linked yet, translated, not locked by "Fix styles"
+	const unlinkedLabels = localizedLabels.filter(
+		(label) =>
+			(label.messageLinkState === MessageLinkState.Unset ||
+				label.messageLinkState === MessageLinkState.Unlinked) &&
+			label.matchingLabelLints.length === 0 &&
+			label.characters.trim() !== "",
+	);
+
+	function openGenerateKeys() {
+		const messages = localizedLabelManager.messageStore.getAllMessages() ?? [];
+		const layers = [...unlinkedLabels]
+			.sort((a, b) => a.y - b.y || a.x - b.x)
+			.map((label) => ({
+				nodeId: label.nodeId,
+				characters: label.characters,
+				language: label.language,
+				layerName: label.name,
+				frameName: label.rootFrameName,
+			}));
+		const index = buildMessageTextIndex(messages, new Set(layers.map((layer) => layer.language)));
+		const labelsById = new Map(unlinkedLabels.map((label) => [label.nodeId, label]));
+		setKeyRows(
+			proposeKeys(layers, messages, index).map((proposal) => ({
+				label: labelsById.get(proposal.layer.nodeId)!,
+				key: proposal.key,
+				existing: proposal.existing,
+				editable: !proposal.existing,
+			})),
+		);
+	}
+
 	return (
 		<>
+			<LinkReviewDrawer
+				shown={keyRows !== undefined}
+				title={`Generate keys for “${rootFrameName}”`}
+				description="Each text gets a message with this key. Texts that already exist as a message are linked to it. Edit a key before linking if you like."
+				rows={keyRows ?? []}
+				showFrame={false}
+				existingKeys={
+					new Set((localizedLabelManager.messageStore.getAllMessages() ?? []).map((m) => m.id))
+				}
+				onCancel={() => setKeyRows(undefined)}
+				onConfirm={async (links) => {
+					try {
+						await localizedLabelManager.linkLabelsToMessages(links);
+						setKeyRows(undefined);
+						figmaRemote.notify(
+							`Linked ${links.length === 1 ? "1 text" : `${links.length} texts`} in “${rootFrameName}”.`,
+						);
+					} catch (e: any) {
+						figmaRemote.notifyError(`Could not link the texts - ${e.message}`, 8000);
+						reportError(e);
+					}
+				}}
+			/>
 			<div
 				className={`column-1 layer-group-header nodes-parent${
 					selectedNodes[rootFrameId]?.directSelection ? " selected" : ""
@@ -118,6 +184,18 @@ export default function LocalizedFrameGroup({
 				</div>
 				<div className="element-name font-body-24-bold">{rootFrameName}</div>
 				<div className="row-actions">
+					{rootFrameLanguage?.value && unlinkedLabels.length > 0 && (
+						<button
+							type="button"
+							className="frame-generate-keys"
+							data-tooltip-content={`Generate keys for ${unlinkedLabels.length === 1 ? "1 unlinked text" : `${unlinkedLabels.length} unlinked texts`}`}
+							aria-label="Generate keys"
+							onClick={openGenerateKeys}
+						>
+							<span className="svg-container key-svg" />
+							{unlinkedLabels.length}
+						</button>
+					)}
 					<Select
 						tooltip="Frame language"
 						placeholder="Select item"
@@ -142,6 +220,14 @@ export default function LocalizedFrameGroup({
 					<div className="frame-hint" role="note">
 						Link each text to a message: type a key like <code>home.title</code> in its “Link a
 						message…” field. Linked texts follow the language of this frame.
+						{unlinkedLabels.length > 1 && (
+							<>
+								{" "}
+								<button type="button" className="frame-hint-action" onClick={openGenerateKeys}>
+									Generate keys for all {unlinkedLabels.length} texts
+								</button>
+							</>
+						)}
 					</div>
 				)}
 

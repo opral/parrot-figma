@@ -68,10 +68,15 @@ export default function Drawer({
 					}
 				}
 				onCancel?.();
-			} else if (event.key === "Enter") {
+			} else if (
+				event.key === "Enter" &&
+				// a focused button or select handles Enter itself (Enter on "Cancel" must not confirm)
+				!(event.target instanceof HTMLButtonElement || event.target instanceof HTMLSelectElement)
+			) {
 				for (const button of sortedButtons) {
 					if (button.key === "enter") {
-						button.callback();
+						// a disabled primary button must not run through the keyboard shortcut either
+						if (!button.disabled) button.callback();
 						break;
 					}
 				}

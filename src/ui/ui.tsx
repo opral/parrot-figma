@@ -3,11 +3,11 @@ import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import TimeAgo from "javascript-time-ago";
 import en from "javascript-time-ago/locale/en.json";
-import * as mixpanel from "mixpanel-figma";
-
-import { track, identify, identifyProject } from "./utils/analytics";
 
 import LocalizedLabelsListView from "./views/localizedlabelslist/LocalizedLabelsListView";
+import DevModeView from "./views/devmode/DevModeView";
+import CloudView from "./views/cloud/CloudView";
+import MachineTranslationContact from "./compontents/machineTranslation/MachineTranslationContact";
 import FigmaUtil from "../shared/FigmaUtil";
 import { AsyncFunctionProxy } from "../lib/rpc/AsyncFunctionProxy";
 import "./ui.css";
@@ -185,17 +185,6 @@ figmaRemote.getFeatureFlags().then((featureFlags) => {
 	FeatureFlags.setFeatureflags(featureFlags);
 });
 
-figmaRemote.getUserId().then((userId) => {
-	identify(userId!);
-});
-
-Promise.all([figmaRemote.getInlangFileId()]).then(([fileId]) => {
-	if (fileId) {
-		track("file opened", { fileId });
-		identifyProject({ projectId: fileId, properties: { name: fileId }, figmaRemote });
-	}
-});
-
 const translationMachine = new TranslatorMachine();
 asyncFunctionProxy.proxyAsyncMethods(translationMachine);
 
@@ -260,7 +249,6 @@ function App() {
 		// asynchronous fetch the state from figma helper
 		(async () => {
 			await userStateManagerUi.loadUserState();
-			userStateManagerUi.trackFileUsageStatistics();
 
 			if (windowMode === WindowMode.DevPanel) {
 				const updatedUser = await userStateManagerUi.requestUserRole(UserFileRole.developer);
@@ -308,7 +296,6 @@ function App() {
 
 	useEffect(() => {
 		if (appScreen) {
-			track(`app_screen__${appScreen}`);
 			figmaRemote.setLocalFileConfig("lastView", appScreen);
 		}
 	}, [appScreen]);
@@ -355,16 +342,13 @@ function App() {
 		return (
 			<>
 				<Tooltip contentAttribute="data-tooltip-content" />
-				<div className="view dev-panel">
-					<div className="comming-soon">
-						Parrot´s Dev Mode version is comming soon... <br />
-						<br />
-						Translate your Designs with Parrot in Design Mode in the meantime!
-						<br />
-						<br />
-						🦜
-					</div>
-				</div>
+				<OverlayScrollbarsComponent
+					className="view dev-panel"
+					options={{ showNativeOverlaidScrollbars: true }}
+					defer
+				>
+					<DevModeView figmaRemote={figmaRemote} localizedLabelManager={localizedLabelManager} />
+				</OverlayScrollbarsComponent>
 			</>
 		);
 	}
@@ -480,6 +464,9 @@ function App() {
 				</>
 			);
 			break;
+		case "cloud":
+			view = <CloudView figmaRemote={figmaRemote} />;
+			break;
 		case "users":
 			view = <UserManagement userManager={userStateManagerUi} />;
 			break;
@@ -490,6 +477,7 @@ function App() {
 	return (
 		<>
 			<Tooltip contentAttribute="data-tooltip-content" />
+			<MachineTranslationContact figmaRemote={figmaRemote} />
 			<div className="toolbar">
 				<div className="tabHeader" role="tablist">
 					{[
@@ -500,6 +488,7 @@ function App() {
 							? [["export", FEATURES_FLAGS.versioning ? "Versions & Export" : "Export"]]
 							: []),
 						["settings", "Setup"],
+						["cloud", "Cloud"],
 					].map(([screen, label]) => (
 						<div
 							key={screen}
@@ -508,6 +497,10 @@ function App() {
 							aria-selected={appScreen === screen}
 							className={`tab ${appScreen === screen ? "active" : ""}`}
 							onClick={() => openTab(screen)}
+							// the tab bar scrolls in narrow windows: keep the focused tab fully visible
+							onFocus={(e) =>
+								e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" })
+							}
 							onKeyDown={(e) => {
 								if (e.key === "Enter" || e.key === " ") {
 									e.preventDefault();

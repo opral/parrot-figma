@@ -68,8 +68,14 @@
 
 .figma-inlang-editor .inlang-selector-details > summary {
 	padding: 8px;
-	color: var(--figma-color-text-brand);
+	color: var(--figma-color-text-secondary);
 	cursor: pointer;
+}
+/* repeated above every row of a message with variables: quiet until the row is used */
+.figma-inlang-editor .inlang-selector-details > summary:hover,
+.figma-inlang-editor .inlang-selector-details[open] > summary,
+.figma-inlang-editor inlang-message:focus-within .inlang-selector-details > summary {
+	color: var(--figma-color-text-brand);
 }
 .figma-inlang-editor .inlang-selector-details[open] {
 	padding-bottom: 8px;
@@ -146,6 +152,11 @@
 
 .figma-inlang-editor .inlang-selector-details > summary {
 	padding: 4px 8px;
+}
+/* a plain row (no selector header): the "Add selector" line sits above the field, the label follows the field */
+.figma-inlang-editor
+	inlang-message:not([data-header]):has(> details.inlang-selector-details:not([hidden])) {
+	--parrot-label-offset: 24px;
 }
 .figma-inlang-editor .inlang-selector-details > summary:focus-visible {
 	outline: 1px solid var(--figma-color-border-brand-strong);

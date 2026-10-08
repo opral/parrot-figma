@@ -21,10 +21,26 @@ import { FillinToPlaceholder, MessageExtension, Parameter } from "../message/Mes
 import { MessageParameterValues } from "../message/MessageParameterValues";
 import MessageImporter from "../import/MessageImporter";
 import TranslatorMachine from "../translationprovider/TranslatorMachine";
-import { captureLoadProjectEvent } from "../../ui/utils/analytics";
+import { isMachineTranslationUnavailable } from "../translationprovider/MachineTranslationContact";
 import FigmaUtil from "../../shared/FigmaUtil";
 
 const UNDO_COMMIT_IDLE_MS = 800;
+
+type LabelPropertyChanges = {
+	labelName?: string;
+	messageState?:
+		| {
+				type: "linked";
+				messageId: string;
+				parameterValues: MessageParameterValues;
+				variantPatternHTML?: string;
+		  }
+		| { type: "unlinked"; unlinkedMessage: Message; parameterValues: MessageParameterValues }
+		| { type: "unmanaged"; unmanaged: boolean }
+		| { type: "unset" }
+		| undefined;
+	language?: Locale;
+};
 
 export default class LocalizedLabelManagerUI
 	extends EventTarget
@@ -53,12 +69,25 @@ export default class LocalizedLabelManagerUI
 	private frameOperations = new Map<string, Promise<unknown>>();
 
 	private runFrameOperation<T>(frameId: string, operation: () => Promise<T>): Promise<T> {
-		const previous = this.frameOperations.get(frameId) ?? Promise.resolve();
-		const current = previous.catch(() => undefined).then(operation);
-		this.frameOperations.set(frameId, current);
+		return this.runFramesOperation([frameId], operation);
+	}
+
+	/** One operation over several frames: waits for the running operations of all of them. */
+	private runFramesOperation<T>(frameIds: string[], operation: () => Promise<T>): Promise<T> {
+		const previous = Promise.all(
+			frameIds.map((frameId) =>
+				(this.frameOperations.get(frameId) ?? Promise.resolve()).catch(() => undefined),
+			),
+		);
+		const current = previous.then(operation);
+		for (const frameId of frameIds) {
+			this.frameOperations.set(frameId, current);
+		}
 		const cleanup = () => {
-			if (this.frameOperations.get(frameId) === current) {
-				this.frameOperations.delete(frameId);
+			for (const frameId of frameIds) {
+				if (this.frameOperations.get(frameId) === current) {
+					this.frameOperations.delete(frameId);
+				}
 			}
 		};
 		current.then(cleanup, cleanup);
@@ -189,7 +218,6 @@ export default class LocalizedLabelManagerUI
 				}
 				if (event.data.pluginMessage.type === "linksLoaded") {
 					this.onKeyLabelLinksLoaded(event.data.pluginMessage as LinksLoadedEvent);
-					captureLoadProjectEvent(figmaRemote);
 				}
 			}
 		});
@@ -363,12 +391,15 @@ export default class LocalizedLabelManagerUI
 	) {
 		let lastError: unknown;
 		let lockedLabels = 0;
+		let untranslatedLabels = 0;
 		for (const [index, frameId] of frameIds.entries()) {
 			onProgress?.(index, frameIds.length);
 			try {
-				lockedLabels += await this.runFrameOperation(frameId, () =>
+				const result = await this.runFrameOperation(frameId, () =>
 					this.applyFrameLanguage(frameId, targetLanguage, translator, false),
 				);
+				lockedLabels += result.lockedLabels;
+				untranslatedLabels += result.untranslatedLabels;
 			} catch (e) {
 				lastError = e;
 			}
@@ -379,10 +410,13 @@ export default class LocalizedLabelManagerUI
 		if (lastError) {
 			throw lastError;
 		}
-		return { lockedLabels };
+		return { lockedLabels, untranslatedLabels };
 	}
 
-	/** @returns the number of layers left unchanged because their styles cannot be translated */
+	/**
+	 * @returns the number of layers left unchanged because their styles cannot be translated, and of
+	 * layers without a text in the language that keep their current text (no machine translation)
+	 */
 	private async applyFrameLanguage(
 		frameId: string,
 		targetLanguage: Locale,
@@ -390,6 +424,7 @@ export default class LocalizedLabelManagerUI
 		commitUndo = true,
 	) {
 		let lastError: undefined | Error;
+		let untranslatedLabels = 0;
 
 		// Hydrate the frame cache here as well as in the view. This keeps the language
 		// command safe when it is triggered before the selection list finished loading.
@@ -411,7 +446,11 @@ export default class LocalizedLabelManagerUI
 						false /** CTA is triggered not every time */,
 					);
 				} catch (e: any) {
-					lastError = e;
+					if (isMachineTranslationUnavailable(e)) {
+						untranslatedLabels += 1;
+					} else {
+						lastError = e;
+					}
 				}
 			}
 		} finally {
@@ -435,7 +474,7 @@ export default class LocalizedLabelManagerUI
 		if (lastError) {
 			throw lastError;
 		}
-		return lockedLabels;
+		return { lockedLabels, untranslatedLabels };
 	}
 
 	async updateMessage(message: Message, defaultParameters: MessageParameterValues) {
@@ -585,22 +624,113 @@ export default class LocalizedLabelManagerUI
 
 	/** Links all given layers to an existing message - a single undo step. */
 	async linkLabelsToMessage(labels: UILocalizedLabel[], messageName: string) {
-		const labelsByFrame = new Map<string, UILocalizedLabel[]>();
-		for (const label of labels) {
-			labelsByFrame.set(label.rootFrameId, [
-				...(labelsByFrame.get(label.rootFrameId) ?? []),
-				label,
-			]);
-		}
-		for (const [frameId, frameLabels] of labelsByFrame) {
-			await this.runFrameOperation(frameId, async () => {
-				for (const frameLabel of frameLabels) {
-					const label = this.cachedLocalisedLabels[frameLabel.nodeId] ?? frameLabel;
-					await this.applyLinkMessage(label, messageName, label.rootFrameLanguage, false);
+		await this.linkLabelsToMessages(labels.map((label) => ({ label, messageName })));
+	}
+
+	/**
+	 * Links every layer to its message, creating messages that do not exist yet from the layer text -
+	 * a single undo step.
+	 */
+	async linkLabelsToMessages(links: { label: UILocalizedLabel; messageName: string }[]) {
+		const frameIds = [...new Set(links.map((link) => link.label.rootFrameId))];
+		// the views refresh once at the end instead of once per layer
+		this.updateBatchDepth = (this.updateBatchDepth ?? 0) + 1;
+		try {
+			await this.runFramesOperation(frameIds, async () => {
+				const updates = [] as { nodeId: string; changedProperties: LabelPropertyChanges }[];
+				for (const { label: linkLabel, messageName } of links) {
+					const label = this.cachedLocalisedLabels[linkLabel.nodeId] ?? linkLabel;
+					const message = await this.ensureMessageForLabel(
+						label,
+						messageName,
+						label.rootFrameLanguage,
+					);
+					updates.push({
+						nodeId: label.nodeId,
+						changedProperties: {
+							messageState: {
+								type: "linked",
+								messageId: message.id,
+								parameterValues: label.parameterValues,
+							},
+							language: label.rootFrameLanguage,
+						},
+					});
 				}
+				await this.updateLabelsProperties(updates);
 			});
+		} finally {
+			this.updateBatchDepth -= 1;
+			this.dispatchEvent(new CustomEvent("updated", {}));
 		}
 		await this.localizedLabelMangerSandbox.commitUndo();
+	}
+
+	/** Layers that can be linked: not linked yet, translated, not locked by "Fix styles", with text. */
+	private isLinkable(label: UILocalizedLabel) {
+		return (
+			(label.messageLinkState === MessageLinkState.Unset ||
+				label.messageLinkState === MessageLinkState.Unlinked) &&
+			label.matchingLabelLints.length === 0 &&
+			label.characters.trim() !== ""
+		);
+	}
+
+	/**
+	 * The layers of the current page that can be linked to a message. `texts` (whitespace collapsed)
+	 * limits the search to layers with one of these texts - much faster on large pages.
+	 */
+	async getLinkableLabelsOnPage(texts?: string[]) {
+		const labels = await this.localizedLabelMangerSandbox.getPageLabels({
+			unlinkedOnly: true,
+			texts,
+		});
+		const linkable = [] as UILocalizedLabel[];
+		for (const label of labels) {
+			this.refreshCachedLabel(label);
+			const cached = this.cachedLocalisedLabels[label.nodeId];
+			if (cached && this.isLinkable(cached)) linkable.push(cached);
+		}
+		return linkable;
+	}
+
+	/** The layers of a frame that can be linked to a message. */
+	async getLinkableLabelsInFrame(frameId: string) {
+		const labels = await this.getLocalizedLabelsByFrame(frameId);
+		return labels.filter((label) => this.isLinkable(label));
+	}
+
+	/** The message with this name - created from the text of the layer if it does not exist yet. */
+	private async ensureMessageForLabel(
+		localizedLabel: UILocalizedLabel,
+		messageName: string,
+		locale: Locale,
+	) {
+		const message = this.messageStore.getMessageByName(messageName);
+		if (message !== undefined) {
+			return message;
+		}
+		if (localizedLabel.unlinkedMessage) {
+			localizedLabel.unlinkedMessage.id = messageName;
+			return this.messageStore.upsertMessage(
+				localizedLabel.unlinkedMessage,
+				localizedLabel.parameterValues,
+			);
+		}
+		return this.messageStore.upsertMessage(
+			{
+				id: messageName,
+				selectors: [],
+				variants: [
+					{
+						match: [],
+						languageTag: locale,
+						pattern: [{ type: "Text", value: localizedLabel.currentPatternHTML }],
+					},
+				],
+			},
+			localizedLabel.parameterValues,
+		);
 	}
 
 	private async applyLinkMessage(
@@ -746,29 +876,11 @@ export default class LocalizedLabelManagerUI
 		}
 	}
 
-	/**
-	 * Updates the label with the given nodeId with provided changes and updates the cache
-	 * @param nodeId
-	 * @param changedProperties
-	 */
-	async updateLabelProperties(
+	/** The properties the sandbox writes for a label change: text, styles and plugin data. */
+	private toSandboxUpdate(
 		nodeId: string,
-		changedProperties: {
-			labelName?: string;
-			messageState?:
-				| {
-						type: "linked";
-						messageId: string;
-						parameterValues: MessageParameterValues;
-						variantPatternHTML?: string;
-				  }
-				| { type: "unlinked"; unlinkedMessage: Message; parameterValues: MessageParameterValues }
-				| { type: "unmanaged"; unmanaged: boolean }
-				| { type: "unset" }
-				| undefined;
-			language?: Locale;
-		},
-	) {
+		changedProperties: LabelPropertyChanges,
+	): SandboxUpdateLabelProperties {
 		const localizedLabelCached = this.cachedLocalisedLabels[nodeId]!;
 
 		const language = changedProperties.language ?? localizedLabelCached.language;
@@ -867,18 +979,63 @@ export default class LocalizedLabelManagerUI
 		}
 		// unset will be passed automatically
 
+		return {
+			messageState: changedProperties.messageState,
+			characters: textOpsAndFillinsToPlaceholders?.characters,
+			ops: textOpsAndFillinsToPlaceholders?.ops,
+			fillinsToPlaceholder: textOpsAndFillinsToPlaceholders?.fillinsToPlaceholder,
+			labelName: changedProperties.labelName,
+			language: changedProperties.language,
+			// messageVersion:
+			variantPatternHTMLHash,
+		};
+	}
+
+	/**
+	 * Updates many labels with a single call into the sandbox (one round trip instead of one per label)
+	 * and refreshes the cache once. Labels that fail are skipped, the first error is thrown at the end.
+	 */
+	async updateLabelsProperties(
+		updates: { nodeId: string; changedProperties: LabelPropertyChanges }[],
+	) {
+		const results = await this.localizedLabelMangerSandbox.updateLabelsProperties(
+			updates.map(({ nodeId, changedProperties }) => ({
+				nodeId,
+				properties: this.toSandboxUpdate(nodeId, changedProperties),
+			})),
+		);
+		let firstError: string | undefined;
+		let cacheUpdated = false;
+		for (const [index, result] of results.entries()) {
+			let label = result.label;
+			if (result.error !== undefined) {
+				firstError ??= result.error;
+				label = await this.localizedLabelMangerSandbox.getById(updates[index].nodeId);
+			}
+			if (label && this.refreshCachedLabel(label, result.error !== undefined)) {
+				cacheUpdated = true;
+			}
+		}
+		if (cacheUpdated) {
+			this.dispatchUpdated();
+		}
+		if (firstError !== undefined) {
+			throw new Error(firstError);
+		}
+	}
+
+	/**
+	 * Updates the label with the given nodeId with provided changes and updates the cache
+	 * @param nodeId
+	 * @param changedProperties
+	 */
+	async updateLabelProperties(nodeId: string, changedProperties: LabelPropertyChanges) {
 		let localizedLabel: LocalizedLabel | undefined;
 		try {
-			localizedLabel = await this.localizedLabelMangerSandbox.updateLabelProperties(nodeId, {
-				messageState: changedProperties.messageState,
-				characters: textOpsAndFillinsToPlaceholders?.characters,
-				ops: textOpsAndFillinsToPlaceholders?.ops,
-				fillinsToPlaceholder: textOpsAndFillinsToPlaceholders?.fillinsToPlaceholder,
-				labelName: changedProperties.labelName,
-				language: changedProperties.language,
-				// messageVersion:
-				variantPatternHTMLHash,
-			});
+			localizedLabel = await this.localizedLabelMangerSandbox.updateLabelProperties(
+				nodeId,
+				this.toSandboxUpdate(nodeId, changedProperties),
+			);
 		} finally {
 			let forceCacheRefresh = false;
 			if (localizedLabel === undefined) {

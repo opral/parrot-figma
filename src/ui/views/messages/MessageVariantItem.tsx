@@ -11,6 +11,8 @@ import TranslatorMachine, {
 } from "../../../lib/translationprovider/TranslatorMachine";
 import type FigmaUtil from "../../../shared/FigmaUtil";
 import FeatureFlags from "../../../lib/featureflags/FeatureFlags";
+import { isMachineTranslationUnavailable } from "../../../lib/translationprovider/MachineTranslationContact";
+import { showMachineTranslationContact } from "../../compontents/machineTranslation/MachineTranslationContact";
 
 type MessageVariantItemProps = {
 	language: Locale;
@@ -138,7 +140,9 @@ export default function MessageVariantItem({
 											setEmpty(false);
 										}
 									} catch (e: any) {
-										if (!(e instanceof NoMoreTranslationsLeftError)) {
+										if (isMachineTranslationUnavailable(e)) {
+											showMachineTranslationContact();
+										} else if (!(e instanceof NoMoreTranslationsLeftError)) {
 											figmaRemote.notifyError(
 												`Something went wrong with translation - ${e.message}`,
 												8000,

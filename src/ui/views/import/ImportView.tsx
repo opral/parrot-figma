@@ -13,6 +13,11 @@ import { translationFormats } from "../../../lib/transfer/TranslationFormats";
 import i18nextPlugin from "@inlang/plugin-i18next";
 import type FigmaUtil from "../../../shared/FigmaUtil";
 import { useTransferFormat } from "../transfer/useTransferFormat";
+import {
+	buildMessageTextIndex,
+	matchLayersToMessages,
+} from "../../../lib/localizedlabels/LinkSuggestions";
+import LinkReviewDrawer, { LinkReviewRow } from "../localizedlabelslist/LinkReviewDrawer";
 
 const i18nextPluginKey = i18nextPlugin.key;
 
@@ -54,6 +59,73 @@ export default function ImportView({
 	>(undefined);
 
 	const [keySummary, setKeySummary] = useState(labelManager.messageStore.getAllMessages() ?? []);
+
+	// layers on the current page with exactly the text of a message - offered for linking
+	const [linkReview, setLinkReview] = useState<
+		{ title: string; description: string; rows: LinkReviewRow[] } | undefined
+	>();
+	const [searchingLayers, setSearchingLayers] = useState(false);
+
+	const findLayersToLink = async (importedMessageIds?: Set<string>) => {
+		setSearchingLayers(true);
+		try {
+			const messages = labelManager.messageStore.getAllMessages() ?? [];
+			const index = buildMessageTextIndex(
+				importedMessageIds
+					? messages.filter((message) => importedMessageIds.has(message.id))
+					: messages,
+				labelManager.messageStore.getOrderedLanguages(),
+			);
+			// only layers with one of these texts are read from the page - reading every layer is slow
+			const texts = [...new Set([...index.values()].flatMap((byText) => [...byText.keys()]))];
+			const labels = texts.length === 0 ? [] : await labelManager.getLinkableLabelsOnPage(texts);
+			const layers = labels.map((label) => ({
+				nodeId: label.nodeId,
+				characters: label.characters,
+				language: label.language,
+				layerName: label.name,
+				frameName: label.rootFrameName,
+			}));
+			const labelsById = new Map(labels.map((label) => [label.nodeId, label]));
+			const matches = matchLayersToMessages(layers, index, importedMessageIds);
+			if (matches.length === 0) {
+				if (!importedMessageIds) {
+					setImportNotice("No unlinked text layer on this page has the text of a message.");
+				}
+				return;
+			}
+			const rows = matches
+				.map(({ layer, messageIds }) => ({
+					label: labelsById.get(layer.nodeId)!,
+					key: messageIds.length === 1 ? messageIds[0] : "",
+					keyOptions: messageIds.length > 1 ? messageIds : undefined,
+					existing: false,
+					editable: false,
+				}))
+				.sort(
+					(a, b) =>
+						(a.label.rootFrameName ?? "").localeCompare(b.label.rootFrameName ?? "") ||
+						a.label.y - b.label.y ||
+						a.label.x - b.label.x,
+				);
+			setLinkReview({
+				title: importedMessageIds
+					? "Link layers to the imported messages?"
+					: "Link layers to existing messages?",
+				description:
+					rows.length === 1
+						? "This unlinked text layer on this page has exactly the text of a message."
+						: `These ${rows.length} unlinked text layers on this page have exactly the text of a message. Where several messages have the same text, choose one.`,
+				rows,
+			});
+		} catch (error) {
+			setImportError(
+				`Could not look for matching layers: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		} finally {
+			setSearchingLayers(false);
+		}
+	};
 
 	useEffect(() => {
 		const updateSummary = () => {
@@ -129,11 +201,15 @@ export default function ImportView({
 		setImportError(undefined);
 		try {
 			await labelManager.import(importResult.messages, importResult.language);
+			// closes the undo step: linking layers afterwards is an undo step of its own
+			await labelManager.commitUndo();
 			setImportNotice(
-				`Imported ${importResult.messages.length} keys for ${importResult.language}.`,
+				`Imported ${importResult.messages.length === 1 ? "1 key" : `${importResult.messages.length} keys`} for ${importResult.language}.`,
 			);
+			const importedMessageIds = new Set(importResult.messages.map((message) => message.id));
 			setImportResult(undefined);
 			setimportKeysByState(undefined);
+			void findLayersToLink(importedMessageIds);
 		} catch (error) {
 			setImportError(
 				`Import stopped: ${error instanceof Error ? error.message : String(error)}. Some changes may already be saved.`,
@@ -196,6 +272,43 @@ export default function ImportView({
 				<p className="transfer-help">Choose your languages in Setup before importing.</p>
 			)}
 			<p className="transfer-help transfer-footer">Review new and updated keys before saving.</p>
+			<div className="transfer-link-layers">
+				<span className="transfer-help">
+					Text layers that already show a message text can be linked to it in one step.
+				</span>
+				<button
+					type="button"
+					className="transfer-action"
+					disabled={importBusy || searchingLayers}
+					onClick={() => void findLayersToLink()}
+				>
+					{searchingLayers ? "Looking for layers…" : "Link matching layers on this page"}
+				</button>
+			</div>
+			<LinkReviewDrawer
+				shown={linkReview !== undefined}
+				title={linkReview?.title ?? ""}
+				description={linkReview?.description ?? ""}
+				rows={linkReview?.rows ?? []}
+				showFrame
+				existingKeys={new Set(keySummary.map((message) => message.id))}
+				onCancel={() => setLinkReview(undefined)}
+				onConfirm={async (links) => {
+					try {
+						await labelManager.linkLabelsToMessages(links);
+						setLinkReview(undefined);
+						setImportNotice(
+							links.length === 1
+								? "Linked 1 layer to its message."
+								: `Linked ${links.length} layers to their messages.`,
+						);
+					} catch (error) {
+						setImportError(
+							`Could not link the layers: ${error instanceof Error ? error.message : String(error)}`,
+						);
+					}
+				}}
+			/>
 			{importBusy && !importResult && <p role="status">Reading translations…</p>}
 			{importError && <p role="alert">{importError}</p>}
 			{importNotice && <p role="status">{importNotice}</p>}

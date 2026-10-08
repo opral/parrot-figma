@@ -51,6 +51,11 @@ export default class FigmaUtil {
 		figma.notify(message, timeout === undefined ? undefined : { timeout });
 	}
 
+	/** Opens a link (web page or mailto:) outside of Figma. */
+	async openExternal(url: string) {
+		figma.openExternal(url);
+	}
+
 	async notifyError(message: string, timeout = 3000) {
 		figma.notify(message, {
 			timeout,

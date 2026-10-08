@@ -1,16 +1,24 @@
 .tabHeader {
-	padding: 0 8px;
+	/* Left inset + tab padding put the first label on the 16px content edge. */
+	padding: 0 0 0 10px;
 	display: flex;
 	align-items: center;
-	flex-shrink: 0;
 	height: 40px;
+	/* Narrow windows scroll the tabs instead of pushing the window controls out of view. */
+	min-width: 0;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+
+.tabHeader::-webkit-scrollbar {
+	display: none;
 }
 
 .tab {
 	cursor: default;
 	font-weight: 500;
-	padding-left: 8px;
-	padding-right: 8px;
+	padding-left: 6px;
+	padding-right: 6px;
 	display: flex;
 	align-items: center;
 	flex-shrink: 0;

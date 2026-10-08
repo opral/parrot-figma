@@ -440,15 +440,9 @@ export class UILocalizedLabel implements LocalizedLabel {
 			],
 		};
 
-		// make the lable a unlinked label with the current language
-		await this.manager.updateLabelProperties(this.nodeId, {
-			messageState: {
-				type: "unlinked",
-				unlinkedMessage,
-				parameterValues: this.parameterValues,
-			},
-		});
-
+		// The label becomes an unlinked label with an anonymous message in one write at the end (also when
+		// the translation fails: it then keeps its text and only gets the language) - a write per label
+		// is a sandbox round trip, which adds up for frames with hundreds of unlinked texts.
 		if (fromRefLanguage) {
 			try {
 				unlinkedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(

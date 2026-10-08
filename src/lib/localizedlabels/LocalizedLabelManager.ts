@@ -9,6 +9,7 @@ import FontHelper from "./FontUtil";
 import { InlangMessageStore } from "../message/store/InlangMessageStoreFigmaRoot";
 import { FillinToPlaceholder as FillinsToPlaceholder } from "../message/MessageExtnesions";
 import { MessageParameterValues } from "../message/MessageParameterValues";
+import { restoreTextFillRanges, type TextFillRange } from "./RichTextFormatting";
 
 export interface NodeSelection {
 	[nodeId: string]: {
@@ -969,6 +970,15 @@ export default class LocalizedLabelManager {
 			// TODO think about the order - at the moment a lables characters might not get updated after fillins got set
 			// NOTE: we also send the characters even if only styling has changed
 			if (changedProperties.characters !== undefined) {
+				const sourceTextLength = textNode.characters.length;
+				const originalFillRanges = textNode
+					.getStyledTextSegments(["fills"])
+					.map(({ start, end, fills }) => ({
+						start,
+						end,
+						fills: [...fills],
+					})) as TextFillRange[];
+
 				try {
 					await this.loadFontsForTextNodes([textNode]);
 				} catch (e: any) {
@@ -1095,6 +1105,12 @@ export default class LocalizedLabelManager {
 				}
 
 				textNode.characters = changedProperties.characters;
+				restoreTextFillRanges(
+					originalFillRanges,
+					sourceTextLength,
+					textNode.characters.length,
+					(start, end, fills) => textNode.setRangeFills(start, end, fills),
+				);
 
 				for (const rangeStyle of changedProperties.ops!) {
 					// debugger;

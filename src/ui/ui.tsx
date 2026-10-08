@@ -27,6 +27,7 @@ import Onboarding from "./views/onboarding/Onboarding";
 import Tooltip from "./compontents/tooltip/Tooltip";
 
 import Export from "./views/export/Export";
+import ImportView from "./views/import/ImportView";
 import FEATURES_FLAGS from "./featuretoggle";
 import SetupView from "./views/setup/SetupView";
 import * as pjs from "../../package.json";
@@ -233,6 +234,7 @@ enum LicenseState {
 function App() {
 	// initial app screen is startup until we initialy loaded the data
 	const [appScreen, setAppScreen] = useState(undefined as string | undefined);
+	const [startupError, setStartupError] = useState<string>();
 
 	const [user, setUser] = useState(undefined as PluginUser | undefined);
 
@@ -252,7 +254,7 @@ function App() {
 				const updatedUser = await userStateManagerUi.requestUserRole(UserFileRole.designer);
 				setUser(updatedUser);
 			}
-		})();
+		})().catch((error) => setStartupError(error instanceof Error ? error.message : String(error)));
 
 		const onUsersUpdated = (event: any) => {
 			console.log("onUsersUpdated");
@@ -286,7 +288,7 @@ function App() {
 				initialScreen = "onboarding";
 			}
 			setAppScreen(initialScreen);
-		})();
+		})().catch((error) => setStartupError(error instanceof Error ? error.message : String(error)));
 	}, []);
 
 	useEffect(() => {
@@ -307,6 +309,14 @@ function App() {
 			WindowManagerUi.instance!.removeEventListener("changed", windowModeUpdated);
 		};
 	}, []);
+
+	if (startupError) {
+		return <div role="alert" style={{ padding: 16 }}>
+			<p>Parrot could not open this file.</p>
+			<p>{startupError}</p>
+			<button type="button" onClick={() => window.location.reload()}>Retry</button>
+		</div>;
+	}
 
 	if (!appScreen || !user) {
 		return <>Loading Plugin</>;
@@ -417,8 +427,11 @@ function App() {
 			);
 			break;
 
+		case "import":
+			view = <ImportView labelManager={localizedLabelManager} />;
+			break;
 		case "export":
-			view = <Export userManager={userStateManagerUi} labelManager={localizedLabelManager} />;
+			view = <Export labelManager={localizedLabelManager} />;
 			break;
 		case "design":
 			view = (
@@ -461,6 +474,7 @@ function App() {
 					>
 						Messages
 					</div>
+					<div className={`tab ${appScreen === "import" ? "active" : ""}`} onClick={() => setAppScreen("import")}>Import</div>
 					{FEATURES_FLAGS.export && (
 						<div
 							className={`tab ${appScreen === "export" ? "active" : ""}`}

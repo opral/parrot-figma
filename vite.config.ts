@@ -3,49 +3,46 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import rawPlugin from 'vite-raw-plugin';
 
-import { exec } from "child_process";
-// import postcssUrl from "postcss-url";
+import { build, type ViteDevServer } from "vite";
 
-const buildWithUrl = (serverPort: string) => {
-  exec(
-    "VITE_CUSTOM_URL=" + "http://localhost:" + serverPort + " vite build -c vite.config.plugin.ts",
-    (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error during build: ${error.message}`);
-        return;
-      }
-      if (stderr) console.error(stderr);
-      console.log(stdout);
-    },
-  );
-};
-
-const onConfigureServer = (server: any) => {
-  // we need to wait for the port until the connection is established...
-  const pollServerPort = () => {
-    const serverPort = (server as any)._currentServerPort;
-    if (serverPort) {
-      console.log("got port: " + serverPort);
-      buildWithUrl(serverPort);
-    } else {
-      console.log("waiting for port");
-      setTimeout(() => {
-        pollServerPort();
-      }, 10);
+const onConfigureServer = (server: ViteDevServer) => {
+  let timer: ReturnType<typeof setTimeout>;
+  let building = false;
+  let pending = false;
+  const rebuild = async () => {
+    if (building) { pending = true; return; }
+    const address = server.httpServer?.address();
+    if (!address || typeof address === "string") return;
+    building = true;
+    try {
+      await build({
+        configFile: path.resolve("vite.config.plugin.ts"),
+        define: { "import.meta.env.VITE_CUSTOM_URL": JSON.stringify(`http://localhost:${address.port}`) },
+      });
+    } catch (error) {
+      server.config.logger.error(`Plugin build failed: ${error}`);
+    } finally {
+      building = false;
+      if (pending) { pending = false; void rebuild(); }
     }
   };
-  pollServerPort();
-
-  server.watcher.on("change", (...args) => {
-    const serverPort = (server as any)._currentServerPort;
-    buildWithUrl(serverPort);
+  server.httpServer?.once("listening", () => void rebuild());
+  server.watcher.on("change", (file) => {
+    if (!file.startsWith(path.resolve("src/plugin")) && !file.startsWith(path.resolve("src/lib")) && !file.startsWith(path.resolve("src/shared"))) return;
+    clearTimeout(timer);
+    timer = setTimeout(() => void rebuild(), 150);
   });
-}
+  server.httpServer?.once("close", () => clearTimeout(timer));
+};
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  worker: {
+    format: "es",
+  },
   optimizeDeps: {
     exclude: ["@inlang/sdk", "@lix-js/sdk"],
+    include: ["@inlang/sdk > @sinclair/typebox", "@lix-js/sdk > @sinclair/typebox"],
   },
   server: {
     fs: {
@@ -63,7 +60,12 @@ export default defineConfig(({ mode }) => ({
     
     {
       name: "rebuild-on-change",
-      configureServer: onConfigureServer
+      configureServer: onConfigureServer,
+      handleHotUpdate({ server }) {
+        // RPC proxies and window managers are singletons; reload their browser realm together.
+        server.ws.send({ type: "full-reload" });
+        return [];
+      }
     },
   ],
   define: {
@@ -71,12 +73,13 @@ export default defineConfig(({ mode }) => ({
   },
   root: path.resolve("src/ui"),
   build: {
+    target: "esnext",
     minify: mode === "production",
     cssMinify: mode === "production",
     sourcemap: mode !== "production" ? "inline" : false,
     // target: "es2017",
     emptyOutDir: true,
-    outDir: path.resolve("dist"),
+    outDir: path.resolve("dist/ui"),
     // rollupOptions: {
     //   output: {
     //     inlineDynamicImports: false,

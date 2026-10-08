@@ -85,6 +85,15 @@ describe("FigmaBundleStore", () => {
 		expect(bundleToLegacyMessage(legacyMessageToBundle(legacyMessage))).toEqual(legacyMessage);
 	});
 
+	test("rejects legacy data that the Inlang bundle model would silently drop", () => {
+		expect(() =>
+			legacyMessageToBundle({ ...legacyMessage, variants: [] }),
+		).toThrow("cannot preserve them without a locale message");
+		expect(() =>
+			legacyMessageToBundle({ ...legacyMessage, alias: { oldName: "welcome" } }),
+		).toThrow("aliases that cannot be represented");
+	});
+
 	test("emits remote add, update, and delete changes", () => {
 		const root = new FakeRoot();
 		const documentChanges = new FakeDocumentChanges();
@@ -142,6 +151,18 @@ describe("legacy migration", () => {
 		root.failOnKey = LEGACY_MESSAGE_PREFIX + legacyMessage.id;
 
 		expect(() => migrateLegacyMessagesToBundles(root)).toThrow("Previous plugin data was restored");
+		expect(root.data).toEqual(before);
+	});
+
+	test("does not touch legacy storage when a message cannot be represented", () => {
+		const root = new FakeRoot();
+		const empty = { ...legacyMessage, variants: [] };
+		root.setPluginData(LEGACY_MESSAGE_PREFIX + empty.id, JSON.stringify(empty));
+		const before = new Map(root.data);
+
+		expect(() => migrateLegacyMessagesToBundles(root)).toThrow(
+			"cannot preserve them without a locale message",
+		);
 		expect(root.data).toEqual(before);
 	});
 });

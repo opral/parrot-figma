@@ -6,6 +6,7 @@ import LocalizedFrameGroup from "./LocalizedFrameGroup";
 import "./LocalizedLabelsListView.css";
 import { UILocalizedLabel } from "../../../lib/localizedlabels/UILocalizedLabel";
 import { NodeSelection } from "../../../lib/localizedlabels/LocalizedLabelManager";
+import { LatestRequest } from "../../utils/LatestRequest";
 
 declare global {
 	interface Element {
@@ -75,6 +76,7 @@ export default function LocalizedLabelsListView({
 	const [localizedLabels, setLocalizedLabels] = useState<UILocalizedLabel[]>([]);
 
 	const tableRef = useRef<HTMLDivElement>(null);
+	const selectionRefresh = useRef(new LatestRequest());
 
 	const [selection, setSelection] = useState({} as NodeSelection);
 
@@ -83,8 +85,10 @@ export default function LocalizedLabelsListView({
 	const freeTier = true;
 
 	async function refreshSelection() {
+		const requestRevision = selectionRefresh.current.begin();
 		const selectedNodes = await localizedLabelManager.getSelection();
-		setSelection(selectedNodes);
+		if (!selectionRefresh.current.isCurrent(requestRevision)) return;
+
 		const updatedParentIds = new Set<string>();
 
 		let selectedLabels = [] as UILocalizedLabel[];
@@ -100,6 +104,7 @@ export default function LocalizedLabelsListView({
 				const selectedLabelsByFrame = await localizedLabelManager.getLocalizedLabelsByFrame(
 					selectedNode.rootFrameId,
 				);
+				if (!selectionRefresh.current.isCurrent(requestRevision)) return;
 
 				if (selectedLabelsByFrame) {
 					selectedLabels = selectedLabels.concat(selectedLabelsByFrame);
@@ -107,6 +112,8 @@ export default function LocalizedLabelsListView({
 				updatedParentIds.add(selectedNode.rootFrameId);
 			}
 		}
+		if (!selectionRefresh.current.isCurrent(requestRevision)) return;
+		setSelection(selectedNodes);
 		setParentIds(updatedParentIds);
 		setLocalizedLabels(selectedLabels);
 	}

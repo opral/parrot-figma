@@ -2,155 +2,142 @@
 import URLSearchParams from "@ungap/url-search-params";
 import Monitoring from "../monitoring/MonitoringProxy";
 
+const placeholderPattern = /<ph\b[^>]*>[\s\S]*?<\/ph>/gi;
+const lineBreakPattern = /(\r\n|\r|\n)/g;
+const sentenceBreakPattern = /(\. )/g;
+
+type TranslationResponse = [string[][]] | undefined;
+
 export default class GoogleTranslator {
 	static async translate(text: string, sourceLanguage: string, targetLanguage: string) {
-		// if the text only contains whitespaces - uses the orignal one
-		if (/^\s*$/.test(text) || text === "") {
+		if (/^\s*$/.test(text)) {
 			return text;
 		}
 
-		// replace placeholder with numbers to not translate them
+		const replacements = new Map<string, string>();
+		let tokenIndex = 0;
+		const createToken = (value: string) => {
+			let token: string;
+			do {
+				token = `[[${tokenIndex++}]]`;
+			} while (text.includes(token) || replacements.has(token));
+			replacements.set(token, value);
+			return token;
+		};
 
-		const pattern =
-			/(<ph( type="([^"]*)"=)?( format="([^"]*)")?( arg="([^"]*)")?( unnamed)?([^>])*(>([^<]*))<\/ph>)/g;
+		const protect = (value: string) =>
+			value
+				// Keep Figma's inline placeholders intact, including their original attributes.
+				.replace(placeholderPattern, (match) => createToken(match))
+				// These characters are structural in Parrot content and should survive translation.
+				.replace(/[.#]/g, (match) => createToken(match))
+				// Preserve intentional spacing such as indentation or multiple spaces.
+				.replace(/[ \t]{2,}/g, (match) => createToken(match));
 
-		const placeholderIndexMapping = [] as string[];
-		let currentIndex = 0;
-
-		// const wholeMatch = paramMatch[0];
-		// const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
-		// const name = paramMatch[2];
-
-		const textWithMaskedPlaceholders = text.replace(
-			pattern,
-			(
-				match,
-				_helper1,
-				type,
-				_helper3,
-				format,
-				_helper5,
-				argumentPosition,
-				unnamed,
-				_helper8,
-				_helper9,
-				name,
-			) => {
-				// const placeholderName = name;
-				placeholderIndexMapping[currentIndex] = match;
-				const placeholderReplacement = `[[${currentIndex}]]`;
-
-				currentIndex++;
-				return placeholderReplacement;
-			},
-		);
-
-		const sentences = textWithMaskedPlaceholders.split(". ");
-		const translatedSentences = [] as string[];
-		for (const sentence of sentences) {
-			const patchedQuery = sentence
-				.split(".")
-				.join("{{dot}}")
-				.split("#")
-				.join("{{route}}")
-				.split("\n")
-				.join("{{newline}}");
-
-			if (/^\s*$/.test(patchedQuery) || patchedQuery === "") {
-				translatedSentences.push(patchedQuery);
+		const translatedParts: string[] = [];
+		// Translate one line at a time so paragraph and line breaks remain exactly where they were.
+		const lines = text.split(lineBreakPattern);
+		for (const line of lines) {
+			if (/^(\r\n|\r|\n)$/.test(line)) {
+				translatedParts.push(line);
 				continue;
 			}
 
-			const result = await fetch(
-				`https://translate.googleapis.com/translate_a/single?${new URLSearchParams({
-					client: "gtx",
-					dt: "t",
-					sl: sourceLanguage === "se" ? "SV" : sourceLanguage,
-					tl: targetLanguage === "se" ? "SV" : targetLanguage,
-					q: patchedQuery,
-				})}`,
-				{
-					method: "GET",
-					/* headers: {
-                'origin-when-cross-origin': '*',
-              }, */
-				},
-			);
-
-			if (!result.ok) {
-				// TODO #29 fix this before we release - test
-				Monitoring.instance?.sentryCaptureMesage(
-					`Translation of ${text} failed. Status code (${result.status}).`,
-				);
-				return null;
-			}
-
-			const translationResults = await result.json();
-
-			if (!translationResults[0] || !translationResults[0][0] || !translationResults[0][0][0]) {
-				const error = new Error("Expected a translation within [0][0][0] not found");
-				// TODO #29 fix this before we release - test
-				Monitoring.instance?.sentryCaptureException(error, {
-					extra: {
-						sourceLanguage,
-						targetLanguage,
-						patchedQuery,
-						translationResults,
-					},
-				});
-			} else {
-				for (let i = 0; i < translationResults[0].length; i += 1) {
-					const resultMessage = translationResults[0][i][0];
-					translatedSentences.push(
-						resultMessage
-							.split("{{dot}}")
-							.join(".")
-							.split("{{route}}")
-							.join("#")
-							.split("{{newline}}")
-							.join("\n"),
-					);
+			// Keep sentence separators out of the translation request. Besides preserving punctuation,
+			// this gives the translator sentence context without sending our own marker words to Google.
+			const sentences = line.split(sentenceBreakPattern);
+			for (let i = 0; i < sentences.length; i += 1) {
+				const sentenceOrSeparator = sentences[i];
+				if (i % 2 === 1) {
+					translatedParts.push(sentenceOrSeparator);
+					continue;
 				}
+
+				if (!sentenceOrSeparator.trim()) {
+					translatedParts.push(sentenceOrSeparator);
+					continue;
+				}
+
+				const leadingWhitespace = sentenceOrSeparator.match(/^[ \t]*/)?.[0] ?? "";
+				const contentAfterLeadingWhitespace = sentenceOrSeparator.slice(leadingWhitespace.length);
+				const trailingWhitespace = contentAfterLeadingWhitespace.match(/[ \t]*$/)?.[0] ?? "";
+				const content = contentAfterLeadingWhitespace.slice(
+					0,
+					contentAfterLeadingWhitespace.length - trailingWhitespace.length,
+				);
+
+				if (!content) {
+					translatedParts.push(sentenceOrSeparator);
+					continue;
+				}
+
+				const translated = await this.translateChunk(
+					protect(content),
+					sourceLanguage,
+					targetLanguage,
+				);
+				if (translated === null) {
+					return null;
+				}
+
+				translatedParts.push(leadingWhitespace, translated, trailingWhitespace);
 			}
 		}
 
-		const translationWithMaskedPlaceholders = translatedSentences.join(". ");
+		let translatedText = translatedParts.join("");
+		for (const [token, originalValue] of replacements) {
+			translatedText = translatedText.split(token).join(originalValue);
+		}
+		return translatedText;
+	}
 
-		const patternMaskedPlaceholders = /\[\[([0-9]+)\]\]/g;
+	private static async translateChunk(
+		text: string,
+		sourceLanguage: string,
+		targetLanguage: string,
+	): Promise<string | null> {
+		if (!text) {
+			return text;
+		}
 
-		// const wholeMatch = paramMatch[0];
-		// const argumentPosition = paramMatch[1] ? parseInt(paramMatch[1], 10) : undefined;
-		// const name = paramMatch[2];
-
-		const translationWithoutPlaceholders = translationWithMaskedPlaceholders.replace(
-			patternMaskedPlaceholders,
-			(match, placeholderIndex, _argumentPosition) =>
-				`${placeholderIndexMapping[placeholderIndex]}`,
+		const result = await fetch(
+			`https://translate.googleapis.com/translate_a/single?${new URLSearchParams({
+				client: "gtx",
+				dt: "t",
+			sl: sourceLanguage === "se" ? "SV" : sourceLanguage,
+				tl: targetLanguage === "se" ? "SV" : targetLanguage,
+				q: text,
+			})}`,
+			{ method: "GET" },
 		);
 
-		return translationWithoutPlaceholders;
-		/*
-          // https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=fr&dt=t&q=Hello
-          // origin-when-cross-origin
-          // console.log(`tranalating: ${text} with deepl`);
-          const result = await fetch('http://localhost:3333/api/v1/translate', {
-            method: 'POST',
-             headers: {
-                'Authorization': 'DeepL-Auth-Key 391733de-67e0-be65-a8b7-4298511dd564:fx'
-              },
-            headers: {
-              Accept: 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(
-              {
-                text: [text],
-                target_lang: targetLanguage === 'se' ? 'SV' : targetLanguage,
-              },
-            ),
-          });
-          const translationResults = await result.json();
+		if (!result.ok) {
+			Monitoring.instance?.sentryCaptureMesage(
+				`Translation of ${text} failed. Status code (${result.status}).`,
+			);
+			return null;
+		}
 
-          return translationResults.messages[0].text; */
+		const translationResults = (await result.json()) as TranslationResponse;
+		const translatedSegments = translationResults?.[0]
+			?.map((segment) => segment?.[0])
+			.filter((segment): segment is string => typeof segment === "string");
+
+		if (!translatedSegments?.length) {
+			const error = new Error("Expected a translation within [0][0][0] not found");
+			Monitoring.instance?.sentryCaptureException(error, {
+				extra: {
+					sourceLanguage,
+					targetLanguage,
+					text,
+					translationResults,
+				},
+			});
+			return null;
+		}
+
+		// Google may split one translated sentence into several response segments. Concatenate them
+		// directly; adding punctuation between segments changes the user's text.
+		return translatedSegments.join("");
 	}
 }

@@ -18,6 +18,7 @@ import { MessageParameterValues } from "../message/MessageParameterValues";
 import { Placeholder } from "../message/Placeholder";
 import PlaceholderUtil from "../message/PlaceholderUtil";
 import TranslatorMachine from "../translationprovider/TranslatorMachine";
+import { toQuillTextOperations } from "./RichTextFormatting";
 
 const Delta = Quill.import("delta") as typeof DeltaType;
 
@@ -183,15 +184,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 			return "";
 		}
 
-		const deltaOps: Op[] = [];
-		const lastTwoCharsBreaks =
-			text.length > 1 && text[text.length - 1] === "\n" && text[text.length - 2] === "\n";
-
-		// allways add an additional line break at the end
-		if (ops.length > 0) {
-			ops[ops.length - 1].end += 1;
-		}
-		const rawtext = `${text}\n`;
+		const deltaOps = toQuillTextOperations(text, ops) as Op[];
 
 		// s
 		// <p>s</p>
@@ -227,26 +220,6 @@ export class UILocalizedLabel implements LocalizedLabel {
 		// all </p> -> \n -> <p>s\n
 		// remove all <p> -> s\n
 		// remove last \n -> s CHECK
-
-		// placholder replacement
-		for (const op of ops) {
-			if (op.attributes.placeholder) {
-				const insert = op.attributes.placeholder.name;
-				const parameterOperation = {
-					insert,
-					attributes: {
-						...op.attributes,
-					},
-				};
-				deltaOps.push(parameterOperation);
-			} else {
-				const insert = rawtext.substring(op.start, op.end);
-				deltaOps.push({
-					insert,
-					attributes: op.attributes,
-				});
-			}
-		}
 
 		const delta = new Delta(deltaOps);
 
@@ -568,44 +541,39 @@ export class UILocalizedLabel implements LocalizedLabel {
 			targetLanguage,
 			[],
 		);
-		// updating message
-		if (!hasVariantTranslationInTargetLanguage || enforceTranslation) {
-			if (!toRefLanguage) {
-				try {
-					const eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(
-						translator,
-						message,
-						refLanguage,
-						targetLanguage,
-						[],
-						triggersCTA,
-					);
-					await this.manager.updateMessage(eventuallyUpdatedMessage, {});
-				} catch (e) {
-					await this.manager.updateLabelProperties(this.nodeId, {
-						messageState: {
-							type: "linked",
-							messageId: this.messageId!,
-							parameterValues: this.parameterValues,
-						},
-						language: targetLanguage,
-					});
-					throw e;
-				}
+		const linkedMessageState = {
+			type: "linked" as const,
+			messageId: this.messageId!,
+			parameterValues: this.parameterValues,
+		};
+
+		// A label can carry an explicit language override from a previous frame switch.
+		// Always persist the newly requested language so those overrides do not pin the
+		// text to an older locale after a later translation is added.
+		if (!toRefLanguage && (!hasVariantTranslationInTargetLanguage || enforceTranslation)) {
+			try {
+				const eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(
+					translator,
+					message,
+					refLanguage,
+					targetLanguage,
+					[],
+					triggersCTA,
+				);
+				await this.manager.updateMessage(eventuallyUpdatedMessage, {});
+			} catch (e) {
+				await this.manager.updateLabelProperties(this.nodeId, {
+					messageState: linkedMessageState,
+					language: targetLanguage,
+				});
+				throw e;
 			}
-			// TODO #3 think about fall back mechanism:
-			// in case the variant for the given plural is skipped try to fall back to others
-			// if this is skipped as well fall back to base language
-			//  - for now we just don't change the label
-			await this.manager.updateLabelProperties(this.nodeId, {});
-			return;
 		}
+
+		// Re-resolve the label from the message at the selected language even when the
+		// frame update or shared-message update has already refreshed its cached state.
 		await this.manager.updateLabelProperties(this.nodeId, {
-			messageState: {
-				type: "linked",
-				messageId: this.messageId!,
-				parameterValues: this.parameterValues,
-			},
+			messageState: linkedMessageState,
 			language: targetLanguage,
 		});
 	}

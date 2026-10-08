@@ -14,6 +14,7 @@ import LocalizedLabelManagerUI from "../../../lib/localizedlabels/LocalizedLabel
 
 import Drawer from "../../compontents/drawer/Drawer";
 import MessageVariantItem from "./MessageVariantItem";
+import InlangEditor from "./InlangEditor";
 // import ReactQuill from 'react-quill';
 
 type TranslationKeyListItemProps = {
@@ -110,7 +111,7 @@ export default function TranslationKeyListItem({
 	return (
 		<div
 			ref={rowRef}
-			className={`message-group ${messageSelected ? "message-group-selected" : ""} ${
+			className={`message-group ${select === undefined ? "message-group-inlang" : ""} ${messageSelected ? "message-group-selected" : ""} ${
 				rowClassNames !== undefined ? rowClassNames : ""
 			} ${messageNameHovered ? " message-group-hovered" : ""} ${
 				focusedMessageVariant !== undefined ? " message-group-focused" : ""
@@ -177,31 +178,43 @@ export default function TranslationKeyListItem({
 			</div>
 			<div className="message-group-header-sticky-border">test</div>
 
-			{languages.map((language) => (
-				<MessageVariantItem
-					key={language}
-					language={language}
-					refLanguage={refLanguage!}
-					localizedLabelManager={localizedLabelManager}
-					messageStore={messageStore}
-					searchMatch={searchMatch}
-					focusedMessageVariant={focusedMessageVariant}
+			{select === undefined ? (
+				<InlangEditor
 					message={message}
-					select={select}
-					onFocus={() => {
-						setFocusedMessageVariant({
-							messageId: message.id,
-							locale: language,
-							match: [],
-						});
-						onFocus?.(message.id, language, []);
-					}}
-					onBlur={() => {
-						setFocusedMessageVariant(undefined);
-						onBlur?.(message.id, language, []);
+					locales={languages}
+					baseLocale={refLanguage!}
+					onSave={async (updated) => {
+						await localizedLabelManager.updateMessage(updated, {});
+						setMessage(updated);
 					}}
 				/>
-			))}
+			) : (
+				languages.map((language) => (
+					<MessageVariantItem
+						key={language}
+						language={language}
+						refLanguage={refLanguage!}
+						localizedLabelManager={localizedLabelManager}
+						messageStore={messageStore}
+						searchMatch={searchMatch}
+						focusedMessageVariant={focusedMessageVariant}
+						message={message}
+						select={select}
+						onFocus={() => {
+							setFocusedMessageVariant({
+								messageId: message.id,
+								locale: language,
+								match: [],
+							});
+							onFocus?.(message.id, language, []);
+						}}
+						onBlur={() => {
+							setFocusedMessageVariant(undefined);
+							onBlur?.(message.id, language, []);
+						}}
+					/>
+				))
+			)}
 			<Drawer
 				position="top"
 				buttons={[
@@ -221,7 +234,7 @@ export default function TranslationKeyListItem({
 						disabled: messageIdToDelete === undefined,
 						callback: () => {
 							localizedLabelManager.deleteMessage(message.id).catch((e: Error) => {
-									reportError(e);
+								reportError(e);
 								figmaRemote.notifyError(e.message);
 							});
 							setMessageIdToDelete(undefined);

@@ -1,3 +1,4 @@
+import { mergeImportedMessage } from "../message/store/LegacyMessageBundleConverter";
 import blake from "blakejs";
 import {
 	createVariant,
@@ -40,6 +41,8 @@ export default class LocalizedLabelManagerUI
 			localizedLabelIds: Set<string>;
 		};
 	};
+
+	private frameLanguageUpdates = new Map<string, Promise<void>>();
 
 	private removeCachedLabel(labelId: string) {
 		const cachedLabel = this.cachedLocalisedLabels[labelId];
@@ -300,13 +303,32 @@ export default class LocalizedLabelManagerUI
 	}
 
 	async setFrameLanguage(frameId: string, targetLanguage: Locale, translator: TranslatorMachine) {
-		const version = undefined as undefined | number; // todo fill with fixed version of the frame if set
+		const previousUpdate = this.frameLanguageUpdates.get(frameId) ?? Promise.resolve();
+		const update = previousUpdate
+			.catch(() => undefined)
+			.then(() => this.applyFrameLanguage(frameId, targetLanguage, translator));
+		this.frameLanguageUpdates.set(frameId, update);
 
+		try {
+			await update;
+		} finally {
+			if (this.frameLanguageUpdates.get(frameId) === update) {
+				this.frameLanguageUpdates.delete(frameId);
+			}
+		}
+	}
+
+	private async applyFrameLanguage(
+		frameId: string,
+		targetLanguage: Locale,
+		translator: TranslatorMachine,
+	) {
 		let lastError: undefined | Error;
 
-		for (const localizedLabelId of this.cachedFrames[frameId].localizedLabelIds) {
-			const localizedLabel = this.cachedLocalisedLabels[localizedLabelId]!;
-
+		// Hydrate the frame cache here as well as in the view. This keeps the language
+		// command safe when it is triggered before the selection list finished loading.
+		const localizedLabels = await this.getLocalizedLabelsByFrame(frameId);
+		for (const localizedLabel of localizedLabels) {
 			try {
 				await this.setLabelLanguage(
 					localizedLabel,
@@ -323,11 +345,15 @@ export default class LocalizedLabelManagerUI
 		await this.localizedLabelMangerSandbox.updateFrameProperties(frameId, {
 			language: targetLanguage,
 		});
+		if (this.cachedFrames[frameId]) {
+			this.cachedFrames[frameId].frameName = undefined;
+		}
+		await this.getLocalizedLabelsByFrame(frameId);
+		this.dispatchEvent(new CustomEvent("updated", {}));
 
 		if (lastError) {
 			throw lastError;
 		}
-		// await this.localizedLabelMangerSandbox.updateFrameById(frameId);
 	}
 
 	async updateMessage(message: Message, defaultParameters: MessageParameterValues) {
@@ -688,39 +714,10 @@ export default class LocalizedLabelManagerUI
 	}
 
 	async import(messagesToImport: Message[], language: Locale) {
-		const importStats = MessageImporter.getImportStatistics(
-			this.messageStore,
-			messagesToImport,
-			language,
+		// Validate the entire preview before the first durable write.
+		const merged = messagesToImport.map((incoming) =>
+			mergeImportedMessage(this.messageStore.getMessage(incoming.id), incoming, language),
 		);
-
-		for (const newMessage of importStats.newMessages) {
-			console.log(`creating Message: ${newMessage.id}`);
-
-			await this.messageStore.upsertMessage(newMessage, {});
-		}
-
-		for (const newVariant of importStats.newVariants) {
-			const existingMessage = this.messageStore.getMessage(newVariant.message.id)!;
-			const updatedMessage = createVariant(existingMessage, { data: newVariant.variant });
-			console.log(
-				`creating Variant for Message: ${newVariant.message.id} match: ${newVariant.variant.match} `,
-			);
-
-			await this.messageStore.upsertMessage(updatedMessage.data!, {});
-		}
-
-		for (const updatedVariant of importStats.updatedVariants) {
-			const existingMessage = this.messageStore.getMessage(updatedVariant.message.id)!;
-			const updatedMessage = updateVariantPattern(existingMessage, {
-				where: { languageTag: language, match: updatedVariant.variant.match },
-				data: updatedVariant.variant.pattern,
-			});
-			console.log(
-				`updating Variant for Message: ${updatedVariant.message.id} match: ${updatedVariant.variant.match} `,
-			);
-
-			await this.messageStore.upsertMessage(updatedMessage.data!, {});
-		}
+		for (const message of merged) await this.updateMessage(message, {});
 	}
 }

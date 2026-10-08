@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => ({
     minify: mode === "production",
     sourcemap: mode !== "production" ? "inline" : false,
     target: "es2017",
-    emptyOutDir: true,
+    emptyOutDir: false,
     outDir: path.resolve("dist"),
     rollupOptions: {
       input: path.resolve("src/plugin/plugin.ts"),

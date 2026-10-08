@@ -1,0 +1,88 @@
+.transfer-view {
+	padding: 20px 16px;
+}
+.transfer-format {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+.transfer-format > span {
+	font-weight: 500;
+}
+.transfer-format .select-menu {
+	min-width: 190px;
+}
+.transfer-format .select-menu__button {
+	width: 100%;
+	border: 1px solid var(--figma-color-border);
+	border-radius: 2px;
+}
+.transfer-help {
+	color: var(--figma-color-text-secondary);
+	line-height: 16px;
+	margin: 12px 0 0;
+}
+.transfer-languages {
+	margin-top: 20px;
+}
+.transfer-language-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	min-height: 68px;
+	border-bottom: 1px solid var(--figma-color-border);
+}
+.transfer-language-name {
+	font-weight: 500;
+	line-height: 16px;
+}
+.transfer-language-detail {
+	margin-top: 6px;
+	color: var(--figma-color-text-secondary);
+	line-height: 16px;
+}
+.transfer-file-action {
+	color: var(--figma-color-text-brand);
+	flex-shrink: 0;
+}
+.transfer-file-action .file-select {
+	display: block;
+	width: auto;
+	padding: 8px 0 8px 8px;
+}
+.transfer-file-action .file-select:focus-within {
+	outline: 1px solid var(--figma-color-border-brand);
+	outline-offset: 2px;
+}
+.transfer-file-action:has(input:disabled) {
+	opacity: 0.5;
+}
+.transfer-footer {
+	margin-top: 24px;
+}
+.transfer-format .select-menu__caret {
+	margin-left: auto;
+}
+
+.transfer-action {
+	border: 0;
+	background: transparent;
+	color: var(--figma-color-text-brand);
+	padding: 8px 0 8px 8px;
+	font: inherit;
+	cursor: pointer;
+	flex-shrink: 0;
+}
+.transfer-action:hover {
+	text-decoration: underline;
+}
+.transfer-action:focus-visible {
+	outline: 1px solid var(--figma-color-border-brand);
+	outline-offset: 2px;
+}
+.transfer-action:disabled {
+	opacity: 0.5;
+	cursor: default;
+	text-decoration: none;
+}

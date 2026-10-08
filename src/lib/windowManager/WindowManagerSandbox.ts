@@ -216,10 +216,10 @@ export class WindowManagerSandbox {
 			this.viewportResizeCheckInterval = setInterval(() => {
 				// check if the viewports width has changed
 				this.checkForViewPortResize(true);
-			}, 1);
+			}, 50);
 
 			figma.ui.on("message", (message) => {
-				if (message.target === "WindowManager") {
+				if (message?.target === "WindowManager") {
 					if (message.uiInit) {
 						figma.ui.postMessage({
 							target: "WindowManager",

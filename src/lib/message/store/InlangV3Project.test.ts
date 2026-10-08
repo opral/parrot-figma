@@ -16,6 +16,30 @@ const initial: Message = {
 };
 
 describe("InlangV3Project", () => {
+	test("hydrates a project from a bulk message set", async () => {
+		const messages = Array.from({ length: 30 }, (_, index) => ({
+			...initial,
+			id: `key-${index}`,
+			variants: [
+				{
+					languageTag: "en",
+					match: [],
+					pattern: [{ type: "Text" as const, value: `Hello ${index}` }],
+				},
+			],
+		}));
+		const session = await InlangV3Project.open({
+			settings: { baseLocale: "en", locales: ["en"], modules: [] },
+			messages,
+		});
+
+		try {
+			expect(session.getAll()).toEqual(messages);
+		} finally {
+			await session.close();
+		}
+	});
+
 	test("owns a Lix project session and replaces nested bundles", async () => {
 		const session = await InlangV3Project.open({
 			settings: { baseLocale: "en", locales: ["en", "de"], modules: [] },

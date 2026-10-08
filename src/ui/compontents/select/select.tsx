@@ -433,6 +433,7 @@ export default function Select({
 	return (
 		<OutsideClickHandler
 			display="contents"
+			additionalInsideRef={menuContainerRef}
 			onOutsideClick={handleOutsideClick}
 			disabled={!isExpanded}
 		>

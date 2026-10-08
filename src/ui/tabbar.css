@@ -24,5 +24,8 @@
 }
 
 .tab.active {
+	box-sizing: border-box;
+	border-bottom: 2px solid var(--figma-color-text);
+	padding-top: 2px;
 	color: var(--figma-color-text);
 }

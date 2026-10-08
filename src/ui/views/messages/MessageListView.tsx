@@ -13,6 +13,7 @@ import { Plural } from "../../../lib/message/variants/Plural";
 import "./MessageView.css";
 import LocalizedLabelManagerUI from "../../../lib/localizedlabels/LocalizedLabelManagerUI";
 import { NodeSelection } from "../../../lib/localizedlabels/LocalizedLabelManager";
+import { LatestRequest } from "../../utils/LatestRequest";
 
 type MessageListViewProps = {
 	initialSearchQuery: SearchQuery;
@@ -42,6 +43,7 @@ export default function MessageListView({
 	const [fullyRendered, setFullyRendered] = useState(false);
 	const [selectedNodes, setSelectedNodes] = useState({} as NodeSelection);
 	const [highlightSelection, setHighlightSelection] = useState(false);
+	const selectionRefresh = useRef(new LatestRequest());
 
 	// const [keys, setKeys] = useState: UITranslationKeys,
 	const [searchQuery, setSearchQuery] = useState<SearchQuery>(initialSearchQuery);
@@ -51,7 +53,9 @@ export default function MessageListView({
 
 	async function refreshSelection(triggerHighlight: boolean) {
 		if (highlightSelectedNodes) {
+			const requestRevision = selectionRefresh.current.begin();
 			const freshSelectedNodes = await localizedLabelManager.getSelection();
+			if (!selectionRefresh.current.isCurrent(requestRevision)) return;
 
 			setSelectedNodes(freshSelectedNodes);
 			setHighlightSelection(triggerHighlight);
@@ -129,7 +133,7 @@ export default function MessageListView({
 						Messages will show up here.
 						<br />
 						Create one by Linking a Message on a Text Layer in the Layers Tab or Import your
-						existing Messages in the Setup Tab.
+						existing messages in the Import tab.
 					</div>
 				</div>
 			</div>

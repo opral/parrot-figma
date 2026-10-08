@@ -1,0 +1,183 @@
+.figma-inlang-editor {
+	font:
+		11px Inter,
+		sans-serif;
+	color: var(--figma-color-text);
+	--sl-font-sans: Inter, sans-serif;
+	--sl-input-font-size-small: 11px;
+	--sl-input-height-small: 28px;
+	--sl-input-border-radius-small: 2px;
+	--sl-color-primary-600: var(--figma-color-bg-brand);
+	--sl-focus-ring-color: var(--figma-color-border-brand-strong);
+}
+.figma-inlang-editor :is(inlang-bundle, inlang-message, inlang-variant, inlang-add-selector) {
+	--sl-input-background-color: var(--figma-color-bg) !important;
+	--sl-input-background-color-disabled: var(--figma-color-bg-secondary) !important;
+	--sl-input-background-color-hover: var(--figma-color-bg-hover) !important;
+	--sl-input-color: var(--figma-color-text) !important;
+	--sl-input-color-hover: var(--figma-color-text) !important;
+	--sl-input-border-color: var(--figma-color-border) !important;
+	--sl-input-border-color-hover: var(--figma-color-border-strong) !important;
+	--sl-input-placeholder-color: var(--figma-color-text-secondary) !important;
+	--sl-color-neutral-0: var(--figma-color-bg) !important;
+	--sl-color-neutral-50: var(--figma-color-bg-secondary) !important;
+	--sl-color-neutral-100: var(--figma-color-bg-secondary) !important;
+	--sl-color-neutral-200: var(--figma-color-border) !important;
+	--sl-color-neutral-300: var(--figma-color-border) !important;
+	--sl-color-neutral-600: var(--figma-color-text-secondary) !important;
+	--sl-color-neutral-700: var(--figma-color-text) !important;
+	--sl-color-neutral-900: var(--figma-color-text) !important;
+	--sl-color-neutral-1000: var(--figma-color-text) !important;
+}
+.figma-inlang-editor .inlang-pattern-editor-contenteditable {
+	min-height: 32px !important;
+	padding: 8px !important;
+	font:
+		11px/16px Inter,
+		sans-serif !important;
+	color: var(--figma-color-text);
+	background: var(--figma-color-bg);
+}
+.figma-inlang-editor .inlang-pattern-editor-contenteditable:focus {
+	outline: 1px solid var(--figma-color-border-brand-strong);
+	outline-offset: -1px;
+}
+.figma-inlang-editor .inlang-pattern-editor-placeholder {
+	font-size: 11px !important;
+	top: 8px !important;
+	left: 8px !important;
+}
+.figma-inlang-editor button {
+	font: inherit;
+	color: var(--figma-color-text-brand);
+	background: transparent;
+	border: none;
+	padding: 8px;
+	cursor: pointer;
+}
+.figma-inlang-editor .inlang-add-language {
+	display: block;
+	width: 100%;
+	text-align: left;
+	border-bottom: 1px solid var(--figma-color-border);
+}
+.figma-inlang-editor [role="alert"] {
+	padding: 8px;
+	color: var(--figma-color-text-danger);
+}
+
+.figma-inlang-editor .inlang-selector-details > summary {
+	padding: 8px;
+	color: var(--figma-color-text-brand);
+	cursor: pointer;
+}
+.figma-inlang-editor .inlang-selector-details[open] {
+	padding-bottom: 8px;
+}
+
+.figma-inlang-editor .inlang-pattern-editor-wrapper {
+	min-height: 32px !important;
+}
+.figma-inlang-editor summary {
+	font:
+		11px/16px Inter,
+		sans-serif;
+}
+
+/* The published editor injects literal light colors for hover and focus. */
+.figma-inlang-editor .inlang-pattern-editor-contenteditable,
+.figma-inlang-editor .inlang-pattern-editor-contenteditable:hover,
+.figma-inlang-editor .inlang-pattern-editor-contenteditable:focus {
+	color: var(--figma-color-text) !important;
+	background-color: var(--figma-color-bg) !important;
+	box-shadow: none !important;
+	box-sizing: border-box;
+	overflow-wrap: anywhere;
+}
+.figma-inlang-editor .inlang-pattern-editor-contenteditable:hover {
+	background-color: var(--figma-color-bg-hover) !important;
+}
+.figma-inlang-editor,
+.figma-inlang-editor inlang-bundle,
+.figma-inlang-editor inlang-variant,
+.figma-inlang-editor inlang-pattern-editor {
+	display: block;
+	min-width: 0;
+	max-width: 100%;
+}
+.figma-inlang-editor .inlang-structured-preview {
+	padding: 8px;
+	font:
+		11px/16px Inter,
+		sans-serif;
+	color: var(--figma-color-text-secondary);
+	overflow-wrap: anywhere;
+}
+.message-group-inlang .message-group-header {
+	height: 28px;
+}
+.message-group-inlang .message-group-header-name {
+	font:
+		500 11px/16px Inter,
+		sans-serif;
+	min-width: 0;
+	flex: 1;
+	color: var(--figma-color-text);
+}
+.message-group-inlang .message-group-header-name .rowText {
+	font: inherit;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.message-group-inlang .message-group-header-element-symbol .svg-container {
+	width: 14px;
+	height: 14px;
+}
+.message-group-inlang .message-group-header-sticky-border {
+	height: 28px;
+	margin-top: -28px;
+}
+
+.figma-inlang-editor inlang-message {
+	min-width: 0;
+	max-width: 100%;
+}
+
+.figma-inlang-editor .inlang-selector-details > summary {
+	padding: 4px 8px;
+}
+.figma-inlang-editor .inlang-selector-details > summary:focus-visible {
+	outline: 1px solid var(--figma-color-border-brand-strong);
+	outline-offset: -1px;
+}
+.figma-inlang-editor .inlang-selector-details[open] {
+	padding-bottom: 0;
+}
+.figma-inlang-editor .inlang-pattern-editor-contenteditable {
+	margin: 4px 8px !important;
+	min-height: 24px !important;
+	padding: 4px 6px !important;
+	border: 1px solid var(--figma-color-border);
+	border-radius: 2px;
+}
+.figma-inlang-editor .inlang-pattern-editor-placeholder {
+	top: 8px !important;
+	left: 14px !important;
+}
+
+.figma-inlang-editor inlang-message {
+	min-height: 32px !important;
+}
+.figma-inlang-editor .inlang-pattern-editor-contenteditable {
+	width: calc(100% - 16px) !important;
+}
+.figma-inlang-editor .inlang-pattern-editor-placeholder {
+	font-size: 0 !important;
+}
+.figma-inlang-editor .inlang-pattern-editor-placeholder::after {
+	content: "Enter translation…";
+	font:
+		11px/16px Inter,
+		sans-serif;
+}

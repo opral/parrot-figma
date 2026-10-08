@@ -1,3 +1,7 @@
+import {
+	legacyMessageToBundle,
+	mergeImportedMessage,
+} from "../message/store/LegacyMessageBundleConverter";
 import { getVariant, type Message, type Variant } from "../message/LegacyMessage";
 import MessageStoreMemory from "../message/store/MessageStoreMemory";
 
@@ -12,6 +16,7 @@ import { Locale } from "../message/variants/Locale";
 
 export enum ImportType {
 	UNSUPPORTED = "not supported",
+	INLANG_PLUGIN = "inlang plugin",
 	IOS_STRINGS = "iOS Strings File",
 	ANDROID_XML = "Android resource XML",
 	L18N_JSON = "l18next JSON",
@@ -19,6 +24,7 @@ export enum ImportType {
 
 export type ImportResult = {
 	fileName: string;
+	formatName?: string;
 	type: ImportType;
 	messages: Message[] | undefined;
 	language: Locale;
@@ -78,6 +84,35 @@ export default class MessageImporter {
 		const currentMessage = messageStore.getMessageByName(importMessage.id);
 		if (!currentMessage) {
 			return { type: "new", message: importMessage };
+		}
+
+		const merged = mergeImportedMessage(currentMessage, importMessage, language);
+		if (currentMessage.nativeBundle || importMessage.nativeBundle) {
+			const current = legacyMessageToBundle(currentMessage);
+			const incoming = legacyMessageToBundle(merged);
+			const oldLocale = current.messages
+				.filter((m) => m.locale === language)
+				.map((m) => ({
+					selectors: m.selectors,
+					variants: m.variants.map((v) => ({ matches: v.matches, pattern: v.pattern })),
+				}));
+			const newLocale = incoming.messages
+				.filter((m) => m.locale === language)
+				.map((m) => ({
+					selectors: m.selectors,
+					variants: m.variants.map((v) => ({ matches: v.matches, pattern: v.pattern })),
+				}));
+			if (
+				JSON.stringify(oldLocale) === JSON.stringify(newLocale) &&
+				JSON.stringify(current.declarations) === JSON.stringify(incoming.declarations)
+			)
+				return { type: "equal" };
+			return {
+				type: "updated",
+				message: importMessage,
+				addedVariants: [],
+				updatedVariants: importMessage.variants,
+			};
 		}
 
 		const addedVariants = [] as Variant[];

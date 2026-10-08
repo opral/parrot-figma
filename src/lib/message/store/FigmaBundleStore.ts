@@ -197,14 +197,27 @@ export function validateBundleNested(value: unknown): asserts value is BundleNes
 		throw new Error(`Bundle "${value.id}" is missing declarations or messages`);
 	}
 	for (const declaration of value.declarations) {
-		if (
-			!isRecord(declaration) ||
-			declaration.type !== "input-variable" ||
-			typeof declaration.name !== "string"
-		) {
+		if (!validDeclaration(declaration)) {
 			throw new Error(`Bundle "${value.id}" contains an invalid declaration`);
 		}
 	}
+
+	const declarationNames = new Set(value.declarations.map((d) => d.name));
+	if (declarationNames.size !== value.declarations.length)
+		throw new Error("Variable names must be unique");
+	function checkReferences(node: unknown): void {
+		if (Array.isArray(node)) {
+			node.forEach(checkReferences);
+			return;
+		}
+		if (!isRecord(node)) return;
+		if (node.type === "variable-reference" && !declarationNames.has(node.name)) {
+			throw new Error(`Variable "${node.name}" is still referenced and needs a declaration.`);
+		}
+		Object.values(node).forEach(checkReferences);
+	}
+	checkReferences(value.declarations);
+	checkReferences(value.messages);
 
 	const messageIds = new Set<string>();
 	for (const message of value.messages) {
@@ -264,18 +277,8 @@ export function validateBundleNested(value: unknown): asserts value is BundleNes
 			) {
 				throw new Error(`Variant "${variant.id}" must match every selector exactly once`);
 			}
-			for (const element of variant.pattern) {
-				if (
-					!isRecord(element) ||
-					(element.type === "text"
-						? typeof element.value !== "string"
-						: element.type !== "expression" ||
-							!isRecord(element.arg) ||
-							element.arg.type !== "variable-reference" ||
-							typeof element.arg.name !== "string")
-				) {
-					throw new Error(`Variant "${variant.id}" contains an invalid pattern`);
-				}
+			if (!variant.pattern.every(validPatternElement)) {
+				throw new Error(`Variant "${variant.id}" contains an invalid pattern`);
 			}
 		}
 	}
@@ -287,4 +290,69 @@ function hash(raw: string) {
 
 function isRecord(value: unknown): value is Record<string, any> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// Match the SDK pattern schema without loading its worker runtime in Figma's sandbox.
+function validArgument(value: unknown): boolean {
+	return (
+		isRecord(value) &&
+		((value.type === "variable-reference" && typeof value.name === "string") ||
+			(value.type === "literal" && typeof value.value === "string"))
+	);
+}
+function validOptions(value: unknown): boolean {
+	return (
+		Array.isArray(value) &&
+		value.every(
+			(option) =>
+				isRecord(option) && typeof option.name === "string" && validArgument(option.value),
+		)
+	);
+}
+function validAnnotation(value: unknown): boolean {
+	return (
+		value === undefined ||
+		(isRecord(value) &&
+			value.type === "function-reference" &&
+			typeof value.name === "string" &&
+			validOptions(value.options))
+	);
+}
+function validExpression(value: unknown): boolean {
+	return (
+		isRecord(value) &&
+		value.type === "expression" &&
+		validArgument(value.arg) &&
+		validAnnotation(value.annotation)
+	);
+}
+function validDeclaration(value: unknown): boolean {
+	return (
+		isRecord(value) &&
+		typeof value.name === "string" &&
+		(value.type === "input-variable"
+			? validAnnotation(value.annotation)
+			: value.type === "local-variable" && validExpression(value.value))
+	);
+}
+function validPatternElement(value: unknown): boolean {
+	if (!isRecord(value)) return false;
+	if (value.type === "text") return typeof value.value === "string";
+	if (value.type === "expression") return validExpression(value);
+	return (
+		["markup-start", "markup-end", "markup-standalone"].includes(value.type) &&
+		typeof value.name === "string" &&
+		(value.options === undefined || validOptions(value.options)) &&
+		(value.attributes === undefined ||
+			(Array.isArray(value.attributes) &&
+				value.attributes.every(
+					(attribute) =>
+						isRecord(attribute) &&
+						typeof attribute.name === "string" &&
+						(attribute.value === true ||
+							(isRecord(attribute.value) &&
+								attribute.value.type === "literal" &&
+								typeof attribute.value.value === "string")),
+				)))
+	);
 }

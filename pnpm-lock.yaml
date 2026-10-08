@@ -68,9 +68,6 @@ importers:
       lodash:
         specifier: ^4.18.1
         version: 4.18.1
-      mixpanel-figma:
-        specifier: ^2.0.4
-        version: 2.0.4
       overlayscrollbars:
         specifier: ^2.16.0
         version: 2.16.0
@@ -1403,9 +1400,6 @@ packages:
   minimatch@10.2.6:
     resolution: {integrity: sha512-vpLQEs+VLCr1nU0BXS07maYoFwlDAH0gngQuuttxIwutDFEMHq2blX+8vpgxDdK3J1PwjCJiep77OitTZ4Ll1A==}
     engines: {node: 18 || 20 || >=22}
-
-  mixpanel-figma@2.0.4:
-    resolution: {integrity: sha512-2hRh8jN0u06r//uB4ZOWODO9Xq8t34PApFCrLIl2rjWxtfkuFbkLbJl6QIjpPdynWtzXQWQNQJ5fKjEBWHMhvw==}
 
   moo@0.5.3:
     resolution: {integrity: sha512-m2fmM2dDm7GZQsY7KK2cme8agi+AAljILjQnof7p1ZMDe6dQ4bdnSMx0cPppudoeNv5hEFQirN6u+O4fDE0IWA==}
@@ -3049,8 +3043,6 @@ snapshots:
   minimatch@10.2.6:
     dependencies:
       brace-expansion: 5.0.12
-
-  mixpanel-figma@2.0.4: {}
 
   moo@0.5.3: {}
 

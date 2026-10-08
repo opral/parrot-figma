@@ -11,6 +11,7 @@ import {
 	translationPlugins,
 } from "../../../lib/transfer/TranslationFormats";
 import { exportWithPlugin } from "../../../lib/transfer/ExportWithPlugin";
+import { capture } from "../../../lib/telemetry/Telemetry";
 import type FigmaUtil from "../../../shared/FigmaUtil";
 import { useTransferFormat } from "../transfer/useTransferFormat";
 
@@ -58,6 +59,10 @@ export default function Export({
 			document.body.appendChild(link);
 			link.click();
 			setNotice(`Download started: ${file.fileName}`);
+			capture("export:file_create", {
+				format,
+				message_count: store.getAllMessages()?.length ?? 0,
+			});
 		} catch (failure) {
 			setError(failure instanceof Error ? failure.message : String(failure));
 		} finally {

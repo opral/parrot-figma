@@ -1,6 +1,7 @@
 import * as React from "react";
 import type FigmaUtil from "../../../shared/FigmaUtil";
 import { CLOUD_INTEREST_FORM_URL, CloudIcon, featureGroups } from "./cloudContent";
+import { capture } from "../../../lib/telemetry/Telemetry";
 import "./CloudView.css";
 
 // 16 px outline icons, drawn with the text color
@@ -60,7 +61,10 @@ export default function CloudView({ figmaRemote }: { figmaRemote: FigmaUtil }) {
 				<button
 					type="button"
 					className="button button-primary cloud-interest-button"
-					onClick={() => figmaRemote.openExternal(CLOUD_INTEREST_FORM_URL)}
+					onClick={() => {
+						capture("cloud:interest_button_click", { topic: "cloud" });
+						figmaRemote.openExternal(CLOUD_INTEREST_FORM_URL);
+					}}
 				>
 					More information
 				</button>

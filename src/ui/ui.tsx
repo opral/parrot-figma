@@ -7,6 +7,7 @@ import en from "javascript-time-ago/locale/en.json";
 import LocalizedLabelsListView from "./views/localizedlabelslist/LocalizedLabelsListView";
 import DevModeView from "./views/devmode/DevModeView";
 import CloudView from "./views/cloud/CloudView";
+import { capture, identifyTelemetry } from "../lib/telemetry/Telemetry";
 import MachineTranslationContact from "./compontents/machineTranslation/MachineTranslationContact";
 import FigmaUtil from "../shared/FigmaUtil";
 import { AsyncFunctionProxy } from "../lib/rpc/AsyncFunctionProxy";
@@ -284,7 +285,34 @@ function App() {
 
 			await localizedLabelManager.prepare();
 			await memoryTranslationKeyStore.load();
+
+			// project size, once every layer of the file has been looked at
+			localizedLabelManager.addEventListener(
+				"linksLoaded",
+				async () => {
+					const [users, linkedLayers, frames] = await Promise.all([
+						userStateManagerUi.getUsers(),
+						figmaRemote.getRootPluginData("numberOfLinkedTextNodes"),
+						figmaRemote.getRootPluginData("numberOfFrames"),
+					]);
+					capture("project:project_view", {
+						message_count: memoryTranslationKeyStore.getAllMessages()?.length ?? 0,
+						language_count: memoryTranslationKeyStore.getOrderedLanguages().length,
+						collaborator_count: users.length,
+						linked_layer_count: Number(linkedLayers) || 0,
+						frame_count: Number(frames) || 0,
+					});
+				},
+				{ once: true },
+			);
 			localizedLabelManager.startFillupCache();
+
+			const [userId, fileId] = await Promise.all([
+				figmaRemote.getUserId(),
+				figmaRemote.getInlangFileId(),
+			]);
+			identifyTelemetry({ userId, fileId, version: pjs.version });
+			capture("app:session_start");
 
 			let initialScreen = (await figmaRemote.getLocalFileConfig("lastView")) ?? "design";
 			if (fileSetupCompleted === undefined || fileSetupCompleted === "") {

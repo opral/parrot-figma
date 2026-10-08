@@ -21,6 +21,7 @@ import { FillinToPlaceholder, MessageExtension, Parameter } from "../message/Mes
 import { MessageParameterValues } from "../message/MessageParameterValues";
 import MessageImporter from "../import/MessageImporter";
 import TranslatorMachine from "../translationprovider/TranslatorMachine";
+import { capture } from "../telemetry/Telemetry";
 import { isMachineTranslationUnavailable } from "../translationprovider/MachineTranslationContact";
 import FigmaUtil from "../../shared/FigmaUtil";
 
@@ -231,6 +232,7 @@ export default class LocalizedLabelManagerUI
 
 	onKeyLabelLinksLoaded(event: LinksLoadedEvent) {
 		this.messageStore.updateMessageLinks(event.keys);
+		this.dispatchEvent(new CustomEvent("linksLoaded"));
 	}
 
 	framesIdToLoad = [] as string[];
@@ -368,6 +370,7 @@ export default class LocalizedLabelManagerUI
 	}
 
 	async setFrameLanguage(frameId: string, targetLanguage: Locale, translator: TranslatorMachine) {
+		capture("translation:language_update", { frame_count: 1 });
 		return this.runFrameOperation(frameId, () =>
 			this.applyFrameLanguage(frameId, targetLanguage, translator),
 		);
@@ -389,6 +392,7 @@ export default class LocalizedLabelManagerUI
 		translator: TranslatorMachine,
 		onProgress?: (doneFrames: number, totalFrames: number) => void,
 	) {
+		capture("translation:language_update", { frame_count: frameIds.length });
 		let lastError: unknown;
 		let lockedLabels = 0;
 		let untranslatedLabels = 0;
@@ -581,6 +585,11 @@ export default class LocalizedLabelManagerUI
 	}
 
 	async linkMessage(localizedLabel: UILocalizedLabel, messageNameToLinkTo: string, locale: Locale) {
+		capture("messages:link_create", {
+			source: "manual",
+			layer_count: 1,
+			new_message_count: this.messageStore.getMessageByName(messageNameToLinkTo) ? 0 : 1,
+		});
 		await this.runFrameOperation(localizedLabel.rootFrameId, async () => {
 			// The layer may have changed while this link waited for an earlier operation of the frame
 			// (e.g. a language switch): link the layer as it is now.
@@ -624,14 +633,29 @@ export default class LocalizedLabelManagerUI
 
 	/** Links all given layers to an existing message - a single undo step. */
 	async linkLabelsToMessage(labels: UILocalizedLabel[], messageName: string) {
-		await this.linkLabelsToMessages(labels.map((label) => ({ label, messageName })));
+		await this.linkLabelsToMessages(
+			labels.map((label) => ({ label, messageName })),
+			"identical_texts",
+		);
 	}
 
 	/**
 	 * Links every layer to its message, creating messages that do not exist yet from the layer text -
 	 * a single undo step.
 	 */
-	async linkLabelsToMessages(links: { label: UILocalizedLabel; messageName: string }[]) {
+	async linkLabelsToMessages(
+		links: { label: UILocalizedLabel; messageName: string }[],
+		source: "generate_keys" | "auto_link" | "identical_texts",
+	) {
+		capture("messages:link_create", {
+			source,
+			layer_count: links.length,
+			new_message_count: new Set(
+				links
+					.map((link) => link.messageName)
+					.filter((name) => !this.messageStore.getMessageByName(name)),
+			).size,
+		});
 		const frameIds = [...new Set(links.map((link) => link.label.rootFrameId))];
 		// the views refresh once at the end instead of once per layer
 		this.updateBatchDepth = (this.updateBatchDepth ?? 0) + 1;

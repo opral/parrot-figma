@@ -155,7 +155,7 @@ export default function LocalizedFrameGroup({
 				onCancel={() => setKeyRows(undefined)}
 				onConfirm={async (links) => {
 					try {
-						await localizedLabelManager.linkLabelsToMessages(links);
+						await localizedLabelManager.linkLabelsToMessages(links, "generate_keys");
 						setKeyRows(undefined);
 						figmaRemote.notify(
 							`Linked ${links.length === 1 ? "1 text" : `${links.length} texts`} in “${rootFrameName}”.`,

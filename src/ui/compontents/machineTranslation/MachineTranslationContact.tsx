@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import Drawer from "../drawer/Drawer";
+import { capture } from "../../../lib/telemetry/Telemetry";
 import type FigmaUtil from "../../../shared/FigmaUtil";
 import { MACHINE_TRANSLATION_CONTACT } from "../../../lib/translationprovider/MachineTranslationContact";
 
@@ -8,6 +9,7 @@ const OPEN_EVENT = "parrot:machine-translation-contact";
 
 /** Opens the "Machine translation is available on request" dialog (mounted once in the app). */
 export function showMachineTranslationContact() {
+	capture("cloud:interest_button_click", { topic: "machine_translation" });
 	window.dispatchEvent(new CustomEvent(OPEN_EVENT));
 }
 

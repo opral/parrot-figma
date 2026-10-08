@@ -18,6 +18,7 @@ import {
 	matchLayersToMessages,
 } from "../../../lib/localizedlabels/LinkSuggestions";
 import LinkReviewDrawer, { LinkReviewRow } from "../localizedlabelslist/LinkReviewDrawer";
+import { capture } from "../../../lib/telemetry/Telemetry";
 
 const i18nextPluginKey = i18nextPlugin.key;
 
@@ -201,6 +202,10 @@ export default function ImportView({
 		setImportError(undefined);
 		try {
 			await labelManager.import(importResult.messages, importResult.language);
+			capture("import:file_submit", {
+				format: importFormat,
+				message_count: importResult.messages.length,
+			});
 			// closes the undo step: linking layers afterwards is an undo step of its own
 			await labelManager.commitUndo();
 			setImportNotice(
@@ -295,7 +300,7 @@ export default function ImportView({
 				onCancel={() => setLinkReview(undefined)}
 				onConfirm={async (links) => {
 					try {
-						await labelManager.linkLabelsToMessages(links);
+						await labelManager.linkLabelsToMessages(links, "auto_link");
 						setLinkReview(undefined);
 						setImportNotice(
 							links.length === 1

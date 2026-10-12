@@ -99,6 +99,7 @@
 }
 
 .figma-inlang-editor .inlang-field-row {
+	position: relative;
 	display: flex;
 	align-items: flex-start;
 	gap: 4px;
@@ -126,6 +127,59 @@
 }
 
 .figma-inlang-editor .inlang-row-action:focus-visible {
+	outline: 1px solid var(--figma-color-border-selected);
+	outline-offset: -1px;
+}
+
+/* "Translate from en" sits inside the (empty) field, at its right end: the fields of all languages stay equally wide */
+.figma-inlang-editor .inlang-row-action--inside {
+	position: absolute;
+	top: 3px;
+	right: 3px;
+	height: 18px;
+	max-width: calc(100% - 110px);
+	padding: 0 6px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	line-height: 18px;
+	border-radius: 3px;
+}
+
+/* delete form: a 24px column in every row of a message with forms, empty where there is nothing to delete */
+.figma-inlang-editor .inlang-row-slot {
+	flex: none;
+	width: 24px;
+	height: 24px;
+}
+
+.figma-inlang-editor .inlang-row-delete {
+	display: block;
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	border: none;
+	border-radius: 5px;
+	background: transparent;
+	cursor: default;
+}
+
+.figma-inlang-editor .inlang-row-delete .svg-container {
+	display: block;
+	width: 24px;
+	height: 24px;
+	background-color: var(--figma-color-icon-secondary);
+}
+
+.figma-inlang-editor .inlang-row-delete:hover {
+	background: var(--figma-color-bg-hover);
+}
+
+.figma-inlang-editor .inlang-row-delete:hover .svg-container {
+	background-color: var(--figma-color-icon-danger);
+}
+
+.figma-inlang-editor .inlang-row-delete:focus-visible {
 	outline: 1px solid var(--figma-color-border-selected);
 	outline-offset: -1px;
 }

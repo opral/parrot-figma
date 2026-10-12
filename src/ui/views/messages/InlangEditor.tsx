@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import {
 	InlangMessageForms,
 	InlangPatternEditor,
@@ -12,9 +13,11 @@ import {
 	bundleToLegacyMessage,
 	legacyMessageToBundle,
 } from "../../../lib/message/store/LegacyMessageBundleConverter";
-import { applyEditorChanges } from "../../../lib/message/editor/EditorChanges";
+import { applyEditorChanges, saveGroups } from "../../../lib/message/editor/EditorChanges";
 import { draftMessages } from "../../../lib/message/editor/DraftMessages";
+import { addExactNumbersOfReference } from "../../../lib/message/editor/Selectors";
 import { fromEditorBundle, toEditorBundle } from "../../../lib/message/editor/HtmlText";
+import { TranslationProblems, useTranslationProblems } from "./TranslationProblems";
 import "./InlangEditor.css";
 
 type EditorMessage = BundleNested["messages"][number];
@@ -97,12 +100,15 @@ function PatternField({
 	declarations,
 	label,
 	external,
+	fields,
 }: {
 	variant: EditorVariant;
 	declarations: Declarations;
 	label: string;
 	/** the variant was changed outside of this field (e.g. Cmd+Z), not echoed from its own edit */
 	external: boolean;
+	/** the pattern editors by variant id, to focus a form that was just added */
+	fields: Map<string, InlangPatternEditor>;
 }) {
 	const host = useRef<HTMLDivElement>(null);
 	const editor = useRef<InlangPatternEditor>(undefined);
@@ -112,7 +118,11 @@ function PatternField({
 		element.placeholder = "Enter translation…";
 		host.current!.append(element);
 		editor.current = element;
-		return () => element.remove();
+		fields.set(variant.id, element);
+		return () => {
+			if (fields.get(variant.id) === element) fields.delete(variant.id);
+			element.remove();
+		};
 	}, []);
 	useLayoutEffect(() => {
 		const element = editor.current!;
@@ -136,12 +146,15 @@ function PatternField({
 function MessageForms({
 	message,
 	declarations,
+	referenceVariants,
 	selectedVariantId,
 	onSelect,
 	onAdd,
 }: {
 	message: EditorMessage;
 	declarations: Declarations;
+	/** variants of the reference language: a translation is asked for the same select values */
+	referenceVariants: EditorVariant[] | undefined;
 	selectedVariantId: string;
 	onSelect: (variantId: string) => void;
 	onAdd: (matches: EditorVariant["matches"]) => void;
@@ -169,9 +182,10 @@ function MessageForms({
 		element.message = message;
 		element.variants = message.variants;
 		element.declarations = declarations;
+		element.referenceVariants = referenceVariants;
 		element.locale = message.locale;
 		element.selectedVariantId = selectedVariantId;
-	}, [message, declarations, selectedVariantId]);
+	}, [message, declarations, referenceVariants, selectedVariantId]);
 	return <div ref={host} className="inlang-forms" />;
 }
 
@@ -181,13 +195,17 @@ export default function InlangEditor({
 	baseLocale,
 	onSave,
 	onTranslate,
+	focusForm,
 }: {
 	message: Message;
 	locales: string[];
 	baseLocale: string;
-	onSave: (message: Message) => Promise<void>;
+	/** `undoStep`: the save changes the forms and is an undo step of its own */
+	onSave: (message: Message, options?: { undoStep?: boolean }) => Promise<void>;
 	/** Fills the (empty) translation of a locale from the reference language. */
 	onTranslate?: (locale: string) => Promise<void>;
+	/** a form added elsewhere (a new exact number, a select value): selected and focused once it is rendered */
+	focusForm?: { locale: string; variantId: string };
 }) {
 	const root = useRef<HTMLDivElement>(null);
 	// the message as stored (HTML text), as the editors show it, and the variants with formatting
@@ -200,6 +218,7 @@ export default function InlangEditor({
 		() => draftMessages(bundle, locales, baseLocale),
 		[bundle, localesKey, baseLocale],
 	);
+	const problems = useTranslationProblems(stored, locales, baseLocale);
 
 	// The state the editors were last given. A new `message` whose text differs from it was changed
 	// elsewhere (undo, the canvas, an import) and replaces what the editor shows.
@@ -229,6 +248,28 @@ export default function InlangEditor({
 		return changed;
 	}, [bundle]);
 
+	// Forms added here, shown (and focused) right away instead of once they are saved, so text typed
+	// right after "+ Add form" goes into the new form.
+	const [adding, setAdding] = useState<EditorVariant[]>([]);
+	useEffect(() => {
+		if (!adding.length) return;
+		const saved = new Set(bundle.messages.flatMap((m) => m.variants.map((v) => v.id)));
+		setAdding((list) => {
+			const rest = list.filter((v) => !saved.has(v.id));
+			return rest.length === list.length ? list : rest;
+		});
+	}, [bundle]);
+	// the pattern editors by variant id, and the form to focus once its editor exists
+	const fields = useRef(new Map<string, InlangPatternEditor>());
+	const focusVariant = useRef<string>(undefined);
+	useLayoutEffect(() => {
+		const field = focusVariant.current && fields.current.get(focusVariant.current);
+		if (!field) return;
+		focusVariant.current = undefined;
+		// the editor focuses once it has rendered: before the next key press
+		field.focus();
+	});
+
 	const latest = useRef({ stored, rich, drafts, onSave });
 	latest.current = { stored, rich, drafts, onSave };
 	const [selected, setSelected] = useState<Record<string, string>>({});
@@ -243,15 +284,8 @@ export default function InlangEditor({
 		let saving = Promise.resolve();
 		// Saving an edit also rewrites the linked layers (~100 ms) and typing is faster than that: edits
 		// that arrive while a save runs are merged into the next one.
-		enqueue.current = (changes, fromPatternEditor) => {
-			pending.push(...changes.map((change) => ({ change, fromPatternEditor })));
-			busy.current = true;
-			if (queued) return;
-			queued = true;
-			saving = saving.then(async () => {
-				queued = false;
-				const batch = pending;
-				pending = [];
+		const save = async (batch: typeof pending, undoStep: boolean) => {
+			{
 				const previous = structuredClone(current.current);
 				const changes = batch.map(({ change, fromPatternEditor: fromEditor }) => {
 					if (!fromEditor) return change;
@@ -269,7 +303,7 @@ export default function InlangEditor({
 						changes.some(
 							(change) =>
 								change.entityId === draft.id ||
-								(change.newData as EditorVariant | undefined)?.messageId === draft.id ||
+								(change.newData as EditorVariant | undefined)?.message_id === draft.id ||
 								draft.variants.some((v) => v.id === change.entityId),
 						) &&
 						!previous.messages.some((m) => m.id === draft.id)
@@ -286,14 +320,30 @@ export default function InlangEditor({
 							fromEditorBundle(next, latest.current.rich, latest.current.stored),
 							true,
 						),
+						{ undoStep },
 					);
 					setError(undefined);
 				} catch (e) {
 					current.current = previous;
+					// a form that could not be added is not shown
+					const failed = new Set(batch.map(({ change }) => change.entityId));
+					setAdding((list) => list.filter((v) => !failed.has(v.id)));
 					setError(e instanceof Error ? e.message : String(e));
-				} finally {
-					busy.current = queued || pending.length > 0;
 				}
+			}
+		};
+		enqueue.current = (changes, fromPatternEditor) => {
+			pending.push(...changes.map((change) => ({ change, fromPatternEditor })));
+			busy.current = true;
+			if (queued) return;
+			queued = true;
+			saving = saving.then(async () => {
+				queued = false;
+				const batch = pending;
+				pending = [];
+				// typing is merged into one save, a form added or deleted is a save (and undo step) of its own
+				for (const group of saveGroups(batch)) await save(group.edits, group.structural);
+				busy.current = queued || pending.length > 0;
 			});
 		};
 		const element = root.current!;
@@ -317,6 +367,19 @@ export default function InlangEditor({
 		return () => element.removeEventListener("change", onChange);
 	}, []);
 
+	// select and focus a form added elsewhere, once the saved message that contains it is rendered
+	const focusedForm = useRef<typeof focusForm>(undefined);
+	useEffect(() => {
+		if (!focusForm || focusedForm.current === focusForm) return;
+		const exists = bundle.messages.some(
+			(m) => m.locale === focusForm.locale && m.variants.some((v) => v.id === focusForm.variantId),
+		);
+		if (!exists) return;
+		focusedForm.current = focusForm;
+		setSelected((s) => ({ ...s, [focusForm.locale]: focusForm.variantId }));
+		focusVariant.current = focusForm.variantId;
+	}, [focusForm, bundle]);
+
 	const reference = bundle.messages.find((m) => m.locale === baseLocale);
 	const referenceHasText =
 		reference?.selectors.length === 0 &&
@@ -326,13 +389,17 @@ export default function InlangEditor({
 	return (
 		<div className="figma-inlang-editor" ref={root}>
 			{locales.map((locale) => {
-				const data =
+				const shown =
 					bundle.messages.find((m) => m.locale === locale) ??
 					drafts.find((m) => m.locale === locale)!;
+				const added = adding.filter(
+					(v) => v.message_id === shown.id && !shown.variants.some((w) => w.id === v.id),
+				);
+				const data = added.length ? { ...shown, variants: [...shown.variants, ...added] } : shown;
 				const withForms = data.selectors.length > 0 || data.variants.length > 1;
 				const variant = data.variants.find((v) => v.id === selected[locale]) ?? data.variants[0];
 				return (
-					<div className="inlang-row" key={locale}>
+					<div className="inlang-row" key={locale} data-locale={locale}>
 						<div className="inlang-row-locale">
 							<span>{locale}</span>
 							{locale === baseLocale && <span className="inlang-ref-tag">ref</span>}
@@ -342,19 +409,20 @@ export default function InlangEditor({
 								<MessageForms
 									message={data}
 									declarations={bundle.declarations}
+									referenceVariants={locale === baseLocale ? undefined : reference?.variants}
 									selectedVariantId={variant?.id ?? ""}
 									onSelect={(variantId) => setSelected((s) => ({ ...s, [locale]: variantId }))}
 									onAdd={(matches) => {
 										const id = crypto.randomUUID();
-										setSelected((s) => ({ ...s, [locale]: id }));
+										const variant = { id, message_id: data.id, matches, pattern: [] };
+										focusVariant.current = id;
+										// rendered (and focused) before the click's task ends, so no key typed right after it is lost
+										flushSync(() => {
+											setAdding((list) => [...list, variant]);
+											setSelected((s) => ({ ...s, [locale]: id }));
+										});
 										enqueue.current(
-											[
-												{
-													entity: "variant",
-													entityId: id,
-													newData: { id, messageId: data.id, matches, pattern: [] },
-												},
-											],
+											[{ entity: "variant", entityId: id, newData: structuredClone(variant) }],
 											false,
 										);
 									}}
@@ -364,14 +432,16 @@ export default function InlangEditor({
 								(rich.has(variant.id) ? (
 									<RichPreview variant={variant} />
 								) : (
-									<div className="inlang-field-row">
+									<div className={`inlang-field-row${withForms ? " inlang-field-row--forms" : ""}`}>
 										<PatternField
 											key={variant.id}
 											variant={variant}
 											declarations={bundle.declarations}
 											label={`${locale} translation`}
 											external={external.has(variant.id)}
+											fields={fields.current}
 										/>
+										{/* inside the empty field, so that every field of a message is equally wide */}
 										{onTranslate &&
 											locale !== baseLocale &&
 											!withForms &&
@@ -379,31 +449,61 @@ export default function InlangEditor({
 											isEmpty(variant) && (
 												<button
 													type="button"
-													className="inlang-row-action"
+													className="inlang-row-action inlang-row-action--inside"
 													onClick={() => void onTranslate(locale)}
 													title="Machine translation is available on request"
 												>
 													Translate from {baseLocale}
 												</button>
 											)}
-										{withForms && data.variants.length > 1 && (
-											<button
-												type="button"
-												className="inlang-row-action inlang-row-action--danger"
-												aria-label={`Delete this ${locale} form`}
-												title="Delete this form"
-												onClick={() =>
-													enqueue.current(
-														[{ entity: "variant", entityId: variant.id, newData: undefined }],
-														false,
-													)
-												}
-											>
-												Delete
-											</button>
+										{/* a column of its own in every row of a message with forms (empty when there is nothing to delete) */}
+										{withForms && (
+											<span className="inlang-row-slot">
+												{data.variants.length > 1 && (
+													<button
+														type="button"
+														className="inlang-row-delete"
+														aria-label={`Delete this ${locale} form`}
+														title="Delete this form"
+														onClick={() =>
+															enqueue.current(
+																[{ entity: "variant", entityId: variant.id, newData: undefined }],
+																false,
+															)
+														}
+													>
+														<span className="svg-container trash-svg" />
+													</button>
+												)}
+											</span>
 										)}
 									</div>
 								))}
+							<TranslationProblems
+								problems={problems.get(locale)}
+								message={data}
+								declarations={bundle.declarations}
+								variants={data.variants}
+								selectedVariantId={variant?.id}
+								onSelect={(variantId) => setSelected((s) => ({ ...s, [locale]: variantId }))}
+								onAddExactNumbers={(input, values) => {
+									setError(undefined);
+									void latest.current
+										.onSave(
+											bundleToLegacyMessage(
+												addExactNumbersOfReference(
+													latest.current.stored,
+													input,
+													values,
+													baseLocale,
+												),
+												true,
+											),
+											{ undoStep: true },
+										)
+										.catch((e) => setError(e instanceof Error ? e.message : String(e)));
+								}}
+							/>
 						</div>
 					</div>
 				);

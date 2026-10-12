@@ -835,7 +835,10 @@ export default class LocalizedLabelManagerUI
 		});
 	}
 
+	/** Closes the undo step now (a pending `commitUndoWhenIdle` is no longer needed). */
 	async commitUndo() {
+		clearTimeout(this.undoCommitTimer);
+		this.undoCommitTimer = undefined;
 		await this.localizedLabelMangerSandbox.commitUndo();
 	}
 

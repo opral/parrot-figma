@@ -272,6 +272,22 @@ describe("LocalizedLabelManagerUI.commitUndoWhenIdle", () => {
 			vi.useRealTimers();
 		}
 	});
+
+	test("commitUndo closes the step right away, for a change that is a step of its own", async () => {
+		vi.useFakeTimers();
+		try {
+			const { manager } = createManager();
+			// typing, then a form is added before the typing paused
+			manager.commitUndoWhenIdle(800);
+			await manager.commitUndo();
+			expect(manager.localizedLabelMangerSandbox.commitUndo).toHaveBeenCalledTimes(1);
+			// the pending idle commit is no longer needed: it would close an empty step later
+			vi.advanceTimersByTime(800);
+			expect(manager.localizedLabelMangerSandbox.commitUndo).toHaveBeenCalledTimes(1);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
 });
 
 describe("LocalizedLabelManagerUI.linkLabelsToMessages", () => {

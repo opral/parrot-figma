@@ -1,6 +1,11 @@
-import type { BundleNested } from "@inlang/sdk/browser";
+import type { Bundle, Message, Variant } from "@inlang/sdk/browser";
 
-export type { BundleNested } from "@inlang/sdk/browser";
+/**
+ * A bundle with its messages and variants as Parrot keeps it in memory and in plugin data: the
+ * camelCase shapes Inlang plugins exchange (`bundleId`, `messageId`), not the SDK's database rows
+ * (`bundle_id`, `message_id`) - stored bundles keep their format.
+ */
+export type BundleNested = Bundle & { messages: (Message & { variants: Variant[] })[] };
 
 export const FIGMA_BUNDLE_PREFIX = "prt_ib__";
 export const FIGMA_BUNDLE_MIGRATION_KEY = "prt_ib_migration_v1";
@@ -8,7 +13,10 @@ export const LEGACY_MESSAGE_PREFIX = "prt_im__";
 
 const MAX_PLUGIN_DATA_BYTES = 100_000;
 
+/** After the store's own writes: wait until they stopped coming (typing saves every ~100 ms). */
 const LOCAL_CHANGE_CHECK_DELAY_MS = 300;
+/** How many of the bundles written last are checked first after a local change (see `checkRecent`). */
+const RECENT_BUNDLES = 100;
 
 function encodeUtf8(value: string): Uint8Array {
 	const bytes: number[] = [];
@@ -69,9 +77,16 @@ export class FigmaBundleStore {
 	/** Local plugin-data changes are checked once when they stop coming (see `scheduleLocalChangeCheck`). */
 	private localChangeTimer: ReturnType<typeof setTimeout> | undefined;
 
+	/** The bundles this store wrote last (newest last): what an undo / redo most likely touches. */
+	private readonly recent = new Set<string>();
+
 	private readonly handleDocumentChange = (event: any) => {
 		if (!event.documentChanges.some((change: any) => this.isRemoteRootPluginDataChange(change))) {
 			if (event.documentChanges.some((change: any) => this.isRootPluginDataChange(change))) {
+				// Cmd+Z / Cmd+Shift+Z: the bundles written last are checked at once so the UI follows right
+				// away. The full check reads every bundle (hundreds of ms in the plugin sandbox for a big
+				// file, during which it cannot even answer the UI): it waits until the changes stopped coming.
+				this.checkRecent();
 				this.scheduleLocalChangeCheck();
 			}
 			return;
@@ -142,11 +157,42 @@ export class FigmaBundleStore {
 		const raw = serializeBundle(bundle);
 		this.root.setPluginData(this.key(bundle.id), raw);
 		this.stored.set(bundle.id, raw);
+		this.remember(bundle.id);
 	}
 
 	delete(bundleId: string) {
 		this.root.setPluginData(this.key(bundleId), "");
 		this.stored.delete(bundleId);
+		this.remember(bundleId);
+	}
+
+	private remember(bundleId: string) {
+		this.recent.delete(bundleId);
+		this.recent.add(bundleId);
+		if (this.recent.size > RECENT_BUNDLES) this.recent.delete(this.recent.values().next().value!);
+	}
+
+	/**
+	 * Compares only the bundles written last with what the store remembers (a few reads instead of one per
+	 * bundle: ~60 ms for 6000 messages) and notifies about the differences. Returns whether there were any.
+	 */
+	private checkRecent(): boolean {
+		const changes: BundleChangeSet = { added: [], updated: [], deleted: [] };
+		for (const id of this.recent) {
+			const raw = this.root.getPluginData(this.key(id));
+			const known = this.stored.get(id);
+			if (raw === (known ?? "")) continue;
+			if (raw === "") {
+				this.stored.delete(id);
+				changes.deleted.push(id);
+			} else {
+				this.stored.set(id, raw);
+				(known === undefined ? changes.added : changes.updated).push(id);
+			}
+		}
+		if (!changes.added.length && !changes.updated.length && !changes.deleted.length) return false;
+		for (const listener of this.listeners) listener(changes);
+		return true;
 	}
 
 	private refreshHashes(validate: boolean): BundleChangeSet {

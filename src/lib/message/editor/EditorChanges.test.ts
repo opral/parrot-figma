@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { applyEditorChanges } from "./EditorChanges";
+import { applyEditorChanges, saveGroups } from "./EditorChanges";
 import { importWithPlugin } from "../../import/InlangPluginImporter";
 import { exportWithPlugin } from "../../transfer/ExportWithPlugin";
 import { translationPlugins } from "../../transfer/TranslationFormats";
@@ -9,6 +9,7 @@ import {
 	mergeImportedMessage,
 } from "../store/LegacyMessageBundleConverter";
 import { InlangV3Project } from "../store/InlangV3Project";
+import { fromRows, toRows } from "../store/BundleRows";
 const icu = translationPlugins.find((p) => p.label === "ICU MessageFormat")!.plugin;
 
 async function imported(pattern: string, locale = "en") {
@@ -24,7 +25,7 @@ async function imported(pattern: string, locale = "en") {
 
 test("text edits preserve currency options across SDK storage and export", async () => {
 	const original = await imported("Total {amount, number, currency/USD}");
-	const bundle = legacyMessageToBundle(original);
+	const bundle = toRows(legacyMessageToBundle(original));
 	const variant = bundle.messages[0].variants[0];
 	const next = applyEditorChanges(bundle, [
 		{
@@ -39,7 +40,7 @@ test("text edits preserve currency options across SDK storage and export", async
 			},
 		},
 	]);
-	const updated = bundleToLegacyMessage(next, true);
+	const updated = bundleToLegacyMessage(fromRows(next), true);
 	const session = await InlangV3Project.open({
 		settings: { baseLocale: "en", locales: ["en"], modules: [] },
 		messages: [original],
@@ -55,7 +56,7 @@ test("text edits preserve currency options across SDK storage and export", async
 
 test("plural variant edits preserve the plural declaration and number sign", async () => {
 	const original = await imported("{count, plural, one {# item} other {# items}}");
-	const bundle = legacyMessageToBundle(original);
+	const bundle = toRows(legacyMessageToBundle(original));
 	const variant = bundle.messages[0].variants[0];
 	const next = applyEditorChanges(bundle, [
 		{
@@ -71,7 +72,7 @@ test("plural variant edits preserve the plural declaration and number sign", asy
 		},
 	]);
 	expect(next.declarations).toEqual(bundle.declarations);
-	const exported = await exportWithPlugin(icu, [bundleToLegacyMessage(next, true)], "en");
+	const exported = await exportWithPlugin(icu, [bundleToLegacyMessage(fromRows(next), true)], "en");
 	expect(JSON.parse(exported.content).price).toContain("one {# product}");
 });
 
@@ -92,8 +93,8 @@ test("locale imports preserve other locale selectors and declarations", async ()
 });
 
 test("selector removal is applied as a single valid batch", async () => {
-	const bundle = legacyMessageToBundle(
-		await imported("{gender, select, female {She} other {They}}"),
+	const bundle = toRows(
+		legacyMessageToBundle(await imported("{gender, select, female {She} other {They}}")),
 	);
 	const message = bundle.messages[0];
 	const next = applyEditorChanges(bundle, [
@@ -105,14 +106,14 @@ test("selector removal is applied as a single valid batch", async () => {
 		{
 			entity: "message",
 			entityId: message.id,
-			newData: { id: message.id, bundleId: bundle.id, locale: message.locale, selectors: [] },
+			newData: { id: message.id, bundle_id: bundle.id, locale: message.locale, selectors: [] },
 		},
 	]);
 	expect(next.messages[0].selectors).toEqual([]);
 });
 
 test("deleting a referenced declaration cannot save a broken bundle", async () => {
-	const bundle = legacyMessageToBundle(await imported("Total {amount, number}"));
+	const bundle = toRows(legacyMessageToBundle(await imported("Total {amount, number}")));
 	expect(() =>
 		applyEditorChanges(bundle, [
 			{ entity: "bundle", entityId: bundle.id, newData: { id: bundle.id, declarations: [] } },
@@ -121,7 +122,7 @@ test("deleting a referenced declaration cannot save a broken bundle", async () =
 });
 
 test("typing a new placeholder declares it in the same edit", async () => {
-	const bundle = legacyMessageToBundle(await imported("Hello"));
+	const bundle = toRows(legacyMessageToBundle(await imported("Hello")));
 	const variant = bundle.messages[0].variants[0];
 	const next = applyEditorChanges(bundle, [
 		{
@@ -143,4 +144,21 @@ test("a locale can replace its own declaration without changing another locale",
 	expect(merged.nativeBundle?.declarations).toContainEqual(
 		expect.objectContaining({ name: "countPlural", type: "local-variable" }),
 	);
+});
+
+test("saveGroups merges typing and saves a change of the forms on its own", () => {
+	const typing = (text: string) => ({ text, fromPatternEditor: true });
+	const add = { text: "add 0", fromPatternEditor: false };
+	const remove = { text: "delete one", fromPatternEditor: false };
+	expect(
+		saveGroups([typing("a"), typing("ab"), add, typing("x"), typing("xy"), remove, add]).map(
+			(group) => [group.structural, group.edits.map((edit) => edit.text)],
+		),
+	).toEqual([
+		[false, ["a", "ab"]],
+		[true, ["add 0"]],
+		[false, ["x", "xy"]],
+		[true, ["delete one"]],
+		[true, ["add 0"]],
+	]);
 });

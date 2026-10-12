@@ -16,6 +16,7 @@ import Drawer from "../../compontents/drawer/Drawer";
 import MessageVariantItem from "./MessageVariantItem";
 import { showMachineTranslationContact } from "../../compontents/machineTranslation/MachineTranslationContact";
 import InlangEditor from "./InlangEditor";
+import SelectorDrawer from "./SelectorDrawer";
 // import ReactQuill from 'react-quill';
 
 type TranslationKeyListItemProps = {
@@ -74,6 +75,9 @@ function TranslationKeyListItem({
 
 	// const [history, setHistory] = useState<undefined | VersionEntry[]>(undefined);
 	const [messageIdToDelete, setMessageIdToDelete] = useState<undefined | string>(undefined);
+	const [selectorsOpen, setSelectorsOpen] = useState(false);
+	// a form the "Plural & select" drawer just added: the editor selects and focuses it
+	const [addedForm, setAddedForm] = useState<{ locale: string; variantId: string }>();
 	const [keyToDeleteReferences, setKeyToDeleteReferences] = useState<undefined | number>(undefined);
 
 	const [message, setMessage] = useState(localizedLabelManager.messageStore.getMessage(messageId)!);
@@ -105,6 +109,18 @@ function TranslationKeyListItem({
 	}, [messageIdToDelete]);
 
 	const refLanguage = messageStore.getRefLanugage();
+
+	/**
+	 * Typing is one undo step per pause. A change of the message's forms (a form added or deleted, a
+	 * selector, an exact number) is an undo step of its own, apart from the typing before and after it.
+	 */
+	const saveMessage = async (updated: typeof message, options: { undoStep?: boolean } = {}) => {
+		if (options.undoStep) await localizedLabelManager.commitUndo();
+		await localizedLabelManager.updateMessage(updated, {});
+		if (options.undoStep) await localizedLabelManager.commitUndo();
+		else localizedLabelManager.commitUndoWhenIdle();
+		setMessage(updated);
+	};
 
 	// reference language first, then the Setup order (the same order in every view)
 	const languages = messageStore.getOrderedLanguages();
@@ -166,6 +182,22 @@ function TranslationKeyListItem({
             </div> */}
 							<div
 								className="layerIcon iconWrapper button"
+								role="button"
+								tabIndex={0}
+								aria-label="Plural and select"
+								data-tooltip-content="Plural & select"
+								onClick={() => setSelectorsOpen(true)}
+								onKeyDown={(event) => {
+									if (event.key === "Enter" || event.key === " ") {
+										event.preventDefault();
+										setSelectorsOpen(true);
+									}
+								}}
+							>
+								<span className="svg-container plural-svg" />
+							</div>
+							<div
+								className="layerIcon iconWrapper button"
 								data-tooltip-content="Delete this Message"
 								onClick={() => {
 									setMessageIdToDelete(message.id);
@@ -184,12 +216,9 @@ function TranslationKeyListItem({
 					message={message}
 					locales={languages}
 					baseLocale={refLanguage!}
-					onSave={async (updated) => {
-						await localizedLabelManager.updateMessage(updated, {});
-						localizedLabelManager.commitUndoWhenIdle();
-						setMessage(updated);
-					}}
+					onSave={saveMessage}
 					onTranslate={async () => showMachineTranslationContact()}
+					focusForm={addedForm}
 				/>
 			) : (
 				languages.map((language) => (
@@ -218,6 +247,15 @@ function TranslationKeyListItem({
 						}}
 					/>
 				))
+			)}
+			{selectorsOpen && (
+				<SelectorDrawer
+					message={message}
+					baseLocale={refLanguage!}
+					onSave={(updated) => saveMessage(updated, { undoStep: true })}
+					onClose={() => setSelectorsOpen(false)}
+					onFormAdded={(locale, variantId) => setAddedForm({ locale, variantId })}
+				/>
 			)}
 			<Drawer
 				position="top"

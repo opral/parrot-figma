@@ -1,0 +1,199 @@
+/* "Plural & select" drawer of a message: Figma-native small form (labels left, 24px controls) */
+.selector-drawer-body {
+	min-width: 260px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.selector-drawer-body p {
+	margin: 0;
+}
+
+.selector-drawer-body [role="alert"] {
+	color: var(--figma-color-text-danger);
+}
+
+.selector-drawer-body .selector-drawer-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.selector-drawer-body .selector-drawer-item {
+	margin: 0;
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 4px 8px;
+	min-height: 24px;
+}
+
+.selector-drawer-variable {
+	font-weight: 500;
+	color: var(--figma-color-text);
+}
+
+.selector-drawer-kind {
+	padding: 0 4px;
+	border-radius: 3px;
+	font-size: 10px;
+	line-height: 16px;
+	background: var(--figma-color-bg-tertiary);
+}
+
+.selector-drawer-remove {
+	margin-left: auto;
+}
+
+.selector-drawer-action {
+	flex: none;
+	height: 24px;
+	padding: 0 8px;
+	border: none;
+	border-radius: 5px;
+	background: transparent;
+	color: var(--figma-color-text-brand);
+	font: inherit;
+	cursor: default;
+}
+
+.selector-drawer-action:hover {
+	background: var(--figma-color-bg-hover);
+}
+
+.selector-drawer-action:focus-visible {
+	outline: 1px solid var(--figma-color-border-selected);
+	outline-offset: -1px;
+}
+
+.selector-drawer-action--danger {
+	color: var(--figma-color-text-secondary);
+}
+
+.selector-drawer-action--danger:hover {
+	color: var(--figma-color-text-danger);
+}
+
+.selector-drawer-confirm {
+	flex: 1 1 100%;
+	color: var(--figma-color-text-secondary);
+}
+
+.selector-drawer-add {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.selector-drawer-field {
+	display: grid;
+	grid-template-columns: 56px minmax(0, 1fr);
+	align-items: center;
+	gap: 8px;
+}
+
+.selector-drawer-kinds {
+	display: inline-flex;
+	justify-self: start;
+	border: 1px solid var(--figma-color-border);
+	border-radius: 5px;
+	overflow: hidden;
+}
+
+.selector-drawer-kinds button {
+	height: 22px;
+	padding: 0 12px;
+	border: none;
+	background: transparent;
+	color: var(--figma-color-text-secondary);
+	font: inherit;
+	cursor: default;
+}
+
+.selector-drawer-kinds button + button {
+	border-left: 1px solid var(--figma-color-border);
+}
+
+.selector-drawer-kinds button:hover {
+	background: var(--figma-color-bg-hover);
+}
+
+.selector-drawer-kinds button.selected {
+	background: var(--figma-color-bg-selected);
+	color: var(--figma-color-text-brand);
+}
+
+.selector-drawer-kinds button:focus-visible {
+	outline: 1px solid var(--figma-color-border-selected);
+	outline-offset: -1px;
+}
+
+/* exact numbers of a plural / values of a select: small chips with a delete button, then "+ Exact number" */
+.selector-drawer-values {
+	flex: 1 1 100%;
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 4px;
+	min-height: 24px;
+}
+
+.selector-drawer-value {
+	display: inline-flex;
+	align-items: center;
+	height: 20px;
+	padding-left: 6px;
+	border-radius: 3px;
+	background: var(--figma-color-bg-secondary);
+	color: var(--figma-color-text);
+	font-size: 11px;
+	font-variant-numeric: tabular-nums;
+}
+
+.selector-drawer-value-remove {
+	width: 18px;
+	height: 20px;
+	padding: 0;
+	border: none;
+	border-radius: 0 3px 3px 0;
+	background: transparent;
+	color: var(--figma-color-text-tertiary);
+	font: inherit;
+	line-height: 20px;
+	cursor: default;
+}
+
+.selector-drawer-value-remove:hover {
+	background: var(--figma-color-bg-hover);
+	color: var(--figma-color-text-danger);
+}
+
+.selector-drawer-value-remove:focus-visible {
+	outline: 1px solid var(--figma-color-border-selected);
+	outline-offset: -1px;
+}
+
+.selector-drawer-add-value {
+	height: 20px;
+	padding: 0 6px;
+}
+
+.selector-drawer-value-input {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.selector-drawer-value-input input {
+	width: 88px;
+	height: 20px;
+}
+
+.selector-drawer-action:disabled {
+	color: var(--figma-color-text-disabled);
+	background: transparent;
+}

@@ -1,5 +1,6 @@
 import type { ChangeEventDetail } from "@inlang/editor-component";
-import type { BundleNested, Variant } from "@inlang/sdk/browser";
+import type { VariantRow as Variant } from "@inlang/sdk/browser";
+import { fromRows, type BundleRows as BundleNested } from "../store/BundleRows";
 import { validateBundleNested } from "../store/FigmaBundleStore";
 
 /** The published plain-text editor omits annotations. Restore them by variable identity. */
@@ -53,7 +54,7 @@ export function applyEditorChanges(
 			if (!change.newData) next.messages = next.messages.filter((m) => m.id !== change.entityId);
 			else {
 				const data = change.newData as Omit<BundleNested["messages"][number], "variants">;
-				if (data.bundleId !== next.id || data.id !== change.entityId)
+				if (data.bundle_id !== next.id || data.id !== change.entityId)
 					throw new Error("Invalid message edit");
 				if (old) Object.assign(old, data, { variants: old.variants });
 				else next.messages.push({ ...data, variants: [] });
@@ -61,7 +62,7 @@ export function applyEditorChanges(
 		} else {
 			const data = change.newData as Variant | undefined;
 			const parent = next.messages.find((m) =>
-				data ? m.id === data.messageId : m.variants.some((v) => v.id === change.entityId),
+				data ? m.id === data.message_id : m.variants.some((v) => v.id === change.entityId),
 			);
 			if (!parent) throw new Error("Missing variant parent");
 			const old = parent.variants.find((v) => v.id === change.entityId);
@@ -88,6 +89,23 @@ export function applyEditorChanges(
 			}
 		}
 	}
-	validateBundleNested(next);
+	validateBundleNested(fromRows(next));
 	return next;
+}
+
+/**
+ * Splits edits that arrived while a save ran into saves: typing (edits of the pattern editors) is
+ * merged into one save, and a change of the forms (a form added or deleted) is saved on its own, so
+ * that it is an undo step of its own.
+ */
+export function saveGroups<T extends { fromPatternEditor: boolean }>(
+	edits: readonly T[],
+): { edits: T[]; structural: boolean }[] {
+	const groups: { edits: T[]; structural: boolean }[] = [];
+	for (const edit of edits) {
+		const last = groups[groups.length - 1];
+		if (edit.fromPatternEditor && last && !last.structural) last.edits.push(edit);
+		else groups.push({ edits: [edit], structural: !edit.fromPatternEditor });
+	}
+	return groups;
 }

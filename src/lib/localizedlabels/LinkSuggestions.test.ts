@@ -3,8 +3,10 @@ import {
 	buildMessageTextIndex,
 	findKeyConflicts,
 	isValidMessageKey,
+	isFlatText,
 	matchLayersToMessages,
 	messageText,
+	planLinks,
 	proposeKeys,
 	type LayerText,
 } from "./LinkSuggestions";
@@ -139,5 +141,104 @@ describe("findKeyConflicts", () => {
 				{ key: "b", characters: "Cancel" },
 			]),
 		).toEqual([false, false, true, false]);
+	});
+});
+
+describe("planLinks", () => {
+	const request = (
+		nodeId: string,
+		messageName: string,
+		layerHtml: string,
+		characters = layerHtml,
+	) => ({
+		nodeId,
+		messageName,
+		language: "en",
+		layerHtml,
+		characters,
+	});
+	const byName = (list: ReturnType<typeof message>[]) => (name: string) =>
+		list.find((m) => m.id === name) as any;
+
+	it("keeps the layer's line breaks and bold and puts them into a flat message", () => {
+		const plans = planLinks(
+			[
+				request("1", "welcome", "Welcome\nback"),
+				request("2", "pay", "Pay <strong>now</strong>", "Pay now"),
+			],
+			byName([
+				message("welcome", { en: text("Welcome back") }),
+				message("pay", { en: text("Pay now") }),
+			]),
+		);
+		expect(plans.map((p) => [p.nodeId, p.keepText, p.updateMessage])).toEqual([
+			["1", true, true],
+			["2", true, true],
+		]);
+	});
+
+	it("does not rewrite a message that has formatting of its own, is used, or is shown exactly", () => {
+		const plans = planLinks(
+			[
+				request("1", "welcome", "Welcome back"),
+				request("2", "used", "Used\ntext"),
+				request("3", "hello", "Hello\nworld"),
+				request("4", "hello", "Hello world"),
+			],
+			byName([
+				message("welcome", { en: text("Welcome<br>back") }),
+				message("used", { en: text("Used text") }),
+				message("hello", { en: text("Hello world") }),
+			]),
+			new Set(["used"]),
+		);
+		expect(plans.map((p) => [p.nodeId, p.keepText, p.updateMessage])).toEqual([
+			["1", true, false],
+			["2", true, false],
+			["3", true, false],
+			["4", true, false],
+		]);
+	});
+
+	it("rewrites a message once per batch and only from the first layer", () => {
+		const plans = planLinks(
+			[
+				request("1", "hello", "Hello\nworld"),
+				request("2", "hello", "Hello <em>world</em>", "Hello world"),
+			],
+			byName([message("hello", { en: text("Hello world") })]),
+		);
+		expect(plans.map((p) => p.updateMessage)).toEqual([true, false]);
+		expect(plans.every((p) => p.keepText)).toBe(true);
+	});
+
+	it("keeps layers that create a message or share the one created", () => {
+		const plans = planLinks(
+			[request("1", "new.key", "New"), request("2", "new.key", "New\n")],
+			() => undefined,
+		);
+		expect(plans.map((p) => [p.keepText, p.updateMessage])).toEqual([
+			[true, false],
+			[true, false],
+		]);
+	});
+
+	it("shows the message's text on a layer linked to a message with other words", () => {
+		const [plan] = planLinks(
+			[request("1", "title", "Sign in")],
+			byName([message("title", { en: text("Welcome") })]),
+		);
+		expect(plan.keepText).toBe(false);
+	});
+});
+
+describe("isFlatText", () => {
+	it("is text without markup, line breaks or repeated spaces", () => {
+		expect(isFlatText("Tom &amp; Jerry")).toBe(true);
+		expect(isFlatText("Two\nlines")).toBe(false);
+		expect(isFlatText("Two  spaces")).toBe(false);
+		expect(isFlatText("<strong>Bold</strong>")).toBe(false);
+		// a non-breaking space is deliberate (French "Bonjour !"): a layer's plain space would lose it
+		expect(isFlatText("Bonjour&nbsp;!")).toBe(false);
 	});
 });

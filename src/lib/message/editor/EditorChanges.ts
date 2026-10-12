@@ -2,6 +2,13 @@ import type { ChangeEventDetail } from "@inlang/editor-component";
 import type { VariantRow as Variant } from "@inlang/sdk/browser";
 import { fromRows, type BundleRows as BundleNested } from "../store/BundleRows";
 import { validateBundleNested } from "../store/FigmaBundleStore";
+import type { Message } from "../LegacyMessage";
+import {
+	bundleToLegacyMessage,
+	legacyMessageToBundle,
+} from "../store/LegacyMessageBundleConverter";
+import { draftMessages } from "./DraftMessages";
+import { fromEditorBundle, toEditorBundle } from "./HtmlText";
 
 /** The published plain-text editor omits annotations. Restore them by variable identity. */
 export function preservePatternMetadata(
@@ -94,18 +101,48 @@ export function applyEditorChanges(
 }
 
 /**
- * Splits edits that arrived while a save ran into saves: typing (edits of the pattern editors) is
- * merged into one save, and a change of the forms (a form added or deleted) is saved on its own, so
- * that it is an undo step of its own.
+ * Applies edits of the message editor to a saved message - the message with every edit saved or queued
+ * before them (e.g. a change of the "Plural & select" drawer), not the message the editor showed when
+ * the edit was made.
+ * - `fromPatternEditor`: the edits are typing. The pattern editor only knows the text: the variant keeps
+ *   its own matches, and text of a form that an earlier edit deleted is dropped with the form.
+ * - languages without a message yet get one (the editor shows a draft row for them).
+ * @returns the saved message and the editor's view of it
  */
-export function saveGroups<T extends { fromPatternEditor: boolean }>(
-	edits: readonly T[],
-): { edits: T[]; structural: boolean }[] {
-	const groups: { edits: T[]; structural: boolean }[] = [];
-	for (const edit of edits) {
-		const last = groups[groups.length - 1];
-		if (edit.fromPatternEditor && last && !last.structural) last.edits.push(edit);
-		else groups.push({ edits: [edit], structural: !edit.fromPatternEditor });
+export function applyEditorEdit(
+	saved: Message,
+	changes: ChangeEventDetail[],
+	options: { fromPatternEditor: boolean; locales: string[]; baseLocale: string },
+): { message: Message; editorBundle: BundleNested } {
+	const storedBundle = legacyMessageToBundle(saved);
+	const editor = toEditorBundle(storedBundle);
+	const previous = structuredClone(editor.bundle);
+	const drafts = draftMessages(previous, options.locales, options.baseLocale);
+	const variants = new Map(
+		[...previous.messages, ...drafts].flatMap((m) => m.variants).map((v) => [v.id, v]),
+	);
+	const edits = changes.flatMap((change) => {
+		if (!options.fromPatternEditor) return [change];
+		const variant = variants.get(change.entityId);
+		if (!variant) return [];
+		const edited = change.newData as Variant | undefined;
+		return edited ? [{ ...change, newData: { ...variant, pattern: edited.pattern } }] : [change];
+	});
+	for (const draft of drafts) {
+		if (
+			edits.some(
+				(change) =>
+					change.entityId === draft.id ||
+					(change.newData as Variant | undefined)?.message_id === draft.id ||
+					draft.variants.some((v) => v.id === change.entityId),
+			)
+		) {
+			previous.messages.push(structuredClone(draft));
+		}
 	}
-	return groups;
+	const next = applyEditorChanges(previous, edits);
+	return {
+		message: bundleToLegacyMessage(fromEditorBundle(next, editor.rich, storedBundle), true),
+		editorBundle: next,
+	};
 }

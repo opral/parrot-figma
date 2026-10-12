@@ -1,6 +1,10 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
-import { Locale, SelectableLocales, languageDisplayName } from "../../../lib/message/variants/Locale";
+import {
+	Locale,
+	SelectableLocales,
+	languageDisplayName,
+} from "../../../lib/message/variants/Locale";
 import "./LanguageSetup.css";
 import ReactSelect, { MultiValueRemoveProps, components } from "react-select";
 import OutsideClickHandler from "../outsideClickHandler/OutsideClickHandler";
@@ -194,28 +198,22 @@ export default function LanguageSetup({
 								</div>
 								<div className="language-summary">
 									{keySummary.matchingNames.size} messages
-									{keySummary.withMissingVariantsPerLanguage[
-										selectedBaseLanguage!.value as Locale
-									] &&
-										keySummary.withMissingVariantsPerLanguage[
-											selectedBaseLanguage!.value as Locale
-										]!.size > 0 && (
-											<div>
-												(
-												{
-													keySummary.withMissingVariantsPerLanguage[
-														selectedBaseLanguage!.value as Locale
-													]!.size
-												}{" "}
-												missing translations)
-											</div>
-										)}
+									{labelManager.messageStore.countMissing(selectedBaseLanguage!.value as Locale) >
+										0 && (
+										<div>
+											(
+											{labelManager.messageStore.countMissing(
+												selectedBaseLanguage!.value as Locale,
+											)}{" "}
+											missing translations)
+										</div>
+									)}
 								</div>
 							</div>
 						</div>
 					</div>
 				)}
-								<div className="setup-header needs-base-language">
+				<div className="setup-header needs-base-language">
 					<div className="setup-header-title">Target languages</div>
 					{!changeLanguages && (
 						<div
@@ -275,13 +273,7 @@ export default function LanguageSetup({
 												<div>{languageOption.label}</div>
 											</div>
 										</div>
-										<div className="language-summary">
-											{/* <div>
-                        {keySummary.withMissingVariantsPerLanguage[languageOption.value as Locale]
-                          ?.size ?? 0}{' '}
-                        Missing Translations
-                      </div> */}
-										</div>
+										<div className="language-summary" />
 									</React.Fragment>
 								))}
 							</div>

@@ -8,10 +8,16 @@ vi.mock("quill/blots/inline", () => ({ default: class FakeInline {} }));
 import { Locale } from "../message/variants/Locale";
 import LocalizedLabelManagerUI from "./LocalizedLabelManagerUI";
 import type { Message } from "../message/LegacyMessage";
+import { MessageLinkState } from "./LocalizedLabel";
 
 function createManager() {
 	const manager = Object.create(LocalizedLabelManagerUI.prototype) as any;
 	manager.frameOperations = new Map();
+	manager.undoStepDepth = 0;
+	manager.undoSteps = Promise.resolve();
+	manager.pendingUndoSteps = 0;
+	manager.idleCommitHolds = 0;
+	manager.linksLoaded = true;
 	manager.cachedFrames = {};
 	manager.cachedLocalisedLabels = {};
 	const localizedLabel = { nodeId: "label-1", rootFrameId: "frame-2" };
@@ -21,6 +27,11 @@ function createManager() {
 	manager.localizedLabelMangerSandbox = {
 		updateFrameProperties: vi.fn(async () => {}),
 		commitUndo: vi.fn(async () => {}),
+		// the layers as they are now: the cached ones
+		getByIds: vi.fn(async (ids: string[]) =>
+			ids.map((id) => manager.cachedLocalisedLabels[id]).filter(Boolean),
+		),
+		getWithMessages: vi.fn(async () => []),
 	};
 	return { manager, localizedLabel };
 }
@@ -182,6 +193,12 @@ describe("translation import", () => {
 			],
 		};
 		const manager = Object.create(LocalizedLabelManagerUI.prototype) as LocalizedLabelManagerUI;
+		Object.assign(manager, {
+			undoStepDepth: 0,
+			undoSteps: Promise.resolve(),
+			pendingUndoSteps: 0,
+			localizedLabelMangerSandbox: { commitUndo: vi.fn(async () => {}) },
+		});
 		manager.messageStore = {
 			getMessageByName: () => structuredClone(stored),
 			getMessage: () => structuredClone(stored),
@@ -224,6 +241,12 @@ describe("translation import", () => {
 			variants: [{ languageTag: "de", match: [], pattern: [{ type: "Text", value: "Kasse" }] }],
 		};
 		const manager = Object.create(LocalizedLabelManagerUI.prototype) as LocalizedLabelManagerUI;
+		Object.assign(manager, {
+			undoStepDepth: 0,
+			undoSteps: Promise.resolve(),
+			pendingUndoSteps: 0,
+			localizedLabelMangerSandbox: { commitUndo: vi.fn(async () => {}) },
+		});
 		manager.messageStore = {
 			getMessage: () => structuredClone(stored),
 			upsertMessage: vi.fn(async () => {}),
@@ -243,6 +266,12 @@ describe("translation import", () => {
 			variants: [],
 		};
 		const manager = Object.create(LocalizedLabelManagerUI.prototype) as LocalizedLabelManagerUI;
+		Object.assign(manager, {
+			undoStepDepth: 0,
+			undoSteps: Promise.resolve(),
+			pendingUndoSteps: 0,
+			localizedLabelMangerSandbox: { commitUndo: vi.fn(async () => {}) },
+		});
 		manager.messageStore = { getMessage: () => existing } as any;
 		manager.updateMessage = vi.fn();
 		await expect(
@@ -291,28 +320,63 @@ describe("LocalizedLabelManagerUI.commitUndoWhenIdle", () => {
 	});
 });
 
+/** A linkable layer as the Layers tab / a review drawer has it. */
+const linkable = (nodeId: string, rootFrameId: string, html = "Sign in", characters = html) => ({
+	nodeId,
+	rootFrameId,
+	rootFrameLanguage: Locale.EN,
+	language: Locale.EN,
+	messageLinkState: MessageLinkState.Unset,
+	matchingLabelLints: [],
+	characters,
+	currentPatternHTML: html,
+	parameterValues: {},
+});
+
+const plainMessage = (id: string, en: string): Message => ({
+	id,
+	selectors: [],
+	variants: [{ languageTag: "en", match: [], pattern: [{ type: "Text", value: en }] }],
+});
+
+/** A manager whose sandbox records the label updates of a bulk link. */
+function linkManager(labels: ReturnType<typeof linkable>[], messages: Message[]) {
+	const { manager } = createManager();
+	for (const label of labels) manager.cachedLocalisedLabels[label.nodeId] = label;
+	const stored = new Map(messages.map((message) => [message.id, message]));
+	manager.updateBatchDepth = 0;
+	manager.messageStore = {
+		getMessageByName: (name: string) => stored.get(name),
+		upsertMessage: vi.fn(async (message: Message) => {
+			stored.set(message.id, message);
+			return message;
+		}),
+	};
+	manager.refreshCachedLabel = vi.fn((label: any) => {
+		manager.cachedLocalisedLabels[label.nodeId] = label;
+		return true;
+	});
+	manager.toSandboxUpdate = vi.fn((nodeId: string, changes: any) => ({ nodeId, ...changes }));
+	manager.localizedLabelMangerSandbox.updateLabelsProperties = vi.fn(async (updates: any[]) =>
+		updates.map(({ nodeId }) => ({ label: manager.cachedLocalisedLabels[nodeId] })),
+	);
+	const written = () =>
+		manager.localizedLabelMangerSandbox.updateLabelsProperties.mock.calls.flatMap(
+			([updates]: any[]) => updates.map((update: any) => update.properties),
+		);
+	return { manager, stored, written };
+}
+
 describe("LocalizedLabelManagerUI.linkLabelsToMessages", () => {
 	test("links all layers with one sandbox call, one view refresh and one undo step", async () => {
-		const { manager } = createManager();
-		const label = (nodeId: string, rootFrameId: string) => ({
-			nodeId,
-			rootFrameId,
-			rootFrameLanguage: Locale.EN,
-			parameterValues: {},
-		});
-		const labels = [label("a", "frame-1"), label("b", "frame-1"), label("c", "frame-2")];
-		manager.updateBatchDepth = 0;
-		manager.messageStore = { getMessageByName: (name: string) => ({ id: name }) };
-		manager.toSandboxUpdate = vi.fn((nodeId: string) => ({ nodeId }));
-		manager.refreshCachedLabel = vi.fn(() => true);
-		manager.localizedLabelMangerSandbox.updateLabelsProperties = vi.fn(async (updates: any[]) =>
-			updates.map(({ nodeId }) => ({ label: { nodeId } })),
-		);
+		const labels = [linkable("a", "frame-1"), linkable("b", "frame-1"), linkable("c", "frame-2")];
+		const { manager } = linkManager(labels, [plainMessage("login.sign_in", "Sign in")]);
 
-		await manager.linkLabelsToMessages(
+		const result = await manager.linkLabelsToMessages(
 			labels.map((l) => ({ label: l, messageName: "login.sign_in" })),
 		);
 
+		expect(result).toEqual({ linked: 3, skipped: 0 });
 		expect(manager.localizedLabelMangerSandbox.updateLabelsProperties).toHaveBeenCalledTimes(1);
 		expect(
 			manager.localizedLabelMangerSandbox.updateLabelsProperties.mock.calls[0][0],
@@ -323,7 +387,8 @@ describe("LocalizedLabelManagerUI.linkLabelsToMessages", () => {
 	});
 
 	test("waits for a running operation of its frames and holds back the next one", async () => {
-		const { manager } = createManager();
+		const label = linkable("a", "frame-1");
+		const { manager } = linkManager([label], [plainMessage("login.cancel", "Sign in")]);
 		const order: string[] = [];
 		let finishSwitch!: () => void;
 		const switching = manager.runFrameOperation(
@@ -336,15 +401,10 @@ describe("LocalizedLabelManagerUI.linkLabelsToMessages", () => {
 					};
 				}),
 		);
-		manager.updateBatchDepth = 0;
-		manager.messageStore = { getMessageByName: (name: string) => ({ id: name }) };
-		manager.toSandboxUpdate = vi.fn((nodeId: string) => ({ nodeId }));
-		manager.refreshCachedLabel = vi.fn(() => true);
 		manager.localizedLabelMangerSandbox.updateLabelsProperties = vi.fn(async (updates: any[]) => {
 			order.push("link written");
 			return updates.map(({ nodeId }: any) => ({ label: { nodeId } }));
 		});
-		const label = { nodeId: "a", rootFrameId: "frame-1", rootFrameLanguage: Locale.EN };
 
 		const linking = manager.linkLabelsToMessages([{ label, messageName: "login.cancel" }]);
 		const nextSwitch = manager.runFrameOperation("frame-1", async () => {
@@ -356,5 +416,214 @@ describe("LocalizedLabelManagerUI.linkLabelsToMessages", () => {
 		finishSwitch();
 		await Promise.all([switching, linking, nextSwitch]);
 		expect(order).toEqual(["switch done", "link written", "next operation"]);
+	});
+
+	test("skips rows that went stale: deleted, linked meanwhile, or with another text", async () => {
+		const labels = [
+			linkable("kept", "frame-1"),
+			linkable("deleted", "frame-1"),
+			linkable("linked", "frame-1"),
+			linkable("edited", "frame-1"),
+		];
+		const { manager, written } = linkManager(labels, [plainMessage("login.sign_in", "Sign in")]);
+		// what happened on the canvas after the review was opened
+		delete manager.cachedLocalisedLabels.deleted;
+		manager.cachedLocalisedLabels.linked = {
+			...labels[2],
+			messageLinkState: MessageLinkState.Linked,
+			messageId: "other",
+		};
+		manager.cachedLocalisedLabels.edited = {
+			...labels[3],
+			characters: "Sign up",
+			currentPatternHTML: "Sign up",
+		};
+
+		const result = await manager.linkLabelsToMessages(
+			labels.map((label) => ({ label, messageName: "login.sign_in" })),
+		);
+
+		expect(result).toEqual({ linked: 1, skipped: 3 });
+		expect(written().map((update: any) => update.nodeId)).toEqual(["kept"]);
+	});
+
+	test("keeps the line breaks and bold of layers that match a message only loosely", async () => {
+		const labels = [
+			linkable("multiline", "frame-1", "Welcome\nback", "Welcome\nback"),
+			linkable("bold", "frame-1", "Pay <strong>now</strong>", "Pay now"),
+		];
+		const { manager, stored, written } = linkManager(labels, [
+			plainMessage("welcome", "Welcome back"),
+			plainMessage("pay", "Pay now"),
+		]);
+
+		await manager.linkLabelsToMessages([
+			{ label: labels[0], messageName: "welcome" },
+			{ label: labels[1], messageName: "pay" },
+		]);
+
+		// the layers are linked as they are: no text is written to the canvas
+		expect(written().map((update: any) => update.messageState.keepText)).toEqual([true, true]);
+		// the flat (imported) texts take the layers' line breaks and formatting, not the other way round
+		expect(stored.get("welcome")!.variants[0].pattern).toEqual([
+			{ type: "Text", value: "Welcome\nback" },
+		]);
+		expect(stored.get("pay")!.variants[0].pattern).toEqual([
+			{ type: "Text", value: "Pay <strong>now</strong>" },
+		]);
+	});
+
+	test("never collapses a message that has line breaks of its own, nor one other layers show", async () => {
+		const labels = [
+			linkable("flat", "frame-1", "Welcome back"),
+			linkable("used", "frame-1", "Pay\nnow", "Pay\nnow"),
+			linkable("exact", "frame-1", "Hello world"),
+			linkable("loose", "frame-1", "Hello\nworld", "Hello\nworld"),
+		];
+		const { manager, stored, written } = linkManager(labels, [
+			plainMessage("welcome", "Welcome\nback"),
+			plainMessage("pay", "Pay now"),
+			plainMessage("hello", "Hello world"),
+		]);
+		// another layer shows "pay" already
+		manager.localizedLabelMangerSandbox.getWithMessages = vi.fn(async (ids: string[]) =>
+			ids.includes("pay") ? [{ nodeId: "elsewhere", messageId: "pay" }] : [],
+		);
+
+		await manager.linkLabelsToMessages([
+			{ label: labels[0], messageName: "welcome" },
+			{ label: labels[1], messageName: "pay" },
+			{ label: labels[2], messageName: "hello" },
+			{ label: labels[3], messageName: "hello" },
+		]);
+
+		expect(manager.messageStore.upsertMessage).not.toHaveBeenCalled();
+		expect(stored.get("welcome")!.variants[0].pattern[0]).toEqual({
+			type: "Text",
+			value: "Welcome\nback",
+		});
+		// every layer keeps its own text
+		expect(written().every((update: any) => update.messageState.keepText)).toBe(true);
+	});
+
+	test("a layer linked to a message with another text shows the message's text", async () => {
+		const label = linkable("a", "frame-1", "Sign in");
+		const { manager, written } = linkManager([label], [plainMessage("login.title", "Welcome")]);
+		await manager.linkLabelsToMessages([{ label, messageName: "login.title" }]);
+		expect(written()[0].messageState.keepText).toBe(false);
+	});
+
+	test("is one undo step: typing before it is closed first, the idle commit waits for it", async () => {
+		vi.useFakeTimers();
+		try {
+			const label = linkable("a", "frame-1");
+			const { manager } = linkManager([label], [plainMessage("login.sign_in", "Sign in")]);
+			const commits: string[] = [];
+			manager.localizedLabelMangerSandbox.commitUndo = vi.fn(async () => {
+				commits.push("commit");
+			});
+			let finishWrite!: () => void;
+			manager.localizedLabelMangerSandbox.updateLabelsProperties = vi.fn(async (updates: any[]) => {
+				commits.push("write starts");
+				await new Promise<void>((resolve) => {
+					finishWrite = resolve;
+				});
+				commits.push("write ends");
+				return updates.map(({ nodeId }: any) => ({ label: { nodeId } }));
+			});
+			// typing whose undo step is not closed yet
+			manager.commitUndoWhenIdle(800);
+			const linking = manager.linkLabelsToMessages([{ label, messageName: "login.sign_in" }]);
+			await vi.advanceTimersByTimeAsync(0);
+			// the idle commit fires while the link is written: it must not split it
+			await vi.advanceTimersByTimeAsync(2000);
+			finishWrite();
+			await linking;
+			expect(commits).toEqual(["commit", "write starts", "write ends", "commit"]);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+});
+
+describe("LocalizedLabelManagerUI.toSandboxUpdate", () => {
+	test("a link that keeps the layer's text writes no characters", () => {
+		const { manager } = createManager();
+		manager.cachedLocalisedLabels.a = linkable("a", "frame-1", "Welcome\nback");
+		manager.messageStore = {
+			getMessage: () => plainMessage("welcome", "Welcome back"),
+			getRefLanugage: () => "en",
+		};
+		const update = manager.toSandboxUpdate("a", {
+			messageState: { type: "linked", messageId: "welcome", parameterValues: {}, keepText: true },
+			language: Locale.EN,
+		});
+		expect(update.characters).toBeUndefined();
+		expect(update.ops).toBeUndefined();
+		expect(update.messageState.messageId).toBe("welcome");
+	});
+});
+
+describe("LocalizedLabelManagerUI bulk language switch", () => {
+	test("the idle commit of typing cannot split a switch of several frames", async () => {
+		vi.useFakeTimers();
+		try {
+			const { manager } = createManager();
+			const commits: string[] = [];
+			manager.localizedLabelMangerSandbox.commitUndo = vi.fn(async () => {
+				commits.push("commit");
+			});
+			manager.setLabelLanguage = vi.fn(async () => {
+				commits.push("label");
+				await new Promise((resolve) => setTimeout(resolve, 600));
+			});
+			manager.commitUndoWhenIdle(800);
+			const switching = manager.setFramesLanguage(["f1", "f2", "f3"], Locale.DE, {} as any);
+			await vi.advanceTimersByTimeAsync(3000);
+			await switching;
+			expect(commits).toEqual(["commit", "label", "label", "label", "commit"]);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+});
+
+describe("LocalizedLabelManagerUI undo steps of bulk actions", () => {
+	test("two bulk actions started together are two undo steps, other commits wait for them", async () => {
+		const label = linkable("a", "frame-1");
+		const { manager } = linkManager([label], [plainMessage("login.sign_in", "Sign in")]);
+		const events: string[] = [];
+		manager.localizedLabelMangerSandbox.commitUndo = vi.fn(async () => {
+			events.push("commit");
+		});
+		manager.localizedLabelMangerSandbox.updateLabelsProperties = vi.fn(async (updates: any[]) => {
+			events.push("link");
+			await new Promise((resolve) => setTimeout(resolve, 20));
+			return updates.map(({ nodeId }: any) => ({ label: { nodeId } }));
+		});
+		manager.setLabelLanguage = vi.fn(async () => {
+			events.push("switch");
+		});
+		const linking = manager.linkLabelsToMessages([{ label, messageName: "login.sign_in" }]);
+		const switching = manager.setFramesLanguage(["frame-2"], Locale.DE, {} as any);
+		// a single change (e.g. a form added in the drawer) during the link: part of its step
+		await new Promise((resolve) => setTimeout(resolve, 5));
+		await manager.commitUndo();
+		await Promise.all([linking, switching]);
+		expect(events).toEqual(["link", "commit", "switch", "commit"]);
+	});
+
+	test("does not rewrite a message while not every page was read (other layers may show it)", async () => {
+		const label = linkable("multiline", "frame-1", "Welcome\nback", "Welcome\nback");
+		const { manager, stored, written } = linkManager(
+			[label],
+			[plainMessage("welcome", "Welcome back")],
+		);
+		manager.linksLoaded = false;
+		await manager.linkLabelsToMessages([{ label, messageName: "welcome" }]);
+		expect(stored.get("welcome")!.variants[0].pattern).toEqual([
+			{ type: "Text", value: "Welcome back" },
+		]);
+		expect(written()[0].messageState.keepText).toBe(true);
 	});
 });

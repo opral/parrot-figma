@@ -749,6 +749,21 @@ export default class LocalizedLabelManager {
 		return lokalizedLabel;
 	}
 
+	/** The labels of these nodes as they are now - nodes that are gone or no labels are left out. */
+	async getByIds(textNodeIds: string[]) {
+		const labels = [] as LocalizedLabel[];
+		for (const textNodeId of textNodeIds) {
+			const node = figma.getNodeById(textNodeId);
+			// deleted, or removed from the document and only kept for undo
+			if (node?.type !== "TEXT" || node.removed) continue;
+			const label = this.toLocalizedLabelOrUndefined(node);
+			if (!label) continue;
+			if (!this.virtualTree.hasNode(node.id)) this.virtualTree.addNode(node, node.id);
+			labels.push(label);
+		}
+		return labels;
+	}
+
 	async getWithMessage(messageId: string) {
 		return this.getWithMessages([messageId]);
 	}

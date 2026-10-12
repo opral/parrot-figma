@@ -16,6 +16,7 @@ import { useTransferFormat } from "../transfer/useTransferFormat";
 import {
 	buildMessageTextIndex,
 	matchLayersToMessages,
+	skippedNotice,
 } from "../../../lib/localizedlabels/LinkSuggestions";
 import LinkReviewDrawer, { LinkReviewRow } from "../localizedlabelslist/LinkReviewDrawer";
 import { capture } from "../../../lib/telemetry/Telemetry";
@@ -53,15 +54,15 @@ export default function ImportView({
 		| {
 				language: Locale;
 				newMessages: Message[];
-				newVariants: { message: Message; variant: Variant }[];
-				updatedVariants: { message: Message; variant: Variant }[];
+				newTranslations: Message[];
+				changedTranslations: Message[];
 		  }
 		| undefined
 	>(undefined);
 
 	const [keySummary, setKeySummary] = useState(labelManager.messageStore.getAllMessages() ?? []);
 
-	// layers on the current page with exactly the text of a message - offered for linking
+	// layers on the current page with the text of a message (whitespace aside) - offered for linking
 	const [linkReview, setLinkReview] = useState<
 		{ title: string; description: string; rows: LinkReviewRow[] } | undefined
 	>();
@@ -83,7 +84,8 @@ export default function ImportView({
 			const layers = labels.map((label) => ({
 				nodeId: label.nodeId,
 				characters: label.characters,
-				language: label.language,
+				// the language the layer is linked in (as `linkLabelsToMessages` does)
+				language: label.rootFrameLanguage ?? label.language,
 				layerName: label.name,
 				frameName: label.rootFrameName,
 			}));
@@ -115,8 +117,8 @@ export default function ImportView({
 					: "Link layers to existing messages?",
 				description:
 					rows.length === 1
-						? "This unlinked text layer on this page has exactly the text of a message."
-						: `These ${rows.length} unlinked text layers on this page have exactly the text of a message. Where several messages have the same text, choose one.`,
+						? "This unlinked text layer on this page shows the text of a message. It keeps its line breaks and formatting."
+						: `These ${rows.length} unlinked text layers on this page show the text of a message. They keep their line breaks and formatting. Where several messages have the same text, choose one.`,
 				rows,
 			});
 		} catch (error) {
@@ -247,9 +249,8 @@ export default function ImportView({
 			<div className="transfer-languages">
 				{languages.map((language) => {
 					// messages that have text in this language, out of all messages (the number Setup shows)
-					const count = keySummary.filter((message) =>
-						message.variants.some((variant) => variant.languageTag === language),
-					).length;
+					// messages with text in this language (an empty translation is missing, as in Messages)
+					const count = labelManager.messageStore.countTranslated(language);
 					return (
 						<div className="transfer-language-row" key={language}>
 							<div>
@@ -300,12 +301,10 @@ export default function ImportView({
 				onCancel={() => setLinkReview(undefined)}
 				onConfirm={async (links) => {
 					try {
-						await labelManager.linkLabelsToMessages(links, "auto_link");
+						const { linked, skipped } = await labelManager.linkLabelsToMessages(links, "auto_link");
 						setLinkReview(undefined);
 						setImportNotice(
-							links.length === 1
-								? "Linked 1 layer to its message."
-								: `Linked ${links.length} layers to their messages.`,
+							`${linked === 1 ? "Linked 1 layer to its message." : `Linked ${linked} layers to their messages.`}${skippedNotice(skipped)}`,
 						);
 					} catch (error) {
 						setImportError(
@@ -383,9 +382,9 @@ export default function ImportView({
 								<dt>New messages</dt>
 								<dd>{importKeysByState.newMessages.length}</dd>
 								<dt>New translations</dt>
-								<dd>{importKeysByState.newVariants.length}</dd>
+								<dd>{importKeysByState.newTranslations.length}</dd>
 								<dt>Changed translations</dt>
-								<dd>{importKeysByState.updatedVariants.length}</dd>
+								<dd>{importKeysByState.changedTranslations.length}</dd>
 							</dl>
 							<p>Existing translations in this language are replaced where the keys match.</p>
 							<ul className="drawer-keys">

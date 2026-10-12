@@ -11,7 +11,7 @@ const RESULT_VISIBLE_MS = 3000;
 type Offer =
 	| { type: "offer"; messageName: string; text: string; labels: UILocalizedLabel[] }
 	| { type: "linking"; messageName: string; count: number }
-	| { type: "done"; messageName: string; count: number };
+	| { type: "done"; messageName: string; count: number; skipped: number };
 
 function shorten(text: string) {
 	const firstLine = text.split(/\r?\n|\u2028/).find((line) => line.trim() !== "") ?? "";
@@ -67,8 +67,12 @@ export default function LinkIdenticalTextsToast({
 		clearTimeout(hideTimer.current);
 		setOffer({ type: "linking", messageName, count: labels.length });
 		try {
-			await localizedLabelManager.linkLabelsToMessage(labels, messageName);
-			setOffer({ type: "done", messageName, count: labels.length });
+			// layers changed or linked since the offer are skipped
+			const { linked, skipped } = await localizedLabelManager.linkLabelsToMessage(
+				labels,
+				messageName,
+			);
+			setOffer({ type: "done", messageName, count: linked, skipped });
 			hideAfter(RESULT_VISIBLE_MS);
 		} catch (e: any) {
 			setOffer(undefined);
@@ -100,6 +104,8 @@ export default function LinkIdenticalTextsToast({
 					<>
 						Linked {layers(offer.count)} to{" "}
 						<span className="link-identical-toast-key">{offer.messageName}</span>
+						{offer.skipped > 0 &&
+							` - ${layers(offer.skipped)} changed since and ${offer.skipped === 1 ? "was" : "were"} skipped`}
 					</>
 				)}
 			</span>

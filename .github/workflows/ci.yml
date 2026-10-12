@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -36,5 +40,10 @@ jobs:
       - name: Test
         run: pnpm test
 
-      - name: Build
+      - name: Build UI
         run: pnpm build
+
+      - name: Build plugin sandbox
+        run: pnpm exec vite build --config vite.config.plugin.ts
+        env:
+          VITE_CUSTOM_URL: http://localhost:5180

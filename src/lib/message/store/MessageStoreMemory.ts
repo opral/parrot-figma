@@ -26,6 +26,8 @@ export type SearchQuery = {
 	missingTranslation?: boolean | undefined;
 	/** with missingTranslation: only this language counts - otherwise any configured language */
 	missingTranslationLanguage?: Locale | undefined;
+	/** translations whose variables, markup or forms do not match the reference language */
+	translationProblems?: boolean | undefined;
 	name?: string | undefined;
 	nameAtEnd?: boolean | undefined;
 	text?: string | undefined;
@@ -40,6 +42,7 @@ export type SearchResult = {
 	withMissingVariantsPerLanguage: {
 		[language in Locale]?: Set<string>;
 	};
+	withProblems: Set<string>;
 	withMissingReview: Set<string>;
 	matchingNames: Set<string>;
 	referencedInFrame: Set<string>;
@@ -222,6 +225,10 @@ export default class MessageStoreMemory extends EventTarget {
 			searchString += `missing_translation:${searchQuery.missingTranslation ? "true" : "false"} `;
 		}
 
+		if (searchQuery.translationProblems !== undefined) {
+			searchString += `problems:${searchQuery.translationProblems ? "true" : "false"} `;
+		}
+
 		if (searchQuery.exactText === true) {
 			searchString += "exact_text:true ";
 		}
@@ -288,6 +295,8 @@ export default class MessageStoreMemory extends EventTarget {
 					if (filterParts[1] !== "true" && filterParts[1] !== "false") {
 						searchQueryObj.missingTranslationLanguage = filterParts[1] as Locale;
 					}
+				} else if (filterParts[0] === "problems" && filterParts.length > 1) {
+					searchQueryObj.translationProblems = filterParts[1] !== "false";
 				} else if (filterParts[0] === "unverified" && filterParts.length > 1) {
 					searchQueryObj.unverified = filterParts[1] === "true";
 				} else if (filterParts[0] === "exact_text" && filterParts.length > 1) {
@@ -365,6 +374,7 @@ export default class MessageStoreMemory extends EventTarget {
 			withMissingVariantsPerLanguage: {} as {
 				[language in Locale]?: Set<string>;
 			},
+			withProblems: new Set<string>(),
 			withMissingReview: new Set<string>(),
 			matchingNames: new Set<string>(),
 			referencedInFrame: new Set<string>(),
@@ -394,20 +404,17 @@ export default class MessageStoreMemory extends EventTarget {
 			return results;
 		}
 
-		const languagesThatMustBeTranslated =
+		// prepared by the translation checks: no message is checked here
+		const missing =
 			query.missingTranslation === undefined
-				? []
-				: query.missingTranslationLanguage
-					? [query.missingTranslationLanguage]
-					: this.getOrderedLanguages();
+				? undefined
+				: this.inlangProject.checks.missing(query.missingTranslationLanguage);
+		const problems =
+			query.translationProblems === undefined ? undefined : this.inlangProject.checks.problems();
 
 		for (const message of this.inlangProject!.getAllReadonly()) {
-			for (const language of languagesThatMustBeTranslated) {
-				if (!MessageStoreMemory.hasTranslation(message, language)) {
-					results.withMissingVariants.add(message.id);
-					break;
-				}
-			}
+			if (missing?.has(message.id)) results.withMissingVariants.add(message.id);
+			if (problems?.has(message.id)) results.withProblems.add(message.id);
 
 			if (query.text === undefined || query.text === "") {
 				results.matchingNames.add(message.id);
@@ -487,6 +494,9 @@ export default class MessageStoreMemory extends EventTarget {
 		results.withMissingVariants = new Set(
 			[...results.withMissingVariants].filter((x) => results.matchingNames.has(x)),
 		);
+		results.withProblems = new Set(
+			[...results.withProblems].filter((x) => results.matchingNames.has(x)),
+		);
 
 		if (query.missingTranslation === true) {
 			results.matchingNames = new Set(
@@ -495,6 +505,16 @@ export default class MessageStoreMemory extends EventTarget {
 		} else if (query.missingTranslation === false) {
 			results.matchingNames = new Set(
 				[...results.matchingNames].filter((x) => !results.withMissingVariants.has(x)),
+			);
+		}
+
+		if (query.translationProblems === true) {
+			results.matchingNames = new Set(
+				[...results.matchingNames].filter((x) => results.withProblems.has(x)),
+			);
+		} else if (query.translationProblems === false) {
+			results.matchingNames = new Set(
+				[...results.matchingNames].filter((x) => !results.withProblems.has(x)),
 			);
 		}
 
@@ -530,13 +550,19 @@ export default class MessageStoreMemory extends EventTarget {
 		return this.inlangProject?.getAllReadonly();
 	}
 
-	/** true if the message has a non-empty text in the language (in any of its variants) */
-	static hasTranslation(message: Message, language: Locale) {
-		return message.variants.some(
-			(variant) =>
-				variant.languageTag === language &&
-				variant.pattern.some((part) => part.type !== "Text" || part.value.trim() !== ""),
-		);
+	/** Messages without text in the language, or in any language (Inlang's translation checks). */
+	countMissing(language?: Locale): number {
+		return this.inlangProject?.checks.missing(language).size ?? 0;
+	}
+
+	/** Messages whose variables, markup or forms do not match the reference language. */
+	countProblems(language?: Locale): number {
+		return this.inlangProject?.checks.problems(language).size ?? 0;
+	}
+
+	/** The translation checks of a message (Inlang `checkBundle` diagnostics), reference language first. */
+	getDiagnostics(messageId: string) {
+		return this.inlangProject?.checks.get(messageId) ?? [];
 	}
 
 	async createTag() {

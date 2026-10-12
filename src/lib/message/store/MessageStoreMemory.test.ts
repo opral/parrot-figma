@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import MessageStoreMemory from "./MessageStoreMemory";
+import { TranslationChecks } from "../checks/TranslationChecks";
+import { legacyMessageToBundle } from "./LegacyMessageBundleConverter";
+import type { Locale } from "../variants/Locale";
 
 describe("MessageStoreMemory.toQueryObject", () => {
 	it("keeps dots and dashes of a message name filter (show linked message)", () => {
@@ -100,11 +103,27 @@ describe("MessageStoreMemory missing translation filter", () => {
 			{ languageTag: "en", pattern: [{ type: "VariableReference", name: "count" }] },
 			{ languageTag: "de", pattern: [{ type: "VariableReference", name: "count" }] },
 		]),
+		message("typo_de", [
+			{
+				languageTag: "en",
+				pattern: [{ type: "VariableReference", name: "total" }, ...text(" left")],
+			},
+			{
+				languageTag: "de",
+				pattern: [{ type: "VariableReference", name: "totl" }, ...text(" übrig")],
+			},
+		]),
 	];
 	const store = () => {
 		const instance = Object.create(MessageStoreMemory.prototype) as MessageStoreMemory;
 		(instance as any).config = { refLanguage: "en", enabledLanguages: ["en", "de"] };
-		(instance as any).inlangProject = { getAllReadonly: () => messages };
+		(instance as any).inlangProject = {
+			getAllReadonly: () => messages,
+			checks: new TranslationChecks(
+				{ locales: ["en", "de"], referenceLocale: "en" },
+				messages.map(legacyMessageToBundle),
+			),
+		};
 		return instance;
 	};
 	const find = (search: string) => [
@@ -124,10 +143,26 @@ describe("MessageStoreMemory missing translation filter", () => {
 
 	it("checks every configured language for missing_translation:true", () => {
 		expect(find("missing_translation:true ")).toEqual(["no_de", "empty_de"]);
-		expect(find("missing_translation:false ")).toEqual(["complete", "variable_de"]);
+		expect(find("missing_translation:false ")).toEqual(["complete", "variable_de", "typo_de"]);
 	});
 
 	it("combines with the text search", () => {
 		expect(find("missing_translation:de bye")).toEqual(["no_de"]);
+	});
+
+	it("lists translations with problems and counts from the prepared checks", () => {
+		expect(find("problems:true ")).toEqual(["typo_de"]);
+		expect(
+			MessageStoreMemory.toSearchString(MessageStoreMemory.toQueryObject("problems:true x")),
+		).toBe("problems:true x");
+		const instance = store();
+		expect(instance.countMissing()).toBe(2);
+		expect(instance.countMissing("de" as Locale)).toBe(2);
+		expect(instance.countMissing("en" as Locale)).toBe(0);
+		expect(instance.countProblems()).toBe(1);
+		expect(instance.getDiagnostics("typo_de").map((d) => d.checkId)).toEqual([
+			"missing-variable",
+			"unknown-variable",
+		]);
 	});
 });

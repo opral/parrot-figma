@@ -3,11 +3,12 @@ import {
 	selectBundleNested,
 	type InlangPlugin,
 	type InlangProject,
-	type BundleNested,
 } from "@inlang/sdk/browser";
 import { openLix } from "@inlang/sdk/lix";
 import type { Message } from "../message/LegacyMessage";
 import { bundleToLegacyMessage } from "../message/store/LegacyMessageBundleConverter";
+import type { BundleNested } from "../message/store/FigmaBundleStore";
+import { fromRows } from "../message/store/BundleRows";
 
 import { pluginSettings } from "../transfer/TranslationFormats";
 
@@ -77,7 +78,9 @@ export async function importWithPlugin(args: {
 				},
 			],
 		});
-		let imported: BundleNested[] = await selectBundleNested(project.db).selectAll().execute();
+		let imported: BundleNested[] = (await selectBundleNested(project.db).selectAll().execute()).map(
+			fromRows,
+		);
 		if (args.plugin.key === APPLE_STRINGS_PLUGIN_KEY && !args.content.includes(ESCAPED_BACKSLASH))
 			imported = restoreEscapedBackslashes(imported);
 		// Catalogs can contain many languages. Only the row selected by the user is imported.

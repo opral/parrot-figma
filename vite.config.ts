@@ -46,7 +46,7 @@ export default defineConfig(({ mode }) => ({
   },
   server: {
     fs: {
-      allow: [path.resolve("."), path.resolve("../inlang")],
+      allow: [path.resolve(".")],
     },
     headers: {
       "Content-Security-Policy":
@@ -106,5 +106,7 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@ui": path.resolve("src/ui"),
     },
+    // the editor component and the inlang plugins depend on @inlang/sdk too: use one SDK instance
+    dedupe: ["@inlang/sdk"],
   },
 }));

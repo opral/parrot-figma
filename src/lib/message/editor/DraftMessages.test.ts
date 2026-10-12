@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import type { BundleNested } from "@inlang/sdk/browser";
+import type { BundleRows as BundleNested } from "../store/BundleRows";
 import { draftMessages } from "./DraftMessages";
 import { applyEditorChanges } from "./EditorChanges";
 
@@ -21,13 +21,13 @@ function bundle(selectors: BundleNested["messages"][number]["selectors"]): Bundl
 		messages: [
 			{
 				id: "items_en",
-				bundleId: "items",
+				bundle_id: "items",
 				locale: "en",
 				selectors,
 				variants: [
 					{
 						id: "items_en_1",
-						messageId: "items_en",
+						message_id: "items_en",
 						matches: selectors.map((s) => ({ type: "catchall-match", key: s.name })),
 						pattern: [{ type: "text", value: "items" }],
 					},
@@ -42,7 +42,7 @@ test("a language without text of a plain message gets one empty variant", () => 
 	expect(drafts).toHaveLength(1);
 	expect(drafts[0]).toMatchObject({ id: "items_de", locale: "de", selectors: [] });
 	expect(drafts[0].variants).toEqual([
-		{ id: "items_de_1", messageId: "items_de", matches: [], pattern: [] },
+		{ id: "items_de_1", message_id: "items_de", matches: [], pattern: [] },
 	]);
 });
 
@@ -60,7 +60,7 @@ test("a language without text of a plural message starts with the selectors and 
 			entityId: "form",
 			newData: {
 				id: "form",
-				messageId: "items_de",
+				message_id: "items_de",
 				matches: [{ type: "literal-match", key: "countPlural", value: "one" }],
 				pattern: [{ type: "text", value: "Artikel" }],
 			},

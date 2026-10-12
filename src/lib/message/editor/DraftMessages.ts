@@ -1,4 +1,4 @@
-import type { BundleNested } from "@inlang/sdk/browser";
+import type { BundleRows as BundleNested } from "../store/BundleRows";
 
 type EditorMessage = BundleNested["messages"][number];
 
@@ -20,11 +20,11 @@ export function draftMessages(
 			const id = `${bundle.id}_${locale}`;
 			return {
 				id,
-				bundleId: bundle.id,
+				bundle_id: bundle.id,
 				locale,
 				selectors: structuredClone(selectors),
 				variants:
-					selectors.length > 0 ? [] : [{ id: `${id}_1`, messageId: id, matches: [], pattern: [] }],
+					selectors.length > 0 ? [] : [{ id: `${id}_1`, message_id: id, matches: [], pattern: [] }],
 			};
 		});
 }

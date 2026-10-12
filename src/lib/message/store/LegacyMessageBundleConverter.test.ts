@@ -35,7 +35,7 @@ test("a message without Inlang metadata can still be edited after an import merg
 	expect(bundleToLegacyMessage(bundle).variants).toHaveLength(3);
 });
 
-test("a message with Inlang metadata must be edited in the Messages tab", () => {
+test("a message with Inlang metadata keeps it when only a text is edited outside the Messages tab", () => {
 	const plural = bundleToLegacyMessage({
 		id: "items",
 		declarations: [
@@ -72,5 +72,15 @@ test("a message with Inlang metadata must be edited in the Messages tab", () => 
 		...plural,
 		variants: [{ ...plural.variants[0], pattern: [{ type: "Text" as const, value: "x" }] }],
 	};
-	expect(() => legacyMessageToBundle(edited)).toThrow("Messages tab");
+	const saved = legacyMessageToBundle(edited);
+	expect(saved.declarations).toEqual(plural.nativeBundle!.declarations);
+	expect(saved.messages[0]!.selectors).toEqual(plural.nativeBundle!.messages[0]!.selectors);
+	expect(saved.messages[0]!.variants[0]!.pattern).toEqual([{ type: "text", value: "x" }]);
+
+	// a change of the forms still needs the Messages tab
+	const restructured = {
+		...plural,
+		variants: [{ ...plural.variants[0]!, match: ["one"] }],
+	};
+	expect(() => legacyMessageToBundle(restructured)).toThrow("Messages tab");
 });

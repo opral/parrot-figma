@@ -3,13 +3,12 @@ import { useEffect, useState } from "react";
 import Drawer from "../drawer/Drawer";
 import { capture } from "../../../lib/telemetry/Telemetry";
 import type FigmaUtil from "../../../shared/FigmaUtil";
-import { MACHINE_TRANSLATION_CONTACT } from "../../../lib/translationprovider/MachineTranslationContact";
+import { CLOUD_INTEREST_FORM_URL } from "../../views/cloud/cloudContent";
 
 const OPEN_EVENT = "parrot:machine-translation-contact";
 
-/** Opens the "Machine translation is available on request" dialog (mounted once in the app). */
+/** Opens the "Access to machine translations" dialog (mounted once in the app). */
 export function showMachineTranslationContact() {
-	capture("cloud:interest_button_click", { topic: "machine_translation" });
 	window.dispatchEvent(new CustomEvent(OPEN_EVENT));
 }
 
@@ -30,28 +29,19 @@ export default function MachineTranslationContact({ figmaRemote }: { figmaRemote
 				{ type: "secondary", text: "Close", key: "escape", callback: () => setShown(false) },
 				{
 					type: "primary",
-					text: "Send email",
+					text: "More info",
 					key: "enter",
 					callback: () => {
-						figmaRemote.openExternal(
-							`mailto:${MACHINE_TRANSLATION_CONTACT}?subject=${encodeURIComponent("Machine translation for Parrot")}`,
-						);
+						capture("cloud:interest_button_click", { topic: "machine_translation" });
+						figmaRemote.openExternal(CLOUD_INTEREST_FORM_URL);
 						setShown(false);
 					},
 				},
 			]}
 		>
-			<div className="drawer-header">Machine translation</div>
+			<div className="drawer-header">Access to machine translations</div>
 			<div className="drawer-body">
-				<p>
-					Parrot can fill in missing translations with machine translation. It is available on
-					request - send an email to{" "}
-					<span className="machine-translation-contact">{MACHINE_TRANSLATION_CONTACT}</span> and we
-					set it up for your team.
-				</p>
-				<p>
-					Until then, texts without a translation keep their current text when you switch a frame.
-				</p>
+				<p>Get access to cloud resources like machine translations.</p>
 			</div>
 		</Drawer>
 	);

@@ -1,4 +1,3 @@
-import Monitoring from "../monitoring/MonitoringProxy";
 
 export type TranslationCreditUsage = {
 	ownerId: string;
@@ -62,13 +61,12 @@ export default class ParrotApi {
 				const resultNoOkError = new Error(
 					`synchronizeCredits went wrong ${JSON.stringify(result)}`,
 				);
-				await Monitoring.instance?.sentryCaptureException(resultNoOkError, {});
 				throw resultNoOkError;
 			}
 
 			return await result.json();
 		} catch (e: any) {
-			await Monitoring.instance?.sentryCaptureException(e, {});
+			console.error(e);
 			throw e;
 		}
 	}

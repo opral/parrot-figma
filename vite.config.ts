@@ -36,7 +36,9 @@ const onConfigureServer = (server: ViteDevServer) => {
 };
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode, command }) => ({
+  // relative asset and worker URLs: the released UI can be hosted below a path (e.g. github.io/parrot/)
+  base: command === "build" ? "./" : "/",
   worker: {
     format: "es",
   },
@@ -46,7 +48,7 @@ export default defineConfig(({ mode }) => ({
   },
   server: {
     fs: {
-      allow: [path.resolve("."), path.resolve("../inlang")],
+      allow: [path.resolve(".")],
     },
     headers: {
       "Content-Security-Policy":
@@ -106,5 +108,7 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@ui": path.resolve("src/ui"),
     },
+    // the editor component and the inlang plugins depend on @inlang/sdk too: use one SDK instance
+    dedupe: ["@inlang/sdk"],
   },
 }));

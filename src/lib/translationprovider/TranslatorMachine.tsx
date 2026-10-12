@@ -5,7 +5,6 @@ import getKey from "./TranslationCredit";
 
 import { MachineTranslationUnavailableError } from "./MachineTranslationContact";
 import FeatureFlags from "../featureflags/FeatureFlags";
-import Monitoring from "../monitoring/MonitoringProxy";
 
 const translationsCreditUsageLocalStorageKey = "prrt_utc";
 const translationCreditsLocalStorageKey = "prrt_tc";
@@ -97,6 +96,8 @@ export class NoMoreTranslationsLeftError extends Error {
 		this.name = "NoMoreTranslationsLeftError";
 	}
 }
+
+const SYNC_CREDITS = false;
 
 export default class TranslatorMachine {
 	public proxyClassName = "TranslatorMachine";
@@ -203,6 +204,9 @@ export default class TranslatorMachine {
 		if (!init) {
 			await this.ensureStateLoaded;
 		}
+		// The credit service of the old Parrot backend is gone and machine translation is part of Parrot
+		// Cloud now: nothing is sent (it sent the Figma user id to api.parrot.global).
+		if (!SYNC_CREDITS) return;
 
 		const usageToSend = [];
 		const currentFigmaUserId = figma.currentUser!.id!;
@@ -254,7 +258,8 @@ export default class TranslatorMachine {
 
 			this.fireCreditsUpdateEvent(false);
 		} catch (e) {
-			// ok we ignore errors here for now - only send them to sentry?
+			// the usage is sent again with the next sync
+			console.error(e);
 			for (const failedToSend of usageToSend) {
 				failedToSend.send = false;
 			}

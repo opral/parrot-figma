@@ -2,21 +2,34 @@ export type TextFillRange = {
 	start: number;
 	end: number;
 	fills: Paint[];
+	/** the color style of the range ("" = none): restoring raw fills would detach it */
+	fillStyleId?: string;
 };
 
-export function restoreTextFillRanges(
+export async function restoreTextFillRanges(
 	ranges: readonly TextFillRange[],
 	sourceTextLength: number,
 	targetTextLength: number,
-	setRangeFills: (start: number, end: number, fills: Paint[]) => void,
+	setRangeFills: (start: number, end: number, fills: Paint[], range: TextFillRange) => unknown,
 ) {
 	for (const range of ranges) {
 		const end =
 			range.end === sourceTextLength ? targetTextLength : Math.min(range.end, targetTextLength);
 		if (range.start < end) {
-			setRangeFills(range.start, end, range.fills);
+			await setRangeFills(range.start, end, range.fills, range);
 		}
 	}
+}
+
+/** Sets a range's color style when it had one, its raw fills otherwise. */
+export async function setTextFillRange(
+	node: Pick<TextNode, "setRangeFills" | "setRangeFillStyleIdAsync">,
+	start: number,
+	end: number,
+	range: TextFillRange,
+) {
+	if (range.fillStyleId) await node.setRangeFillStyleIdAsync(start, end, range.fillStyleId);
+	else node.setRangeFills(start, end, range.fills);
 }
 
 type PlaceholderAttribute = { placeholder?: { name: string } };

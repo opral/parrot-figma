@@ -20,6 +20,9 @@ export function legacyMessageToBundle(message: Message): BundleNested {
 			// imported or edited in the Messages tab could not be translated or edited again until the
 			// plugin was reopened.
 			if (needsNativeBundle(message.nativeBundle)) {
+				// a text edit (canvas, Layers tab) keeps the forms, declarations and formats
+				const patched = patchNativePatterns(message, message.nativeBundle);
+				if (patched) return patched;
 				throw new Error("Edit this message in the Messages tab to preserve its Inlang metadata.");
 			}
 			keptDeclarationNames.push(...message.nativeBundle.declarations.map((d) => d.name));
@@ -98,9 +101,66 @@ export function legacyMessageToBundle(message: Message): BundleNested {
 	return bundle;
 }
 
+/**
+ * A native bundle whose legacy view changed only in its texts: the changed texts are copied into it,
+ * everything else (forms, declarations, formats of variables) is kept. `undefined` when the forms or
+ * languages changed, or a changed text has elements the legacy view cannot represent.
+ */
+function patchNativePatterns(message: Message, native: BundleNested): BundleNested | undefined {
+	const projected = bundleToLegacyMessage(native);
+	if (
+		message.id !== native.id ||
+		JSON.stringify(projected.selectors) !== JSON.stringify(message.selectors) ||
+		projected.variants.length !== message.variants.length
+	)
+		return undefined;
+	const bundle = cloneBundle(native);
+	// bundleToLegacyMessage lists the variants in the order of the bundle's messages and variants
+	const nativeVariants = bundle.messages.flatMap((m) => m.variants);
+	const declared = new Set(bundle.declarations.map((d) => d.name));
+	for (const [index, after] of message.variants.entries()) {
+		const before = projected.variants[index]!;
+		if (
+			before.languageTag !== after.languageTag ||
+			JSON.stringify(before.match) !== JSON.stringify(after.match)
+		)
+			return undefined;
+		if (JSON.stringify(before.pattern) === JSON.stringify(after.pattern)) continue;
+		const target = nativeVariants[index]!;
+		const annotations = new Map<string, string>();
+		for (const element of target.pattern) {
+			if (element.type === "text") continue;
+			if (element.type !== "expression" || element.arg.type !== "variable-reference") return undefined;
+			const annotation = JSON.stringify(element.annotation ?? null);
+			if ((annotations.get(element.arg.name) ?? annotation) !== annotation) return undefined;
+			annotations.set(element.arg.name, annotation);
+		}
+		target.pattern = after.pattern.map((element) => {
+			const converted = legacyPatternElementToBundle(element);
+			if (converted.type !== "expression" || converted.arg.type !== "variable-reference")
+				return converted;
+			const name = converted.arg.name;
+			if (!declared.has(name)) {
+				declared.add(name);
+				bundle.declarations.push({ type: "input-variable", name });
+			}
+			const annotation = JSON.parse(annotations.get(name) ?? "null");
+			return annotation ? { ...converted, annotation } : converted;
+		});
+	}
+	validateBundleNested(bundle);
+	return bundle;
+}
+
 export function bundleToLegacyMessage(bundle: BundleNested, preserveNative = false): Message {
 	validateBundleNested(bundle);
-	const selectorNames = bundle.messages[0]?.selectors.map((selector) => selector.name) ?? [];
+	// Languages can choose by different selectors (an ICU translation without the `=0` of the
+	// reference has no exact-number selector): the legacy view has every selector, a language
+	// without one matches it with "*". Taking the first message's selectors only turned the
+	// reference's `=0` form into its catch-all form - the canvas showed "No messages".
+	const selectorNames = [
+		...new Set(bundle.messages.flatMap((message) => message.selectors.map((s) => s.name))),
+	];
 
 	const variants = bundle.messages.flatMap((message) => {
 		return message.variants.map((variant) => {
@@ -204,7 +264,7 @@ export function mergeImportedMessage(
 		if (
 			previous &&
 			usedByOtherLocales.has(declaration.name) &&
-			JSON.stringify(previous) !== JSON.stringify(declaration)
+			stableStringify(previous) !== stableStringify(declaration)
 		) {
 			throw new Error(
 				`Key "${incoming.id}" has conflicting variable "${declaration.name}". Use a different key to preserve other languages.`,
@@ -223,6 +283,27 @@ export function mergeImportedMessage(
 		},
 		true,
 	);
+}
+
+/**
+ * JSON with object keys in sorted order: the same declaration rebuilt by Parrot (`{type, name}`) and
+ * read from a plugin or the database (`{name, type}`) compare equal.
+ */
+export function stableStringify(value: unknown): string {
+	return JSON.stringify(value, (_key, v: unknown) =>
+		v && typeof v === "object" && !Array.isArray(v)
+			? Object.fromEntries(
+					Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+				)
+			: v,
+	);
+}
+
+/** Declarations compared by content: neither their order nor the order of their keys matters. */
+export function sameDeclarations(a: BundleNested["declarations"], b: BundleNested["declarations"]) {
+	const sorted = (d: BundleNested["declarations"]) =>
+		[...d].sort((x, y) => (x.name < y.name ? -1 : x.name > y.name ? 1 : 0));
+	return stableStringify(sorted(a)) === stableStringify(sorted(b));
 }
 
 // Figma's plugin sandbox has no structuredClone; bundles contain JSON data only.

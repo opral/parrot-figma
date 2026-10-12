@@ -86,9 +86,9 @@ describe("FigmaBundleStore", () => {
 	});
 
 	test("rejects legacy data that the Inlang bundle model would silently drop", () => {
-		expect(() =>
-			legacyMessageToBundle({ ...legacyMessage, variants: [] }),
-		).toThrow("cannot preserve them without a locale message");
+		expect(() => legacyMessageToBundle({ ...legacyMessage, variants: [] })).toThrow(
+			"cannot preserve them without a locale message",
+		);
 		expect(() =>
 			legacyMessageToBundle({ ...legacyMessage, alias: { oldName: "welcome" } }),
 		).toThrow("aliases that cannot be represented");
@@ -168,7 +168,6 @@ describe("FigmaBundleStore local changes (undo / redo)", () => {
 		root.setPluginData(key, JSON.stringify(bundle));
 		documentChanges.emit("LOCAL");
 		documentChanges.emit("LOCAL");
-		expect(events).toEqual([]);
 		vi.advanceTimersByTime(1000);
 		expect(events).toEqual([{ added: [], updated: ["welcome"], deleted: [] }]);
 
@@ -177,6 +176,80 @@ describe("FigmaBundleStore local changes (undo / redo)", () => {
 		documentChanges.emit("LOCAL");
 		vi.advanceTimersByTime(1000);
 		expect(events[1]).toEqual({ added: [], updated: [], deleted: ["welcome"] });
+	});
+});
+
+describe("FigmaBundleStore undo latency", () => {
+	afterEach(() => vi.useRealTimers());
+
+	test("an undo of a bundle written last is reported at once, everything else after the slow check", () => {
+		vi.useFakeTimers();
+		const root = new FakeRoot();
+		const documentChanges = new FakeDocumentChanges();
+		const bundle = legacyMessageToBundle(legacyMessage);
+		const key = FIGMA_BUNDLE_PREFIX + bundle.id;
+		const other = { ...structuredClone(bundle), id: "other" };
+		other.messages = other.messages.map((m) => ({
+			...m,
+			id: `other_${m.locale}`,
+			bundleId: "other",
+			variants: m.variants.map((v) => ({
+				...v,
+				id: `other_${v.id}`,
+				messageId: `other_${m.locale}`,
+			})),
+		}));
+		root.setPluginData(key, JSON.stringify(bundle));
+		root.setPluginData(FIGMA_BUNDLE_PREFIX + "other", JSON.stringify(other));
+		const store = new FigmaBundleStore({ root, documentChanges });
+		const events: any[] = [];
+		store.subscribe((changes) => events.push(changes));
+
+		// own write + its event: nothing differs
+		const written = structuredClone(bundle);
+		written.messages[0]!.variants[0]!.pattern = [{ type: "text", value: "Translation" }];
+		store.put(written);
+		documentChanges.emit("LOCAL");
+		expect(events).toEqual([]);
+
+		// Cmd+Z restores it behind the store's back: reported synchronously from the recent bundles
+		root.setPluginData(key, JSON.stringify(bundle));
+		documentChanges.emit("LOCAL");
+		expect(events).toEqual([{ added: [], updated: ["welcome"], deleted: [] }]);
+		vi.advanceTimersByTime(20);
+		expect(events).toHaveLength(1);
+
+		// a bundle this store never wrote (undo of an import, an older edit) is found by the full check
+		root.setPluginData(FIGMA_BUNDLE_PREFIX + "other", "");
+		documentChanges.emit("LOCAL");
+		expect(events).toHaveLength(1);
+		vi.advanceTimersByTime(1000);
+		expect(events[1]).toEqual({ added: [], updated: [], deleted: ["other"] });
+	});
+});
+
+describe("FigmaBundleStore own writes", () => {
+	afterEach(() => vi.useRealTimers());
+
+	test("a pause in typing does not read every bundle", () => {
+		vi.useFakeTimers();
+		const root = new FakeRoot();
+		const documentChanges = new FakeDocumentChanges();
+		const bundle = legacyMessageToBundle(legacyMessage);
+		for (let i = 0; i < 50; i++) {
+			root.setPluginData(FIGMA_BUNDLE_PREFIX + `b${i}`, JSON.stringify({ ...bundle, id: `b${i}` }));
+		}
+		const store = new FigmaBundleStore({ root, documentChanges });
+		const reads = vi.spyOn(root, "getPluginData");
+		const written = structuredClone(bundle);
+		for (let i = 0; i < 5; i++) {
+			written.messages[0]!.variants[0]!.pattern = [{ type: "text", value: `T${i}` }];
+			store.put(written);
+			documentChanges.emit("LOCAL");
+		}
+		vi.advanceTimersByTime(1000);
+		// one read of the bundle written last per change, no full check
+		expect(reads.mock.calls.length).toBeLessThanOrEqual(5);
 	});
 });
 

@@ -1,0 +1,10 @@
+{
+  "icu.inbox": "{count, plural, offset:1 =0 {No messages} =1 {One message from {sender}} one {{sender} and # other wrote} other {{sender} and # others wrote}}",
+  "icu.invite": "{gender, select, female {She invited you} male {He invited you} other {They invited you}}",
+  "icu.cart": "{count, plural, one {{gender, select, female {She has} other {They have}} # item} other {{gender, select, female {She has} other {They have}} # items}}",
+  "icu.rank": "You finished {place, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+  "icu.escape": "It''s '{'literal'}' {n, plural, one {'#' # tag} other {'#' # tags}}",
+  "icu.total": "Total: {amount, number}",
+  "icu.due": "Due {due, date, short}",
+  "icu.party": "{host, select, female {{guests, plural, offset:1 =0 {She stays home.} =1 {She invites {guest}.} one {She invites {guest} and one other.} other {She invites {guest} and # others.}}} other {{guests, plural, offset:1 =0 {They stay home.} =1 {They invite {guest}.} one {They invite {guest} and one other.} other {They invite {guest} and # others.}}}}"
+}

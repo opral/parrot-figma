@@ -40,7 +40,6 @@ import { InlangMessageStore } from "../lib/message/store/InlangMessageStoreFigma
 import { OverlayScrollbarsComponent } from "./compontents/overlayscrollbar";
 
 import TranslatorMachine from "../lib/translationprovider/TranslatorMachine";
-import Monitoring from "../lib/monitoring/MonitoringProxy";
 import FeatureFlags from "../lib/featureflags/FeatureFlags";
 
 console.log(`Starting Figma UI - Version ${pjs.version}`);
@@ -80,7 +79,7 @@ document.addEventListener(
 			!(e.target! as any).classList.contains("cm-content")
 		) {
 			document.execCommand("selectAll");
-		} else if (e.keyCode === 90 /* Z */ && e.metaKey) {
+		} else if (e.keyCode === 90 /* Z */ && (e.metaKey || e.ctrlKey)) {
 			// In a text field Cmd+Z is the undo of that field and nothing else: if Figma undid the
 			// document as well (see the listener below) the layers, the message and the field would no
 			// longer match. Outside of a text field it is Figma's undo only - the document-wide text undo
@@ -92,6 +91,8 @@ document.addEventListener(
 				target?.isContentEditable
 			) {
 				undoHandledByTextField.add(e);
+				// Ctrl+Z (Windows) reaches the field natively; Cmd+Z in the desktop app does not
+				if (!e.metaKey) return;
 				if (e.shiftKey) {
 					document.execCommand("redoForce");
 				} else {
@@ -176,8 +177,6 @@ const asyncFunctionProxy = new AsyncFunctionProxy(
 	window,
 );
 
-const monitoring = new Monitoring();
-asyncFunctionProxy.registerInstance(monitoring);
 
 const figmaRemote = new FigmaUtil();
 asyncFunctionProxy.proxyAsyncMethods(figmaRemote);
@@ -307,12 +306,13 @@ function App() {
 			);
 			localizedLabelManager.startFillupCache();
 
-			const [userId, fileId] = await Promise.all([
-				figmaRemote.getUserId(),
-				figmaRemote.getInlangFileId(),
-			]);
-			identifyTelemetry({ userId, fileId, version: pjs.version });
-			capture("app:session_start");
+			// telemetry never holds up or breaks the start
+			void Promise.all([figmaRemote.getUserId(), figmaRemote.getInlangFileId()])
+				.then(([userId, fileId]) => {
+					identifyTelemetry({ userId, fileId, version: pjs.version });
+					capture("app:session_start");
+				})
+				.catch((error) => console.error("Telemetry setup failed", error));
 
 			let initialScreen = (await figmaRemote.getLocalFileConfig("lastView")) ?? "design";
 			if (fileSetupCompleted === undefined || fileSetupCompleted === "") {

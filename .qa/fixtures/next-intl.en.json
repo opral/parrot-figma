@@ -1,0 +1,10 @@
+{
+  "app": { "title": "Parrot", "single": { "only": "Only child" } },
+  "solo": { "child": "A single-child object" },
+  "greeting": "Hello {name}, you have {count} new messages",
+  "items": "{count, plural, =0 {No items} one {# item} other {# items}}",
+  "rich": "Read <b>the docs</b> now",
+  "esc": "Line one\nLine two \"quotes\" & more",
+  "emoji": "Hello 👋 世界",
+  "empty": ""
+}

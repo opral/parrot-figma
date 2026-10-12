@@ -17,6 +17,9 @@ import LocalizedLabelManagerUI from "../../../lib/localizedlabels/LocalizedLabel
 import { NodeSelection } from "../../../lib/localizedlabels/LocalizedLabelManager";
 import { LatestRequest } from "../../utils/LatestRequest";
 
+/** filter value of "With problems": translations whose variables, markup or forms do not match the reference */
+const PROBLEMS_FILTER = "problems";
+
 // rows are cheap placeholders until they get close to the viewport (see LazyMessageRow)
 const renderChunkSize = 100;
 const initiallyVisibleRows = 12;
@@ -64,17 +67,21 @@ export default function MessageListView({
 
 	// const [keys, setKeys] = useState: UITranslationKeys,
 	const [searchQuery, setSearchQuery] = useState<SearchQuery>(initialSearchQuery);
-	// "" = all messages, "*" = missing in any language, otherwise the language that is missing
+	// "" = all messages, "*" = missing in any language, "problems" = translations with problems,
+	// otherwise the language that is missing
 	const [missingFilter, setMissingFilter] = useState("");
 
 	const effectiveQuery: SearchQuery =
 		missingFilter === ""
 			? searchQuery
-			: {
-					...searchQuery,
-					missingTranslation: true,
-					missingTranslationLanguage: missingFilter === "*" ? undefined : (missingFilter as Locale),
-				};
+			: missingFilter === PROBLEMS_FILTER
+				? { ...searchQuery, translationProblems: true }
+				: {
+						...searchQuery,
+						missingTranslation: true,
+						missingTranslationLanguage:
+							missingFilter === "*" ? undefined : (missingFilter as Locale),
+					};
 	// A message that is being edited stays in a "missing translation" list: it would vanish with the
 	// first typed character (the translation is no longer missing) and take the focus - and the rest of
 	// the typed text - with it.
@@ -230,28 +237,29 @@ export default function MessageListView({
 	};
 
 	const missingLabel = (filter: string) =>
-		filter === "*"
-			? "Missing in any language"
-			: `Missing in ${languageDisplayName(filter) ?? filter}`;
+		filter === PROBLEMS_FILTER
+			? "With problems"
+			: filter === "*"
+				? "Missing in any language"
+				: `Missing in ${languageDisplayName(filter) ?? filter}`;
 
-	const missingFilterOptions = (): SelectOption[] => {
-		const countMissing = (language?: Locale) =>
-			messageStore.findMessages({
-				...MessageStoreMemory.toQueryObject(""),
-				missingTranslation: true,
-				missingTranslationLanguage: language,
-			}).matchingNames.size;
-		return [
-			{ value: "", label: "All messages", tag: `${allMessages.length}` },
-			{ divider: true, value: "divider", label: "" },
-			{ value: "*", label: missingLabel("*"), tag: `${countMissing()}` },
-			...messageStore.getOrderedLanguages().map((language) => ({
-				value: language,
-				label: missingLabel(language),
-				tag: `${countMissing(language)}`,
-			})),
-		];
-	};
+	// the counts are prepared by the translation checks of the store: opening the menu checks nothing
+	const missingFilterOptions = (): SelectOption[] => [
+		{ value: "", label: "All messages", tag: `${allMessages.length}` },
+		{ divider: true, value: "divider", label: "" },
+		{ value: "*", label: missingLabel("*"), tag: `${messageStore.countMissing()}` },
+		...messageStore.getOrderedLanguages().map((language) => ({
+			value: language,
+			label: missingLabel(language),
+			tag: `${messageStore.countMissing(language)}`,
+		})),
+		{ divider: true, value: "divider-problems", label: "" },
+		{
+			value: PROBLEMS_FILTER,
+			label: missingLabel(PROBLEMS_FILTER),
+			tag: `${messageStore.countProblems()}`,
+		},
+	];
 
 	const longestKey = allMessages
 		.map((message) => message.id)
@@ -283,7 +291,7 @@ export default function MessageListView({
 					</div>
 					<Select
 						className={`message-filter-missing${missingFilter !== "" ? " message-filter-missing--active" : ""}`}
-						tooltip="Show messages without a translation"
+						tooltip="Show messages without a translation or with problems"
 						placeholder="All messages"
 						checkmark
 						defaultValue={{
@@ -331,11 +339,15 @@ export default function MessageListView({
 				{[...filteredKeys.matchingNames].length === 0 &&
 					(missingFilter !== "" && !searchQuery.text && !searchQuery.name ? (
 						<div className="emptyState">
-							<div className="emptyStateTitle">Nothing is missing</div>
+							<div className="emptyStateTitle">
+								{missingFilter === PROBLEMS_FILTER ? "No problems" : "Nothing is missing"}
+							</div>
 							<div className="emptyStateSubtitle">
-								{missingFilter === "*"
-									? "Every message has a text in every language."
-									: `Every message has a ${languageDisplayName(missingFilter) ?? missingFilter} translation.`}
+								{missingFilter === PROBLEMS_FILTER
+									? "Every translation uses the variables and forms of the reference language."
+									: missingFilter === "*"
+										? "Every message has a text in every language."
+										: `Every message has a ${languageDisplayName(missingFilter) ?? missingFilter} translation.`}
 							</div>
 						</div>
 					) : (

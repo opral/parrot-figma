@@ -6,4 +6,10 @@ node_modules
 out/
 dist/
 code.js
-.qa/
+# QA harness: tools, fixtures and README are versioned; screenshots, downloads and reports are not
+.qa/*
+!.qa/README.md
+!.qa/tools/
+!.qa/fixtures/
+.qa/tools/node_modules/
+.qa/tools/*.bak

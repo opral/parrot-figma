@@ -1,4 +1,5 @@
 import type { BundleNested } from "../store/FigmaBundleStore";
+import { fromRows, toRows, type BundleRows } from "../store/BundleRows";
 
 /**
  * Text elements of a message hold the HTML of the text layer: `&`, `<` and `>` are stored as entities
@@ -43,19 +44,21 @@ export function plainTextToHtml(value: string): string {
 	});
 }
 
-type Variant = BundleNested["messages"][number]["variants"][number];
+type Variant = Pick<BundleNested["messages"][number]["variants"][number], "pattern">;
 
 function isRichVariant(variant: Variant): boolean {
 	return variant.pattern.some((element) => element.type === "text" && isRichHtml(element.value));
 }
 
 /**
- * The bundle as the plain-text editor sees it: entities decoded, and the ids of the variants that
- * contain markup (their pattern is left exactly as stored).
+ * The bundle as the plain-text editor sees it: database rows (the shape of the editor components),
+ * entities decoded, and the ids of the variants that contain markup (their pattern is left exactly
+ * as stored).
  */
-export function toEditorBundle(bundle: BundleNested): { bundle: BundleNested; rich: Set<string> } {
+export function toEditorBundle(stored: BundleNested): { bundle: BundleRows; rich: Set<string> } {
 	const rich = new Set<string>();
-	const decoded: BundleNested = {
+	const bundle = toRows(stored);
+	const decoded: BundleRows = {
 		...bundle,
 		messages: bundle.messages.map((message) => ({
 			...message,
@@ -64,35 +67,39 @@ export function toEditorBundle(bundle: BundleNested): { bundle: BundleNested; ri
 					rich.add(variant.id);
 					return variant;
 				}
-				return {
-					...variant,
-					pattern: variant.pattern.map((element) =>
-						element.type === "text"
-							? { ...element, value: htmlToPlainText(element.value) }
-							: element,
-					),
-				};
+				return { ...variant, pattern: decodePattern(variant.pattern) };
 			}),
 		})),
 	};
 	return { bundle: decoded, rich };
 }
 
+function decodePattern<P extends Variant["pattern"]>(pattern: P): P {
+	return pattern.map((element) =>
+		element.type === "text" ? { ...element, value: htmlToPlainText(element.value) } : element,
+	) as P;
+}
+
 /** Inverse of `toEditorBundle`: encodes edited text and restores variants that were only previewed. */
 export function fromEditorBundle(
-	edited: BundleNested,
+	editedRows: BundleRows,
 	rich: ReadonlySet<string>,
 	stored: BundleNested,
 ): BundleNested {
 	const storedVariants = new Map(
 		stored.messages.flatMap((message) => message.variants).map((variant) => [variant.id, variant]),
 	);
+	const edited = fromRows(editedRows);
 	return {
 		...edited,
 		messages: edited.messages.map((message) => ({
 			...message,
 			variants: message.variants.map((variant) => {
-				if (rich.has(variant.id)) return storedVariants.get(variant.id) ?? variant;
+				const prior = storedVariants.get(variant.id);
+				if (rich.has(variant.id)) return prior ?? variant;
+				// an unedited text keeps its stored encoding (imports store `&` and `<` as they are)
+				if (prior && JSON.stringify(decodePattern(prior.pattern)) === JSON.stringify(variant.pattern))
+					return { ...variant, pattern: prior.pattern };
 				return {
 					...variant,
 					pattern: variant.pattern.map((element) =>

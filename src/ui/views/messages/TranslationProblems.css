@@ -1,0 +1,45 @@
+/* "Missing {total}" below a translation: text only, in Figma's warning color */
+.figma-inlang-editor .translation-problems {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	column-gap: 0;
+	row-gap: 2px;
+	padding: 0 8px;
+	color: var(--figma-color-text-warning);
+	font-size: 11px;
+	line-height: 16px;
+	overflow-wrap: anywhere;
+}
+
+.figma-inlang-editor .translation-problem {
+	white-space: pre-wrap;
+}
+
+.figma-inlang-editor .translation-problem-separator::before {
+	content: "·";
+	padding: 0 6px;
+	color: var(--figma-color-text-tertiary);
+}
+
+.figma-inlang-editor .translation-problem-form {
+	padding: 0;
+	border: none;
+	background: none;
+	color: inherit;
+	font: inherit;
+	text-decoration: underline;
+	text-decoration-color: var(--figma-color-text-warning-tertiary);
+	text-underline-offset: 2px;
+	cursor: default;
+}
+
+.figma-inlang-editor .translation-problem-form:hover {
+	text-decoration-color: currentColor;
+}
+
+.figma-inlang-editor .translation-problem-form:focus-visible {
+	outline: 1px solid var(--figma-color-border-selected);
+	outline-offset: 1px;
+	border-radius: 2px;
+}

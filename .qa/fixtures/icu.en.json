@@ -1,0 +1,9 @@
+{
+  "app": { "title": "Parrot", "single": { "only": "Only child" } },
+  "greeting": "Hello {name}, you have {count} new messages",
+  "items": "{count, plural, =0 {No items} one {# item} other {# items}}",
+  "gender": "{gender, select, female {She} male {He} other {They}} arrived",
+  "esc": "Line one\nLine two \"quotes\" <b>bold</b> & more",
+  "emoji": "Hello 👋 世界",
+  "empty": ""
+}

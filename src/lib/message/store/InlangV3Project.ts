@@ -2,12 +2,14 @@ import {
 	openProject,
 	executeLixBatch,
 	selectBundleNested,
-	type BundleNested,
 	type InlangProject,
 	type ProjectSettings,
 } from "@inlang/sdk/browser";
 import { openLix, type Lix } from "@inlang/sdk/lix";
 import type { Message } from "../LegacyMessage";
+import type { BundleNested } from "./FigmaBundleStore";
+import { fromRows } from "./BundleRows";
+import { TranslationChecks, type CheckSettings } from "../checks/TranslationChecks";
 import { bundleToLegacyMessage, legacyMessageToBundle } from "./LegacyMessageBundleConverter";
 
 /**
@@ -22,10 +24,16 @@ export class InlangV3Project {
 	private readonly bundles = new Map<string, BundleNested>();
 	private readonly listeners = new Map<string, Set<(message: Message) => void>>();
 
+	/** The translation checks of every message, updated with every change of a message. */
+	readonly checks: TranslationChecks;
+
 	private constructor(
 		private readonly project: InlangProject,
 		private readonly lix: Lix,
-	) {}
+		settings: ProjectSettings,
+	) {
+		this.checks = new TranslationChecks(checkSettings(settings));
+	}
 
 	/**
 	 * Takes ownership of `messages` (they are not copied). Starting Lix takes a while, so it runs
@@ -46,10 +54,13 @@ export class InlangV3Project {
 		const lix = await lixPromise;
 		try {
 			const project = await openProject({ lix, settings: args.settings });
-			const session = new InlangV3Project(project, lix);
+			const session = new InlangV3Project(project, lix, args.settings);
 			const bundles = messages.map(legacyMessageToBundle);
 			await insertBundlesNested(project, bundles);
-			for (const bundle of bundles) session.bundles.set(bundle.id, bundle);
+			for (const bundle of bundles) {
+				session.bundles.set(bundle.id, bundle);
+				session.checks.update(bundle);
+			}
 			for (const message of messages) session.messages.set(message.id, message);
 			return session;
 		} catch (error) {
@@ -87,6 +98,7 @@ export class InlangV3Project {
 		const currentBundle = this.bundles.get(bundle.id);
 		await replaceBundlesNested(this.project, [bundle], currentBundle ? [currentBundle] : []);
 		this.bundles.set(bundle.id, structuredClone(bundle));
+		this.checks.update(bundle);
 		this.messages.set(message.id, structuredClone(message));
 		for (const listener of this.listeners.get(message.id) ?? []) {
 			listener(structuredClone(message));
@@ -103,6 +115,7 @@ export class InlangV3Project {
 			await replaceBundlesNested(this.project, bundles, currentBundles);
 			bundles.forEach((bundle, index) => {
 				this.bundles.set(bundle.id, structuredClone(bundle));
+				this.checks.update(bundle);
 				this.messages.set(chunk[index]!.id, structuredClone(chunk[index]!));
 			});
 			chunk.forEach((message) => {
@@ -128,6 +141,7 @@ export class InlangV3Project {
 			);
 			for (const id of chunk) {
 				this.bundles.delete(id);
+				this.checks.remove(id);
 				this.messages.delete(id);
 			}
 		}
@@ -139,13 +153,14 @@ export class InlangV3Project {
 
 	async setSettings(settings: ProjectSettings): Promise<void> {
 		await this.project.settings.set(settings);
+		this.checks.setSettings(checkSettings(settings), this.bundles.values());
 	}
 
 	async refreshFromProject(): Promise<void> {
-		const bundles = await selectBundleNested(this.project.db).selectAll().execute();
+		const rows = await selectBundleNested(this.project.db).selectAll().execute();
 		const nextBundles = new Map<string, BundleNested>();
 		const nextMessages = new Map<string, Message>();
-		for (const bundle of bundles) {
+		for (const bundle of rows.map(fromRows)) {
 			const message = bundleToLegacyMessage(bundle);
 			nextBundles.set(bundle.id, bundle);
 			nextMessages.set(message.id, message);
@@ -154,6 +169,7 @@ export class InlangV3Project {
 		for (const [id, bundle] of nextBundles) this.bundles.set(id, bundle);
 		this.messages.clear();
 		for (const [id, message] of nextMessages) this.messages.set(id, message);
+		this.checks.setSettings(checkSettings(await this.settings()), this.bundles.values());
 	}
 
 	async close(): Promise<void> {
@@ -171,12 +187,16 @@ async function deleteBundlesNested(
 	const statements = [];
 	if (messageIds.length > 0) {
 		statements.push(
-			project.db.deleteFrom("variant").where("messageId", "in", messageIds).compile(),
-			project.db.deleteFrom("message").where("id", "in", messageIds).compile(),
+			project.db.deleteFrom("inlang_variant").where("message_id", "in", messageIds).compile(),
+			project.db.deleteFrom("inlang_message").where("id", "in", messageIds).compile(),
 		);
 	}
-	statements.push(project.db.deleteFrom("bundle").where("id", "in", bundleIds).compile());
+	statements.push(project.db.deleteFrom("inlang_bundle").where("id", "in", bundleIds).compile());
 	await executeLixBatch(project.db, statements);
+}
+
+function checkSettings(settings: ProjectSettings): CheckSettings {
+	return { locales: settings.locales, referenceLocale: settings.baseLocale };
 }
 
 /** Fills an empty project. Multi-row inserts keep the number of statements small for big files. */
@@ -186,7 +206,7 @@ async function insertBundlesNested(project: InlangProject, bundles: BundleNested
 	const messages = bundles.flatMap((bundle) =>
 		bundle.messages.map((message) => ({
 			id: message.id,
-			bundleId: bundle.id,
+			bundle_id: bundle.id,
 			locale: message.locale,
 			selectors: message.selectors,
 		})),
@@ -195,7 +215,7 @@ async function insertBundlesNested(project: InlangProject, bundles: BundleNested
 		bundle.messages.flatMap((message) =>
 			message.variants.map((variant) => ({
 				id: variant.id,
-				messageId: message.id,
+				message_id: message.id,
 				matches: variant.matches,
 				pattern: variant.pattern,
 			})),
@@ -204,7 +224,7 @@ async function insertBundlesNested(project: InlangProject, bundles: BundleNested
 	for (let i = 0; i < bundles.length; i += chunkSize) {
 		statements.push(
 			project.db
-				.insertInto("bundle")
+				.insertInto("inlang_bundle")
 				.values(
 					bundles.slice(i, i + chunkSize).map(({ id, declarations }) => ({ id, declarations })),
 				)
@@ -214,7 +234,7 @@ async function insertBundlesNested(project: InlangProject, bundles: BundleNested
 	for (let i = 0; i < messages.length; i += chunkSize) {
 		statements.push(
 			project.db
-				.insertInto("message")
+				.insertInto("inlang_message")
 				.values(messages.slice(i, i + chunkSize))
 				.compile(),
 		);
@@ -222,7 +242,7 @@ async function insertBundlesNested(project: InlangProject, bundles: BundleNested
 	for (let i = 0; i < variants.length; i += chunkSize) {
 		statements.push(
 			project.db
-				.insertInto("variant")
+				.insertInto("inlang_variant")
 				.values(variants.slice(i, i + chunkSize))
 				.compile(),
 		);
@@ -265,18 +285,22 @@ async function replaceBundlesNested(
 	const statements = currentMessages.flatMap((message) =>
 		message.variants
 			.filter((variant) => nextVariantOwners.get(variant.id) !== message.id)
-			.map((variant) => project.db.deleteFrom("variant").where("id", "=", variant.id).compile()),
+			.map((variant) =>
+				project.db.deleteFrom("inlang_variant").where("id", "=", variant.id).compile(),
+			),
 	);
 	statements.push(
 		...currentMessages
 			.filter((message) => !nextMessageIds.has(message.id))
-			.map((message) => project.db.deleteFrom("message").where("id", "=", message.id).compile()),
+			.map((message) =>
+				project.db.deleteFrom("inlang_message").where("id", "=", message.id).compile(),
+			),
 	);
 
 	for (const bundle of bundles) {
 		statements.push(
 			project.db
-				.insertInto("bundle")
+				.insertInto("inlang_bundle")
 				.values({ id: bundle.id, declarations: bundle.declarations })
 				.onConflict((conflict) =>
 					conflict.column("id").doUpdateSet({ declarations: bundle.declarations }),
@@ -286,16 +310,16 @@ async function replaceBundlesNested(
 		for (const message of bundle.messages) {
 			statements.push(
 				project.db
-					.insertInto("message")
+					.insertInto("inlang_message")
 					.values({
 						id: message.id,
-						bundleId: bundle.id,
+						bundle_id: bundle.id,
 						locale: message.locale,
 						selectors: message.selectors,
 					})
 					.onConflict((conflict) =>
 						conflict.column("id").doUpdateSet({
-							bundleId: bundle.id,
+							bundle_id: bundle.id,
 							locale: message.locale,
 							selectors: message.selectors,
 						}),
@@ -305,16 +329,16 @@ async function replaceBundlesNested(
 			for (const variant of message.variants) {
 				statements.push(
 					project.db
-						.insertInto("variant")
+						.insertInto("inlang_variant")
 						.values({
 							id: variant.id,
-							messageId: message.id,
+							message_id: message.id,
 							matches: variant.matches,
 							pattern: variant.pattern,
 						})
 						.onConflict((conflict) =>
 							conflict.column("id").doUpdateSet({
-								messageId: message.id,
+								message_id: message.id,
 								matches: variant.matches,
 								pattern: variant.pattern,
 							}),

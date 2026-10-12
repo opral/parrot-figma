@@ -231,6 +231,7 @@ describe("translation import", () => {
 		manager.getWithMessages = vi.fn(async () => []);
 		manager.updateToMessageHead = vi.fn(async () => {});
 		await manager.import([structuredClone(stored)], Locale.DE);
+		expect(manager.messageStore.upsertMessage).not.toHaveBeenCalled();
 		expect(manager.getWithMessages).not.toHaveBeenCalled();
 		expect(manager.updateToMessageHead).not.toHaveBeenCalled();
 	});
@@ -268,6 +269,22 @@ describe("LocalizedLabelManagerUI.commitUndoWhenIdle", () => {
 			manager.commitUndoWhenIdle(800);
 			vi.advanceTimersByTime(800);
 			expect(manager.localizedLabelMangerSandbox.commitUndo).toHaveBeenCalledTimes(2);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	test("commitUndo closes the step right away, for a change that is a step of its own", async () => {
+		vi.useFakeTimers();
+		try {
+			const { manager } = createManager();
+			// typing, then a form is added before the typing paused
+			manager.commitUndoWhenIdle(800);
+			await manager.commitUndo();
+			expect(manager.localizedLabelMangerSandbox.commitUndo).toHaveBeenCalledTimes(1);
+			// the pending idle commit is no longer needed: it would close an empty step later
+			vi.advanceTimersByTime(800);
+			expect(manager.localizedLabelMangerSandbox.commitUndo).toHaveBeenCalledTimes(1);
 		} finally {
 			vi.useRealTimers();
 		}

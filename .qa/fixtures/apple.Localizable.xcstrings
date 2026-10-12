@@ -1,0 +1,51 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "app_name": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Parrot" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Papagei" } }
+      }
+    },
+    "welcome": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Hello, %@! You have %lld new messages" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Hallo, %@! Du hast %lld neue Nachrichten" } }
+      }
+    },
+    "esc": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Line one\nLine two \"quotes\" <b>bold</b> & more" } }
+      }
+    },
+    "emoji": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Hello 👋 世界 ñ" } }
+      }
+    },
+    "empty": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "" } }
+      }
+    },
+    "member.login_title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Welcome back" } }
+      }
+    },
+    "items": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": { "stringUnit": { "state": "translated", "value": "%lld item" } },
+              "other": { "stringUnit": { "state": "translated", "value": "%lld items" } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

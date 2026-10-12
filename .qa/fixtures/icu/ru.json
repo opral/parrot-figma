@@ -1,0 +1,10 @@
+{
+  "icu.inbox": "{count, plural, offset:1 =0 {Нет сообщений} =1 {Одно сообщение от {sender}} one {{sender} и ещё # человек написали} few {{sender} и ещё # человека написали} many {{sender} и ещё # человек написали} other {{sender} и ещё # человека написали}}",
+  "icu.invite": "{gender, select, female {Она пригласила вас} male {} other {Они пригласили вас}}",
+  "icu.cart": "{count, plural, one {{gender, select, female {У неё} other {У них}} # товар} few {{gender, select, female {У неё} other {У них}} # товара} many {{gender, select, female {У неё} other {У них}} # товаров} other {{gender, select, female {У неё} other {У них}} # товара}}",
+  "icu.rank": "Вы заняли {place, selectordinal, other {#-е}} место",
+  "icu.escape": "Это '{'буквально'}' {n, plural, one {'#' # тег} few {'#' # тега} many {'#' # тегов} other {'#' # тега}}",
+  "icu.total": "Итого: {amount, number}",
+  "icu.due": "Срок {due, date, short}",
+  "icu.party": "{host, select, female {{guests, plural, offset:1 =0 {Она остаётся дома.} =1 {Она приглашает {guest}.} one {Она приглашает {guest} и ещё # гостя.} other {Она приглашает {guest} и ещё # гостей.}}} other {{guests, plural, offset:1 =0 {Они остаются дома.} =1 {Они приглашают {guest}.} one {Они приглашают {guest} и ещё # гостя.} other {Они приглашают {guest} и ещё # гостей.}}}}"
+}

@@ -1,0 +1,12 @@
+{
+  "shop": {
+    "basket": "Your basket",
+    "checkout": "Check out",
+    "continue": "Continue shopping",
+    "bold": "Bold <strong>word</strong>",
+    "hello": "Hello {{name}}"
+  },
+  "home": { "welcome": "Welcome" },
+  "intro": { "welcome": "Welcome" },
+  "cart": { "title": "Shopping cart" }
+}

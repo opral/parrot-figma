@@ -1,0 +1,8 @@
+{
+  "dev": {
+    "cart_items_one": "{{count}} Artikel im Warenkorb",
+    "cart_items_other": "{{count}} Artikel im Warenkorb",
+    "greeting": "Hallo {{name}}, willkommen zurück",
+    "weekly": "Wöchentliche Zusammenfassung"
+  }
+}

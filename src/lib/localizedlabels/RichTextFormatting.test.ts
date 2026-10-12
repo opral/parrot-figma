@@ -2,12 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { restoreTextFillRanges, toQuillTextOperations } from "./RichTextFormatting";
 
 describe("rich text formatting helpers", () => {
-	it("restores mixed fill colors across replacement text ranges", () => {
+	it("restores mixed fill colors across replacement text ranges", async () => {
 		const red = { type: "SOLID", color: { r: 1, g: 0, b: 0 } } as Paint;
 		const blue = { type: "SOLID", color: { r: 0, g: 0, b: 1 } } as Paint;
 		const setRangeFills = vi.fn();
 
-		restoreTextFillRanges(
+		await restoreTextFillRanges(
 			[
 				{ start: 0, end: 4, fills: [red] },
 				{ start: 4, end: 8, fills: [blue] },
@@ -17,18 +17,18 @@ describe("rich text formatting helpers", () => {
 			setRangeFills,
 		);
 
-		expect(setRangeFills.mock.calls).toEqual([
+		expect(setRangeFills.mock.calls.map((call) => call.slice(0, 3))).toEqual([
 			[0, 4, [red]],
 			[4, 10, [blue]],
 		]);
 	});
 
-	it("clips fill ranges when translated text is shorter", () => {
+	it("clips fill ranges when translated text is shorter", async () => {
 		const red = { type: "SOLID", color: { r: 1, g: 0, b: 0 } } as Paint;
 		const blue = { type: "SOLID", color: { r: 0, g: 0, b: 1 } } as Paint;
 		const setRangeFills = vi.fn();
 
-		restoreTextFillRanges(
+		await restoreTextFillRanges(
 			[
 				{ start: 0, end: 4, fills: [red] },
 				{ start: 4, end: 8, fills: [blue] },
@@ -38,7 +38,7 @@ describe("rich text formatting helpers", () => {
 			setRangeFills,
 		);
 
-		expect(setRangeFills.mock.calls).toEqual([
+		expect(setRangeFills.mock.calls.map((call) => call.slice(0, 3))).toEqual([
 			[0, 4, [red]],
 			[4, 6, [blue]],
 		]);

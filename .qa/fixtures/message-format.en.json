@@ -1,0 +1,19 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "app_title": "Parrot",
+  "greeting": "Hello {name}, you have {count} new messages",
+  "member_login_title": "Welcome back",
+  "esc": "Line one\nLine two \"quotes\" <b>bold</b> & more",
+  "emoji": "Hello 👋 世界",
+  "empty": "",
+  "items": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} item",
+        "countPlural=other": "{count} items"
+      }
+    }
+  ]
+}

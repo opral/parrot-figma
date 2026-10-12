@@ -1,0 +1,8 @@
+{
+  "app": { "title": "Papagei", "tagline": "Lokalisiere deine Designs", "single": { "only": "Einziges Kind" } },
+  "solo": { "child": "Ein Objekt mit einem Kind" },
+  "deep": { "a": { "b": { "c": "Drei Ebenen tief" } } },
+  "member.login_title": "Willkommen zurück",
+  "greeting": "Hallo {{name}}, du hast {{count}} neue Nachrichten",
+  "emoji": "Hallo 👋 世界 ñ ü ß"
+}

@@ -1,0 +1,10 @@
+{
+  "r3": {
+    "imp": {
+      "one": "Import one {{name}}",
+      "two": "Import two",
+      "three": "Import three with <b>bold</b>"
+    }
+  },
+  "r3.imp.flat": "Flat dotted key"
+}

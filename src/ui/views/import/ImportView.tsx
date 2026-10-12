@@ -62,7 +62,7 @@ export default function ImportView({
 
 	const [keySummary, setKeySummary] = useState(labelManager.messageStore.getAllMessages() ?? []);
 
-	// layers on the current page with exactly the text of a message - offered for linking
+	// layers on the current page with the text of a message (whitespace aside) - offered for linking
 	const [linkReview, setLinkReview] = useState<
 		{ title: string; description: string; rows: LinkReviewRow[] } | undefined
 	>();
@@ -116,8 +116,8 @@ export default function ImportView({
 					: "Link layers to existing messages?",
 				description:
 					rows.length === 1
-						? "This unlinked text layer on this page has exactly the text of a message."
-						: `These ${rows.length} unlinked text layers on this page have exactly the text of a message. Where several messages have the same text, choose one.`,
+						? "This unlinked text layer on this page shows the text of a message. It keeps its line breaks and formatting."
+						: `These ${rows.length} unlinked text layers on this page show the text of a message. They keep their line breaks and formatting. Where several messages have the same text, choose one.`,
 				rows,
 			});
 		} catch (error) {

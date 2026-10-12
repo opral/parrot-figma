@@ -1,6 +1,6 @@
 # Parrot QA harness (read fully before testing)
 
-Repo: /Users/samuel/git-repos/workspace-1/parrot-figma. Drives Figma desktop over CDP to QA the plugin live. Screenshots (`.qa/shots`), downloads, outputs and reports are git-ignored; only `tools/`, `fixtures/` and this README are versioned. Install the tool dependencies once with `npm ci` in `.qa/tools`.
+Drives Figma desktop over CDP to QA the plugin live. Screenshots (`.qa/shots`), downloads, outputs and reports are git-ignored; only `tools/`, `fixtures/` and this README are versioned. Install the tool dependencies once with `npm ci` in `.qa/tools`.
 Pre-QA snapshot of the working tree: git ref `refs/qa/baseline` (`.qa/tools/qa-diff.sh [--stat]` shows what QA changed, incl. untracked files — plain `git diff refs/qa/baseline` wrongly shows untracked files as deleted).
 
 ## Live environment (already running — do not restart)
@@ -22,7 +22,7 @@ node cdp.mjs click X Y              # real mouse click at Figma page CSS coordin
 node cdp.mjs type "text" / key Enter / key Meta+a   # real keyboard input to the focused element
 node cdp.mjs upload "<selector>" /abs/file   # set files on an <input type=file> in the UI (avoid native file dialogs)
 node cdp.mjs uiconsole 15           # stream UI console logs + uncaught exceptions for 15s (run in background while you act)
-node cdp.mjs downloads /Users/samuel/git-repos/workspace-1/parrot-figma/.qa/downloads   # exports save here w/o dialog (re-run if a save dialog appears)
+node cdp.mjs downloads "$(cd ../downloads && pwd)"   # exports save here w/o dialog (re-run if a save dialog appears)
 ```
 Tips:
 - Read screenshots with the Read tool. Screenshot images are 2x device pixels; click coordinates are CSS px (image px / 2 for `shot`; for `uishot` add the plugin window origin — get it with `node cdp.mjs eval 4Xgyn "[...document.querySelectorAll('iframe')].map(f=>JSON.stringify(f.getBoundingClientRect()))"`).

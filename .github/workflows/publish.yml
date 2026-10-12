@@ -6,8 +6,12 @@ on:
   workflow_dispatch:
     inputs:
       ui_url:
-        description: "URL where dist/ui is hosted (the plugin sandbox loads the UI from there)"
+        description: "URL where dist/ui is hosted (the plugin sandbox loads the UI from there; its origin must be in manifest.json networkAccess.allowedDomains)"
         required: true
+      plugin_name:
+        description: "Plugin name written into the released manifest"
+        required: true
+        default: "Parrot - Language Translation with ease - the Translator, i18n, l8n, Plugin (Free Beta)"
 
 permissions:
   contents: read
@@ -30,6 +34,9 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Typecheck, lint and test
+        run: pnpm tsc && pnpm lint && pnpm test
+
       - name: Build UI
         run: pnpm build
 
@@ -38,10 +45,26 @@ jobs:
         env:
           VITE_CUSTOM_URL: ${{ inputs.ui_url }}
 
+      - name: Release manifest
+        run: |
+          node -e '
+            const fs = require("fs");
+            const manifest = JSON.parse(fs.readFileSync("manifest.json", "utf8"));
+            const origin = new URL(process.env.UI_URL).origin;
+            if (!manifest.networkAccess.allowedDomains.includes(origin))
+              throw new Error(`${origin} is not in networkAccess.allowedDomains of manifest.json`);
+            manifest.name = process.env.PLUGIN_NAME;
+            fs.mkdirSync("release/dist", { recursive: true });
+            fs.writeFileSync("release/manifest.json", JSON.stringify(manifest, null, 2));
+          '
+          cp dist/plugin.js release/dist/plugin.js
+          cp -r dist/ui release/dist/ui
+        env:
+          UI_URL: ${{ inputs.ui_url }}
+          PLUGIN_NAME: ${{ inputs.plugin_name }}
+
       - uses: actions/upload-artifact@v4
         with:
           name: parrot-figma-plugin
-          path: |
-            dist/
-            manifest.json
+          path: release/
           retention-days: 90

@@ -1,6 +1,6 @@
 # source me: helpers for QA driving. FILE=<file id substring>
 FILE=${FILE:-0EJ5M7}
-cd /Users/samuel/git-repos/workspace-1/parrot-figma/.qa/tools
+cd "$(dirname "${BASH_SOURCE[0]:-$0}")"
 # click a UI element by JS selector (+optional text match) with a REAL mouse click: uiclick "<css>" ["text"]
 uiclick() {
   local pos

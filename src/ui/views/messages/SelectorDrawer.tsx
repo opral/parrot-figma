@@ -184,7 +184,11 @@ export default function SelectorDrawer({
 }: {
 	message: Message;
 	baseLocale: string;
-	onSave: (message: Message) => Promise<void>;
+	/**
+	 * Saves a change of the message. The change is applied to the message as it is when it is saved
+	 * (with text typed just before that is still being saved), not to the message the drawer shows.
+	 */
+	onSave: (change: (message: Message) => Message) => Promise<unknown>;
 	onClose: () => void;
 	/** a form was added to the reference language: the editor selects it so that it can be typed right away */
 	onFormAdded?: (locale: string, variantId: string) => void;
@@ -226,7 +230,7 @@ export default function SelectorDrawer({
 		setBusy(true);
 		setError(undefined);
 		try {
-			await onSave(bundleToLegacyMessage(change(bundle), true));
+			await onSave((saved) => bundleToLegacyMessage(change(legacyMessageToBundle(saved)), true));
 			if (close) {
 				onClose();
 				return true;

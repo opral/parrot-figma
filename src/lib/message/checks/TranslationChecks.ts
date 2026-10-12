@@ -1,5 +1,6 @@
 import { checkBundle, type CheckDiagnostic } from "@inlang/sdk/browser";
 import type { BundleNested } from "../store/FigmaBundleStore";
+import { htmlBundleForChecks } from "../editor/HtmlText";
 
 export type CheckSettings = {
 	/** the languages every message needs (the reference language is always included) */
@@ -59,7 +60,9 @@ export class TranslationChecks {
 	update(bundle: BundleNested) {
 		this.remove(bundle.id);
 		const diagnostics = checkBundle({
-			bundle,
+			// Parrot stores formatting as HTML text: as markup, a translation without the reference's
+			// bold is reported, and `&nbsp;` alone counts as no text
+			bundle: htmlBundleForChecks(bundle),
 			locales: this.settings.locales,
 			referenceLocale: this.settings.referenceLocale,
 		});

@@ -98,7 +98,10 @@ export function fromEditorBundle(
 				const prior = storedVariants.get(variant.id);
 				if (rich.has(variant.id)) return prior ?? variant;
 				// an unedited text keeps its stored encoding (imports store `&` and `<` as they are)
-				if (prior && JSON.stringify(decodePattern(prior.pattern)) === JSON.stringify(variant.pattern))
+				if (
+					prior &&
+					JSON.stringify(decodePattern(prior.pattern)) === JSON.stringify(variant.pattern)
+				)
 					return { ...variant, pattern: prior.pattern };
 				return {
 					...variant,
@@ -109,6 +112,58 @@ export function fromEditorBundle(
 					),
 				};
 			}),
+		})),
+	};
+}
+
+type Pattern = BundleNested["messages"][number]["variants"][number]["pattern"];
+
+const tag = /<(\/?)([a-z][a-z0-9]*)\b[^>]*?(\/?)>/gi;
+
+/**
+ * Stored (HTML) text as the Inlang translation checks need it: formatting tags become markup
+ * elements (so a translation that lost the bold of the reference is reported), entities are decoded
+ * (`&nbsp;` alone is no text). Line breaks (`<br>`) stay text: they may differ between languages.
+ */
+export function htmlPatternForChecks(pattern: Pattern): Pattern {
+	const result: Pattern = [];
+	const pushText = (value: string) => {
+		if (value === "") return;
+		const previous = result[result.length - 1];
+		if (previous?.type === "text") previous.value += value;
+		else result.push({ type: "text", value });
+	};
+	for (const element of pattern) {
+		if (element.type !== "text") {
+			result.push(element);
+			continue;
+		}
+		let last = 0;
+		for (const match of element.value.matchAll(tag)) {
+			pushText(htmlToPlainText(element.value.slice(last, match.index)));
+			last = match.index + match[0].length;
+			const [, closing, rawName, selfClosing] = match;
+			const name = rawName.toLowerCase();
+			if (name === "br") pushText("\n");
+			else if (closing) result.push({ type: "markup-end", name });
+			else if (selfClosing) result.push({ type: "markup-standalone", name });
+			else result.push({ type: "markup-start", name });
+		}
+		pushText(htmlToPlainText(element.value.slice(last)));
+	}
+	return result;
+}
+
+/** The bundle with `htmlPatternForChecks` applied to every variant. */
+export function htmlBundleForChecks(bundle: BundleNested): BundleNested {
+	return {
+		...bundle,
+		messages: bundle.messages.map((message) => ({
+			...message,
+			variants: message.variants.map((variant) => ({
+				...variant,
+				pattern: htmlPatternForChecks(variant.pattern),
+			})),
 		})),
 	};
 }

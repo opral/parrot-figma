@@ -17,6 +17,7 @@ import MessageVariantItem from "./MessageVariantItem";
 import { showMachineTranslationContact } from "../../compontents/machineTranslation/MachineTranslationContact";
 import InlangEditor from "./InlangEditor";
 import SelectorDrawer from "./SelectorDrawer";
+import { MessageSaveQueue } from "../../../lib/message/editor/MessageSaveQueue";
 // import ReactQuill from 'react-quill';
 
 type TranslationKeyListItemProps = {
@@ -84,10 +85,28 @@ function TranslationKeyListItem({
 
 	const rowRef = React.useRef<HTMLDivElement>(null);
 
+	/**
+	 * Every save of this message: typing, forms added or deleted in the editor and changes of the
+	 * "Plural & select" drawer, one after the other. Typing is one undo step per pause. A change of the
+	 * message's forms (a form added or deleted, a selector, an exact number) is an undo step of its own,
+	 * apart from the typing before and after it.
+	 */
+	const [saveQueue] = useState(
+		() =>
+			new MessageSaveQueue(message, async (updated, options) => {
+				if (options.undoStep) await localizedLabelManager.commitUndo();
+				await localizedLabelManager.updateMessage(updated, {});
+				if (options.undoStep) await localizedLabelManager.commitUndo();
+				else localizedLabelManager.commitUndoWhenIdle();
+				setMessage(updated);
+			}),
+	);
+
 	useEffect(() => {
 		const unsubscribe = messageStore.subscribeMessage(messageId, (updatedMessage) => {
 			if (updatedMessage !== undefined) {
 				// skip deleted
+				saveQueue.sync(updatedMessage);
 				setMessage(updatedMessage);
 			}
 		});
@@ -109,18 +128,6 @@ function TranslationKeyListItem({
 	}, [messageIdToDelete]);
 
 	const refLanguage = messageStore.getRefLanugage();
-
-	/**
-	 * Typing is one undo step per pause. A change of the message's forms (a form added or deleted, a
-	 * selector, an exact number) is an undo step of its own, apart from the typing before and after it.
-	 */
-	const saveMessage = async (updated: typeof message, options: { undoStep?: boolean } = {}) => {
-		if (options.undoStep) await localizedLabelManager.commitUndo();
-		await localizedLabelManager.updateMessage(updated, {});
-		if (options.undoStep) await localizedLabelManager.commitUndo();
-		else localizedLabelManager.commitUndoWhenIdle();
-		setMessage(updated);
-	};
 
 	// reference language first, then the Setup order (the same order in every view)
 	const languages = messageStore.getOrderedLanguages();
@@ -216,7 +223,7 @@ function TranslationKeyListItem({
 					message={message}
 					locales={languages}
 					baseLocale={refLanguage!}
-					onSave={saveMessage}
+					saveQueue={saveQueue}
 					onTranslate={async () => showMachineTranslationContact()}
 					focusForm={addedForm}
 				/>
@@ -252,7 +259,7 @@ function TranslationKeyListItem({
 				<SelectorDrawer
 					message={message}
 					baseLocale={refLanguage!}
-					onSave={(updated) => saveMessage(updated, { undoStep: true })}
+					onSave={(change) => saveQueue.edit(change, { undoStep: true })}
 					onClose={() => setSelectorsOpen(false)}
 					onFormAdded={(locale, variantId) => setAddedForm({ locale, variantId })}
 				/>

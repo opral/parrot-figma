@@ -10,7 +10,7 @@ import {
 	translationFormats as formats,
 	translationPlugins,
 } from "../../../lib/transfer/TranslationFormats";
-import { exportWithPlugin } from "../../../lib/transfer/ExportWithPlugin";
+import { exportWithPlugin, type SkippedMessage } from "../../../lib/transfer/ExportWithPlugin";
 import { capture } from "../../../lib/telemetry/Telemetry";
 import type FigmaUtil from "../../../shared/FigmaUtil";
 import { useTransferFormat } from "../transfer/useTransferFormat";
@@ -28,6 +28,8 @@ export default function Export({
 	const [notice, setNotice] = useState<string>();
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string>();
+	// messages the last export left out because the format cannot hold them
+	const [skipped, setSkipped] = useState<SkippedMessage[]>([]);
 	const baseLanguage = store.getRefLanugage();
 	const languages = store.getOrderedLanguages();
 	useEffect(() => {
@@ -40,6 +42,7 @@ export default function Export({
 		setBusy(true);
 		setError(undefined);
 		setNotice(undefined);
+		setSkipped([]);
 		let fileUrl: string | undefined;
 		let link: HTMLAnchorElement | undefined;
 		try {
@@ -58,7 +61,16 @@ export default function Export({
 			link.download = file.fileName;
 			document.body.appendChild(link);
 			link.click();
-			setNotice(`Download started: ${file.fileName}`);
+			setNotice(
+				file.skipped.length === 0
+					? `Download started: ${file.fileName}`
+					: `Download started: ${file.fileName}. ${
+							file.skipped.length === 1
+								? "1 message was left out"
+								: `${file.skipped.length} messages were left out`
+						} because ${selectedPlugin.label} cannot hold ${file.skipped.length === 1 ? "it" : "them"}:`,
+			);
+			setSkipped(file.skipped);
 			capture("export:file_create", {
 				format,
 				message_count: store.getAllMessages()?.length ?? 0,
@@ -94,9 +106,8 @@ export default function Export({
 			<p className="transfer-help">Choose a format, then export a file for its language.</p>
 			<div className="transfer-languages">
 				{languages.map((language) => {
-					const count = messages.filter((message) =>
-						message.variants.some((variant) => variant.languageTag === language),
-					).length;
+					// messages with text in this language (an empty translation is missing, as in Messages)
+					const count = store.countTranslated(language);
 					return (
 						<div className="transfer-language-row" key={language}>
 							<div>
@@ -128,6 +139,15 @@ export default function Export({
 				Download translations for your project, one language at a time.
 			</p>
 			{notice && <p role="status">{notice}</p>}
+			{skipped.length > 0 && (
+				<ul className="transfer-skipped" aria-label="Messages left out of the export">
+					{skipped.map(({ id, reason }) => (
+						<li key={id}>
+							<b>{id}</b>: {reason}
+						</li>
+					))}
+				</ul>
+			)}
 			{error && <p role="alert">{error}</p>}
 		</div>
 	);

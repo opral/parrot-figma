@@ -104,13 +104,36 @@ test("next-intl export writes nested objects because next-intl rejects dots in k
 	});
 	expect(imported.map((m) => m.id).sort()).toEqual(["checkout.pay.now", "checkout.title", "home"]);
 
-	// "checkout" next to "checkout.title" cannot be nested - keep exporting instead of failing
+	// "checkout" next to "checkout.title" cannot be nested: "checkout" is left out and reported - the
+	// flat key "checkout.title" that was written before is invalid for next-intl
 	const clash = await exportWithPlugin(
 		plugin,
-		[message("checkout", "Checkout"), message("checkout.title", "Title")],
+		[message("checkout", "Checkout"), message("checkout.title", "Title"), message("home", "Home")],
 		"en",
 	);
-	expect(JSON.parse(clash.content)).toEqual({ checkout: "Checkout", "checkout.title": "Title" });
+	expect(JSON.parse(clash.content)).toEqual({ checkout: { title: "Title" }, home: "Home" });
+	expect(clash.skipped).toEqual([
+		{
+			id: "checkout",
+			reason: "this format cannot hold both “checkout” and “checkout.title”: rename one of them",
+		},
+	]);
+});
+
+test("i18next leaves out and reports a key it would silently drop", async () => {
+	const plugin = translationPlugins.find((format) => format.label === "i18next JSON")!.plugin;
+	const message = (id: string): Message => ({
+		id,
+		selectors: [],
+		variants: [{ languageTag: "en", match: [], pattern: [{ type: "Text", value: id }] }],
+	});
+	const file = await exportWithPlugin(
+		plugin,
+		[message("a"), message("a.b"), message("c..d"), message("__proto__"), message("e")],
+		"en",
+	);
+	expect(JSON.parse(file.content)).toEqual({ a: { b: "a.b" }, e: "e" });
+	expect(file.skipped.map((skipped) => skipped.id)).toEqual(["__proto__", "a", "c..d"]);
 });
 
 test("HTML in an i18next text keeps its tags and can be exported to every other format", async () => {
@@ -166,26 +189,59 @@ test("HTML in an i18next text keeps its tags and can be exported to every other 
 	expect(JSON.parse(file.content)).toEqual({ esc: "Say <b>bold</b>" });
 });
 
-test("an export that a format cannot represent names the messages that block it", async () => {
+test("one message a format cannot write is left out and named, the rest is exported", async () => {
 	const strings = translationPlugins.find((format) => format.label === "Apple strings")!.plugin;
-	const messages: Message[] = [
-		{
-			id: "plain",
-			selectors: [],
-			variants: [{ languageTag: "en", match: [], pattern: [{ type: "Text", value: "Hi" }] }],
-		},
-		{
-			id: "items",
-			selectors: [{ type: "VariableReference", name: "count" }],
-			variants: [
-				{ languageTag: "en", match: ["one"], pattern: [{ type: "Text", value: "1 item" }] },
-				{ languageTag: "en", match: ["*"], pattern: [{ type: "Text", value: "many items" }] },
-			],
-		},
-	];
-	await expect(exportWithPlugin(strings, messages, "en")).rejects.toThrow(
-		/Affected messages: items\./,
-	);
+	const android = translationPlugins.find((format) => format.label === "Android XML")!.plugin;
+	const plain = (id: string): Message => ({
+		id,
+		selectors: [],
+		variants: [{ languageTag: "en", match: [], pattern: [{ type: "Text", value: "Hi" }] }],
+	});
+	const plural: Message = {
+		id: "items",
+		selectors: [{ type: "VariableReference", name: "count" }],
+		variants: [
+			{ languageTag: "en", match: ["one"], pattern: [{ type: "Text", value: "1 item" }] },
+			{ languageTag: "en", match: ["*"], pattern: [{ type: "Text", value: "many items" }] },
+		],
+	};
+	const file = await exportWithPlugin(strings, [plain("plain"), plural], "en");
+	expect(file.content).toContain('"plain" = "Hi";');
+	expect(file.content).not.toContain("items");
+	expect(file.skipped.map((skipped) => skipped.id)).toEqual(["items"]);
+	expect(file.skipped[0].reason).not.toBe("");
+
+	// a key Parrot accepts but Android cannot use
+	const xml = await exportWithPlugin(android, [plain("title"), plain("1st_title")], "en");
+	expect(xml.content).toContain('name="title"');
+	expect(xml.skipped.map((skipped) => skipped.id)).toEqual(["1st_title"]);
+
+	// nothing left to write: the export fails with the reason
+	await expect(exportWithPlugin(strings, [plural], "en")).rejects.toThrow(/Choose another format/);
+});
+
+test("a message that cannot be read does not block other messages or languages", async () => {
+	const json = translationPlugins.find((format) => format.label === "inlang JSON")!.plugin;
+	const good: Message = {
+		id: "good",
+		selectors: [],
+		variants: [
+			{ languageTag: "en", match: [], pattern: [{ type: "Text", value: "Good" }] },
+			{ languageTag: "de", match: [], pattern: [{ type: "Text", value: "Gut" }] },
+		],
+	};
+	// a German text with a match but no selector: no Inlang bundle can be built from it
+	const broken: Message = {
+		id: "broken",
+		selectors: [],
+		variants: [{ languageTag: "de", match: ["one"], pattern: [{ type: "Text", value: "x" }] }],
+	};
+	const english = await exportWithPlugin(json, [good, broken], "en");
+	expect(JSON.parse(english.content)).toEqual({ good: "Good" });
+	expect(english.skipped).toEqual([]);
+	const german = await exportWithPlugin(json, [good, broken], "de");
+	expect(JSON.parse(german.content)).toEqual({ good: "Gut" });
+	expect(german.skipped.map((skipped) => skipped.id)).toEqual(["broken"]);
 });
 
 test("exported keys are sorted so files do not change order between sessions", async () => {

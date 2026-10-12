@@ -16,6 +16,7 @@ import { useTransferFormat } from "../transfer/useTransferFormat";
 import {
 	buildMessageTextIndex,
 	matchLayersToMessages,
+	skippedNotice,
 } from "../../../lib/localizedlabels/LinkSuggestions";
 import LinkReviewDrawer, { LinkReviewRow } from "../localizedlabelslist/LinkReviewDrawer";
 import { capture } from "../../../lib/telemetry/Telemetry";
@@ -53,8 +54,8 @@ export default function ImportView({
 		| {
 				language: Locale;
 				newMessages: Message[];
-				newVariants: { message: Message; variant: Variant }[];
-				updatedVariants: { message: Message; variant: Variant }[];
+				newTranslations: Message[];
+				changedTranslations: Message[];
 		  }
 		| undefined
 	>(undefined);
@@ -247,9 +248,8 @@ export default function ImportView({
 			<div className="transfer-languages">
 				{languages.map((language) => {
 					// messages that have text in this language, out of all messages (the number Setup shows)
-					const count = keySummary.filter((message) =>
-						message.variants.some((variant) => variant.languageTag === language),
-					).length;
+					// messages with text in this language (an empty translation is missing, as in Messages)
+					const count = labelManager.messageStore.countTranslated(language);
 					return (
 						<div className="transfer-language-row" key={language}>
 							<div>
@@ -300,12 +300,10 @@ export default function ImportView({
 				onCancel={() => setLinkReview(undefined)}
 				onConfirm={async (links) => {
 					try {
-						await labelManager.linkLabelsToMessages(links, "auto_link");
+						const { linked, skipped } = await labelManager.linkLabelsToMessages(links, "auto_link");
 						setLinkReview(undefined);
 						setImportNotice(
-							links.length === 1
-								? "Linked 1 layer to its message."
-								: `Linked ${links.length} layers to their messages.`,
+							`${linked === 1 ? "Linked 1 layer to its message." : `Linked ${linked} layers to their messages.`}${skippedNotice(skipped)}`,
 						);
 					} catch (error) {
 						setImportError(
@@ -383,9 +381,9 @@ export default function ImportView({
 								<dt>New messages</dt>
 								<dd>{importKeysByState.newMessages.length}</dd>
 								<dt>New translations</dt>
-								<dd>{importKeysByState.newVariants.length}</dd>
+								<dd>{importKeysByState.newTranslations.length}</dd>
 								<dt>Changed translations</dt>
-								<dd>{importKeysByState.updatedVariants.length}</dd>
+								<dd>{importKeysByState.changedTranslations.length}</dd>
 							</dl>
 							<p>Existing translations in this language are replaced where the keys match.</p>
 							<ul className="drawer-keys">

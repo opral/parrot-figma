@@ -22,14 +22,14 @@ test("a merged message (native bundle) counts a language it did not have as a ne
 
 	const polish = await read("pl", { hello: "Cześć {name}" });
 	const added = MessageImporter.getImportStatistics(store, [polish], "pl" as any);
-	expect(added.newVariants).toHaveLength(1);
-	expect(added.updatedVariants).toHaveLength(0);
+	expect(added.newTranslations).toHaveLength(1);
+	expect(added.changedTranslations).toHaveLength(0);
 
 	const changed = MessageImporter.getImportStatistics(
 		store,
 		[await read("de", { hello: "Guten Tag {name}" })],
 		"de" as any,
 	);
-	expect(changed.newVariants).toHaveLength(0);
-	expect(changed.updatedVariants).toHaveLength(1);
+	expect(changed.newTranslations).toHaveLength(0);
+	expect(changed.changedTranslations).toHaveLength(1);
 });

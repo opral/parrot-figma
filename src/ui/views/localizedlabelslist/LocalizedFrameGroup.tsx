@@ -13,7 +13,11 @@ import { NodeSelection } from "../../../lib/localizedlabels/LocalizedLabelManage
 import TranslatorMachine, {
 	NoMoreTranslationsLeftError,
 } from "../../../lib/translationprovider/TranslatorMachine";
-import { buildMessageTextIndex, proposeKeys } from "../../../lib/localizedlabels/LinkSuggestions";
+import {
+	buildMessageTextIndex,
+	proposeKeys,
+	skippedNotice,
+} from "../../../lib/localizedlabels/LinkSuggestions";
 import { untranslatedNotice } from "../../../lib/translationprovider/MachineTranslationContact";
 import LinkReviewDrawer, { LinkReviewRow } from "./LinkReviewDrawer";
 
@@ -155,10 +159,13 @@ export default function LocalizedFrameGroup({
 				onCancel={() => setKeyRows(undefined)}
 				onConfirm={async (links) => {
 					try {
-						await localizedLabelManager.linkLabelsToMessages(links, "generate_keys");
+						const { linked, skipped } = await localizedLabelManager.linkLabelsToMessages(
+							links,
+							"generate_keys",
+						);
 						setKeyRows(undefined);
 						figmaRemote.notify(
-							`Linked ${links.length === 1 ? "1 text" : `${links.length} texts`} in “${rootFrameName}”.`,
+							`Linked ${linked === 1 ? "1 text" : `${linked} texts`} in “${rootFrameName}”.${skippedNotice(skipped)}`,
 						);
 					} catch (e: any) {
 						figmaRemote.notifyError(`Could not link the texts - ${e.message}`, 8000);

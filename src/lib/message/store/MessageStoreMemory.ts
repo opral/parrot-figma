@@ -40,9 +40,6 @@ export type SearchResult = {
 	inNames: Set<string>;
 	inText: Set<string>;
 	withMissingVariants: Set<string>;
-	withMissingVariantsPerLanguage: {
-		[language in Locale]?: Set<string>;
-	};
 	withProblems: Set<string>;
 	withMissingReview: Set<string>;
 	matchingNames: Set<string>;
@@ -372,9 +369,6 @@ export default class MessageStoreMemory extends EventTarget {
 			inNames: new Set<string>(),
 			inText: new Set<string>(),
 			withMissingVariants: new Set<string>(),
-			withMissingVariantsPerLanguage: {} as {
-				[language in Locale]?: Set<string>;
-			},
 			withProblems: new Set<string>(),
 			withMissingReview: new Set<string>(),
 			matchingNames: new Set<string>(),
@@ -549,6 +543,11 @@ export default class MessageStoreMemory extends EventTarget {
 
 	getAllMessages() {
 		return this.inlangProject?.getAllReadonly();
+	}
+
+	/** Messages with text in the language - the messages an export of the language contains. */
+	countTranslated(language: Locale): number {
+		return (this.getAllMessages()?.length ?? 0) - this.countMissing(language);
 	}
 
 	/** Messages without text in the language, or in any language (Inlang's translation checks). */

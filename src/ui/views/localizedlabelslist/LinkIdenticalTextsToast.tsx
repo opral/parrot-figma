@@ -67,8 +67,9 @@ export default function LinkIdenticalTextsToast({
 		clearTimeout(hideTimer.current);
 		setOffer({ type: "linking", messageName, count: labels.length });
 		try {
-			await localizedLabelManager.linkLabelsToMessage(labels, messageName);
-			setOffer({ type: "done", messageName, count: labels.length });
+			// layers changed or linked since the offer are skipped
+			const { linked } = await localizedLabelManager.linkLabelsToMessage(labels, messageName);
+			setOffer({ type: "done", messageName, count: linked });
 			hideAfter(RESULT_VISIBLE_MS);
 		} catch (e: any) {
 			setOffer(undefined);

@@ -130,7 +130,8 @@ function patchNativePatterns(message: Message, native: BundleNested): BundleNest
 		const annotations = new Map<string, string>();
 		for (const element of target.pattern) {
 			if (element.type === "text") continue;
-			if (element.type !== "expression" || element.arg.type !== "variable-reference") return undefined;
+			if (element.type !== "expression" || element.arg.type !== "variable-reference")
+				return undefined;
 			const annotation = JSON.stringify(element.annotation ?? null);
 			if ((annotations.get(element.arg.name) ?? annotation) !== annotation) return undefined;
 			annotations.set(element.arg.name, annotation);
@@ -276,13 +277,29 @@ export function mergeImportedMessage(
 		{
 			...current,
 			declarations: [...declarations.values()],
-			messages: [
-				...current.messages.filter((m) => m.locale !== locale),
-				...imported.messages.filter((m) => m.locale === locale),
-			],
+			messages: replaceLocaleMessages(current.messages, imported.messages, locale),
 		},
 		true,
 	);
+}
+
+/**
+ * The messages with the imported language in the place of the stored one (appended if it is new):
+ * re-importing an unchanged file gives the same bundle, so it writes nothing.
+ */
+function replaceLocaleMessages(
+	current: BundleNested["messages"],
+	imported: BundleNested["messages"],
+	locale: string,
+) {
+	const incoming = imported.filter((m) => m.locale === locale);
+	const index = current.findIndex((m) => m.locale === locale);
+	if (index === -1) return [...current, ...incoming];
+	return [
+		...current.slice(0, index),
+		...incoming,
+		...current.slice(index + 1).filter((m) => m.locale !== locale),
+	];
 }
 
 /**
@@ -293,7 +310,9 @@ export function stableStringify(value: unknown): string {
 	return JSON.stringify(value, (_key, v: unknown) =>
 		v && typeof v === "object" && !Array.isArray(v)
 			? Object.fromEntries(
-					Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+					Object.entries(v as Record<string, unknown>).sort(([a], [b]) =>
+						a < b ? -1 : a > b ? 1 : 0,
+					),
 				)
 			: v,
 	);

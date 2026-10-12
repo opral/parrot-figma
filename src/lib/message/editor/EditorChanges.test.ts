@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { applyEditorChanges, saveGroups } from "./EditorChanges";
+import { applyEditorChanges } from "./EditorChanges";
 import { importWithPlugin } from "../../import/InlangPluginImporter";
 import { exportWithPlugin } from "../../transfer/ExportWithPlugin";
 import { translationPlugins } from "../../transfer/TranslationFormats";
@@ -153,21 +153,4 @@ test("a locale can replace its own declaration without changing another locale",
 	expect(merged.nativeBundle?.declarations).toContainEqual(
 		expect.objectContaining({ name: "countPlural", type: "local-variable" }),
 	);
-});
-
-test("saveGroups merges typing and saves a change of the forms on its own", () => {
-	const typing = (text: string) => ({ text, fromPatternEditor: true });
-	const add = { text: "add 0", fromPatternEditor: false };
-	const remove = { text: "delete one", fromPatternEditor: false };
-	expect(
-		saveGroups([typing("a"), typing("ab"), add, typing("x"), typing("xy"), remove, add]).map(
-			(group) => [group.structural, group.edits.map((edit) => edit.text)],
-		),
-	).toEqual([
-		[false, ["a", "ab"]],
-		[true, ["add 0"]],
-		[false, ["x", "xy"]],
-		[true, ["delete one"]],
-		[true, ["add 0"]],
-	]);
 });

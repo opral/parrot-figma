@@ -13,7 +13,8 @@ import {
 	bundleToLegacyMessage,
 	legacyMessageToBundle,
 } from "../../../lib/message/store/LegacyMessageBundleConverter";
-import { applyEditorChanges, saveGroups } from "../../../lib/message/editor/EditorChanges";
+import { applyEditorEdit } from "../../../lib/message/editor/EditorChanges";
+import type { MessageSaveQueue } from "../../../lib/message/editor/MessageSaveQueue";
 import { draftMessages } from "../../../lib/message/editor/DraftMessages";
 import { addExactNumbersOfReference } from "../../../lib/message/editor/Selectors";
 import { fromEditorBundle, toEditorBundle } from "../../../lib/message/editor/HtmlText";
@@ -193,15 +194,19 @@ export default function InlangEditor({
 	message,
 	locales,
 	baseLocale,
-	onSave,
+	saveQueue,
 	onTranslate,
 	focusForm,
 }: {
 	message: Message;
 	locales: string[];
 	baseLocale: string;
-	/** `undoStep`: the save changes the forms and is an undo step of its own */
-	onSave: (message: Message, options?: { undoStep?: boolean }) => Promise<void>;
+	/**
+	 * The saves of this message (shared with the "Plural & select" drawer): an edit is applied to the
+	 * message as left by the edits before it, typing is merged, a change of the forms is an undo step
+	 * of its own.
+	 */
+	saveQueue: MessageSaveQueue;
 	/** Fills the (empty) translation of a locale from the reference language. */
 	onTranslate?: (locale: string) => Promise<void>;
 	/** a form added elsewhere (a new exact number, a select value): selected and focused once it is rendered */
@@ -223,14 +228,13 @@ export default function InlangEditor({
 	// The state the editors were last given. A new `message` whose text differs from it was changed
 	// elsewhere (undo, the canvas, an import) and replaces what the editor shows.
 	const current = useRef<BundleNested>(bundle);
-	// Texts the pattern editors reported per variant, and whether a save is queued or running. While
-	// the user types, saves finish one after the other and each renders an older text than the field
-	// shows: those renders are echoes of our own edits, not changes from elsewhere.
+	// Texts the pattern editors reported per variant. While the user types, saves finish one after the
+	// other and each renders an older text than the field shows: while the queue is busy, those renders
+	// are echoes of our own edits, not changes from elsewhere.
 	const emitted = useRef(new Map<string, string[]>());
-	const busy = useRef(false);
 	const external = useMemo(() => {
 		const changed = new Set<string>();
-		if (busy.current) return changed;
+		if (saveQueue.busy) return changed;
 		const before = new Map(
 			current.current.messages.flatMap((m) => m.variants).map((v) => [v.id, v]),
 		);
@@ -270,8 +274,8 @@ export default function InlangEditor({
 		field.focus();
 	});
 
-	const latest = useRef({ stored, rich, drafts, onSave });
-	latest.current = { stored, rich, drafts, onSave };
+	const latest = useRef({ locales, baseLocale, saveQueue });
+	latest.current = { locales, baseLocale, saveQueue };
 	const [selected, setSelected] = useState<Record<string, string>>({});
 	const [error, setError] = useState<string>();
 	const enqueue = useRef<(changes: ChangeEventDetail[], fromPatternEditor: boolean) => void>(
@@ -279,72 +283,30 @@ export default function InlangEditor({
 	);
 
 	useEffect(() => {
-		let pending: { change: ChangeEventDetail; fromPatternEditor: boolean }[] = [];
-		let queued = false;
-		let saving = Promise.resolve();
-		// Saving an edit also rewrites the linked layers (~100 ms) and typing is faster than that: edits
-		// that arrive while a save runs are merged into the next one.
-		const save = async (batch: typeof pending, undoStep: boolean) => {
-			{
-				const previous = structuredClone(current.current);
-				const changes = batch.map(({ change, fromPatternEditor: fromEditor }) => {
-					if (!fromEditor) return change;
-					// the pattern editor only knows the text: keep the variant's own matches
-					const variant = previous.messages
-						.flatMap((m) => m.variants)
-						.find((v) => v.id === change.entityId);
-					const edited = change.newData as EditorVariant | undefined;
-					return variant && edited
-						? { ...change, newData: { ...variant, pattern: edited.pattern } }
-						: change;
+		enqueue.current = (changes, fromPatternEditor) => {
+			const queue = latest.current.saveQueue;
+			// applied to the message with every edit queued before it (drawer changes too), when it is saved
+			const update = (saved: Message) => {
+				const { message: next, editorBundle } = applyEditorEdit(saved, changes, {
+					fromPatternEditor,
+					locales: latest.current.locales,
+					baseLocale: latest.current.baseLocale,
 				});
-				for (const draft of latest.current.drafts) {
-					if (
-						changes.some(
-							(change) =>
-								change.entityId === draft.id ||
-								(change.newData as EditorVariant | undefined)?.message_id === draft.id ||
-								draft.variants.some((v) => v.id === change.entityId),
-						) &&
-						!previous.messages.some((m) => m.id === draft.id)
-					) {
-						previous.messages.push(structuredClone(draft));
-					}
-				}
-				try {
-					const next = applyEditorChanges(previous, changes);
-					// set before saving: the save renders the new message, which is this edit, not an external one
-					current.current = next;
-					await latest.current.onSave(
-						bundleToLegacyMessage(
-							fromEditorBundle(next, latest.current.rich, latest.current.stored),
-							true,
-						),
-						{ undoStep },
-					);
-					setError(undefined);
-				} catch (e) {
-					current.current = previous;
+				// set before saving: the save renders the new message, which is this edit, not an external one
+				current.current = editorBundle;
+				return next;
+			};
+			queue
+				.edit(update, { undoStep: !fromPatternEditor })
+				.then(() => setError(undefined))
+				.catch((e) => {
+					// the editors show what is saved, not the failed edit
+					current.current = toEditorBundle(legacyMessageToBundle(queue.message)).bundle;
 					// a form that could not be added is not shown
-					const failed = new Set(batch.map(({ change }) => change.entityId));
+					const failed = new Set(changes.map((change) => change.entityId));
 					setAdding((list) => list.filter((v) => !failed.has(v.id)));
 					setError(e instanceof Error ? e.message : String(e));
-				}
-			}
-		};
-		enqueue.current = (changes, fromPatternEditor) => {
-			pending.push(...changes.map((change) => ({ change, fromPatternEditor })));
-			busy.current = true;
-			if (queued) return;
-			queued = true;
-			saving = saving.then(async () => {
-				queued = false;
-				const batch = pending;
-				pending = [];
-				// typing is merged into one save, a form added or deleted is a save (and undo step) of its own
-				for (const group of saveGroups(batch)) await save(group.edits, group.structural);
-				busy.current = queued || pending.length > 0;
-			});
+				});
 		};
 		const element = root.current!;
 		const onChange = (event: Event) => {
@@ -488,17 +450,18 @@ export default function InlangEditor({
 								onSelect={(variantId) => setSelected((s) => ({ ...s, [locale]: variantId }))}
 								onAddExactNumbers={(input, values) => {
 									setError(undefined);
-									void latest.current
-										.onSave(
-											bundleToLegacyMessage(
-												addExactNumbersOfReference(
-													latest.current.stored,
-													input,
-													values,
-													baseLocale,
+									saveQueue
+										.edit(
+											(saved) =>
+												bundleToLegacyMessage(
+													addExactNumbersOfReference(
+														legacyMessageToBundle(saved),
+														input,
+														values,
+														baseLocale,
+													),
+													true,
 												),
-												true,
-											),
 											{ undoStep: true },
 										)
 										.catch((e) => setError(e instanceof Error ? e.message : String(e)));

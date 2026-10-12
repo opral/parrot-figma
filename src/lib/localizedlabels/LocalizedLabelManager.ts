@@ -9,7 +9,11 @@ import FontHelper from "./FontUtil";
 import { InlangMessageStore } from "../message/store/InlangMessageStoreFigmaRoot";
 import { FillinToPlaceholder as FillinsToPlaceholder } from "../message/MessageExtnesions";
 import { MessageParameterValues } from "../message/MessageParameterValues";
-import { restoreTextFillRanges, type TextFillRange } from "./RichTextFormatting";
+import {
+	restoreTextFillRanges,
+	setTextFillRange,
+	type TextFillRange,
+} from "./RichTextFormatting";
 import { normalizeText } from "./LinkSuggestions";
 
 export interface NodeSelection {
@@ -1101,11 +1105,12 @@ export default class LocalizedLabelManager {
 			if (changedProperties.characters !== undefined) {
 				const sourceTextLength = textNode.characters.length;
 				const originalFillRanges = textNode
-					.getStyledTextSegments(["fills"])
-					.map(({ start, end, fills }) => ({
+					.getStyledTextSegments(["fills", "fillStyleId"])
+					.map(({ start, end, fills, fillStyleId }) => ({
 						start,
 						end,
 						fills: [...fills],
+						fillStyleId,
 					})) as TextFillRange[];
 
 				try {
@@ -1233,11 +1238,11 @@ export default class LocalizedLabelManager {
 				}
 
 				textNode.characters = changedProperties.characters;
-				restoreTextFillRanges(
+				await restoreTextFillRanges(
 					originalFillRanges,
 					sourceTextLength,
 					textNode.characters.length,
-					(start, end, fills) => textNode.setRangeFills(start, end, fills),
+					(start, end, _fills, range) => setTextFillRange(textNode, start, end, range),
 				);
 
 				for (const rangeStyle of changedProperties.ops!) {

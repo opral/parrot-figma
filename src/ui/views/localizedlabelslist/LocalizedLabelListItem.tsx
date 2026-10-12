@@ -598,7 +598,7 @@ export default function LocalizedLabelListItem({
 											<button
 												type="button"
 												onClick={showMachineTranslationContact}
-												data-tooltip-content="Machine translation is available on request"
+												data-tooltip-content="Machine translations are part of Parrot Cloud"
 											>
 												Translate
 											</button>

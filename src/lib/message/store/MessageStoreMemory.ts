@@ -15,6 +15,7 @@ import { Config, InlangMessageStore } from "./InlangMessageStoreFigmaRoot";
 import { MessageParameterValues } from "../MessageParameterValues";
 import PlaceholderHelper from "../PlaceholderUtil";
 import TranslatorMachine from "../../translationprovider/TranslatorMachine";
+import { MachineTranslationUnavailableError } from "../../translationprovider/MachineTranslationContact";
 import FigmaUtil from "../../../shared/FigmaUtil";
 import { InlangV3Project } from "./InlangV3Project";
 
@@ -770,11 +771,8 @@ export default class MessageStoreMemory extends EventTarget {
 			sourceLanguage,
 			match,
 		);
-		if (sourceVariantPatternHTML === undefined) {
-			throw new Error(
-				`There is no text in the reference language (${sourceLanguage}) to translate from`,
-			);
-		}
+		// nothing to translate from: the text keeps its current text like any other untranslated text
+		if (sourceVariantPatternHTML === undefined) throw new MachineTranslationUnavailableError();
 
 		const translatedPattern = await translator.translate(
 			sourceVariantPatternHTML,

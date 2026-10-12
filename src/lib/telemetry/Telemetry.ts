@@ -26,6 +26,7 @@ let appVersion = "";
 let distinctId: string | undefined;
 let projectId: string | undefined;
 // events captured before the user is known are sent once it is
+const MAX_PENDING = 50;
 let pending: { event: TelemetryEvent; properties: Properties; timestamp: string }[] = [];
 
 export function hashId(id: string) {
@@ -90,7 +91,8 @@ export function capture(event: TelemetryEvent, properties: Properties = {}) {
 	if (!isEnabled()) return;
 	const timestamp = new Date().toISOString();
 	if (!distinctId) {
-		pending.push({ event, properties, timestamp });
+		// without a user (none signed in) nothing is sent: keep only the first few events
+		if (pending.length < MAX_PENDING) pending.push({ event, properties, timestamp });
 		return;
 	}
 	send(event, properties, timestamp);

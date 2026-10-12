@@ -19,9 +19,6 @@ export function untranslatedNotice(count: number, languageName: string) {
 export function isMachineTranslationUnavailable(error: unknown) {
 	return (
 		error instanceof MachineTranslationUnavailableError ||
-		(error as Error | undefined)?.name === "MachineTranslationUnavailableError" ||
-		String((error as Error | undefined)?.message ?? "").startsWith(
-			"Machine translation is available on request",
-		)
+		(error as Error | undefined)?.name === "MachineTranslationUnavailableError"
 	);
 }

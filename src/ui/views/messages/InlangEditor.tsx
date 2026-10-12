@@ -451,7 +451,7 @@ export default function InlangEditor({
 													type="button"
 													className="inlang-row-action inlang-row-action--inside"
 													onClick={() => void onTranslate(locale)}
-													title="Machine translation is available on request"
+													title="Machine translations are part of Parrot Cloud"
 												>
 													Translate from {baseLocale}
 												</button>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Parrot</string>
+    <string name="welcome">Hello, %1$s! You have %2$d new messages</string>
+    <string name="esc">It\'s a \"quoted\" &amp; &lt;b&gt;bold&lt;/b&gt; text\nSecond line</string>
+    <string name="emoji">Hello 👋 世界 ñ</string>
+    <string name="empty"></string>
+    <string name="member.login_title">Welcome back</string>
+    <plurals name="items">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+</resources>

@@ -1,0 +1,10 @@
+{
+  "dev": {
+    "cart_items_one": "{{count}} item in your cart",
+    "cart_items_other": "{{count}} items in your cart",
+    "greeting": "Hello {{name}}, welcome back",
+    "weekly": "Weekly digest",
+    "multiline": "Line one\nLine two"
+  },
+  "settings": { "notifications": { "email": { "marketing": { "weekly_digest": { "enabled_label": "Send me the weekly digest by email" } } } } }
+}

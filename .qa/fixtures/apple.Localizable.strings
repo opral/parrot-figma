@@ -1,0 +1,7 @@
+/* App name */
+"app_name" = "Parrot";
+"welcome" = "Hello, %@! You have %d new messages";
+"esc" = "Line one\nLine two with \"quotes\" and <b>bold</b> & more";
+"emoji" = "Hello 👋 世界 ñ";
+"empty" = "";
+"member.login_title" = "Welcome back";

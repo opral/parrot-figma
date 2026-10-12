@@ -1,0 +1,20 @@
+import { ctx } from "./qa-lib.mjs";
+import { execSync } from "node:child_process";
+const F = process.env.FILE || "ZXC9xq";
+const d = await ctx(F);
+const shot = (n) => execSync(`node cdp.mjs uishot ../shots/${n}.png ${F}`);
+const open = () => d.ui("[...document.querySelectorAll('.top-drawer.open')].length");
+const txt = () => d.fig("figma.currentPage.findAll(x=>x.type==='TEXT').map(t=>t.characters+'/'+t.getPluginData('l')).join(',')");
+await d.click(".tab", "Layers"); await d.sleep(500);
+const pick = async () => { await d.clickEl("document.querySelector('.bulk-language-select button')"); await d.sleep(600);
+  await d.clickEl("[...document.querySelectorAll('.select-menu__item')].filter(e=>e.innerText.startsWith('German'))[0]"); await d.sleep(1000); };
+console.log("start", await txt());
+await pick(); console.log("drawer", await open(), await d.ui("document.querySelector('.top-drawer.open .drawer-header')?.innerText")); shot("b2r2-22-page-drawer");
+await d.key("Escape"); await d.sleep(600); console.log("Escape -> open", await open(), await txt());
+await pick();
+let n = 0; for (; n < 20; n++) { await d.key("Tab"); const a = await d.ui("document.activeElement?.innerText"); if (/Cancel/.test(a || "")) break; }
+console.log("Tab count", n + 1);
+await d.key("Enter"); await d.sleep(800); console.log("Enter on Cancel -> open", await open(), await txt());
+await pick(); console.log("focus", await d.ui("document.activeElement?.className"));
+await d.key("Enter"); await d.sleep(3500); console.log("Enter -> open", await open(), await txt());
+await d.close();

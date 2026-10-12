@@ -1,0 +1,2 @@
+import { chromium } from "playwright-core";
+export async function snap(p){ return p.evaluate(()=>{const o={};const r=figma.root;for(const k of r.getPluginDataKeys())o['root:'+k]=r.getPluginData(k).slice(0,400);const walk=(n)=>{for(const k of n.getPluginDataKeys())o[n.id+':'+k]=n.getPluginData(k).slice(0,200);if(n.children)n.children.forEach(walk)};figma.currentPage.children.forEach(walk);o.sel=figma.currentPage.selection.map(n=>n.id).join();o.chars=figma.currentPage.findAll(n=>n.type==='TEXT').map(n=>n.characters).join('|');return o}); }

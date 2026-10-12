@@ -1,0 +1,10 @@
+{
+  "icu.inbox": "{count, plural, offset:1 one {{sender} und # weitere Person haben geschrieben} other {{sender} und # weitere haben geschrieben}}",
+  "icu.invite": "{gender, select, female {Sie hat dich eingeladen} male {Er hat dich eingeladen} other {Sie haben dich eingeladen}}",
+  "icu.cart": "{count, plural, one {{gender, select, female {Sie hat} other {Sie haben}} # Artikel} other {{gender, select, female {Sie hat} other {Sie haben}} # Artikel}}",
+  "icu.rank": "Du bist {place, selectordinal, other {#.}} geworden",
+  "icu.escape": "Das ist '{'wörtlich'}' {n, plural, one {'#' # Tag} other {'#' # Tags}}",
+  "icu.total": "Summe: {amount, number}",
+  "icu.due": "Fällig {due, date, short}",
+  "icu.party": "{host, select, female {{guests, plural, offset:1 =0 {Sie bleibt zu Hause.} =1 {Sie lädt jemanden ein.} one {Sie lädt {guest} und eine weitere Person ein.} other {Sie lädt {guest} und # weitere ein.}}} other {{guests, plural, offset:1 =0 {Sie bleiben zu Hause.} =1 {Sie laden {guest} ein.} one {Sie laden {guest} und eine weitere Person ein.} other {Sie laden {guest} und # weitere ein.}}}}"
+}

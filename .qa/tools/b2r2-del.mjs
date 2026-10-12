@@ -1,0 +1,21 @@
+import { ctx } from "./qa-lib.mjs";
+import { execSync } from "node:child_process";
+const F = process.env.FILE || "ZXC9xq";
+const d = await ctx(F);
+const shot = (n) => execSync(`node cdp.mjs uishot ../shots/${n}.png ${F}`);
+const open = () => d.ui("[...document.querySelectorAll('.top-drawer.open')].length");
+const ids = () => d.ui("[...document.querySelectorAll('inlang-bundle')].filter(b=>b.getBoundingClientRect().height>10).map(b=>b.bundle?.id).join(',')");
+await d.click(".tab", "Messages"); await d.sleep(500);
+await d.clickEl("document.querySelector('.message-filter-search-input')"); await d.key("Meta+a"); await d.type("name:r2b.thanks"); await d.sleep(1500);
+console.log("found", await ids());
+const trash = () => d.clickEl("[...document.querySelectorAll('.message-group-header-actions .button')].find(b=>b.getBoundingClientRect().height>5)");
+await trash(); await d.sleep(800); console.log("drawer open", await open()); shot("b2r2-20-delete-drawer");
+await d.key("Escape"); await d.sleep(600); console.log("Escape -> open", await open(), await ids());
+await trash(); await d.sleep(800);
+let n = 0; for (; n < 20; n++) { await d.key("Tab"); const a = await d.ui("document.activeElement?.innerText"); if (/Cancel/.test(a || "")) break; }
+console.log("Tab to Cancel after", n + 1, "focus:", await d.ui("document.activeElement?.innerText"));
+await d.key("Enter"); await d.sleep(800); console.log("Enter on Cancel -> open", await open(), await ids());
+await trash(); await d.sleep(800);
+console.log("focus", await d.ui("document.activeElement?.outerHTML.slice(0,120)"));
+await d.key("Enter"); await d.sleep(2000); console.log("Enter (confirm) -> open", await open(), "ids", await ids());
+await d.close();

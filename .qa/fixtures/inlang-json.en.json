@@ -1,0 +1,17 @@
+{
+  "app": {
+    "title": "Parrot",
+    "tagline": "Localize your designs",
+    "single": { "only": "Only child of single" }
+  },
+  "solo": { "child": "A single-child object" },
+  "deep": { "a": { "b": { "c": "Three levels deep" } } },
+  "member.login_title": "Welcome back",
+  "login.button": "Log in",
+  "greeting": "Hello {{name}}, you have {{count}} new messages",
+  "esc": "Line one\nLine two with \"quotes\", a backslash \\ and <b>bold</b> & ampersand",
+  "emoji": "Hello 👋 世界 ñ ü ß",
+  "empty": "",
+  "list": "<ul><li>First</li><li>Second</li></ul>",
+  "olist": "<ol><li>Step one</li><li>Step two</li></ol>"
+}

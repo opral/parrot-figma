@@ -1,0 +1,1 @@
+node cdp.mjs eval 4Xgyn "(()=>{const p=figma.root.children.find(p=>p.name==='QA b2 big');return p.findAllWithCriteria({types:['TEXT']}).filter(t=>t.getPluginData('mn').startsWith('b2cell')).length})()"

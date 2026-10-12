@@ -1,0 +1,9 @@
+{
+  "r3": {
+    "imp": {
+      "one": "Import eins {{name}}",
+      "two": "Import zwei"
+    }
+  },
+  "r3.imp.flat": "Flacher Punkt-Schluessel"
+}

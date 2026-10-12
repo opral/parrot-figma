@@ -1,0 +1,11 @@
+{
+  "r2imp": {
+    "summary": "Order summary",
+    "place_order": "Place order",
+    "rich": "Rich <strong>bit</strong>",
+    "thanks": "Thanks!",
+    "thanks_alt": "Thanks!",
+    "vars": "Hi {{name}}"
+  },
+  "r2cart": { "title": "Bag overview" }
+}

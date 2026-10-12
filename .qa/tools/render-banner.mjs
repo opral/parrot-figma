@@ -1,0 +1,10 @@
+import { chromium } from "playwright-core";
+import path from "node:path";
+const [input, output, scale = "1"] = process.argv.slice(2);
+const exe = (await import("node:fs")).readdirSync(path.join(process.env.HOME, "Library/Caches/ms-playwright")).filter((d) => d.startsWith("chromium-")).sort().pop();
+const browser = await chromium.launch({ executablePath: path.join(process.env.HOME, "Library/Caches/ms-playwright", exe, "chrome-mac/Chromium.app/Contents/MacOS/Chromium") }).catch(() => chromium.launch({ channel: "chrome" }));
+const page = await browser.newPage({ viewport: { width: 1600, height: 400 }, deviceScaleFactor: Number(scale) });
+await page.goto("file://" + path.resolve(input));
+await page.screenshot({ path: output });
+await browser.close();
+console.log(output);

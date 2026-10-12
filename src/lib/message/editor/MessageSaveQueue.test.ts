@@ -219,4 +219,36 @@ describe("MessageSaveQueue", () => {
 		expect(text(queue.message, "de")).toEqual(["Warenkorb"]);
 		expect(text(queue.message, "en")).toEqual(["Cart"]);
 	});
+
+	it("a save that fails after the store took the edit continues from what the store holds", async () => {
+		let failLayers = true;
+		const queue: MessageSaveQueue = new MessageSaveQueue(plain("Cart", "Korb"), async (message) => {
+			// the store is written and echoes the message, then a linked layer cannot be updated
+			queue.sync(message);
+			if (failLayers) throw new Error("Can't update label - not all Fonts could get loaded");
+		});
+		await expect(typing(queue, "cart_de_1", "Warenkorb")).rejects.toThrow("Fonts");
+		expect(text(queue.message, "de")).toEqual(["Warenkorb"]);
+		failLayers = false;
+		await typing(queue, "cart_en_1", "Shopping cart");
+		expect(text(queue.message, "de")).toEqual(["Warenkorb"]);
+		expect(text(queue.message, "en")).toEqual(["Shopping cart"]);
+	});
+
+	it("a change from elsewhere during a save is the start of the next edit, not overwritten", async () => {
+		let external: Message | undefined;
+		const queue: MessageSaveQueue = new MessageSaveQueue(plain("Cart", "Korb"), async (message) => {
+			queue.sync(message);
+			await new Promise((resolve) => setTimeout(resolve, 5));
+			// e.g. "Update message" on the canvas while the layers of this save are updated
+			if (external) queue.sync(external);
+		});
+		external = plain("Cart", "Einkaufswagen");
+		await typing(queue, "cart_en_1", "Cart!");
+		external = undefined;
+		expect(text(queue.message, "de")).toEqual(["Einkaufswagen"]);
+		await typing(queue, "cart_en_1", "Cart!!");
+		expect(text(queue.message, "de")).toEqual(["Einkaufswagen"]);
+		expect(text(queue.message, "en")).toEqual(["Cart!!"]);
+	});
 });

@@ -237,7 +237,11 @@ export default class LocalizedLabelManagerUI
 		});
 	}
 
+	/** All pages were read once: lookups of the layers linked to a message are complete. */
+	private linksLoaded = false;
+
 	onKeyLabelLinksLoaded(event: LinksLoadedEvent) {
+		this.linksLoaded = true;
 		this.messageStore.updateMessageLinks(event.keys);
 		this.dispatchEvent(new CustomEvent("linksLoaded"));
 	}
@@ -378,8 +382,11 @@ export default class LocalizedLabelManagerUI
 
 	async setFrameLanguage(frameId: string, targetLanguage: Locale, translator: TranslatorMachine) {
 		capture("translation:language_update", { frame_count: 1 });
-		return this.runFrameOperation(frameId, () =>
-			this.applyFrameLanguage(frameId, targetLanguage, translator),
+		// one language switch = one undo step (otherwise Cmd+Z reverts everything since the last commit)
+		return this.runAsUndoStep(() =>
+			this.runFrameOperation(frameId, () =>
+				this.applyFrameLanguage(frameId, targetLanguage, translator),
+			),
 		);
 	}
 
@@ -408,7 +415,7 @@ export default class LocalizedLabelManagerUI
 				onProgress?.(index, frameIds.length);
 				try {
 					const result = await this.runFrameOperation(frameId, () =>
-						this.applyFrameLanguage(frameId, targetLanguage, translator, false),
+						this.applyFrameLanguage(frameId, targetLanguage, translator),
 					);
 					lockedLabels += result.lockedLabels;
 					untranslatedLabels += result.untranslatedLabels;
@@ -433,14 +440,7 @@ export default class LocalizedLabelManagerUI
 		frameId: string,
 		targetLanguage: Locale,
 		translator: TranslatorMachine,
-		/** one language switch = one undo step (otherwise Cmd+Z reverts everything since the last commit) */
-		commitUndo = true,
 	): Promise<{ lockedLabels: number; untranslatedLabels: number }> {
-		if (commitUndo) {
-			return this.runAsUndoStep(() =>
-				this.applyFrameLanguage(frameId, targetLanguage, translator, false),
-			);
-		}
 		let lastError: undefined | Error;
 		let untranslatedLabels = 0;
 
@@ -526,14 +526,14 @@ export default class LocalizedLabelManagerUI
 
 		// await this.updateUnpinnedLabelsWithKey(localizedLabel.messageId!);
 
-		await this.localizedLabelMangerSandbox.commitUndo();
+		await this.commitUndo();
 	}
 
 	async fixLabelLints(localizedLabel: LocalizedLabel, lintsToFix: string[]) {
 		await this.runFrameOperation(localizedLabel.rootFrameId, async () => {
 			await this.localizedLabelMangerSandbox.fixLabelLints(localizedLabel.nodeId, lintsToFix);
 
-			await this.localizedLabelMangerSandbox.commitUndo();
+			await this.commitUndo();
 		});
 	}
 
@@ -569,7 +569,7 @@ export default class LocalizedLabelManagerUI
 		await this.unlinkLabelsWithMessage(messageId);
 		console.log(`DELETING done ${messageId}`);
 
-		await this.localizedLabelMangerSandbox.commitUndo();
+		await this.commitUndo();
 	}
 
 	async unlinkLabelsWithMessage(messageId: string) {
@@ -677,8 +677,9 @@ export default class LocalizedLabelManagerUI
 		// the views refresh once at the end instead of once per layer
 		this.updateBatchDepth = (this.updateBatchDepth ?? 0) + 1;
 		try {
-			return await this.runFramesOperation(frameIds, () =>
-				this.runAsUndoStep(async () => {
+			// the undo step outside, the frame operation inside - as in every bulk action (no deadlock)
+			return await this.runAsUndoStep(() =>
+				this.runFramesOperation(frameIds, async () => {
 					const current = await this.currentLinkableLabels(links.map((link) => link.label));
 					const valid = links.filter((link) => current.has(link.label.nodeId));
 					const requests = valid.map(({ label: shown, messageName }) => {
@@ -782,6 +783,8 @@ export default class LocalizedLabelManagerUI
 				candidates.add(message.id);
 		}
 		if (candidates.size === 0) return new Set<string>();
+		// layers of pages that are not loaded yet would be missed: treat the messages as used
+		if (!this.linksLoaded) return candidates;
 		const linked = await this.localizedLabelMangerSandbox.getWithMessages([...candidates]);
 		return new Set(linked.map((label) => label.messageId!).filter(Boolean));
 	}
@@ -907,7 +910,7 @@ export default class LocalizedLabelManagerUI
 		}
 
 		if (commitUndo) {
-			await this.localizedLabelMangerSandbox.commitUndo();
+			await this.commitUndo();
 		}
 	}
 
@@ -917,7 +920,7 @@ export default class LocalizedLabelManagerUI
 				messageState: { type: "unset" },
 			});
 
-			await this.localizedLabelMangerSandbox.commitUndo();
+			await this.commitUndo();
 		});
 	}
 
@@ -927,12 +930,20 @@ export default class LocalizedLabelManagerUI
 				messageState: { type: "unmanaged", unmanaged: true },
 			});
 
-			await this.localizedLabelMangerSandbox.commitUndo();
+			await this.commitUndo();
 		});
 	}
 
-	/** Closes the undo step now (a pending `commitUndoWhenIdle` is no longer needed). */
+	/**
+	 * Closes the undo step now (a pending `commitUndoWhenIdle` is no longer needed). While a bulk action
+	 * runs, the change becomes part of its undo step instead: a commit now would split it.
+	 */
 	async commitUndo() {
+		if (this.undoStepDepth > 0) return;
+		await this.commitUndoNow();
+	}
+
+	private async commitUndoNow() {
 		clearTimeout(this.undoCommitTimer);
 		this.undoCommitTimer = undefined;
 		await this.localizedLabelMangerSandbox.commitUndo();
@@ -949,8 +960,8 @@ export default class LocalizedLabelManagerUI
 		clearTimeout(this.undoCommitTimer);
 		this.undoCommitTimer = setTimeout(() => {
 			this.undoCommitTimer = undefined;
-			// a bulk action is running: closing the step now would split it in two undo steps
-			if (this.undoStepDepth > 0) {
+			// a bulk action or a save is running: closing the step now would split it
+			if (this.undoStepDepth > 0 || this.idleCommitHolds > 0) {
 				this.commitUndoWhenIdle(delayMs);
 				return;
 			}
@@ -958,22 +969,64 @@ export default class LocalizedLabelManagerUI
 		}, delayMs);
 	}
 
-	/** bulk actions that are running, each one undo step */
+	/** 1 while a bulk action runs (they run one after the other) */
 	private undoStepDepth = 0;
+
+	/** bulk actions, one after the other */
+	private undoSteps: Promise<unknown> = Promise.resolve();
+
+	/** bulk actions that are running or waiting */
+	private pendingUndoSteps = 0;
 
 	/**
 	 * Runs a bulk action (language switch, linking many layers, an import) as one undo step: typing
-	 * whose idle commit is still pending is closed as its own step first, and the idle commit cannot
-	 * close a step while the action runs.
+	 * whose idle commit is still pending is closed as its own step first, and neither the idle commit
+	 * nor the commit of another change can close a step while the action runs. Bulk actions run one
+	 * after the other, so two of them never end up in one step. Call it outside of frame operations.
+	 * Without a bulk action before it, the action starts right away (synchronously), so its frame
+	 * operations are queued in the order the user started the actions.
 	 */
-	private async runAsUndoStep<T>(operation: () => Promise<T>): Promise<T> {
-		if (this.undoStepDepth === 0 && this.undoCommitTimer !== undefined) await this.commitUndo();
-		this.undoStepDepth += 1;
+	private runAsUndoStep<T>(operation: () => Promise<T>): Promise<T> {
+		const run = async () => {
+			// sandbox calls are handled in order: the typing step closes before the action's changes
+			const closingTyping =
+				this.undoCommitTimer !== undefined ? this.commitUndoNow() : Promise.resolve();
+			this.undoStepDepth += 1;
+			try {
+				const result = operation();
+				await closingTyping;
+				return await result;
+			} finally {
+				this.undoStepDepth -= 1;
+				await this.commitUndoNow();
+			}
+		};
+		const result = this.pendingUndoSteps === 0 ? run() : this.undoSteps.then(run, run);
+		this.pendingUndoSteps += 1;
+		const settled = result.then(
+			() => undefined,
+			() => undefined,
+		);
+		this.undoSteps = settled;
+		void settled.then(() => {
+			this.pendingUndoSteps -= 1;
+		});
+		return result;
+	}
+
+	/** saves of typed text that are running: the idle commit waits for them */
+	private idleCommitHolds = 0;
+
+	/**
+	 * Runs a save of typed text: the idle commit of the typing before cannot fire in its middle (the
+	 * message written, the layers not yet), which would make Cmd+Z revert only half of it.
+	 */
+	async holdIdleCommit<T>(operation: () => Promise<T>): Promise<T> {
+		this.idleCommitHolds += 1;
 		try {
 			return await operation();
 		} finally {
-			this.undoStepDepth -= 1;
-			if (this.undoStepDepth === 0) await this.commitUndo();
+			this.idleCommitHolds -= 1;
 		}
 	}
 
@@ -988,7 +1041,7 @@ export default class LocalizedLabelManagerUI
 	//     parameterValues: newFillins,
 	//   });
 
-	//   await this.localizedLabelMangerSandbox.commitUndo();
+	//   await this.commitUndo();
 	// }
 
 	async updateLabelName(localizedLabel: LocalizedLabel, labelName: string) {
@@ -996,7 +1049,7 @@ export default class LocalizedLabelManagerUI
 			labelName,
 		});
 
-		await this.localizedLabelMangerSandbox.commitUndo();
+		await this.commitUndo();
 	}
 
 	async updateLabelPatternHtml(

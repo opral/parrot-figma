@@ -14,6 +14,10 @@ function createManager() {
 	const manager = Object.create(LocalizedLabelManagerUI.prototype) as any;
 	manager.frameOperations = new Map();
 	manager.undoStepDepth = 0;
+	manager.undoSteps = Promise.resolve();
+	manager.pendingUndoSteps = 0;
+	manager.idleCommitHolds = 0;
+	manager.linksLoaded = true;
 	manager.cachedFrames = {};
 	manager.cachedLocalisedLabels = {};
 	const localizedLabel = { nodeId: "label-1", rootFrameId: "frame-2" };
@@ -191,6 +195,8 @@ describe("translation import", () => {
 		const manager = Object.create(LocalizedLabelManagerUI.prototype) as LocalizedLabelManagerUI;
 		Object.assign(manager, {
 			undoStepDepth: 0,
+			undoSteps: Promise.resolve(),
+			pendingUndoSteps: 0,
 			localizedLabelMangerSandbox: { commitUndo: vi.fn(async () => {}) },
 		});
 		manager.messageStore = {
@@ -237,6 +243,8 @@ describe("translation import", () => {
 		const manager = Object.create(LocalizedLabelManagerUI.prototype) as LocalizedLabelManagerUI;
 		Object.assign(manager, {
 			undoStepDepth: 0,
+			undoSteps: Promise.resolve(),
+			pendingUndoSteps: 0,
 			localizedLabelMangerSandbox: { commitUndo: vi.fn(async () => {}) },
 		});
 		manager.messageStore = {
@@ -260,6 +268,8 @@ describe("translation import", () => {
 		const manager = Object.create(LocalizedLabelManagerUI.prototype) as LocalizedLabelManagerUI;
 		Object.assign(manager, {
 			undoStepDepth: 0,
+			undoSteps: Promise.resolve(),
+			pendingUndoSteps: 0,
 			localizedLabelMangerSandbox: { commitUndo: vi.fn(async () => {}) },
 		});
 		manager.messageStore = { getMessage: () => existing } as any;
@@ -575,5 +585,45 @@ describe("LocalizedLabelManagerUI bulk language switch", () => {
 		} finally {
 			vi.useRealTimers();
 		}
+	});
+});
+
+describe("LocalizedLabelManagerUI undo steps of bulk actions", () => {
+	test("two bulk actions started together are two undo steps, other commits wait for them", async () => {
+		const label = linkable("a", "frame-1");
+		const { manager } = linkManager([label], [plainMessage("login.sign_in", "Sign in")]);
+		const events: string[] = [];
+		manager.localizedLabelMangerSandbox.commitUndo = vi.fn(async () => {
+			events.push("commit");
+		});
+		manager.localizedLabelMangerSandbox.updateLabelsProperties = vi.fn(async (updates: any[]) => {
+			events.push("link");
+			await new Promise((resolve) => setTimeout(resolve, 20));
+			return updates.map(({ nodeId }: any) => ({ label: { nodeId } }));
+		});
+		manager.setLabelLanguage = vi.fn(async () => {
+			events.push("switch");
+		});
+		const linking = manager.linkLabelsToMessages([{ label, messageName: "login.sign_in" }]);
+		const switching = manager.setFramesLanguage(["frame-2"], Locale.DE, {} as any);
+		// a single change (e.g. a form added in the drawer) during the link: part of its step
+		await new Promise((resolve) => setTimeout(resolve, 5));
+		await manager.commitUndo();
+		await Promise.all([linking, switching]);
+		expect(events).toEqual(["link", "commit", "switch", "commit"]);
+	});
+
+	test("does not rewrite a message while not every page was read (other layers may show it)", async () => {
+		const label = linkable("multiline", "frame-1", "Welcome\nback", "Welcome\nback");
+		const { manager, stored, written } = linkManager(
+			[label],
+			[plainMessage("welcome", "Welcome back")],
+		);
+		manager.linksLoaded = false;
+		await manager.linkLabelsToMessages([{ label, messageName: "welcome" }]);
+		expect(stored.get("welcome")!.variants[0].pattern).toEqual([
+			{ type: "Text", value: "Welcome back" },
+		]);
+		expect(written()[0].messageState.keepText).toBe(true);
 	});
 });

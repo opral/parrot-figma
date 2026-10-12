@@ -134,6 +134,15 @@ test("i18next leaves out and reports a key it would silently drop", async () => 
 	);
 	expect(JSON.parse(file.content)).toEqual({ a: { b: "a.b" }, e: "e" });
 	expect(file.skipped.map((skipped) => skipped.id)).toEqual(["__proto__", "a", "c..d"]);
+
+	// a child that is left out itself does not push out its parent
+	const parents = await exportWithPlugin(
+		plugin,
+		[message("x"), message("x..y"), message("p"), message("p.__proto__")],
+		"en",
+	);
+	expect(JSON.parse(parents.content)).toEqual({ x: "x", p: "p" });
+	expect(parents.skipped.map((skipped) => skipped.id)).toEqual(["p.__proto__", "x..y"]);
 });
 
 test("HTML in an i18next text keeps its tags and can be exported to every other format", async () => {

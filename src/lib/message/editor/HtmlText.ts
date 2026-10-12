@@ -121,9 +121,27 @@ type Pattern = BundleNested["messages"][number]["variants"][number]["pattern"];
 const tag = /<(\/?)([a-z][a-z0-9]*)\b[^>]*?(\/?)>/gi;
 
 /**
+ * The formatting a text layer can have, by the name the checks compare: `<b>` and `<strong>` are the
+ * same bold. Other tags (`<li>`, `<span>`, or `<name>` typed as text) are no formatting of their own.
+ */
+const formattingTags: Record<string, string> = {
+	strong: "bold",
+	b: "bold",
+	em: "italic",
+	i: "italic",
+	u: "underline",
+	s: "strikethrough",
+	strike: "strikethrough",
+	a: "link",
+	ul: "list",
+	ol: "list",
+};
+
+/**
  * Stored (HTML) text as the Inlang translation checks need it: formatting tags become markup
  * elements (so a translation that lost the bold of the reference is reported), entities are decoded
  * (`&nbsp;` alone is no text). Line breaks (`<br>`) stay text: they may differ between languages.
+ * Anything else that looks like a tag stays text.
  */
 export function htmlPatternForChecks(pattern: Pattern): Pattern {
 	const result: Pattern = [];
@@ -140,11 +158,14 @@ export function htmlPatternForChecks(pattern: Pattern): Pattern {
 		}
 		let last = 0;
 		for (const match of element.value.matchAll(tag)) {
+			const [source, closing, rawName, selfClosing] = match;
+			const tagName = rawName.toLowerCase();
+			const name = formattingTags[tagName];
+			if (tagName !== "br" && tagName !== "li" && name === undefined) continue;
 			pushText(htmlToPlainText(element.value.slice(last, match.index)));
-			last = match.index + match[0].length;
-			const [, closing, rawName, selfClosing] = match;
-			const name = rawName.toLowerCase();
-			if (name === "br") pushText("\n");
+			last = match.index + source.length;
+			if (tagName === "br") pushText("\n");
+			else if (name === undefined) continue;
 			else if (closing) result.push({ type: "markup-end", name });
 			else if (selfClosing) result.push({ type: "markup-standalone", name });
 			else result.push({ type: "markup-start", name });
@@ -152,6 +173,13 @@ export function htmlPatternForChecks(pattern: Pattern): Pattern {
 		pushText(htmlToPlainText(element.value.slice(last)));
 	}
 	return result;
+}
+
+/** A pattern without visible text: blank, `&nbsp;` or line breaks only. */
+export function isBlankHtmlPattern(pattern: Pattern): boolean {
+	return htmlPatternForChecks(pattern).every(
+		(element) => element.type === "text" && element.value.trim() === "",
+	);
 }
 
 /** The bundle with `htmlPatternForChecks` applied to every variant. */

@@ -66,9 +66,9 @@ export default function Export({
 					? `Download started: ${file.fileName}`
 					: `Download started: ${file.fileName}. ${
 							file.skipped.length === 1
-								? "1 message was left out"
-								: `${file.skipped.length} messages were left out`
-						} because ${selectedPlugin.label} cannot hold ${file.skipped.length === 1 ? "it" : "them"}:`,
+								? "1 message was left out because it cannot"
+								: `${file.skipped.length} messages were left out because they cannot`
+						} be written as ${selectedPlugin.label}:`,
 			);
 			setSkipped(file.skipped);
 			capture("export:file_create", {
@@ -108,6 +108,10 @@ export default function Export({
 				{languages.map((language) => {
 					// messages with text in this language (an empty translation is missing, as in Messages)
 					const count = store.countTranslated(language);
+					// empty translations are exported too (a template for translators)
+					const exportable = messages.some((message) =>
+						message.variants.some((variant) => variant.languageTag === language),
+					);
 					return (
 						<div className="transfer-language-row" key={language}>
 							<div>
@@ -122,7 +126,7 @@ export default function Export({
 							<button
 								type="button"
 								className="transfer-action"
-								disabled={busy || count === 0}
+								disabled={busy || !exportable}
 								onClick={() => download(language)}
 								aria-label={`Export file for ${language}`}
 							>

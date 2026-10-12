@@ -51,6 +51,20 @@ describe("translation checks of Parrot's HTML texts", () => {
 		expect(checks.get("bold").map((d) => d.checkId)).toContain("missing-markup");
 	});
 
+	test("only formatting is markup: <b> and <strong> are the same, other tags are text", () => {
+		const checks = checksFor([
+			plain("same", { en: [t("<b>Hi</b>")], de: [t("<strong>Hallo</strong>")] }),
+			plain("literal", { en: [t("Use <name> here")], de: [t("Nutze &lt;name&gt; hier")] }),
+			plain("list", {
+				en: [t("<ul><li>One</li><li>Two</li></ul>")],
+				de: [t("<ul><li>Eins</li><li>Zwei</li></ul>")],
+			}),
+			plain("lost_list", { en: [t("<ul><li>One</li></ul>")], de: [t("Eins")] }),
+		]);
+		expect([...checks.problems("de")]).toEqual(["lost_list"]);
+		expect(checks.get("lost_list").map((d) => (d as { name?: string }).name)).toEqual(["list"]);
+	});
+
 	test("a text of only &nbsp; is missing", () => {
 		const checks = checksFor([plain("nbsp", { en: [t("Hi")], de: [t("&nbsp;")] })]);
 		expect([...checks.missing("de")]).toEqual(["nbsp"]);

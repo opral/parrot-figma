@@ -59,7 +59,10 @@ export function messageText(message: Message, language: string) {
  * replaces it.
  */
 export function isFlatText(html: string) {
-	return !/[<\r\n\u2028\u2029]/.test(html) && normalizeText(html) === html;
+	// a non-breaking space (stored as `&nbsp;`) is a deliberate space: a layer's plain one would lose it
+	return (
+		!/[<\r\n\u2028\u2029\u00a0]|&nbsp;|&#160;|&#xa0;/i.test(html) && normalizeText(html) === html
+	);
 }
 
 /** language -> normalized text -> ids of the messages with exactly that text */

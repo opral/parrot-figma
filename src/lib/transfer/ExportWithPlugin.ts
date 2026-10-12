@@ -39,16 +39,17 @@ function keyProblems(ids: readonly string[], nested: boolean): Map<string, strin
 	const problems = new Map<string, string>();
 	for (const id of ids) {
 		const parts = nested ? id.split(".") : [id];
-		if (parts.includes("__proto__")) {
-			problems.set(id, "“__proto__” cannot be a key");
-		} else if (nested && parts.some((part) => part === "")) {
+		if (parts.includes("__proto__")) problems.set(id, "“__proto__” cannot be a key");
+		else if (nested && parts.some((part) => part === ""))
 			problems.set(id, "the key has an empty part between dots");
-		} else if (nested) {
-			// "home" is left out, "home.title" is written
-			const child = ids.find((other) => other.startsWith(`${id}.`));
-			if (child)
-				problems.set(id, `this format cannot hold both “${id}” and “${child}”: rename one of them`);
-		}
+	}
+	if (!nested) return problems;
+	// only keys that are written can clash: "home" is left out next to "home.title", "home.title" is written
+	const written = ids.filter((id) => !problems.has(id));
+	for (const id of written) {
+		const child = written.find((other) => other.startsWith(`${id}.`));
+		if (child)
+			problems.set(id, `this format cannot hold both “${id}” and “${child}”: rename one of them`);
 	}
 	return problems;
 }

@@ -8,6 +8,7 @@ import {
 	type VariableReference,
 } from "@inlang/sdk/browser";
 import type { BundleNested } from "../../../lib/message/store/FigmaBundleStore";
+import { htmlBundleForChecks } from "../../../lib/message/editor/HtmlText";
 import "./TranslationProblems.css";
 
 /** The problems a translation can have that its field cannot show by itself. */
@@ -50,7 +51,8 @@ export function useTranslationProblems(
 	return useMemo(() => {
 		const byLocale = new Map<string, Problem[]>();
 		for (const diagnostic of checkBundle({
-			bundle: stored,
+			// as the store checks it (formatting as markup): the "With problems" filter and this list agree
+			bundle: htmlBundleForChecks(stored),
 			locales,
 			referenceLocale: baseLocale,
 			checks: [...PROBLEM_CHECKS],
@@ -91,6 +93,9 @@ export function missingExactNumbers(problem: Problem): readonly string[] | undef
 		: undefined;
 }
 
+/** the names `htmlPatternForChecks` gives the formatting of a text layer */
+const markupWords = new Set(["bold", "italic", "underline", "strikethrough", "link", "list"]);
+
 function problemText(problem: Problem) {
 	if (problem.checkId === "empty-variant") return "Empty";
 	// the reference chooses by an input this language has no selector for
@@ -101,7 +106,10 @@ function problemText(problem: Problem) {
 			: `Not split by {${problem.name}} – add it in Plural & select`;
 	}
 	if (problem.checkId === "missing-variable") return `Missing {${problem.name}}`;
-	if (problem.checkId === "missing-markup") return `Missing <${problem.name}>`;
+	if (problem.checkId === "missing-markup")
+		return markupWords.has(problem.name)
+			? `Missing ${problem.name} formatting`
+			: `Missing <${problem.name}>`;
 	const suggestion = "suggestion" in problem ? problem.suggestion : undefined;
 	return suggestion
 		? `Unknown {${problem.name}} – did you mean {${suggestion}}?`

@@ -545,7 +545,7 @@ export default class MessageStoreMemory extends EventTarget {
 		return this.inlangProject?.getAllReadonly();
 	}
 
-	/** Messages with text in the language - the messages an export of the language contains. */
+	/** Messages with text in the language (an empty translation is missing, as in the Messages tab). */
 	countTranslated(language: Locale): number {
 		return (this.getAllMessages()?.length ?? 0) - this.countMissing(language);
 	}

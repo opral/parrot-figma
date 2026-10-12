@@ -238,5 +238,7 @@ describe("isFlatText", () => {
 		expect(isFlatText("Two\nlines")).toBe(false);
 		expect(isFlatText("Two  spaces")).toBe(false);
 		expect(isFlatText("<strong>Bold</strong>")).toBe(false);
+		// a non-breaking space is deliberate (French "Bonjour !"): a layer's plain space would lose it
+		expect(isFlatText("Bonjour&nbsp;!")).toBe(false);
 	});
 });

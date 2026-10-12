@@ -5,6 +5,7 @@ import {
 	stableStringify,
 } from "../message/store/LegacyMessageBundleConverter";
 import type { Message } from "../message/LegacyMessage";
+import { isBlankHtmlPattern } from "../message/editor/HtmlText";
 import MessageStoreMemory from "../message/store/MessageStoreMemory";
 
 import AppleStringsFileImporter from "./AppleStringsFileImporter";
@@ -94,7 +95,8 @@ export default class MessageImporter {
 			sameDeclarations(current.declarations, incoming.declarations)
 		)
 			return { type: "equal" };
-		const hadText = before.some((form) => !isEmptyPattern(form.pattern));
+		// no form, or only blank ones (`&nbsp;`, line breaks): what the translation checks call missing
+		const hadText = before.some((form) => !isBlankHtmlPattern(form.pattern));
 		return { type: hadText ? "changedTranslation" : "newTranslation" };
 	}
 
@@ -190,11 +192,4 @@ function languageForms(bundle: Bundle, language: string) {
 			const y = stableStringify(b.matches);
 			return x < y ? -1 : x > y ? 1 : 0;
 		});
-}
-
-/** No visible text: no form, or only blank text (what the translation checks call missing). */
-function isEmptyPattern(pattern: Bundle["messages"][number]["variants"][number]["pattern"]) {
-	return pattern.every(
-		(element) => element.type === "text" && element.value.replace(/&nbsp;/g, " ").trim() === "",
-	);
 }

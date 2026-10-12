@@ -84,7 +84,8 @@ export default function ImportView({
 			const layers = labels.map((label) => ({
 				nodeId: label.nodeId,
 				characters: label.characters,
-				language: label.language,
+				// the language the layer is linked in (as `linkLabelsToMessages` does)
+				language: label.rootFrameLanguage ?? label.language,
 				layerName: label.name,
 				frameName: label.rootFrameName,
 			}));

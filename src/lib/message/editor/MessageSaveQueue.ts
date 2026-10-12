@@ -32,6 +32,9 @@ export class MessageSaveQueue {
 
 	private running = false;
 
+	/** the last message the store reported while edits were queued: what it holds now */
+	private received: Message | undefined;
+
 	constructor(
 		message: Message,
 		private readonly save: (message: Message, options: SaveOptions) => Promise<void>,
@@ -50,11 +53,21 @@ export class MessageSaveQueue {
 	}
 
 	/**
-	 * The message was changed elsewhere (undo, the canvas, an import): later edits start from it.
-	 * Ignored while edits are queued - what is stored then is an older state of our own edits.
+	 * The store has a new state of the message: an echo of a save, or a change from elsewhere (undo,
+	 * the canvas, an import). Later edits start from it. While edits are queued it is taken before the
+	 * next save starts and after a save, so a change from elsewhere is not overwritten with an older
+	 * message, and a save that failed after the message was written does not roll back to an older one.
 	 */
 	sync(message: Message) {
-		if (!this.busy) this.latest = message;
+		if (this.busy) this.received = message;
+		else this.latest = message;
+	}
+
+	/** Continues from what the store reported last. */
+	private adoptReceived() {
+		if (this.received === undefined) return;
+		this.latest = this.received;
+		this.received = undefined;
 	}
 
 	/**
@@ -83,11 +96,13 @@ export class MessageSaveQueue {
 				await this.saveGroup(group, !group[0].typing);
 			}
 		} finally {
+			this.adoptReceived();
 			this.running = false;
 		}
 	}
 
 	private async saveGroup(group: Edit[], undoStep: boolean) {
+		this.adoptReceived();
 		const before = this.latest;
 		let next = before;
 		const applied = [] as Edit[];
@@ -104,9 +119,12 @@ export class MessageSaveQueue {
 		this.latest = next;
 		try {
 			await this.save(next, { undoStep });
-			for (const edit of applied) edit.resolve(next);
+			this.adoptReceived();
+			for (const edit of applied) edit.resolve(this.latest);
 		} catch (error) {
+			// the store may hold the edit already (e.g. a linked layer could not be updated): its state wins
 			this.latest = before;
+			this.adoptReceived();
 			for (const edit of applied) edit.reject(error);
 		}
 	}

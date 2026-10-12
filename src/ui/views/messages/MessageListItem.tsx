@@ -94,11 +94,18 @@ function TranslationKeyListItem({
 	const [saveQueue] = useState(
 		() =>
 			new MessageSaveQueue(message, async (updated, options) => {
-				if (options.undoStep) await localizedLabelManager.commitUndo();
-				await localizedLabelManager.updateMessage(updated, {});
-				if (options.undoStep) await localizedLabelManager.commitUndo();
-				else localizedLabelManager.commitUndoWhenIdle();
-				setMessage(updated);
+				if (options.undoStep) {
+					await localizedLabelManager.commitUndo();
+					await localizedLabelManager.updateMessage(updated, {});
+					await localizedLabelManager.commitUndo();
+				} else {
+					await localizedLabelManager.holdIdleCommit(() =>
+						localizedLabelManager.updateMessage(updated, {}),
+					);
+					localizedLabelManager.commitUndoWhenIdle();
+				}
+				// what the store holds (a change from elsewhere during the save is not hidden)
+				setMessage(messageStore.getMessage(messageId) ?? updated);
 			}),
 	);
 

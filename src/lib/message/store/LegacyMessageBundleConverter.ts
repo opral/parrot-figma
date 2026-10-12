@@ -100,7 +100,13 @@ export function legacyMessageToBundle(message: Message): BundleNested {
 
 export function bundleToLegacyMessage(bundle: BundleNested, preserveNative = false): Message {
 	validateBundleNested(bundle);
-	const selectorNames = bundle.messages[0]?.selectors.map((selector) => selector.name) ?? [];
+	// Languages can choose by different selectors (an ICU translation without the `=0` of the
+	// reference has no exact-number selector): the legacy view has every selector, a language
+	// without one matches it with "*". Taking the first message's selectors only turned the
+	// reference's `=0` form into its catch-all form - the canvas showed "No messages".
+	const selectorNames = [
+		...new Set(bundle.messages.flatMap((message) => message.selectors.map((s) => s.name))),
+	];
 
 	const variants = bundle.messages.flatMap((message) => {
 		return message.variants.map((variant) => {

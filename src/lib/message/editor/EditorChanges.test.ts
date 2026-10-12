@@ -76,10 +76,19 @@ test("plural variant edits preserve the plural declaration and number sign", asy
 	expect(JSON.parse(exported.content).price).toContain("one {# product}");
 });
 
-test("legacy text editing cannot silently discard formatter metadata", async () => {
+test("legacy text editing keeps the formatter of a variable", async () => {
 	const message = await imported("Total {amount, number}");
-	message.variants[0].pattern = [{ type: "Text", value: "Changed" }];
-	expect(() => legacyMessageToBundle(message)).toThrow("Messages tab");
+	message.variants[0].pattern = [
+		{ type: "Text", value: "Sum " },
+		{ type: "VariableReference", name: "amount" },
+	];
+	const saved = legacyMessageToBundle(message);
+	expect(saved.messages[0]!.variants[0]!.pattern).toEqual([
+		{ type: "text", value: "Sum " },
+		message.nativeBundle!.messages[0]!.variants[0]!.pattern.find((e) => e.type === "expression"),
+	]);
+	const exported = await exportWithPlugin(icu, [bundleToLegacyMessage(saved, true)], "en");
+	expect(JSON.parse(exported.content).price).toBe("Sum {amount, number}");
 });
 
 test("locale imports preserve other locale selectors and declarations", async () => {

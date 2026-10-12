@@ -183,9 +183,3 @@
 .drawer-alert > :last-child {
 	margin-bottom: 0;
 }
-
-.machine-translation-contact {
-	color: var(--figma-color-text);
-	font-weight: 500;
-	user-select: all;
-}

@@ -97,6 +97,8 @@ export class NoMoreTranslationsLeftError extends Error {
 	}
 }
 
+const SYNC_CREDITS = false;
+
 export default class TranslatorMachine {
 	public proxyClassName = "TranslatorMachine";
 
@@ -202,6 +204,9 @@ export default class TranslatorMachine {
 		if (!init) {
 			await this.ensureStateLoaded;
 		}
+		// The credit service of the old Parrot backend is gone and machine translation is part of Parrot
+		// Cloud now: nothing is sent (it sent the Figma user id to api.parrot.global).
+		if (!SYNC_CREDITS) return;
 
 		const usageToSend = [];
 		const currentFigmaUserId = figma.currentUser!.id!;

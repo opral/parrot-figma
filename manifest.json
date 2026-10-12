@@ -33,7 +33,6 @@
     "allowedDomains": [
       "https://inlang.com",
       "https://parrot-global.github.io",
-      "https://api.parrot.global",
       "https://s3-alpha.figma.com"
     ],
     "devAllowedDomains": [

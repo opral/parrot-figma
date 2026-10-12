@@ -30,8 +30,8 @@ importers:
         specifier: 6.4.2
         version: 6.4.2
       '@inlang/plugin-icu1':
-        specifier: 1.3.1
-        version: 1.3.1
+        specifier: 1.3.2
+        version: 1.3.2
       '@inlang/plugin-json':
         specifier: 5.1.61
         version: 5.1.61
@@ -39,8 +39,8 @@ importers:
         specifier: 4.5.2
         version: 4.5.2
       '@inlang/plugin-next-intl':
-        specifier: 2.4.0
-        version: 2.4.0
+        specifier: 2.4.1
+        version: 2.4.1
       '@inlang/sdk':
         specifier: 4.0.2
         version: 4.0.2
@@ -451,8 +451,8 @@ packages:
   '@inlang/plugin-i18next@6.4.2':
     resolution: {integrity: sha512-L9ZEwpmv3sFxVdzuk9RYFzbCiaRJLll5RsHK1KeKFsua5ygIexsMjivlew04XT+dv6wnbFciYQKsD2QwQ7CROA==}
 
-  '@inlang/plugin-icu1@1.3.1':
-    resolution: {integrity: sha512-mAEuqlGeHa2ynuBpPMYC6HPdKRsglI7j03EUbzdDysfgRJXGHT0PnEup6zgVdJ0zDcCAhwjHLktS9jMIOwm6wg==}
+  '@inlang/plugin-icu1@1.3.2':
+    resolution: {integrity: sha512-pRF6OOdt4V2ES91uwCwABZwbpYfySCOa7kDFlKaggdSO3utk1hS0TeXxfpdQML64yI8ePWfH7D4eeth+Zmi6PQ==}
 
   '@inlang/plugin-json@5.1.61':
     resolution: {integrity: sha512-5qJDg6ndoU4uegF0L+7VGV6fpYL6lnqZPX2zhOy7pj2NBwXby1kc2u9pxrC3ZyM8z90/nCKGa44IX8/UooSQ/Q==}
@@ -460,8 +460,8 @@ packages:
   '@inlang/plugin-message-format@4.5.2':
     resolution: {integrity: sha512-alC8+5and4dNm6TWEdc/MAYIuiPbeBG4rdowwiiy+kM3OCSfJRl3oXrXsmsbP7yoU81VH8LMSrBgrWtKLFeVDQ==}
 
-  '@inlang/plugin-next-intl@2.4.0':
-    resolution: {integrity: sha512-ePRf3/mjgMACqvDHyQCs+XmPTSKvHIULnZcvIMU8yY6+ifoJHNsY1Gpd8EtP6+km+UN/LSHkUOCbuZgeVCSdEQ==}
+  '@inlang/plugin-next-intl@2.4.1':
+    resolution: {integrity: sha512-YseTrjYtDf06D778S4bW4X+Zjij7lH+tJRAYJRa3p2AHIOg8fFibB8F7bFPrpbQp9gNJGtdYWerqpXHXEif4OQ==}
 
   '@inlang/sdk@4.0.2':
     resolution: {integrity: sha512-IiOiQpybiV2HrguH+2eG+9Pqsm8AuUBtjHpgl3rnwXkE9x1p+mAC5YqVVRlquGLELXxFiu90zvgFXdYnt4X3LA==}
@@ -2369,7 +2369,7 @@ snapshots:
       '@inlang/sdk': 4.0.2
       '@sinclair/typebox': 0.31.28
 
-  '@inlang/plugin-icu1@1.3.1':
+  '@inlang/plugin-icu1@1.3.2':
     dependencies:
       '@inlang/sdk': 4.0.2
       '@messageformat/parser': 5.1.1
@@ -2385,7 +2385,7 @@ snapshots:
       '@inlang/sdk': 4.0.2
       '@sinclair/typebox': 0.31.28
 
-  '@inlang/plugin-next-intl@2.4.0':
+  '@inlang/plugin-next-intl@2.4.1':
     dependencies:
       '@babel/parser': 7.29.9
       '@inlang/sdk': 4.0.2

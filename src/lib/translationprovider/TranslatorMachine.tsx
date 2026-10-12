@@ -5,7 +5,6 @@ import getKey from "./TranslationCredit";
 
 import { MachineTranslationUnavailableError } from "./MachineTranslationContact";
 import FeatureFlags from "../featureflags/FeatureFlags";
-import Monitoring from "../monitoring/MonitoringProxy";
 
 const translationsCreditUsageLocalStorageKey = "prrt_utc";
 const translationCreditsLocalStorageKey = "prrt_tc";
@@ -254,7 +253,8 @@ export default class TranslatorMachine {
 
 			this.fireCreditsUpdateEvent(false);
 		} catch (e) {
-			// ok we ignore errors here for now - only send them to sentry?
+			// the usage is sent again with the next sync
+			console.error(e);
 			for (const failedToSend of usageToSend) {
 				failedToSend.send = false;
 			}

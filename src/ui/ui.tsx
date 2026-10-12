@@ -40,7 +40,6 @@ import { InlangMessageStore } from "../lib/message/store/InlangMessageStoreFigma
 import { OverlayScrollbarsComponent } from "./compontents/overlayscrollbar";
 
 import TranslatorMachine from "../lib/translationprovider/TranslatorMachine";
-import Monitoring from "../lib/monitoring/MonitoringProxy";
 import FeatureFlags from "../lib/featureflags/FeatureFlags";
 
 console.log(`Starting Figma UI - Version ${pjs.version}`);
@@ -176,8 +175,6 @@ const asyncFunctionProxy = new AsyncFunctionProxy(
 	window,
 );
 
-const monitoring = new Monitoring();
-asyncFunctionProxy.registerInstance(monitoring);
 
 const figmaRemote = new FigmaUtil();
 asyncFunctionProxy.proxyAsyncMethods(figmaRemote);

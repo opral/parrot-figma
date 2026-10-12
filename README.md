@@ -3,7 +3,7 @@
 
 ## Local development
 
-Parrot uses the published `@inlang/sdk` 3.1.0. No sibling checkout or local SDK link is required.
+Parrot uses the published `@inlang/sdk` 4, `@inlang/editor-component` and Inlang format plugins (pinned in `package.json`). No sibling checkout or local link is required.
 
 ```sh
 pnpm install
@@ -16,11 +16,18 @@ Validation:
 
 ```sh
 pnpm tsc
+pnpm lint
 pnpm test
 pnpm build
 ```
 
+CI (`.github/workflows/ci.yml`) runs the same checks plus the sandbox build on every pull request.
+
 `pnpm build` creates hosted UI assets in `dist/ui/`. The UI uses module workers and WebAssembly; serve the complete directory, including worker and WASM assets. Build the Figma sandbox separately with `VITE_CUSTOM_URL` set to the hosted UI URL using `pnpm exec vite build -c vite.config.plugin.ts`. Use a separate checkout when building a hosted loader while the local plugin is running.
+
+## Branches and releases
+
+`dev` is the default branch: pull requests go into `dev`. Merging into `dev` publishes nothing. A release is built with the manual **Release build** workflow (`.github/workflows/publish.yml`, input: the URL that hosts `dist/ui`) and published to the Figma Community by hand from the Figma desktop app (**Plugins → Manage plugins → Publish new version**). The workflow no longer runs on pushes to the old `production` branch (that branch still holds the old auto-publishing workflow until `dev` is merged into it).
 
 ## Import translations
 
@@ -373,8 +380,6 @@ What we want from ui point of view:
  - [x] esc in panel - cancel
  - [x] esc key in drawer and call to action (cancel)
  - [x] enter in create key panel
- - [x] add sentry (see: https://github.com/tokens-studio/figma-plugin/tree/916a34f70d729cb3797a00bcffd78f1790695cb4)
- - [x] add mixpanel (see: https://github.com/tokens-studio/figma-plugin/tree/916a34f70d729cb3797a00bcffd78f1790695cb4)
  
  - [x] add action button to create key when no result in search
  - [ ] provide filter current frame key
@@ -694,8 +699,6 @@ setTimeout(10000, () => console.log('modify_test_online: with delay:' + figma.ge
 figma.setPluginData('create_test_online', 'Created by user1');
 console.log('create_test_online: ' + figma.getPluginData('create_test_online'));
 setTimeout(10000, () => console.log('create_test_online: with delay:' + figma.getPluginData('create_test_online')))
-<<<<<<< HEAD
-=======
 
 
 #### User2: 
@@ -849,6 +852,5 @@ function runTest(currentUser, testRunPrefix) {
 }
 
 }
->>>>>>> production
 
 ICU imports preserve plural rules, number-sign expressions, select variants, and formatter metadata in the native Inlang bundle stored in Figma. The shared editor supports text and variant editing; metadata is retained across these edits. Structures the plain-text editor cannot represent appear as read-only previews. Legacy canvas edits cannot overwrite native metadata. File-format plugins are registered in `src/lib/transfer/TranslationFormats.ts` with import/export hooks, a path pattern and MIME type; code matcher plugins are not file formats.

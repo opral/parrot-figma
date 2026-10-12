@@ -1,6 +1,5 @@
 // use polyfill in sandbox https://forum.figma.com/t/sandbox-not-support-urlsearchparams/41676
 import URLSearchParams from "@ungap/url-search-params";
-import Monitoring from "../monitoring/MonitoringProxy";
 
 const placeholderPattern = /<ph\b[^>]*>[\s\S]*?<\/ph>/gi;
 const variablePattern = /\{\{[^{}]*\}\}|\{[^{}]*\}/g;
@@ -223,9 +222,7 @@ export default class GoogleTranslator {
 		}
 
 		if (!result.ok) {
-			Monitoring.instance?.sentryCaptureMesage(
-				`Translation of ${text} failed. Status code (${result.status}).`,
-			);
+			console.error(`Machine translation failed: HTTP ${result.status}`);
 			if (result.status === 429 || result.status === 403) {
 				throw new TranslationServiceError(
 					`The machine translation service is limiting requests right now (HTTP ${result.status}). Wait a few minutes and try again.`,
@@ -248,14 +245,7 @@ export default class GoogleTranslator {
 
 		if (!translatedSegments?.length) {
 			const error = new Error("Expected a translation within [0][0][0] not found");
-			Monitoring.instance?.sentryCaptureException(error, {
-				extra: {
-					sourceLanguage,
-					targetLanguage,
-					text,
-					translationResults,
-				},
-			});
+			console.error(error, { sourceLanguage, targetLanguage, translationResults });
 			throw new TranslationServiceError(
 				`The machine translation service did not return a translation from ${sourceLanguage} to ${targetLanguage}.`,
 			);

@@ -8,7 +8,7 @@ export default {
   ],
   capabilities: ['inspect'],
   networkAccess: {
-    allowedDomains: ['https://translate.googleapis.com', 'https://parrot-global.github.io', 'https://api.parrot.global', 'https://s3-alpha.figma.com'],
+    allowedDomains: ['https://inlang.com', 'https://parrot-global.github.io', 'https://api.parrot.global', 'https://s3-alpha.figma.com'],
     devAllowedDomains: [
       'http://localhost:8080',
     ],

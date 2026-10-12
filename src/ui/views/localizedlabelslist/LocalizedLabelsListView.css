@@ -91,7 +91,7 @@
 	top: 0;
 	left: 0;
 	bottom: 0;
-	right: 1;
+	right: 0;
 	background-color: transparent;
 	border: 1px solid transparent;
 	pointer-events: none;
@@ -127,10 +127,64 @@
 	/*background-color: var(--figma-color-text);*/
 }
 
+/*
+ * A text-layer row is a grid: layer name | message key | language | translation.
+ * .layer-details, .message-panel and .message-variant only group the cells for the React tree
+ * (display: contents), so the cells can be re-flowed into two lines in narrow plugin windows.
+ */
 .layer {
-	display: flex;
-	align-items: flex-start;
+	display: grid;
+	grid-template-columns: minmax(88px, 1fr) minmax(128px, 1.25fr) 60px minmax(0, 3fr) 24px;
+	align-items: start;
 	position: relative;
+	padding-right: 8px;
+	min-height: 32px;
+}
+
+.layer-details,
+.message-panel,
+.message-variant {
+	display: contents;
+}
+
+.layer-spacer {
+	display: none;
+}
+
+@media (max-width: 560px) {
+	.layer {
+		grid-template-columns: 64px minmax(0, 1fr) minmax(0, 1.4fr) 24px;
+		padding-top: 2px;
+		padding-bottom: 4px;
+	}
+
+	.layer-name {
+		grid-column: 1 / 3;
+		grid-row: 1;
+	}
+
+	.layer .message-select {
+		grid-column: 3;
+		grid-row: 1;
+	}
+
+	.layer .message-variant .message-variant-language {
+		grid-column: 1;
+		grid-row: 2;
+		padding-left: 16px;
+		padding-right: 0;
+		overflow: visible;
+	}
+
+	.layer .translation-container {
+		grid-column: 2 / 5;
+		grid-row: 2;
+	}
+
+	.layer .layer-row-actions {
+		grid-column: 4;
+		grid-row: 1;
+	}
 }
 
 .layer::after {
@@ -140,7 +194,7 @@
 	top: 0;
 	left: 0;
 	bottom: 0;
-	right: 1;
+	right: 0;
 	background-color: transparent;
 	border: 1px solid transparent;
 	pointer-events: none;
@@ -188,8 +242,8 @@
 	display: flex;
 	align-items: center;
 	color: var(--figma-color-text);
-	min-width: 180px;
-	max-width: 180px;
+	min-width: 0;
+	height: 32px;
 }
 
 .layer-name .text-field-text:hover {
@@ -201,10 +255,6 @@
 	min-height: 32px;
 	display: flex;
 	align-items: flex-start;
-}
-
-.layer-details {
-	flex-grow: 1;
 }
 
 .header .column-1 {
@@ -233,25 +283,17 @@
 	height: 12px;
 }
 
-.message-panel {
-	width: 100%;
-	display: flex;
-	align-items: flex-start;
-	align-content: center;
-}
-
 .message-panel .button.layerIcon {
 	align-self: self-start;
 }
 
 .message-panel .input-select-menu.message-select {
-	min-width: 160px;
-	max-width: 160px;
-	align-self: self-start;
+	min-width: 0;
+	max-width: none;
+	width: auto;
+	align-self: start;
 	display: flex;
-}
-.message-panel .input-select-menu.message-select {
-	margin-left: auto;
+	margin: 0;
 }
 
 .message-panel .input-select-menu__caret {
@@ -283,19 +325,16 @@
 
 .layer-name .text-field {
 	overflow: hidden;
-}
-
-.message-variant {
-	display: flex;
-	flex-grow: 1;
+	min-width: 0;
 }
 
 .message-variant .message-variant-language {
-	min-width: 70px;
-	max-width: 70px;
-	flex-grow: 0;
-	padding-left: 8px;
-	padding-right: 8px;
+	min-width: 0;
+	padding-left: 4px;
+	padding-right: 4px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	color: var(--figma-color-text-secondary);
 	font-feature-settings:
 		"ss02" on,
 		"liga" on,
@@ -310,20 +349,25 @@
 	overflow-y: auto;
 	overflow-x: hidden;
 
-	max-width: calc(100% - 20px);
-	max-height: calc(100% - 10px);
+	box-sizing: border-box;
+	min-width: min(280px, calc(100% - 16px));
+	max-width: min(calc(100% - 16px), 720px);
+	max-height: calc(100% - 16px);
 	background: var(--figma-color-bg);
+	color: var(--figma-color-text);
+	border: 1px solid var(--figma-color-border);
+	border-radius: 8px;
 	position: fixed;
-	top: 0;
+	top: 8px;
 	right: 0;
 	left: 0;
 	margin: auto;
 	z-index: 200;
-	box-shadow: 0 0px 0px rgba(0, 0, 0, 0.15);
-	transform: translateY(-100%);
+	box-shadow: none;
+	transform: translateY(calc(-100% - 16px));
 	transition:
-		box-shadow 0.3s ease-out,
-		transform 0.3s ease-out;
+		box-shadow 0.2s ease-out,
+		transform 0.2s ease-out;
 	width: max-content;
 
 	display: flex;
@@ -338,23 +382,10 @@
 	color: var(--figma-color-icon-component);
 }
 
-.layer-message-state__linked .translation-editor-text div * {
-	color: var(--figma-color-icon-component);
-}
-
-.layer-message-state__linked .translation-editor-text.editing div * {
-	color: var(--figma-color-text);
-}
-
 .layer-message-state__linked .message-select .input-select-menu__item-icon .svg-container {
 	width: 24px;
 	height: 24px;
 	background-color: var(--figma-color-icon-component-pressed);
-}
-
-.layer-message-state__linked .message-variant .svg-container.language-tag {
-	background-color: rgb(134, 56, 229, 0.14);
-	color: rgb(134, 56, 229);
 }
 
 .message-select .input-select-menu__item-icon .svg-container.with-message-svg {
@@ -378,14 +409,12 @@
 }
 
 .message-variant .language-tag {
-	color: var(--figma-color-text-onbrand);
-	background-color: grey;
+	color: var(--figma-color-text-secondary);
+	background-color: var(--figma-color-bg-tertiary);
 	border-radius: 3px;
-	padding-top: 0px;
-	padding-bottom: 0px;
-	padding-left: 5px;
-	padding-right: 5px;
-	margin-left: 6px;
+	padding: 0 4px;
+	margin-left: 4px;
+	font-size: 10px;
 }
 
 .message-variant .translation-editor {
@@ -397,10 +426,482 @@
 	overflow: hidden;
 }
 
-.layer-spacer {
-	width: 4px;
-}
-
 .top-drawer.message-editor-drawer {
 	overflow-y: auto;
+}
+
+.frame-hint {
+	padding: 8px 16px;
+	line-height: 16px;
+	color: var(--figma-color-text-secondary);
+	background-color: var(--figma-color-bg-secondary);
+	border-bottom: 1px solid var(--figma-color-border);
+}
+
+.frame-hint code {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 10px;
+	padding: 0 4px;
+	border-radius: 3px;
+	background-color: var(--figma-color-bg-tertiary);
+	color: var(--figma-color-text);
+}
+
+.lint-fix-button {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	height: 24px;
+	padding: 0 8px 0 2px;
+	border: 1px solid var(--figma-color-border-warning, var(--figma-color-border));
+	border-radius: 5px;
+	background-color: transparent;
+	color: var(--figma-color-text);
+	font-size: 11px;
+	line-height: 16px;
+	white-space: nowrap;
+	cursor: default;
+}
+
+/* the text of a locked row is greyed out, the action that unlocks it is not */
+.translation-editor-disabled .translation-editor-text .lint-fix-button {
+	color: var(--figma-color-text);
+}
+
+.lint-fix-button:hover {
+	background-color: var(--figma-color-bg-hover);
+}
+
+.lint-fix-button:focus-visible {
+	outline: 1px solid var(--figma-color-border-selected);
+	outline-offset: 1px;
+}
+
+.lint-fix-button .svg-container.warning-svg {
+	width: 20px;
+	height: 20px;
+	/* amber with enough contrast on white and on dark */
+	background-color: var(--figma-color-border-warning-strong, #f3c11b);
+}
+
+/* Switch the language of the selected frames / the whole page */
+.layers-view .layer-group-header {
+	top: 40px;
+}
+
+.layers-view .layer-group-header-sticky-border {
+	top: 41px;
+}
+
+.layers-view .layer.selected,
+.layers-view .layer.selected-by-parent {
+	scroll-margin-top: 72px;
+}
+
+.bulk-language-bar {
+	position: sticky;
+	top: 0;
+	z-index: 4;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	box-sizing: border-box;
+	height: 40px;
+	padding: 0 8px 0 16px;
+	background-color: var(--figma-color-bg);
+	border-bottom: 1px solid var(--figma-color-border);
+}
+
+.bulk-language-bar-label {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	color: var(--figma-color-text-secondary);
+}
+
+.bulk-language-bar .bulk-language-select {
+	flex: none;
+	width: auto;
+}
+
+.bulk-language-bar .bulk-language-select .select-menu__button {
+	height: 24px;
+	padding-right: 4px;
+	border-color: var(--figma-color-border);
+	color: var(--figma-color-text);
+}
+
+.bulk-language-bar .bulk-language-select .select-menu__button.placeholder,
+.bulk-language-bar .bulk-language-select .placeholder .select-menu__label {
+	color: var(--figma-color-text);
+}
+
+.bulk-language-bar .bulk-language-select .select-menu__button .switch-language-svg {
+	width: 24px;
+	height: 24px;
+	-webkit-mask-size: 32px 32px;
+	mask-size: 32px 32px;
+}
+
+/* One action per layer row: unlink / do not translate / translate again - visible on hover */
+.layer-row-actions {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 32px;
+	position: relative;
+	z-index: 1;
+}
+
+.layer-row-action {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	border: none;
+	border-radius: 5px;
+	background-color: transparent;
+	opacity: 0;
+	cursor: default;
+}
+
+.layer:hover .layer-row-action,
+.layer-row-action:focus-visible,
+.layer-row-action--active {
+	opacity: 1;
+}
+
+.layer-row-action:hover {
+	background-color: var(--figma-color-bg-hover);
+}
+
+.layer-row-action:focus-visible {
+	outline: 1px solid var(--figma-color-border-selected);
+	outline-offset: -1px;
+}
+
+.layer-row-action .svg-container {
+	width: 24px;
+	height: 24px;
+	background-color: var(--figma-color-icon-secondary);
+	-webkit-mask-size: 32px 32px;
+	mask-size: 32px 32px;
+	/* the standard mask-size resets the repeat of .svg-container: a small glyph would be tiled */
+	mask-repeat: no-repeat;
+	mask-position: center;
+}
+
+.layer-row-action:hover .svg-container {
+	background-color: var(--figma-color-icon);
+}
+
+.layer-row-action .svg-container.unlinked-svg {
+	-webkit-mask-size: 8px 14px;
+	mask-size: 8px 14px;
+}
+
+/* touch devices have no hover - keep the action visible */
+@media (hover: none) {
+	.layer-row-action {
+		opacity: 1;
+	}
+}
+
+/* "N other layers say …" after linking a layer */
+.link-identical-toast {
+	position: fixed;
+	/* centred without translate: a fixed box with left: 50% could only grow to the right half of the window */
+	left: 12px;
+	right: 12px;
+	width: fit-content;
+	margin: 0 auto;
+	bottom: 12px;
+	z-index: 150;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	box-sizing: border-box;
+	min-height: 40px;
+	padding: 4px 4px 4px 16px;
+	border-radius: 8px;
+	background-color: var(--figma-color-bg-inverse);
+	color: var(--figma-color-text-oninverse);
+	box-shadow:
+		0 2px 6px rgba(0, 0, 0, 0.15),
+		0 8px 24px rgba(0, 0, 0, 0.2);
+	animation: link-identical-toast-in 0.18s ease-out;
+}
+
+@keyframes link-identical-toast-in {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+}
+
+.link-identical-toast-text {
+	min-width: 0;
+	/* two lines in narrow windows, then an ellipsis */
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	overflow: hidden;
+	overflow-wrap: anywhere;
+	line-height: 16px;
+	padding-right: 8px;
+}
+
+.link-identical-toast-key {
+	font-weight: 600;
+}
+
+.link-identical-toast-action {
+	flex: none;
+	height: 24px;
+	padding: 0 8px;
+	border: 1px solid color-mix(in srgb, var(--figma-color-text-oninverse) 40%, transparent);
+	border-radius: 5px;
+	background-color: transparent;
+	color: var(--figma-color-text-oninverse);
+	font-size: 11px;
+	font-weight: 500;
+	cursor: default;
+}
+
+.link-identical-toast-action:hover {
+	background-color: color-mix(in srgb, var(--figma-color-text-oninverse) 12%, transparent);
+}
+
+.link-identical-toast-close {
+	flex: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	border: none;
+	border-radius: 5px;
+	background-color: transparent;
+	cursor: default;
+}
+
+.link-identical-toast-close:hover {
+	background-color: color-mix(in srgb, var(--figma-color-text-oninverse) 12%, transparent);
+}
+
+.link-identical-toast-close .svg-container {
+	width: 16px;
+	height: 16px;
+	background-color: var(--figma-color-icon-oninverse);
+}
+
+.link-identical-toast button:focus-visible {
+	outline: 1px solid var(--figma-color-text-oninverse);
+	outline-offset: 1px;
+}
+
+/* "Generate keys" for the unlinked texts of a frame */
+.frame-generate-keys {
+	display: flex;
+	align-items: center;
+	gap: 0;
+	height: 24px;
+	margin-right: 4px;
+	padding: 0 8px 0 0;
+	border: 1px solid transparent;
+	border-radius: 5px;
+	background-color: transparent;
+	color: var(--figma-color-text-secondary);
+	font-size: 11px;
+	cursor: default;
+}
+
+.frame-generate-keys:hover {
+	border-color: var(--figma-color-border);
+	background-color: var(--figma-color-bg-hover);
+	color: var(--figma-color-text);
+}
+
+.frame-generate-keys:focus-visible {
+	outline: 1px solid var(--figma-color-border-selected);
+	outline-offset: -1px;
+}
+
+.frame-generate-keys .svg-container {
+	width: 24px;
+	height: 24px;
+	background-color: var(--figma-color-icon-secondary);
+	-webkit-mask-size: 14px 14px;
+	mask-size: 14px 14px;
+	-webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-position: center;
+}
+
+.frame-hint-action {
+	display: inline;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--figma-color-text-brand);
+	font-size: inherit;
+	cursor: default;
+}
+
+.frame-hint-action:hover {
+	text-decoration: underline;
+}
+
+/* Review table: layer text | message key */
+.link-review-drawer.top-drawer {
+	width: min(640px, calc(100% - 16px));
+}
+
+.link-review-drawer .drawer-body {
+	max-width: none;
+}
+
+.link-review-table {
+	display: flex;
+	flex-direction: column;
+	margin-top: 8px;
+	border: 1px solid var(--figma-color-border);
+	border-radius: 5px;
+	max-height: 320px;
+	overflow: auto;
+}
+
+.link-review-row {
+	display: grid;
+	grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr);
+	align-items: center;
+	gap: 8px;
+	min-height: 32px;
+	padding-right: 8px;
+	border-bottom: 1px solid var(--figma-color-border);
+}
+
+.link-review-row:last-child {
+	border-bottom: none;
+}
+
+.link-review-head {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	min-height: 28px;
+	background-color: var(--figma-color-bg-secondary);
+	color: var(--figma-color-text-secondary);
+	font-weight: 500;
+}
+
+.link-review-row--off .link-review-text,
+.link-review-row--off .link-review-static {
+	color: var(--figma-color-text-tertiary);
+}
+
+.link-review-check {
+	display: flex;
+	justify-content: center;
+}
+
+.link-review-check input {
+	margin: 0;
+	accent-color: var(--figma-color-bg-brand);
+}
+
+.link-review-text {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.link-review-label,
+.link-review-frame {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.link-review-frame {
+	font-size: 10px;
+	color: var(--figma-color-text-tertiary);
+}
+
+.link-review-key {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+}
+
+.link-review-input {
+	flex: 1;
+	min-width: 0;
+	height: 24px;
+	box-sizing: border-box;
+	padding: 0 6px;
+	border: 1px solid var(--figma-color-border);
+	border-radius: 5px;
+	background-color: var(--figma-color-bg);
+	color: var(--figma-color-icon-component);
+	font-family: inherit;
+	font-size: 11px;
+	outline: none;
+}
+
+.link-review-input:hover {
+	border-color: var(--figma-color-border-strong, var(--figma-color-border));
+}
+
+.link-review-input:focus {
+	border-color: var(--figma-color-border-selected);
+}
+
+.link-review-input--invalid,
+.link-review-input--invalid:focus {
+	border-color: var(--figma-color-border-danger, #f24822);
+}
+
+.link-review-static {
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	color: var(--figma-color-icon-component);
+}
+
+.link-review-tag {
+	flex: none;
+	padding: 0 4px;
+	border-radius: 3px;
+	font-size: 10px;
+	color: var(--figma-color-text-secondary);
+	background-color: var(--figma-color-bg-tertiary);
+}
+
+.link-review-error {
+	margin: 8px 0 0;
+	color: var(--figma-color-text-danger, #f24822);
+}
+
+@media (max-width: 420px) {
+	.link-review-row {
+		grid-template-columns: 28px minmax(0, 1fr);
+		padding: 4px 8px 4px 0;
+	}
+
+	.link-review-key {
+		grid-column: 2;
+	}
+
+	.link-review-head span:last-child {
+		display: none;
+	}
 }

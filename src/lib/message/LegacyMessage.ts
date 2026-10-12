@@ -21,6 +21,7 @@ export type Variant = {
 
 export type Message = {
 	id: string;
+	nativeBundle?: import("./store/FigmaBundleStore").BundleNested;
 	alias?: Record<string, string>;
 	selectors: LegacyVariableReference[];
 	variants: Variant[];

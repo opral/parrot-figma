@@ -6,6 +6,12 @@
 
 .message-filter {
 	display: flex;
+	align-items: center;
+	gap: 8px;
+	box-sizing: border-box;
+	height: 40px;
+	padding: 8px 16px;
+	border-bottom: 1px solid var(--figma-color-border);
 }
 
 .message-list {
@@ -14,47 +20,46 @@
 
 .message-filter-search-input {
 	outline: none;
-	border: none;
-	height: 100%;
-	width: 100%;
-	height: 22px;
 	box-sizing: border-box;
+	width: 100%;
+	height: 24px;
 	flex: 1;
-	background-color: var(--color-bg);
-	color: var(--color-text);
-	padding: 0 0px 0 24px;
-	border: 1px solid var(--figma-color-border, rgba(0, 0, 0, 0.1));
-	border-radius: 2px;
-	margin-top: 1px;
-	margin-bottom: 2px;
-	margin-right: 2px;
-	margin-left: 2px;
+	margin: 0;
+	padding: 0 8px 0 28px;
+	font-size: 11px;
+	background-color: var(--figma-color-bg);
+	color: var(--figma-color-text);
+	border: 1px solid var(--figma-color-border);
+	border-radius: 5px;
+}
+
+.message-filter-search-input::placeholder {
+	color: var(--figma-color-text-tertiary);
+}
+
+.message-filter-search-input:hover {
+	border-color: var(--figma-color-border-strong, var(--figma-color-border));
 }
 
 .message-filter-search-input:focus {
-	outline-offset: 0.39px;
-	border: 1px solid var(--figma-color-border-selected);
-	outline: 1px solid var(--figma-color-border-selected);
+	border-color: var(--figma-color-border-selected);
 }
 
 .message-filter-search {
-	position: sticky;
-	z-index: 10;
-	top: 0;
-	box-sizing: border-box;
-	margin-right: 8px;
+	position: relative;
+	flex: 1;
 	display: flex;
 	align-items: center;
-	overflow: hidden;
-	background-color: var(--figma-color-bg);
 	color: var(--figma-color-text);
-	fill: var(--figma-color-text);
 }
 
 .message-filter-search .svg-container {
 	position: absolute;
+	left: 2px;
 	width: 24px;
 	height: 24px;
+	pointer-events: none;
+	background-color: var(--figma-color-icon-tertiary);
 }
 
 .message-group {
@@ -306,3 +311,54 @@ refLanguage - bold
 hover - bold
 focus - bold
 **/
+
+.message-list-load-more {
+	height: 1px;
+}
+
+.message-list-row-placeholder {
+	box-sizing: border-box;
+}
+
+/* keep the search field in reach while scrolling long lists - the sticky row headers stick below it */
+.message-view-searchable {
+	/* the sticky search field is only sticky within its parent - which has to span the whole list */
+	height: auto;
+}
+
+.message-view-searchable .message-filter {
+	position: sticky;
+	top: 0;
+	z-index: 11;
+	background-color: var(--figma-color-bg);
+}
+
+.message-view-searchable .message-group-header {
+	top: 40px;
+}
+
+.message-view-searchable .message-group-header-sticky-border {
+	top: 41px;
+}
+
+/* "Missing in German" filter next to the search field */
+.message-filter .message-filter-missing {
+	flex: none;
+	width: auto;
+	max-width: 50%;
+}
+
+.message-filter .message-filter-missing .select-menu__button {
+	height: 24px;
+	padding-right: 4px;
+	border-color: var(--figma-color-border);
+}
+
+.message-filter .message-filter-missing .select-menu__button:hover {
+	border-color: var(--figma-color-border-strong, var(--figma-color-border));
+}
+
+.message-filter .message-filter-missing--active .select-menu__button {
+	border-color: var(--figma-color-border-selected);
+	background-color: var(--figma-color-bg-selected);
+}

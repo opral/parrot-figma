@@ -68,10 +68,15 @@ export default function Drawer({
 					}
 				}
 				onCancel?.();
-			} else if (event.key === "Enter") {
+			} else if (
+				event.key === "Enter" &&
+				// a focused button or select handles Enter itself (Enter on "Cancel" must not confirm)
+				!(event.target instanceof HTMLButtonElement || event.target instanceof HTMLSelectElement)
+			) {
 				for (const button of sortedButtons) {
 					if (button.key === "enter") {
-						button.callback();
+						// a disabled primary button must not run through the keyboard shortcut either
+						if (!button.disabled) button.callback();
 						break;
 					}
 				}
@@ -95,6 +100,9 @@ export default function Drawer({
 			const firstInputElement = drawerDiv.current?.querySelector("input");
 			if (firstInputElement instanceof HTMLElement) {
 				firstInputElement.focus();
+			} else {
+				// without a focused element inside the drawer Enter/Escape would never reach it
+				drawerDiv.current?.focus();
 			}
 		}
 	}, [isShown]);
@@ -131,6 +139,7 @@ export default function Drawer({
 		>
 			<div
 				ref={drawerDiv}
+				tabIndex={-1}
 				className={`${position}-drawer${isShown ? " open" : " "} ${className ?? ""}`}
 			>
 				{children}

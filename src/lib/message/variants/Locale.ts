@@ -119,6 +119,54 @@ export enum Locale {
 	ZU = "zu",
 }
 
+/**
+ * Region and script variants (BCP-47 tags) that can be chosen in the language picker in addition to the
+ * two letter `Locale` values - projects usually ship "pt-BR", "zh-Hans" or "en-GB", not just "pt".
+ * Machine translation maps them to the language Google knows (see `toGoogleLanguage`).
+ */
+export const RegionalLocales = [
+	"de-AT",
+	"de-CH",
+	"en-AU",
+	"en-CA",
+	"en-GB",
+	"en-IN",
+	"en-US",
+	"es-419",
+	"es-ES",
+	"es-MX",
+	"fr-BE",
+	"fr-CA",
+	"fr-CH",
+	"it-CH",
+	"nl-BE",
+	"pt-BR",
+	"pt-PT",
+	"sr-Cyrl",
+	"sr-Latn",
+	"zh-CN",
+	"zh-HK",
+	"zh-Hans",
+	"zh-Hant",
+	"zh-TW",
+];
+
+/**
+ * The name of a language for the UI. `Intl` calls the legacy tag `sh` "Serbian (Latin)", which is the
+ * same name as `sr-Latn` - two identical entries in every language list.
+ */
+export function languageDisplayName(tag: string, inLanguage = "en"): string | undefined {
+	if (tag === "sh") return inLanguage === "sh" ? "srpskohrvatski" : "Serbo-Croatian";
+	try {
+		return new Intl.DisplayNames(inLanguage, { type: "language" }).of(tag);
+	} catch {
+		return undefined;
+	}
+}
+
+/** Every language that can be chosen in Setup, region variants right after their base language. */
+export const SelectableLocales: string[] = [...Object.values(Locale), ...RegionalLocales].sort();
+
 export const SupportedLanguages = [
 	// Language.AR,
 	Locale.BG,

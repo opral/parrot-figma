@@ -143,15 +143,15 @@ select.input-select-menu {
 }
 
 .input-select-menu__button:hover .input-select-menu__label--placeholder {
-	color: var(--black8);
+	color: var(--figma-color-text-secondary);
 }
 
 .input-select-menu__button:focus .input-select-menu__label--placeholder {
-	color: var(--black8);
+	color: var(--figma-color-text-secondary);
 }
 
 .input-select-menu__button:disabled:hover .input-select-menu__label--placeholder {
-	color: var(--black3);
+	color: var(--figma-color-text-disabled);
 }
 
 .input-select-menu__button:hover .input-select-menu__caret,
@@ -174,7 +174,7 @@ select.input-select-menu {
 }
 
 .input-select-menu__button:disabled .input-select-menu__label {
-	color: var(--black3);
+	color: var(--figma-color-text-disabled);
 }
 
 .input-select-menu__label.input-select-menu__label-part1 {
@@ -263,7 +263,7 @@ select.input-select-menu {
 	cursor: default;
 	display: flex;
 	font-family: var(--font-stack);
-	font-size: var(--font-size-small);
+	font-size: var(--font-size-xsmall);
 	font-weight: var(--font-weight-normal);
 	letter-spacing: var(--font-letter-spacing-neg-xsmall);
 	line-height: var(--font-line-height);
@@ -307,6 +307,13 @@ select.input-select-menu {
 	height: 24px;
 }
 
+/* plus.svg is an 11 px glyph - "cover" would blow it up to the 24 px icon box */
+.input-select-menu__item-icon .svg-container.plus-svg {
+	width: 11px;
+	height: 11px;
+	margin: 0 6.5px;
+}
+
 .input-select-menu__item-check .svg-container.menu-checkmark-svg {
 	width: 10px;
 	height: 10px;
@@ -318,7 +325,7 @@ select.input-select-menu {
 }
 
 .input-select-menu__divider-label {
-	font-size: var(--font-size-small);
+	font-size: var(--font-size-xsmall);
 	font-weight: var(--font-weight-normal);
 	letter-spacing: var(--font-letter-spacing-neg-small);
 	line-height: var(--line-height);
@@ -417,7 +424,7 @@ select.input-select-menu {
 	flex: 0 0;
 	min-width: 150px;
 
-	border-bottom: solid var(--figma-color-border);
+	border-bottom: 1px solid var(--figma-color-border);
 }
 
 .input-select-menu__input {
@@ -425,6 +432,7 @@ select.input-select-menu {
 }
 
 .input-select-menu__input__wrapper {
+	position: relative;
 	width: 100%;
 	min-height: 14px;
 	margin: 0px;
@@ -444,8 +452,14 @@ select.input-select-menu {
 	/* background-color: var(--figma-color-bg); */
 	border-radius: 2px;
 	border-style: solid;
+	border-width: 0;
 	/* border-color: var(--figma-color-border-selected-strong); */
 	color: var(--figma-color-text-disabled);
+	/* the suggestion text sits exactly under the input text, so typed and suggested text line up */
+	font:
+		400 11px/14px "Inter",
+		sans-serif;
+	letter-spacing: 0.01em;
 }
 
 .input-select-menu__input__wrapper p.addVisible {
@@ -524,8 +538,43 @@ select.input-select-menu {
 	display: flex;
 	background-color: var(--figma-color-bg);
 	z-index: 100000;
-	border-radius: var(--border-radius-small);
+	border-radius: var(--border-radius-med);
 	box-shadow: var(--shadow-hud);
+	overflow: hidden;
 
-	border: solid var(--figma-color-border);
+	border: 1px solid var(--figma-color-border);
+}
+
+/* ghost suggestion (e.g. a suggested message key) - Tab takes it over; a long key ends before the hint */
+.input-select-menu__input__wrapper p.suggestion--ghost {
+	display: block;
+	box-sizing: border-box;
+	width: 100%;
+	padding-right: 40px;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.input-select-menu__input__wrapper p.suggestion--ghost.addVisible {
+	padding-right: 72px;
+}
+
+.input-select-menu__accept-hint {
+	position: absolute;
+	top: 50%;
+	right: 6px;
+	transform: translateY(-50%);
+	padding: 0 4px;
+	border: 1px solid var(--figma-color-border);
+	border-radius: 3px;
+	font-family: inherit;
+	font-size: 9px;
+	line-height: 14px;
+	color: var(--figma-color-text-tertiary);
+	pointer-events: none;
+}
+
+.input-select-menu__input__wrapper p.addVisible ~ .input-select-menu__accept-hint {
+	right: 38px;
 }

@@ -17,15 +17,22 @@
 	padding-left: 8px;
 }
 
+.onboarding-title.onboarding-title {
+	font-size: 14px;
+	line-height: 24px;
+}
+
 .onboarding-buttonbar {
 	display: flex;
-	margin-right: 15px;
-	height: 100px;
+	margin: 16px;
+	height: 64px;
 }
 
 .onboarding-buttonbar .button {
 	margin-left: auto;
 	margin-top: auto;
+	min-width: 96px;
+	justify-content: center;
 }
 
 button.button--buttonPrimary {

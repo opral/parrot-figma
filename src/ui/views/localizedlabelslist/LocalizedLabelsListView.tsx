@@ -3,9 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import LocalizedLabelManagerUI from "../../../lib/localizedlabels/LocalizedLabelManagerUI";
 import FigmaUtil from "../../../shared/FigmaUtil";
 import LocalizedFrameGroup from "./LocalizedFrameGroup";
+import BulkLanguageBar from "./BulkLanguageBar";
+import LinkIdenticalTextsToast from "./LinkIdenticalTextsToast";
 import "./LocalizedLabelsListView.css";
 import { UILocalizedLabel } from "../../../lib/localizedlabels/UILocalizedLabel";
 import { NodeSelection } from "../../../lib/localizedlabels/LocalizedLabelManager";
+import { LatestRequest } from "../../utils/LatestRequest";
 
 declare global {
 	interface Element {
@@ -75,6 +78,7 @@ export default function LocalizedLabelsListView({
 	const [localizedLabels, setLocalizedLabels] = useState<UILocalizedLabel[]>([]);
 
 	const tableRef = useRef<HTMLDivElement>(null);
+	const selectionRefresh = useRef(new LatestRequest());
 
 	const [selection, setSelection] = useState({} as NodeSelection);
 
@@ -83,8 +87,10 @@ export default function LocalizedLabelsListView({
 	const freeTier = true;
 
 	async function refreshSelection() {
+		const requestRevision = selectionRefresh.current.begin();
 		const selectedNodes = await localizedLabelManager.getSelection();
-		setSelection(selectedNodes);
+		if (!selectionRefresh.current.isCurrent(requestRevision)) return;
+
 		const updatedParentIds = new Set<string>();
 
 		let selectedLabels = [] as UILocalizedLabel[];
@@ -100,6 +106,7 @@ export default function LocalizedLabelsListView({
 				const selectedLabelsByFrame = await localizedLabelManager.getLocalizedLabelsByFrame(
 					selectedNode.rootFrameId,
 				);
+				if (!selectionRefresh.current.isCurrent(requestRevision)) return;
 
 				if (selectedLabelsByFrame) {
 					selectedLabels = selectedLabels.concat(selectedLabelsByFrame);
@@ -107,6 +114,8 @@ export default function LocalizedLabelsListView({
 				updatedParentIds.add(selectedNode.rootFrameId);
 			}
 		}
+		if (!selectionRefresh.current.isCurrent(requestRevision)) return;
+		setSelection(selectedNodes);
 		setParentIds(updatedParentIds);
 		setLocalizedLabels(selectedLabels);
 	}
@@ -149,17 +158,49 @@ export default function LocalizedLabelsListView({
 	}, [selection]);
 
 	return (
-		<>
+		<div className="layers-view">
+			<BulkLanguageBar
+				selectedFrameIds={[...parentIds]}
+				figmaRemote={figmaRemote}
+				localizedLabelManager={localizedLabelManager}
+			/>
+			<LinkIdenticalTextsToast
+				figmaRemote={figmaRemote}
+				localizedLabelManager={localizedLabelManager}
+			/>
 			{localizedLabels.length === 0 && (
 				<div className="emptyState">
-					<div className="emptyStateTitle">No Frame selected</div>
-					<div className="emptyStateSubtitle">
-						<div>
-							Labels for localization
-							<br />
-							will show up here when selected - Select a Frame containing Text in your Design.
-						</div>
-					</div>
+					{Object.keys(selection).length === 0 && (
+						<>
+							<div className="emptyStateTitle">Select a frame to get started</div>
+							<div className="emptyStateSubtitle">
+								Parrot lists the text layers of the frame you select on the canvas.
+							</div>
+							<ol className="emptyStateSteps">
+								<li>
+									<b>Select</b> a frame, group or component that contains text.
+								</li>
+								<li>
+									<b>Link</b> each text layer to a message, a key like <code>home.title</code>, so
+									its translations are stored once.
+								</li>
+								<li>
+									<b>Switch</b> the frame&apos;s language here. Already have translations? Add them
+									in the Import tab.
+								</li>
+							</ol>
+						</>
+					)}
+					{Object.keys(selection).length > 0 && (
+						<>
+							<div className="emptyStateTitle">Nothing to localize in the selection</div>
+							<div className="emptyStateSubtitle">
+								{Object.values(selection).some((node) => node.rootFrameId)
+									? "The selected frame contains no text layers."
+									: "Parrot only lists text inside a frame, group, component or instance (up to 3000 px wide). Put the text in a frame, for example by selecting it and pressing Ctrl/Cmd + Alt + G, or select the frame that contains it."}
+							</div>
+						</>
+					)}
 				</div>
 			)}
 			{localizedLabels.length >= 0 && (
@@ -183,6 +224,6 @@ export default function LocalizedLabelsListView({
 					</div>
 				</div>
 			)}
-		</>
+		</div>
 	);
 }

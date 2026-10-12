@@ -92,8 +92,19 @@ export class InlangMessageStore {
 		return bundle ? bundleToLegacyMessage(bundle) : undefined;
 	}
 
+	async getMessagesAsync(messageIds: string[]) {
+		const messages: { [messageId: string]: Message } = {};
+		for (const messageId of messageIds) {
+			const message = this.getMessage(messageId);
+			if (message) messages[messageId] = message;
+		}
+		return messages;
+	}
+
 	async load(): Promise<Message[]> {
-		return this.getBundleStore().load().map(bundleToLegacyMessage);
+		return this.getBundleStore()
+			.load()
+			.map((bundle) => bundleToLegacyMessage(bundle));
 	}
 
 	async commitUndo() {

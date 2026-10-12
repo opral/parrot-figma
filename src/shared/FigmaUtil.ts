@@ -47,13 +47,18 @@ export default class FigmaUtil {
 		return figma.root.getPluginData(key);
 	}
 
-	async notify(message: string) {
-		figma.notify(message);
+	async notify(message: string, timeout?: number) {
+		figma.notify(message, timeout === undefined ? undefined : { timeout });
 	}
 
-	async notifyError(message: string) {
+	/** Opens a link (web page or mailto:) outside of Figma. */
+	async openExternal(url: string) {
+		figma.openExternal(url);
+	}
+
+	async notifyError(message: string, timeout = 3000) {
 		figma.notify(message, {
-			timeout: 3000,
+			timeout,
 			error: true,
 		});
 	}

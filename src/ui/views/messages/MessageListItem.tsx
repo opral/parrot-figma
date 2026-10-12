@@ -14,6 +14,8 @@ import LocalizedLabelManagerUI from "../../../lib/localizedlabels/LocalizedLabel
 
 import Drawer from "../../compontents/drawer/Drawer";
 import MessageVariantItem from "./MessageVariantItem";
+import { showMachineTranslationContact } from "../../compontents/machineTranslation/MachineTranslationContact";
+import InlangEditor from "./InlangEditor";
 // import ReactQuill from 'react-quill';
 
 type TranslationKeyListItemProps = {
@@ -52,7 +54,7 @@ type TranslationKeyListItemProps = {
 // DONE #27 style delete drawer
 // DONE #27 add no messages found with filter
 
-export default function TranslationKeyListItem({
+function TranslationKeyListItem({
 	rowClassNames,
 	figmaRemote,
 	searchMatch,
@@ -79,12 +81,15 @@ export default function TranslationKeyListItem({
 	const rowRef = React.useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
-		messageStore.subscribeMessage(messageId, (updatedMessage) => {
+		const unsubscribe = messageStore.subscribeMessage(messageId, (updatedMessage) => {
 			if (updatedMessage !== undefined) {
 				// skip deleted
 				setMessage(updatedMessage);
 			}
 		});
+		return () => {
+			unsubscribe?.();
+		};
 	}, []);
 
 	useEffect(() => {
@@ -101,16 +106,13 @@ export default function TranslationKeyListItem({
 
 	const refLanguage = messageStore.getRefLanugage();
 
-	// create an array of languages with baselanguage at position zero
-	const languages = [
-		refLanguage,
-		...messageStore.getLanugages()!.filter((l) => l !== refLanguage),
-	] as Locale[];
+	// reference language first, then the Setup order (the same order in every view)
+	const languages = messageStore.getOrderedLanguages();
 
 	return (
 		<div
 			ref={rowRef}
-			className={`message-group ${messageSelected ? "message-group-selected" : ""} ${
+			className={`message-group ${select === undefined ? "message-group-inlang" : ""} ${messageSelected ? "message-group-selected" : ""} ${
 				rowClassNames !== undefined ? rowClassNames : ""
 			} ${messageNameHovered ? " message-group-hovered" : ""} ${
 				focusedMessageVariant !== undefined ? " message-group-focused" : ""
@@ -175,33 +177,48 @@ export default function TranslationKeyListItem({
 					)}
 				</div>
 			</div>
-			<div className="message-group-header-sticky-border">test</div>
+			<div className="message-group-header-sticky-border" />
 
-			{languages.map((language) => (
-				<MessageVariantItem
-					key={language}
-					language={language}
-					refLanguage={refLanguage!}
-					localizedLabelManager={localizedLabelManager}
-					messageStore={messageStore}
-					searchMatch={searchMatch}
-					focusedMessageVariant={focusedMessageVariant}
+			{select === undefined ? (
+				<InlangEditor
 					message={message}
-					select={select}
-					onFocus={() => {
-						setFocusedMessageVariant({
-							messageId: message.id,
-							locale: language,
-							match: [],
-						});
-						onFocus?.(message.id, language, []);
+					locales={languages}
+					baseLocale={refLanguage!}
+					onSave={async (updated) => {
+						await localizedLabelManager.updateMessage(updated, {});
+						localizedLabelManager.commitUndoWhenIdle();
+						setMessage(updated);
 					}}
-					onBlur={() => {
-						setFocusedMessageVariant(undefined);
-						onBlur?.(message.id, language, []);
-					}}
+					onTranslate={async () => showMachineTranslationContact()}
 				/>
-			))}
+			) : (
+				languages.map((language) => (
+					<MessageVariantItem
+						key={language}
+						language={language}
+						refLanguage={refLanguage!}
+						localizedLabelManager={localizedLabelManager}
+						figmaRemote={figmaRemote}
+						messageStore={messageStore}
+						searchMatch={searchMatch}
+						focusedMessageVariant={focusedMessageVariant}
+						message={message}
+						select={select}
+						onFocus={() => {
+							setFocusedMessageVariant({
+								messageId: message.id,
+								locale: language,
+								match: [],
+							});
+							onFocus?.(message.id, language, []);
+						}}
+						onBlur={() => {
+							setFocusedMessageVariant(undefined);
+							onBlur?.(message.id, language, []);
+						}}
+					/>
+				))
+			)}
 			<Drawer
 				position="top"
 				buttons={[
@@ -216,12 +233,12 @@ export default function TranslationKeyListItem({
 					},
 					{
 						type: "primary-destructive",
-						text: "Delete Key",
+						text: "Delete message",
 						key: "enter",
 						disabled: messageIdToDelete === undefined,
 						callback: () => {
 							localizedLabelManager.deleteMessage(message.id).catch((e: Error) => {
-									reportError(e);
+								reportError(e);
 								figmaRemote.notifyError(e.message);
 							});
 							setMessageIdToDelete(undefined);
@@ -230,25 +247,28 @@ export default function TranslationKeyListItem({
 				]}
 				shown={messageIdToDelete !== undefined}
 			>
-				<div className="modal-drawer-header">
-					Delete {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id}
-				</div>
-				<div className="modal-drawer-body">
+				<div className="drawer-header">Delete message?</div>
+				<div className="drawer-body">
 					{keyToDeleteReferences !== undefined && keyToDeleteReferences > 0 && (
-						<>
-							Deletion of the Message{" "}
-							{localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id} will unlink{" "}
-							{keyToDeleteReferences} referencing text layers.
-						</>
+						<p>
+							<b>{message.id}</b> is linked to {keyToDeleteReferences} text{" "}
+							{keyToDeleteReferences === 1 ? "layer" : "layers"}. Deleting it unlinks{" "}
+							{keyToDeleteReferences === 1 ? "that layer" : "those layers"}. The text on the canvas
+							stays as it is.
+						</p>
 					)}
 					{keyToDeleteReferences === 0 && (
-						<>
-							Key {localizedLabelManager.messageStore.getMessage(messageIdToDelete!)?.id} is not
-							refrenced by a label
-						</>
+						<p>
+							<b>{message.id}</b> is not linked to any text layer. All of its translations will be
+							deleted.
+						</p>
 					)}
+					{keyToDeleteReferences === undefined && <p>Checking where {message.id} is used…</p>}
 				</div>
 			</Drawer>
 		</div>
 	);
 }
+
+// The list re-renders on every edit; a row only has to render again when its own props or message change.
+export default React.memo(TranslationKeyListItem);

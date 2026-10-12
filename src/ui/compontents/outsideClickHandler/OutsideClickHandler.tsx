@@ -4,13 +4,19 @@ type OutsideClickHandlerProps = {
 	children: ReactNode;
 	disabled?: boolean;
 	display?: CSSProperties["display"];
+	additionalInsideRef?: { current: HTMLElement | null };
 	onOutsideClick: (event: MouseEvent | TouchEvent) => void;
 };
+
+export function isClickOutside(target: Node, roots: readonly (ParentNode | null | undefined)[]) {
+	return !roots.some((root) => root?.contains(target));
+}
 
 export default function OutsideClickHandler({
 	children,
 	disabled = false,
 	display = "block",
+	additionalInsideRef,
 	onOutsideClick,
 }: OutsideClickHandlerProps) {
 	const root = useRef<HTMLDivElement>(null);
@@ -19,7 +25,10 @@ export default function OutsideClickHandler({
 		if (disabled) return;
 
 		const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
-			if (event.target instanceof Node && !root.current?.contains(event.target)) {
+			if (
+				event.target instanceof Node &&
+				isClickOutside(event.target, [root.current, additionalInsideRef?.current])
+			) {
 				onOutsideClick(event);
 			}
 		};
@@ -30,7 +39,7 @@ export default function OutsideClickHandler({
 			document.removeEventListener("mousedown", handleOutsideClick, true);
 			document.removeEventListener("touchstart", handleOutsideClick, true);
 		};
-	}, [disabled, onOutsideClick]);
+	}, [additionalInsideRef, disabled, onOutsideClick]);
 
 	return (
 		<div ref={root} style={{ display }}>

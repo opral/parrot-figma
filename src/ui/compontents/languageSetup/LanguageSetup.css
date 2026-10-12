@@ -18,45 +18,43 @@
 
 .choosen-languages {
 	display: grid;
-	grid-template-columns: auto 2fr auto;
+	grid-template-columns: auto 1fr auto;
+	align-items: center;
 	width: 100%;
-	padding-top: 2px;
-	padding-bottom: 2px;
-	padding-left: 3px;
-	margin-left:;
+}
+
+/* the target languages are a plain list of chips - the grid above is for "name + summary" rows */
+.choosen-languages-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.choosen-languages-list .language-summary:empty {
+	display: none;
 }
 
 .choosen-language-control .change-control {
 	display: flex;
 	align-items: flex-start;
+	padding: 0 16px;
 }
 
-.choosen-language-control .svg-container {
-	margin-left: 25px;
-	margin-right: 6px;
-	margin-top: 8px;
-	flex-grow: 0;
-	flex-shrink: 0;
-	flex-basis: 15px;
-	width: 15px;
-	height: 15px;
+/* the globe in front of the chips only pushed them away from the text above */
+.choosen-language-control .svg-container.world-svg {
+	display: none;
 }
 
 .language-name {
 	background-color: var(--figma-color-bg);
-	border-color: var(--figma-color-border);
-	border-style: solid;
-	border-radius: 4px;
-	margin-top: 2px;
-	margin-right: auto;
-	margin-bottom: 2px;
-	margin-left: 2px;
-
+	border: 1px solid var(--figma-color-border);
+	border-radius: 5px;
+	margin: 0;
 	align-items: center;
-	padding-left: 6px;
-	padding-right: 6px;
+	padding: 0 8px;
 	display: flex;
 	height: 24px;
+	white-space: nowrap;
 }
 
 .language-name-wrapper {
@@ -64,10 +62,19 @@
 }
 
 .choosen-language-change {
+	display: flex;
+	align-items: center;
+	height: 24px;
 	line-height: 16px;
-	margin-right: 15px;
-	padding: 8px;
+	margin: 0;
+	padding: 0 8px;
+	border-radius: 5px;
 	color: var(--figma-color-text-brand);
+	font-weight: 500;
+	cursor: default;
+}
+.choosen-language-change:hover {
+	background-color: var(--figma-color-bg-hover);
 }
 .language-import-action {
 	margin-right: 15px;
@@ -76,17 +83,22 @@
 	margin-left: auto;
 }
 .language-summary {
-	margin-right: 15px;
-	padding: 8px;
+	margin: 0 0 0 8px;
+	padding: 0;
+	color: var(--figma-color-text-secondary);
 }
 .setup-header {
 	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	min-height: 24px;
+	padding: 16px 8px 4px 16px;
+	box-sizing: content-box;
 }
 .setup-header-title {
-	margin-left: 8px;
-	padding: 8px;
+	margin: 0;
+	padding: 0;
 	font-size: 11px;
-	font-family: Inter;
 	font-style: normal;
 	font-weight: 600;
 	line-height: 16px;
@@ -94,14 +106,13 @@
 	display: flex;
 }
 .setup-text {
-	margin-left: 8px;
-	padding-left: 8px;
-	padding-bottom: 16px;
+	margin: 0;
+	padding: 0 16px 8px;
 	font-size: 11px;
-	font-family: Inter;
 	font-style: normal;
 	line-height: 16px;
 	letter-spacing: 0.055px;
+	color: var(--figma-color-text-secondary);
 }
 
 .setup-baselanguage-select {
@@ -111,7 +122,7 @@
 }
 
 div.react-select__single-value {
-	color: var(--figma-color-text-disabled);
+	color: var(--figma-color-text);
 }
 
 input.react-select__input {
@@ -133,16 +144,25 @@ input.react-select__input {
 }
 
 .view .react-select__control {
-	margin-left: 16.5px;
+	margin-left: 16px;
 	margin-right: 16px;
-	outline-offset: 0.39px;
-	border: 1px solid transparent;
-	outline: 1px solid var(--figma-color-border-selected);
+	border: 1px solid var(--figma-color-border);
+	box-shadow: none;
 	background-color: var(--figma-color-bg);
-	border-radius: 2px;
+	border-radius: 5px;
 	min-height: 32px;
 	justify-content: flex-start;
 	align-items: flex-start;
+}
+
+.view .react-select__control:hover {
+	border-color: var(--figma-color-border-strong, var(--figma-color-border));
+}
+
+.view .react-select__control--is-focused,
+.view .react-select__control--is-focused:hover {
+	border-color: var(--figma-color-border-selected);
+	box-shadow: inset 0 0 0 1px var(--figma-color-border-selected);
 }
 
 .view .react-select__menu {
@@ -150,20 +170,29 @@ input.react-select__input {
 
 	margin-left: 16px;
 	margin-right: 16px;
-	border-radius: 2px;
-	margin-top: 0px;
+	border-radius: 5px;
+	margin-top: 4px;
 	margin-bottom: 16px;
-	box-shadow: none;
+	overflow: hidden;
+	box-shadow:
+		0 5px 17px rgba(0, 0, 0, 0.2),
+		0 2px 7px rgba(0, 0, 0, 0.15),
+		0 0 0 1px var(--color-border-menu, #383838);
 	color: var(--figma-color-text-onbrand);
 	background-color: var(--figma-color-bg-menu-hover);
 }
 
 .view .react-select__menu-list {
-	max-height: 180px;
+	max-height: 216px;
 }
 
 .view .react-select__option {
 	display: flex;
+	align-items: center;
+	box-sizing: border-box;
+	height: 24px;
+	padding: 0 8px;
+	line-height: 16px;
 }
 
 .view .react-select__option--is-disabled {
@@ -189,7 +218,7 @@ input.react-select__input {
 .view .react-select__option .svg-container {
 	width: 10px;
 	height: 7px;
-	margin-top: 4px;
+	margin-top: 0;
 	margin-right: 8px;
 	margin-left: 0px;
 	background-color: transparent;

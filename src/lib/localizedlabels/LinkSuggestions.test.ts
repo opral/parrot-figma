@@ -1,0 +1,143 @@
+import { describe, expect, it } from "vitest";
+import {
+	buildMessageTextIndex,
+	findKeyConflicts,
+	isValidMessageKey,
+	matchLayersToMessages,
+	messageText,
+	proposeKeys,
+	type LayerText,
+} from "./LinkSuggestions";
+
+const text = (value: string) => [{ type: "Text" as const, value }];
+const message = (id: string, variants: Record<string, any[]>, selectors: any[] = []) => ({
+	id,
+	selectors,
+	variants: Object.entries(variants).map(([languageTag, pattern]) => ({
+		languageTag,
+		match: [],
+		pattern,
+	})),
+});
+const layer = (
+	nodeId: string,
+	characters: string,
+	overrides: Partial<LayerText> = {},
+): LayerText => ({
+	nodeId,
+	characters,
+	language: "en",
+	layerName: characters,
+	frameName: "Login",
+	...overrides,
+});
+
+const messages = [
+	message("login.sign_in", { en: text("Sign in"), de: text("Anmelden") }),
+	message("dialog.ok", { en: text("OK") }),
+	message("button.ok", { en: text("OK") }),
+	message("intro", { en: text("Fast &amp; <strong>simple</strong>") }),
+	message("list", { en: text("<ul><li>One</li><li>Two</li></ul>") }),
+	message("greeting", {
+		en: [
+			{ type: "Text", value: "Hi " },
+			{ type: "VariableReference", name: "name" },
+		],
+	}),
+];
+const index = buildMessageTextIndex(messages, ["en", "de"]);
+
+describe("messageText", () => {
+	it("ignores formatting, entities and line breaks", () => {
+		expect(messageText(messages[3], "en")).toBe("Fast & simple");
+		expect(messageText(messages[4], "en")).toBe("One Two");
+	});
+
+	it("has no text for variables or plurals", () => {
+		expect(messageText(messages[5], "en")).toBeUndefined();
+		expect(
+			messageText(
+				message("p", { en: text("x") }, [{ type: "VariableReference", name: "n" }]),
+				"en",
+			),
+		).toBeUndefined();
+	});
+});
+
+describe("matchLayersToMessages", () => {
+	it("matches by the text in the layer's language, whitespace-insensitive", () => {
+		const matches = matchLayersToMessages(
+			[
+				layer("1", " Sign  in "),
+				layer("2", "Anmelden", { language: "de" }),
+				layer("3", "One\nTwo"),
+				layer("4", "Nope"),
+			],
+			index,
+		);
+		expect(matches.map((m) => [m.layer.nodeId, m.messageIds])).toEqual([
+			["1", ["login.sign_in"]],
+			["2", ["login.sign_in"]],
+			["3", ["list"]],
+		]);
+	});
+
+	it("reports every message of an ambiguous text", () => {
+		expect(matchLayersToMessages([layer("1", "OK")], index)[0].messageIds).toEqual([
+			"dialog.ok",
+			"button.ok",
+		]);
+	});
+
+	it("can be limited to some messages", () => {
+		expect(
+			matchLayersToMessages([layer("1", "OK")], index, new Set(["button.ok"]))[0].messageIds,
+		).toEqual(["button.ok"]);
+		expect(matchLayersToMessages([layer("1", "Sign in")], index, new Set(["button.ok"]))).toEqual(
+			[],
+		);
+	});
+});
+
+describe("proposeKeys", () => {
+	it("reuses existing messages, shares keys for equal texts and never collides", () => {
+		const proposals = proposeKeys(
+			[
+				layer("1", "Sign in"),
+				layer("2", "Forgot password?"),
+				layer("3", "Forgot password?"),
+				layer("4", "Title", { layerName: "Title", frameName: "Dialog" }),
+			],
+			[...messages, message("dialog.title", { en: text("Other") })],
+			index,
+		);
+		expect(proposals.map((p) => [p.layer.nodeId, p.key, p.existing])).toEqual([
+			["1", "login.sign_in", true],
+			["2", "login.forgot_password", false],
+			["3", "login.forgot_password", false],
+			["4", "dialog.title_2", false],
+		]);
+	});
+});
+
+describe("isValidMessageKey", () => {
+	it("accepts dotted keys and rejects spaces or trailing separators", () => {
+		expect(isValidMessageKey("login.sign_in")).toBe(true);
+		expect(isValidMessageKey("login.")).toBe(false);
+		expect(isValidMessageKey("sign in")).toBe(false);
+		expect(isValidMessageKey("")).toBe(false);
+	});
+});
+
+describe("findKeyConflicts", () => {
+	it("flags a key that is used for a different text, not for the same text", () => {
+		expect(
+			findKeyConflicts([
+				{ key: "a", characters: "Pay now" },
+				{ key: "a", characters: "Pay  now " },
+				{ key: "a", characters: "Cancel" },
+				{ key: "b", characters: "Cancel" },
+			]),
+		).toEqual([false, false, true, false]);
+	});
+});

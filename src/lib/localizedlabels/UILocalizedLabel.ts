@@ -18,6 +18,7 @@ import { MessageParameterValues } from "../message/MessageParameterValues";
 import { Placeholder } from "../message/Placeholder";
 import PlaceholderUtil from "../message/PlaceholderUtil";
 import TranslatorMachine from "../translationprovider/TranslatorMachine";
+import { toQuillTextOperations } from "./RichTextFormatting";
 
 const Delta = Quill.import("delta") as typeof DeltaType;
 
@@ -136,14 +137,35 @@ export class UILocalizedLabel implements LocalizedLabel {
 			this.messageLinkState = MessageLinkState.Unlinked;
 
 			const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
+			// A label that still shows text of another language than its frame's (the reference text or the
+			// only text a message has) was not translated (e.g. the machine translation failed or there
+			// is no reference text to translate from) - it must not be stored as the translation of the
+			// frame language, otherwise switching to the language again would never retry the translation.
+			const stillShowsOtherLanguageText =
+				!MessageStoreMemory.hasTranslationInVariant(
+					localizedLabel.unlinkedMessage,
+					this.rootFrameLanguage,
+					[],
+				) &&
+				localizedLabel.unlinkedMessage.variants.some(
+					(variant) =>
+						variant.languageTag !== this.rootFrameLanguage &&
+						MessageStoreMemory.htmlForPattern(
+							localizedLabel.unlinkedMessage,
+							variant.languageTag,
+							[],
+						) === this.currentPatternHTML,
+				);
 			// override the currents label variant with state form label
-			this.unlinkedMessage = MessageStoreMemory.upsertVariantPatternHtml(
-				localizedLabel.unlinkedMessage,
-				refLanguage,
-				this.rootFrameLanguage,
-				[],
-				this.currentPatternHTML,
-			);
+			this.unlinkedMessage = stillShowsOtherLanguageText
+				? localizedLabel.unlinkedMessage
+				: MessageStoreMemory.upsertVariantPatternHtml(
+						localizedLabel.unlinkedMessage,
+						refLanguage,
+						this.rootFrameLanguage,
+						[],
+						this.currentPatternHTML,
+					);
 		} else if (localizedLabel.messageId) {
 			this.messageId = localizedLabel.messageId;
 			if (!this.manager.messageStore.getMessage(this.messageId)) {
@@ -183,15 +205,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 			return "";
 		}
 
-		const deltaOps: Op[] = [];
-		const lastTwoCharsBreaks =
-			text.length > 1 && text[text.length - 1] === "\n" && text[text.length - 2] === "\n";
-
-		// allways add an additional line break at the end
-		if (ops.length > 0) {
-			ops[ops.length - 1].end += 1;
-		}
-		const rawtext = `${text}\n`;
+		const deltaOps = toQuillTextOperations(text, ops) as Op[];
 
 		// s
 		// <p>s</p>
@@ -228,26 +242,6 @@ export class UILocalizedLabel implements LocalizedLabel {
 		// remove all <p> -> s\n
 		// remove last \n -> s CHECK
 
-		// placholder replacement
-		for (const op of ops) {
-			if (op.attributes.placeholder) {
-				const insert = op.attributes.placeholder.name;
-				const parameterOperation = {
-					insert,
-					attributes: {
-						...op.attributes,
-					},
-				};
-				deltaOps.push(parameterOperation);
-			} else {
-				const insert = rawtext.substring(op.start, op.end);
-				deltaOps.push({
-					insert,
-					attributes: op.attributes,
-				});
-			}
-		}
-
 		const delta = new Delta(deltaOps);
 
 		const tempCont = document.createElement("pre");
@@ -259,7 +253,11 @@ export class UILocalizedLabel implements LocalizedLabel {
 		htmlContent = htmlContent.split("</p>").join("\n");
 
 		htmlContent = htmlContent.split("<p>").join("");
-		htmlContent = htmlContent.slice(0, htmlContent.length - 1);
+		// Drop the helper newline. A text that ends in a list has no trailing paragraph, so there is
+		// no helper newline to drop and slicing would cut the closing list tag.
+		if (htmlContent.endsWith("\n")) {
+			htmlContent = htmlContent.slice(0, htmlContent.length - 1);
+		}
 		return htmlContent;
 	}
 
@@ -317,7 +315,9 @@ export class UILocalizedLabel implements LocalizedLabel {
 			removeLastCR = true;
 		}
 
-		htmlWithFilledPlaceholders += "<br>";
+		// The HTML parser drops whitespace at the very start of the document - an empty element in front
+		// keeps leading spaces of the text.
+		htmlWithFilledPlaceholders = `<span></span>${htmlWithFilledPlaceholders}<br>`;
 
 		const contents = (quill.clipboard as any).convert({ html: htmlWithFilledPlaceholders }) as any;
 		let text = contents
@@ -380,9 +380,12 @@ export class UILocalizedLabel implements LocalizedLabel {
 				throw new Error("Message does not exist");
 			}
 
-			const variantPatternHtml = MessageStoreMemory.htmlForPattern(message, this.language, [
-				/** TODO #18 selectors build selectors based on variableValues */
-			]);
+			const variantPatternHtml = MessageStoreMemory.htmlForPatternWithFallback(
+				message,
+				this.language,
+				this.manager.messageStore.getRefLanugage(),
+				[/** TODO #18 selectors build selectors based on variableValues */],
+			);
 			state.modified = variantPatternHtml !== this.currentPatternHTML;
 			if (variantPatternHtml !== this.currentPatternHTML) {
 				// debugger;
@@ -437,15 +440,9 @@ export class UILocalizedLabel implements LocalizedLabel {
 			],
 		};
 
-		// make the lable a unlinked label with the current language
-		await this.manager.updateLabelProperties(this.nodeId, {
-			messageState: {
-				type: "unlinked",
-				unlinkedMessage,
-				parameterValues: this.parameterValues,
-			},
-		});
-
+		// The label becomes an unlinked label with an anonymous message in one write at the end (also when
+		// the translation fails: it then keeps its text and only gets the language) - a write per label
+		// is a sandbox round trip, which adds up for frames with hundreds of unlinked texts.
 		if (fromRefLanguage) {
 			try {
 				unlinkedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(
@@ -568,44 +565,39 @@ export class UILocalizedLabel implements LocalizedLabel {
 			targetLanguage,
 			[],
 		);
-		// updating message
-		if (!hasVariantTranslationInTargetLanguage || enforceTranslation) {
-			if (!toRefLanguage) {
-				try {
-					const eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(
-						translator,
-						message,
-						refLanguage,
-						targetLanguage,
-						[],
-						triggersCTA,
-					);
-					await this.manager.updateMessage(eventuallyUpdatedMessage, {});
-				} catch (e) {
-					await this.manager.updateLabelProperties(this.nodeId, {
-						messageState: {
-							type: "linked",
-							messageId: this.messageId!,
-							parameterValues: this.parameterValues,
-						},
-						language: targetLanguage,
-					});
-					throw e;
-				}
+		const linkedMessageState = {
+			type: "linked" as const,
+			messageId: this.messageId!,
+			parameterValues: this.parameterValues,
+		};
+
+		// A label can carry an explicit language override from a previous frame switch.
+		// Always persist the newly requested language so those overrides do not pin the
+		// text to an older locale after a later translation is added.
+		if (!toRefLanguage && (!hasVariantTranslationInTargetLanguage || enforceTranslation)) {
+			try {
+				const eventuallyUpdatedMessage = await MessageStoreMemory.upsertUsingAutoTranslateMessage(
+					translator,
+					message,
+					refLanguage,
+					targetLanguage,
+					[],
+					triggersCTA,
+				);
+				await this.manager.updateMessage(eventuallyUpdatedMessage, {});
+			} catch (e) {
+				await this.manager.updateLabelProperties(this.nodeId, {
+					messageState: linkedMessageState,
+					language: targetLanguage,
+				});
+				throw e;
 			}
-			// TODO #3 think about fall back mechanism:
-			// in case the variant for the given plural is skipped try to fall back to others
-			// if this is skipped as well fall back to base language
-			//  - for now we just don't change the label
-			await this.manager.updateLabelProperties(this.nodeId, {});
-			return;
 		}
+
+		// Re-resolve the label from the message at the selected language even when the
+		// frame update or shared-message update has already refreshed its cached state.
 		await this.manager.updateLabelProperties(this.nodeId, {
-			messageState: {
-				type: "linked",
-				messageId: this.messageId!,
-				parameterValues: this.parameterValues,
-			},
+			messageState: linkedMessageState,
 			language: targetLanguage,
 		});
 	}
@@ -640,6 +632,14 @@ export class UILocalizedLabel implements LocalizedLabel {
 		enforceTranslation: boolean,
 		triggersCTA: boolean,
 	) {
+		if (this.matchingLabelLints.length > 0) {
+			// The row is locked ("Fix styles") because its text uses styles that cannot be written back
+			// (nested lists, mixed fonts/colors, ...). Translating it would silently rewrite the design.
+			// just trigger cache update to propagate the changed root language
+			await this.manager.updateLabelProperties(this.nodeId, {});
+			return;
+		}
+
 		switch (this.messageLinkState) {
 			case MessageLinkState.MissingMessage:
 				// we don't change any label that is in this state - got to be manually fixed by the user

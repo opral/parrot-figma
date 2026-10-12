@@ -3,11 +3,12 @@ import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import TimeAgo from "javascript-time-ago";
 import en from "javascript-time-ago/locale/en.json";
-import * as mixpanel from "mixpanel-figma";
-
-import { track, identify, identifyProject } from "./utils/analytics";
 
 import LocalizedLabelsListView from "./views/localizedlabelslist/LocalizedLabelsListView";
+import DevModeView from "./views/devmode/DevModeView";
+import CloudView from "./views/cloud/CloudView";
+import { capture, identifyTelemetry } from "../lib/telemetry/Telemetry";
+import MachineTranslationContact from "./compontents/machineTranslation/MachineTranslationContact";
 import FigmaUtil from "../shared/FigmaUtil";
 import { AsyncFunctionProxy } from "../lib/rpc/AsyncFunctionProxy";
 import "./ui.css";
@@ -27,6 +28,7 @@ import Onboarding from "./views/onboarding/Onboarding";
 import Tooltip from "./compontents/tooltip/Tooltip";
 
 import Export from "./views/export/Export";
+import ImportView from "./views/import/ImportView";
 import FEATURES_FLAGS from "./featuretoggle";
 import SetupView from "./views/setup/SetupView";
 import * as pjs from "../../package.json";
@@ -66,6 +68,8 @@ document.execCommand = function () {
 	return monkeyPatchCommandExec.apply(document, arguments as any);
 };
 
+const undoHandledByTextField = new WeakSet<Event>();
+
 document.addEventListener(
 	"keydown",
 	(e) => {
@@ -77,10 +81,22 @@ document.addEventListener(
 		) {
 			document.execCommand("selectAll");
 		} else if (e.keyCode === 90 /* Z */ && e.metaKey) {
-			if (e.shiftKey) {
-				document.execCommand("redoForce");
-			} else {
-				document.execCommand("undoForce");
+			// In a text field Cmd+Z is the undo of that field and nothing else: if Figma undid the
+			// document as well (see the listener below) the layers, the message and the field would no
+			// longer match. Outside of a text field it is Figma's undo only - the document-wide text undo
+			// (execCommand) would silently revert the last typed text of a field that has no focus.
+			const target = e.composedPath()[0] as HTMLElement | undefined;
+			if (
+				target instanceof HTMLInputElement ||
+				target instanceof HTMLTextAreaElement ||
+				target?.isContentEditable
+			) {
+				undoHandledByTextField.add(e);
+				if (e.shiftKey) {
+					document.execCommand("redoForce");
+				} else {
+					document.execCommand("undoForce");
+				}
 			}
 		}
 	},
@@ -90,6 +106,7 @@ document.addEventListener(
 window.addEventListener("keydown", (e) => {
 	if (
 		e.key === "z" &&
+		!undoHandledByTextField.has(e) &&
 		!e.shiftKey &&
 		!e.altKey &&
 		!(e.target! as any).classList.contains("cm-content")
@@ -169,17 +186,6 @@ figmaRemote.getFeatureFlags().then((featureFlags) => {
 	FeatureFlags.setFeatureflags(featureFlags);
 });
 
-figmaRemote.getUserId().then((userId) => {
-	identify(userId!);
-});
-
-Promise.all([figmaRemote.getInlangFileId()]).then(([fileId]) => {
-	if (fileId) {
-		track("file opened", { fileId });
-		identifyProject({ projectId: fileId, properties: { name: fileId }, figmaRemote });
-	}
-});
-
 const translationMachine = new TranslatorMachine();
 asyncFunctionProxy.proxyAsyncMethods(translationMachine);
 
@@ -233,6 +239,7 @@ enum LicenseState {
 function App() {
 	// initial app screen is startup until we initialy loaded the data
 	const [appScreen, setAppScreen] = useState(undefined as string | undefined);
+	const [startupError, setStartupError] = useState<string>();
 
 	const [user, setUser] = useState(undefined as PluginUser | undefined);
 
@@ -243,7 +250,6 @@ function App() {
 		// asynchronous fetch the state from figma helper
 		(async () => {
 			await userStateManagerUi.loadUserState();
-			userStateManagerUi.trackFileUsageStatistics();
 
 			if (windowMode === WindowMode.DevPanel) {
 				const updatedUser = await userStateManagerUi.requestUserRole(UserFileRole.developer);
@@ -252,7 +258,7 @@ function App() {
 				const updatedUser = await userStateManagerUi.requestUserRole(UserFileRole.designer);
 				setUser(updatedUser);
 			}
-		})();
+		})().catch((error) => setStartupError(error instanceof Error ? error.message : String(error)));
 
 		const onUsersUpdated = (event: any) => {
 			console.log("onUsersUpdated");
@@ -279,19 +285,45 @@ function App() {
 
 			await localizedLabelManager.prepare();
 			await memoryTranslationKeyStore.load();
+
+			// project size, once every layer of the file has been looked at
+			localizedLabelManager.addEventListener(
+				"linksLoaded",
+				async () => {
+					const [users, linkedLayers, frames] = await Promise.all([
+						userStateManagerUi.getUsers(),
+						figmaRemote.getRootPluginData("numberOfLinkedTextNodes"),
+						figmaRemote.getRootPluginData("numberOfFrames"),
+					]);
+					capture("project:project_view", {
+						message_count: memoryTranslationKeyStore.getAllMessages()?.length ?? 0,
+						language_count: memoryTranslationKeyStore.getOrderedLanguages().length,
+						collaborator_count: users.length,
+						linked_layer_count: Number(linkedLayers) || 0,
+						frame_count: Number(frames) || 0,
+					});
+				},
+				{ once: true },
+			);
 			localizedLabelManager.startFillupCache();
+
+			const [userId, fileId] = await Promise.all([
+				figmaRemote.getUserId(),
+				figmaRemote.getInlangFileId(),
+			]);
+			identifyTelemetry({ userId, fileId, version: pjs.version });
+			capture("app:session_start");
 
 			let initialScreen = (await figmaRemote.getLocalFileConfig("lastView")) ?? "design";
 			if (fileSetupCompleted === undefined || fileSetupCompleted === "") {
 				initialScreen = "onboarding";
 			}
 			setAppScreen(initialScreen);
-		})();
+		})().catch((error) => setStartupError(error instanceof Error ? error.message : String(error)));
 	}, []);
 
 	useEffect(() => {
 		if (appScreen) {
-			track(`app_screen__${appScreen}`);
 			figmaRemote.setLocalFileConfig("lastView", appScreen);
 		}
 	}, [appScreen]);
@@ -308,8 +340,29 @@ function App() {
 		};
 	}, []);
 
+	if (startupError) {
+		return (
+			<div role="alert" className="startup-message">
+				<div className="startup-message-title">Parrot could not open this file</div>
+				<p>{startupError}</p>
+				<button
+					type="button"
+					className="button button-primary"
+					style={{ marginLeft: 0 }}
+					onClick={() => window.location.reload()}
+				>
+					Retry
+				</button>
+			</div>
+		);
+	}
+
 	if (!appScreen || !user) {
-		return <>Loading Plugin</>;
+		return (
+			<div className="startup-message" role="status">
+				Loading Parrot…
+			</div>
+		);
 	}
 	let view;
 
@@ -317,16 +370,13 @@ function App() {
 		return (
 			<>
 				<Tooltip contentAttribute="data-tooltip-content" />
-				<div className="view dev-panel">
-					<div className="comming-soon">
-						Parrot´s Dev Mode version is comming soon... <br />
-						<br />
-						Translate your Designs with Parrot in Design Mode in the meantime!
-						<br />
-						<br />
-						🦜
-					</div>
-				</div>
+				<OverlayScrollbarsComponent
+					className="view dev-panel"
+					options={{ showNativeOverlaidScrollbars: true }}
+					defer
+				>
+					<DevModeView figmaRemote={figmaRemote} localizedLabelManager={localizedLabelManager} />
+				</OverlayScrollbarsComponent>
 			</>
 		);
 	}
@@ -379,6 +429,11 @@ function App() {
 		);
 	}
 
+	const openTab = (screen: string) => {
+		if (screen === "messages") setKeyQuery(MessageStoreMemory.toQueryObject(""));
+		setAppScreen(screen);
+	};
+
 	switch (appScreen) {
 		case "onboarding":
 			return (
@@ -399,7 +454,7 @@ function App() {
 			view = (
 				<>
 					<MessageListView
-						showSearchBar={false}
+						showSearchBar
 						initialSearchQuery={keyQuery}
 						messageStore={memoryTranslationKeyStore}
 						localizedLabelManager={localizedLabelManager}
@@ -417,8 +472,11 @@ function App() {
 			);
 			break;
 
+		case "import":
+			view = <ImportView labelManager={localizedLabelManager} figmaRemote={figmaRemote} />;
+			break;
 		case "export":
-			view = <Export userManager={userStateManagerUi} labelManager={localizedLabelManager} />;
+			view = <Export labelManager={localizedLabelManager} figmaRemote={figmaRemote} />;
 			break;
 		case "design":
 			view = (
@@ -434,6 +492,9 @@ function App() {
 				</>
 			);
 			break;
+		case "cloud":
+			view = <CloudView figmaRemote={figmaRemote} />;
+			break;
 		case "users":
 			view = <UserManagement userManager={userStateManagerUi} />;
 			break;
@@ -444,37 +505,40 @@ function App() {
 	return (
 		<>
 			<Tooltip contentAttribute="data-tooltip-content" />
+			<MachineTranslationContact figmaRemote={figmaRemote} />
 			<div className="toolbar">
-				<div className="tabHeader">
-					<div
-						className={`tab ${appScreen === "design" ? "active" : ""}`}
-						onClick={() => setAppScreen("design")}
-					>
-						Layers
-					</div>
-					<div
-						className={`tab ${appScreen === "messages" ? "active" : ""}`}
-						onClick={() => {
-							setKeyQuery(MessageStoreMemory.toQueryObject(""));
-							setAppScreen("messages");
-						}}
-					>
-						Messages
-					</div>
-					{FEATURES_FLAGS.export && (
+				<div className="tabHeader" role="tablist">
+					{[
+						["design", "Layers"],
+						["messages", "Messages"],
+						["import", "Import"],
+						...(FEATURES_FLAGS.export
+							? [["export", FEATURES_FLAGS.versioning ? "Versions & Export" : "Export"]]
+							: []),
+						["settings", "Setup"],
+						["cloud", "Cloud"],
+					].map(([screen, label]) => (
 						<div
-							className={`tab ${appScreen === "export" ? "active" : ""}`}
-							onClick={() => setAppScreen("export")}
+							key={screen}
+							role="tab"
+							tabIndex={0}
+							aria-selected={appScreen === screen}
+							className={`tab ${appScreen === screen ? "active" : ""}`}
+							onClick={() => openTab(screen)}
+							// the tab bar scrolls in narrow windows: keep the focused tab fully visible
+							onFocus={(e) =>
+								e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" })
+							}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" || e.key === " ") {
+									e.preventDefault();
+									openTab(screen);
+								}
+							}}
 						>
-							{FEATURES_FLAGS.versioning ? "Versions & Export" : "Export"}
+							{label}
 						</div>
-					)}
-					<div
-						className={`tab ${appScreen === "settings" ? "active" : ""}`}
-						onClick={() => setAppScreen("settings")}
-					>
-						Setup
-					</div>
+					))}
 					{/* <div className={`tab ${appScreen === 'users' ? 'active' : ''}`} onClick={() => setAppScreen('users')}>Users</div> */}
 				</div>
 
@@ -505,12 +569,12 @@ function App() {
 							{
 								iconName: "window-mode-window-svg",
 								value: WindowMode.Window,
-								tooltip: "Use as Window",
+								tooltip: "Window",
 							},
 							{
 								iconName: "window-mode-fullscreen-svg",
 								value: WindowMode.Fullscreen,
-								tooltip: "Switch to Fullscreen",
+								tooltip: "Fullscreen",
 							},
 						]}
 						selectedSegment={windowMode}

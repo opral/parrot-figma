@@ -1,18 +1,21 @@
 import * as React from "react";
+import { useState } from "react";
 import { reportError } from "../../utils/errorReporting";
-import { LocalizedLabel } from "../../../lib/localizedlabels/LocalizedLabel";
+import { LocalizedLabel, MessageLinkState } from "../../../lib/localizedlabels/LocalizedLabel";
 import LocalizedLabelListItem from "./LocalizedLabelListItem";
 import Select, { SelectOption } from "../../compontents/select/select";
 import FigmaUtil from "../../../shared/FigmaUtil";
 import MessageStoreMemory from "../../../lib/message/store/MessageStoreMemory";
 import LocalizedLabelManagerUI from "../../../lib/localizedlabels/LocalizedLabelManagerUI";
-import { Locale } from "../../../lib/message/variants/Locale";
+import { Locale, languageDisplayName } from "../../../lib/message/variants/Locale";
 import { UILocalizedLabel } from "../../../lib/localizedlabels/UILocalizedLabel";
 import { NodeSelection } from "../../../lib/localizedlabels/LocalizedLabelManager";
-import GoogleTranslator from "../../../lib/translationprovider/google";
 import TranslatorMachine, {
 	NoMoreTranslationsLeftError,
 } from "../../../lib/translationprovider/TranslatorMachine";
+import { buildMessageTextIndex, proposeKeys } from "../../../lib/localizedlabels/LinkSuggestions";
+import { untranslatedNotice } from "../../../lib/translationprovider/MachineTranslationContact";
+import LinkReviewDrawer, { LinkReviewRow } from "./LinkReviewDrawer";
 
 type LocalizedFrameGroupProps = {
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- TODO specify type
@@ -24,23 +27,7 @@ type LocalizedFrameGroupProps = {
 };
 
 function toLanguageOption(language: string, baseLanguage?: string) {
-	let languageNameInCurrentLanguage = "no name found";
-	try {
-		languageNameInCurrentLanguage =
-			new Intl.DisplayNames("en", { type: "language" }).of(language) ??
-			languageNameInCurrentLanguage;
-	} catch (e) {
-		/* empty */
-	}
-
-	let languageNameInForeignLanguage = "no name found";
-	try {
-		languageNameInForeignLanguage =
-			new Intl.DisplayNames(language, { type: "language" }).of(language) ??
-			languageNameInForeignLanguage;
-	} catch (e) {
-		/* empty */
-	}
+	const languageNameInCurrentLanguage = languageDisplayName(language) ?? "no name found";
 
 	if (baseLanguage && language === baseLanguage) {
 		return {
@@ -62,6 +49,8 @@ export default function LocalizedFrameGroup({
 	figmaRemote,
 	localizedLabelManager,
 }: LocalizedFrameGroupProps) {
+	const [keyRows, setKeyRows] = useState<LinkReviewRow[] | undefined>();
+
 	if (localizedLabels.length === 0) return null;
 
 	const firstTranslationState = localizedLabels[0];
@@ -70,23 +59,24 @@ export default function LocalizedFrameGroup({
 	let rootFrameLanguage: SelectOption | undefined;
 	const languageOptiones = [] as SelectOption[];
 
-	const languages = localizedLabelManager.messageStore.getLanugages()!.sort();
-
-	languageOptiones.push(
-		toLanguageOption(
-			localizedLabelManager.messageStore.getRefLanugage()!,
-			localizedLabelManager.messageStore.getRefLanugage()!,
-		),
-	);
-
-	for (const language of languages) {
-		const currentLanguageOption = toLanguageOption(language);
+	// reference language first, then the Setup order (the same order in every view)
+	for (const language of localizedLabelManager.messageStore.getOrderedLanguages()) {
+		const currentLanguageOption = toLanguageOption(
+			language,
+			language === localizedLabelManager.messageStore.getRefLanugage() ? language : undefined,
+		);
 		if (language === firstTranslationState.rootFrameLanguage) {
 			rootFrameLanguage = currentLanguageOption;
 		}
-		if (localizedLabelManager.messageStore.getRefLanugage()! !== language) {
-			languageOptiones.push(currentLanguageOption);
-		}
+		languageOptiones.push(currentLanguageOption);
+	}
+
+	// A frame can still be in a language that was removed in Setup. Keep it selectable so the
+	// layers stay visible and the user can switch the frame to a language that is configured.
+	const frameLanguage = firstTranslationState.rootFrameLanguage;
+	if (rootFrameLanguage === undefined && frameLanguage) {
+		rootFrameLanguage = { ...toLanguageOption(frameLanguage), tag: "not in Setup" };
+		languageOptiones.push(rootFrameLanguage);
 	}
 
 	async function onLanguageSelectionClick(
@@ -96,15 +86,21 @@ export default function LocalizedFrameGroup({
 		const translationProvider = TranslatorMachine.instance;
 
 		try {
-			await localizedLabelManager.setFrameLanguage(
+			const { untranslatedLabels } = await localizedLabelManager.setFrameLanguage(
 				firstLocalizedLabelInFrame.rootFrameId,
 				language,
 				translationProvider,
 			);
+			if (untranslatedLabels > 0) {
+				figmaRemote.notify(
+					untranslatedNotice(untranslatedLabels, languageDisplayName(language) ?? language),
+					8000,
+				);
+			}
 		} catch (e: any) {
 			if (!(e instanceof NoMoreTranslationsLeftError)) {
-				figmaRemote.notify(`Something went wrong with translation - ${e.message}`);
-					reportError(e);
+				figmaRemote.notifyError(`Something went wrong with translation - ${e.message}`, 8000);
+				reportError(e);
 			}
 		}
 	}
@@ -113,13 +109,72 @@ export default function LocalizedFrameGroup({
 		await figmaRemote.scrollIntoViewIfNeeded(nodeId, true);
 	}
 
+	// texts that "Generate keys" links: not linked yet, translated, not locked by "Fix styles"
+	const unlinkedLabels = localizedLabels.filter(
+		(label) =>
+			(label.messageLinkState === MessageLinkState.Unset ||
+				label.messageLinkState === MessageLinkState.Unlinked) &&
+			label.matchingLabelLints.length === 0 &&
+			label.characters.trim() !== "",
+	);
+
+	function openGenerateKeys() {
+		const messages = localizedLabelManager.messageStore.getAllMessages() ?? [];
+		const layers = [...unlinkedLabels]
+			.sort((a, b) => a.y - b.y || a.x - b.x)
+			.map((label) => ({
+				nodeId: label.nodeId,
+				characters: label.characters,
+				language: label.language,
+				layerName: label.name,
+				frameName: label.rootFrameName,
+			}));
+		const index = buildMessageTextIndex(messages, new Set(layers.map((layer) => layer.language)));
+		const labelsById = new Map(unlinkedLabels.map((label) => [label.nodeId, label]));
+		setKeyRows(
+			proposeKeys(layers, messages, index).map((proposal) => ({
+				label: labelsById.get(proposal.layer.nodeId)!,
+				key: proposal.key,
+				existing: proposal.existing,
+				editable: !proposal.existing,
+			})),
+		);
+	}
+
 	return (
 		<>
+			<LinkReviewDrawer
+				shown={keyRows !== undefined}
+				title={`Generate keys for “${rootFrameName}”`}
+				description="Each text gets a message with this key. Texts that already exist as a message are linked to it. Edit a key before linking if you like."
+				rows={keyRows ?? []}
+				showFrame={false}
+				existingKeys={
+					new Set((localizedLabelManager.messageStore.getAllMessages() ?? []).map((m) => m.id))
+				}
+				onCancel={() => setKeyRows(undefined)}
+				onConfirm={async (links) => {
+					try {
+						await localizedLabelManager.linkLabelsToMessages(links, "generate_keys");
+						setKeyRows(undefined);
+						figmaRemote.notify(
+							`Linked ${links.length === 1 ? "1 text" : `${links.length} texts`} in “${rootFrameName}”.`,
+						);
+					} catch (e: any) {
+						figmaRemote.notifyError(`Could not link the texts - ${e.message}`, 8000);
+						reportError(e);
+					}
+				}}
+			/>
 			<div
 				className={`column-1 layer-group-header nodes-parent${
 					selectedNodes[rootFrameId]?.directSelection ? " selected" : ""
 				}`}
-				onClick={() => {
+				onClick={(e) => {
+					// The language menu is rendered in a portal, so its clicks bubble through React to
+					// this header. Using it must not collapse a multi-frame selection to this frame.
+					const target = e.target as HTMLElement;
+					if (!e.currentTarget.contains(target) || target.closest(".row-actions")) return;
 					onNodeSelect(rootFrameId);
 				}}
 			>
@@ -129,8 +184,20 @@ export default function LocalizedFrameGroup({
 				</div>
 				<div className="element-name font-body-24-bold">{rootFrameName}</div>
 				<div className="row-actions">
+					{rootFrameLanguage?.value && unlinkedLabels.length > 0 && (
+						<button
+							type="button"
+							className="frame-generate-keys"
+							data-tooltip-content={`Generate keys for ${unlinkedLabels.length === 1 ? "1 unlinked text" : `${unlinkedLabels.length} unlinked texts`}`}
+							aria-label="Generate keys"
+							onClick={openGenerateKeys}
+						>
+							<span className="svg-container key-svg" />
+							{unlinkedLabels.length}
+						</button>
+					)}
 					<Select
-						tooltip="Container Frame Langueage"
+						tooltip="Frame language"
 						placeholder="Select item"
 						checkmark
 						iconClass="switch-language-svg"
@@ -143,6 +210,26 @@ export default function LocalizedFrameGroup({
 				</div>
 			</div>
 			<div className="layer-group-header-sticky-border" />
+
+			{rootFrameLanguage?.value &&
+				!localizedLabels.some(
+					(label) =>
+						label.messageLinkState === MessageLinkState.Linked ||
+						label.messageLinkState === MessageLinkState.Unmanaged,
+				) && (
+					<div className="frame-hint" role="note">
+						Link each text to a message: type a key like <code>home.title</code> in its “Link a
+						message…” field. Linked texts follow the language of this frame.
+						{unlinkedLabels.length > 1 && (
+							<>
+								{" "}
+								<button type="button" className="frame-hint-action" onClick={openGenerateKeys}>
+									Generate keys for all {unlinkedLabels.length} texts
+								</button>
+							</>
+						)}
+					</div>
+				)}
 
 			{rootFrameLanguage?.value &&
 				localizedLabels.map((translationState) => {
@@ -167,7 +254,11 @@ export default function LocalizedFrameGroup({
 					);
 				})}
 
-			{rootFrameLanguage?.value === undefined && <div>choose current design language</div>}
+			{rootFrameLanguage?.value === undefined && (
+				<div className="frame-hint" role="note">
+					Choose the language this frame is currently designed in (menu above).
+				</div>
+			)}
 		</>
 	);
 }

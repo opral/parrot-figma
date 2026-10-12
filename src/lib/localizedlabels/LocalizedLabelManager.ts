@@ -9,6 +9,8 @@ import FontHelper from "./FontUtil";
 import { InlangMessageStore } from "../message/store/InlangMessageStoreFigmaRoot";
 import { FillinToPlaceholder as FillinsToPlaceholder } from "../message/MessageExtnesions";
 import { MessageParameterValues } from "../message/MessageParameterValues";
+import { restoreTextFillRanges, type TextFillRange } from "./RichTextFormatting";
+import { normalizeText } from "./LinkSuggestions";
 
 export interface NodeSelection {
 	[nodeId: string]: {
@@ -744,12 +746,18 @@ export default class LocalizedLabelManager {
 	}
 
 	async getWithMessage(messageId: string) {
+		return this.getWithMessages([messageId]);
+	}
+
+	/** All labels linked to one of the messages - a single traversal of the tree for any number of messages. */
+	async getWithMessages(messageIds: string[]) {
 		const labels = [] as LocalizedLabel[];
 		const foundNodes = [] as VirtualTreeNode[];
+		const wantedMessageIds = new Set(messageIds);
 
 		// Define the callback function for the traversal
 		const findNodesWithMessage = (node: VirtualTreeNode) => {
-			if (node.cacheRelevant && node.messageId === messageId) {
+			if (node.cacheRelevant && node.messageId && wantedMessageIds.has(node.messageId)) {
 				foundNodes.push(node);
 			}
 		};
@@ -768,6 +776,102 @@ export default class LocalizedLabelManager {
 					this.virtualTree.addNode(figmaNode, figmaNode.id);
 				}
 				labels.push(localizedLabel);
+			}
+		}
+		return labels;
+	}
+
+	/**
+	 * The root frames of the current page that contain text - the frames the Layers tab lists when they
+	 * are selected (outermost frame, group, component or instance below the size threshold).
+	 */
+	async getPageRootFrames() {
+		const frames = [] as { id: string; name: string; language: Locale; textCount: number }[];
+		const refLanguage = this.messageStore?.getConfigSync()?.refLanguage;
+		const isContainer = (node: SceneNode) =>
+			(node.type === "COMPONENT" ||
+				node.type === "COMPONENT_SET" ||
+				node.type === "FRAME" ||
+				node.type === "GROUP" ||
+				node.type === "INSTANCE") &&
+			node.width < this.containerSizeThreashold;
+
+		const skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
+		figma.skipInvisibleInstanceChildren = true;
+		const collect = (nodes: readonly SceneNode[]) => {
+			for (const node of nodes) {
+				if (!node.visible) continue;
+				if (isContainer(node)) {
+					const textCount = (node as FrameNode).findAllWithCriteria({ types: ["TEXT"] }).length;
+					if (textCount > 0) {
+						frames.push({
+							id: node.id,
+							name: node.name,
+							language: (node.getPluginData(this.languageDataKey) || refLanguage) as Locale,
+							textCount,
+						});
+					}
+				} else if ("children" in node) {
+					// sections and frames above the size threshold are no root frames - their children can be
+					collect(node.children);
+				}
+			}
+		};
+		collect(figma.currentPage.children);
+		figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
+		return { pageName: figma.currentPage.name, frames };
+	}
+
+	/**
+	 * Labels on the current page (text layers inside root frames). Building a label is expensive (plugin
+	 * data, styles, lints), so `filter` skips layers cheaply first: linked or "not translated" layers and
+	 * layers whose text (whitespace collapsed) is not one of `texts`.
+	 */
+	async getPageLabels(filter?: { unlinkedOnly?: boolean; texts?: string[] }) {
+		const labels = [] as LocalizedLabel[];
+		const wantedTexts = filter?.texts ? new Set(filter.texts) : undefined;
+		const skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
+		figma.skipInvisibleInstanceChildren = true;
+		const textNodes = figma.currentPage.findAllWithCriteria({ types: ["TEXT"] });
+		figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
+
+		for (const textNode of textNodes) {
+			if (wantedTexts && !wantedTexts.has(normalizeText(textNode.characters))) continue;
+			if (
+				filter?.unlinkedOnly &&
+				(textNode.getPluginData(this.messageNameDataKey) !== "" ||
+					textNode.getPluginData(this.messageUnmanagedKey) === "true")
+			) {
+				continue;
+			}
+			const label = this.toLocalizedLabelOrUndefined(textNode);
+			if (label) {
+				if (!this.virtualTree.hasNode(textNode.id)) {
+					this.virtualTree.addNode(textNode, textNode.id);
+				}
+				labels.push(label);
+			}
+		}
+		return labels;
+	}
+
+	/** Labels on the current page whose text is exactly `characters` (e.g. to link them to the same message). */
+	async findLabelsWithText(characters: string, excludeNodeIds: string[]) {
+		const excluded = new Set(excludeNodeIds);
+		const labels = [] as LocalizedLabel[];
+		const skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
+		figma.skipInvisibleInstanceChildren = true;
+		const textNodes = figma.currentPage.findAllWithCriteria({ types: ["TEXT"] });
+		figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
+
+		for (const textNode of textNodes) {
+			if (excluded.has(textNode.id) || textNode.characters !== characters) continue;
+			const label = this.toLocalizedLabelOrUndefined(textNode);
+			if (label) {
+				if (!this.virtualTree.hasNode(textNode.id)) {
+					this.virtualTree.addNode(textNode, textNode.id);
+				}
+				labels.push(label);
 			}
 		}
 		return labels;
@@ -865,6 +969,32 @@ export default class LocalizedLabelManager {
 		if (textNode.getPluginData(this.messageNameDataKey) !== messageId) {
 			textNode.setPluginData(this.messageNameDataKey, "");
 		}
+	}
+
+	/**
+	 * Applies many label updates in one call from the UI - one message round trip instead of one per
+	 * label. Fonts of all labels are loaded up front once. A failing label does not stop the others.
+	 */
+	async updateLabelsProperties(
+		updates: { nodeId: string; properties: SandboxUpdateLabelProperties }[],
+	) {
+		const textNodes = updates
+			.filter(({ properties }) => properties.characters !== undefined)
+			.map(({ nodeId }) => figma.getNodeById(nodeId))
+			.filter((node): node is TextNode => node?.type === "TEXT");
+		await this.loadFontsForTextNodes(textNodes).catch(() => {
+			// a missing font is reported per label below
+		});
+
+		const results = [] as { label?: LocalizedLabel; error?: string }[];
+		for (const { nodeId, properties } of updates) {
+			try {
+				results.push({ label: await this.updateLabelProperties(nodeId, properties) });
+			} catch (e: any) {
+				results.push({ error: e?.message ?? String(e) });
+			}
+		}
+		return results;
 	}
 
 	async updateLabelProperties(nodeId: string, changedProperties: SandboxUpdateLabelProperties) {
@@ -969,12 +1099,20 @@ export default class LocalizedLabelManager {
 			// TODO think about the order - at the moment a lables characters might not get updated after fillins got set
 			// NOTE: we also send the characters even if only styling has changed
 			if (changedProperties.characters !== undefined) {
+				const sourceTextLength = textNode.characters.length;
+				const originalFillRanges = textNode
+					.getStyledTextSegments(["fills"])
+					.map(({ start, end, fills }) => ({
+						start,
+						end,
+						fills: [...fills],
+					})) as TextFillRange[];
+
 				try {
 					await this.loadFontsForTextNodes([textNode]);
 				} catch (e: any) {
 					// rethrow with better error message
-					e.message = `Can't update label - not all Fonts could get loaded: ${e.message}`;
-					throw e;
+					throw this.toFontLoadError(`Can't update label - not all Fonts could get loaded`, e);
 				}
 
 				// const textWithDecorators = this.toTextRangeObject(changedProperties.translation);
@@ -986,10 +1124,7 @@ export default class LocalizedLabelManager {
 				const textNodeFontFamily =
 					(textNode.fontName as FontName).family ??
 					(textNode.getRangeFontName(0, 1) as FontName).family;
-				const fonts = await figma.listAvailableFontsAsync();
-				const fontFamilyVariants = fonts
-					.filter((font: Font) => font.fontName.family === textNodeFontFamily)
-					.map((font) => font.fontName);
+				const fontFamilyVariants = await this.getFontFamilyVariants(textNodeFontFamily);
 
 				// check what inline style variants we find (bold, italic, bold&italic, regular)
 				const fontStyleVariants = new Set<"bold" | "italic" | "bold italic" | "regular">();
@@ -1033,7 +1168,8 @@ export default class LocalizedLabelManager {
 							italicFontName = fontFamilyVariant;
 						}
 
-						if (styleLowerCase.includes("bold italic")) {
+						// exact match - "semi bold italic" or "extra bold italic" must not win over "bold italic"
+						if (styleLowerCase === "bold italic") {
 							boldItalicFontName = fontFamilyVariant;
 						}
 						if (
@@ -1050,10 +1186,12 @@ export default class LocalizedLabelManager {
 							throw new Error(`No regular font variant for ${textNodeFontFamily}  found `);
 						}
 						try {
-							await figma.loadFontAsync(regularFontName);
+							await this.loadFont(regularFontName);
 						} catch (e: any) {
-							e.message = `Could not load regular font for ${textNodeFontFamily}: ${e.message}`;
-							throw e;
+							throw this.toFontLoadError(
+								`Could not load regular font for ${textNodeFontFamily}`,
+								e,
+							);
 						}
 					}
 
@@ -1062,10 +1200,9 @@ export default class LocalizedLabelManager {
 							throw new Error(`No bold font variant for ${textNodeFontFamily}  found `);
 						}
 						try {
-							await figma.loadFontAsync(boldFontName);
+							await this.loadFont(boldFontName);
 						} catch (e: any) {
-							e.message = `Could not load bold font for ${textNodeFontFamily}: ${e.message}`;
-							throw e;
+							throw this.toFontLoadError(`Could not load bold font for ${textNodeFontFamily}`, e);
 						}
 					}
 
@@ -1074,10 +1211,9 @@ export default class LocalizedLabelManager {
 							throw new Error(`No italic font variant for ${textNodeFontFamily}  found `);
 						}
 						try {
-							await figma.loadFontAsync(italicFontName);
+							await this.loadFont(italicFontName);
 						} catch (e: any) {
-							e.message = `Could not load italic font for ${textNodeFontFamily}: ${e.message}`;
-							throw e;
+							throw this.toFontLoadError(`Could not load italic font for ${textNodeFontFamily}`, e);
 						}
 					}
 
@@ -1086,15 +1222,23 @@ export default class LocalizedLabelManager {
 							throw new Error(`No italic font variant for ${textNodeFontFamily}  found `);
 						}
 						try {
-							await figma.loadFontAsync(boldItalicFontName);
+							await this.loadFont(boldItalicFontName);
 						} catch (e: any) {
-							e.message = `Could not load italic+bold font for ${textNodeFontFamily}: ${e.message}`;
-							throw e;
+							throw this.toFontLoadError(
+								`Could not load italic+bold font for ${textNodeFontFamily}`,
+								e,
+							);
 						}
 					}
 				}
 
 				textNode.characters = changedProperties.characters;
+				restoreTextFillRanges(
+					originalFillRanges,
+					sourceTextLength,
+					textNode.characters.length,
+					(start, end, fills) => textNode.setRangeFills(start, end, fills),
+				);
 
 				for (const rangeStyle of changedProperties.ops!) {
 					// debugger;
@@ -1191,8 +1335,42 @@ export default class LocalizedLabelManager {
 		await this.loadFonts(fontsToLoad);
 	}
 
+	/**
+	 * figma.loadFontAsync rejects with a plain string - not an Error - when a font can't be loaded
+	 * (e.g. it is missing on this machine). Setting `message` on a string throws "not an object",
+	 * so wrap whatever was thrown into a proper Error that keeps the original reason.
+	 */
+	private toFontLoadError(context: string, reason: any) {
+		return new Error(`${context}: ${reason?.message ?? String(reason)}`);
+	}
+
 	private async loadFonts(fontArray = [] as FontName[]) {
-		await Promise.all(fontArray.map(figma.loadFontAsync));
+		await Promise.all(fontArray.map((font) => this.loadFont(font)));
+	}
+
+	/** Fonts stay loaded for the session. Every figma.loadFontAsync call costs a round trip (~10 ms), even for a loaded font. */
+	private loadedFonts = new Set<string>();
+
+	private async loadFont(font: FontName) {
+		const key = JSON.stringify([font.family, font.style]);
+		if (this.loadedFonts.has(key)) {
+			return;
+		}
+		await figma.loadFontAsync(font);
+		this.loadedFonts.add(key);
+	}
+
+	/** The styles of a font family. Listing all installed fonts is expensive - the list loaded on startup is reused. */
+	private async getFontFamilyVariants(family: string) {
+		const variantsOf = (fonts: Font[]) =>
+			fonts.filter((font) => font.fontName.family === family).map((font) => font.fontName);
+		let variants = FontHelper.availableFonts ? variantsOf(FontHelper.availableFonts) : [];
+		if (variants.length === 0) {
+			// not listed yet (e.g. installed since startup)
+			FontHelper.availableFonts = await figma.listAvailableFontsAsync();
+			variants = variantsOf(FontHelper.availableFonts);
+		}
+		return variants;
 	}
 
 	private getFonts(textNode: TextNode, fontArray = [] as FontName[]) {

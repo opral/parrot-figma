@@ -24,7 +24,7 @@ export class AsyncFunctionProxy {
 		try {
 			if (messageBus.addEventListener) {
 				messageBus.addEventListener("message", (event: MessageEvent) => {
-					this.handleMessage(event.data.pluginMessage);
+					this.handleMessage(event.data?.pluginMessage);
 				});
 			} else {
 				messageBus.on("message", (message: any) => {
@@ -38,7 +38,7 @@ export class AsyncFunctionProxy {
 	}
 
 	handleMessage(message: any) {
-		if (message.target === "AsyncFunctionProxy") {
+		if (message?.target === "AsyncFunctionProxy") {
 			if (message.type === AsyncMessageBus.invocationResult) {
 				this.handleInvocationResult(message);
 			} else if (message.type === AsyncMessageBus.invocationRequest) {
@@ -155,34 +155,27 @@ export class AsyncFunctionProxy {
 		});
 	}
 
-	handleInvocationRequest(pluginMessage: any) {
-		if (!this.invocationRequestHandler[pluginMessage.name]) {
-			throw new Error(
-				`${this.name} Invocation handler for [${pluginMessage.name}] does not exist (did you register the executing instance in [${this.name}]?`,
-			);
-		}
-
-		const methodHandler = this.invocationRequestHandler[pluginMessage.name];
-
-		methodHandler.method
-			.apply(methodHandler.instance, pluginMessage.parameter)
-			.then((data: any) => {
-				const transferObj = {
-					target: "AsyncFunctionProxy",
-					type: AsyncMessageBus.invocationResult,
-					invocationId: pluginMessage.id,
-					result: data,
-				};
-				this.postMessage(transferObj);
-			})
-			.catch((error: Error) => {
-				this.postMessage({
-					target: "AsyncFunctionProxy",
-					type: AsyncMessageBus.invocationResult,
-					invocationId: pluginMessage.id,
-					error: this.toSerializableError(error),
-				});
+	async handleInvocationRequest(pluginMessage: any) {
+		try {
+			const methodHandler = this.invocationRequestHandler[pluginMessage.name];
+			if (!methodHandler) {
+				throw new Error(`${this.name} Invocation handler for [${pluginMessage.name}] does not exist`);
+			}
+			const result = await methodHandler.method.apply(methodHandler.instance, pluginMessage.parameter);
+			this.postMessage({
+				target: "AsyncFunctionProxy",
+				type: AsyncMessageBus.invocationResult,
+				invocationId: pluginMessage.id,
+				result,
 			});
+		} catch (error) {
+			this.postMessage({
+				target: "AsyncFunctionProxy",
+				type: AsyncMessageBus.invocationResult,
+				invocationId: pluginMessage.id,
+				error: this.toSerializableError(error instanceof Error ? error : new Error(String(error))),
+			});
+		}
 	}
 
 	handleInvocationResult(pluginMessage: any) {
@@ -199,6 +192,7 @@ export class AsyncFunctionProxy {
 			fn(pluginMessage.result);
 		}
 
+		delete this.invocationRequests[pluginMessage.invocationId];
 		return true;
 	}
 

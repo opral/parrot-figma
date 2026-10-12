@@ -1,4 +1,3 @@
-import blake from "blakejs";
 import type { BundleNested } from "@inlang/sdk/browser";
 
 export type { BundleNested } from "@inlang/sdk/browser";
@@ -8,6 +7,8 @@ export const FIGMA_BUNDLE_MIGRATION_KEY = "prt_ib_migration_v1";
 export const LEGACY_MESSAGE_PREFIX = "prt_im__";
 
 const MAX_PLUGIN_DATA_BYTES = 100_000;
+
+const LOCAL_CHANGE_CHECK_DELAY_MS = 300;
 
 function encodeUtf8(value: string): Uint8Array {
 	const bytes: number[] = [];
@@ -62,31 +63,60 @@ export class FigmaBundleStore {
 
 	private readonly listeners = new Set<(changes: BundleChangeSet) => void>();
 
-	private hashes = new Map<string, string>();
+	/** The stored JSON of every bundle - comparing the strings is far cheaper than hashing them. */
+	private stored = new Map<string, string>();
+
+	/** Local plugin-data changes are checked once when they stop coming (see `scheduleLocalChangeCheck`). */
+	private localChangeTimer: ReturnType<typeof setTimeout> | undefined;
 
 	private readonly handleDocumentChange = (event: any) => {
 		if (!event.documentChanges.some((change: any) => this.isRemoteRootPluginDataChange(change))) {
+			if (event.documentChanges.some((change: any) => this.isRootPluginDataChange(change))) {
+				this.scheduleLocalChangeCheck();
+			}
 			return;
 		}
 
+		this.refreshAndNotify(true);
+	};
+
+	private refreshAndNotify(validate: boolean) {
 		try {
-			const changes = this.refreshHashes();
+			const changes = this.refreshHashes(validate);
 			if (changes.added.length || changes.updated.length || changes.deleted.length) {
 				for (const listener of this.listeners) listener(changes);
 			}
 		} catch (error) {
 			console.error("Failed to apply a remote Parrot bundle update", error);
 		}
-	};
+	}
+
+	/**
+	 * Cmd+Z / Cmd+Shift+Z change the plugin data of the document without this store writing it. The
+	 * writes of this store are already remembered in `stored`, so a difference means the data was
+	 * changed from the outside (an undo/redo) and whoever holds a copy has to follow. Reading every
+	 * bundle is not free for big files and a language switch writes plugin data many times: check once
+	 * the changes stopped coming.
+	 */
+	private scheduleLocalChangeCheck() {
+		clearTimeout(this.localChangeTimer);
+		this.localChangeTimer = setTimeout(() => {
+			this.localChangeTimer = undefined;
+			this.refreshAndNotify(false);
+		}, LOCAL_CHANGE_CHECK_DELAY_MS);
+	}
 
 	constructor(args: { root: PluginDataRoot; documentChanges?: DocumentChangeSource }) {
 		this.root = args.root;
 		this.documentChanges = args.documentChanges;
-		this.refreshHashes();
+		// A big file has thousands of bundles and the sandbox shares Figma's main thread: only remember
+		// what is stored now. Validation happens when the bundles are loaded.
+		this.refreshHashes(false);
 		this.documentChanges?.on("documentchange", this.handleDocumentChange);
 	}
 
 	dispose() {
+		clearTimeout(this.localChangeTimer);
 		this.documentChanges?.off?.("documentchange", this.handleDocumentChange);
 		this.listeners.clear();
 	}
@@ -111,15 +141,15 @@ export class FigmaBundleStore {
 	put(bundle: BundleNested) {
 		const raw = serializeBundle(bundle);
 		this.root.setPluginData(this.key(bundle.id), raw);
-		this.hashes.set(bundle.id, hash(raw));
+		this.stored.set(bundle.id, raw);
 	}
 
 	delete(bundleId: string) {
 		this.root.setPluginData(this.key(bundleId), "");
-		this.hashes.delete(bundleId);
+		this.stored.delete(bundleId);
 	}
 
-	private refreshHashes(): BundleChangeSet {
+	private refreshHashes(validate: boolean): BundleChangeSet {
 		const next = new Map<string, string>();
 		const added: string[] = [];
 		const updated: string[] = [];
@@ -127,15 +157,14 @@ export class FigmaBundleStore {
 		for (const key of this.bundleKeys()) {
 			const id = this.idFromKey(key);
 			const raw = this.root.getPluginData(key);
-			parseBundle(raw, id);
-			const nextHash = hash(raw);
-			next.set(id, nextHash);
-			if (!this.hashes.has(id)) added.push(id);
-			else if (this.hashes.get(id) !== nextHash) updated.push(id);
+			if (validate) parseBundle(raw, id);
+			next.set(id, raw);
+			if (!this.stored.has(id)) added.push(id);
+			else if (this.stored.get(id) !== raw) updated.push(id);
 		}
 
-		const deleted = [...this.hashes.keys()].filter((id) => !next.has(id));
-		this.hashes = next;
+		const deleted = [...this.stored.keys()].filter((id) => !next.has(id));
+		this.stored = next;
 		return { added, updated, deleted };
 	}
 
@@ -154,13 +183,16 @@ export class FigmaBundleStore {
 		return key.slice(FIGMA_BUNDLE_PREFIX.length);
 	}
 
-	private isRemoteRootPluginDataChange(change: any) {
+	private isRootPluginDataChange(change: any) {
 		return (
-			change.origin === "REMOTE" &&
 			change.type === "PROPERTY_CHANGE" &&
 			change.node.id === this.root.id &&
 			change.properties.includes("pluginData")
 		);
+	}
+
+	private isRemoteRootPluginDataChange(change: any) {
+		return change.origin === "REMOTE" && this.isRootPluginDataChange(change);
 	}
 }
 
@@ -197,14 +229,27 @@ export function validateBundleNested(value: unknown): asserts value is BundleNes
 		throw new Error(`Bundle "${value.id}" is missing declarations or messages`);
 	}
 	for (const declaration of value.declarations) {
-		if (
-			!isRecord(declaration) ||
-			declaration.type !== "input-variable" ||
-			typeof declaration.name !== "string"
-		) {
+		if (!validDeclaration(declaration)) {
 			throw new Error(`Bundle "${value.id}" contains an invalid declaration`);
 		}
 	}
+
+	const declarationNames = new Set(value.declarations.map((d) => d.name));
+	if (declarationNames.size !== value.declarations.length)
+		throw new Error("Variable names must be unique");
+	function checkReferences(node: unknown): void {
+		if (Array.isArray(node)) {
+			node.forEach(checkReferences);
+			return;
+		}
+		if (!isRecord(node)) return;
+		if (node.type === "variable-reference" && !declarationNames.has(node.name)) {
+			throw new Error(`Variable "${node.name}" is still referenced and needs a declaration.`);
+		}
+		Object.values(node).forEach(checkReferences);
+	}
+	checkReferences(value.declarations);
+	checkReferences(value.messages);
 
 	const messageIds = new Set<string>();
 	for (const message of value.messages) {
@@ -264,27 +309,78 @@ export function validateBundleNested(value: unknown): asserts value is BundleNes
 			) {
 				throw new Error(`Variant "${variant.id}" must match every selector exactly once`);
 			}
-			for (const element of variant.pattern) {
-				if (
-					!isRecord(element) ||
-					(element.type === "text"
-						? typeof element.value !== "string"
-						: element.type !== "expression" ||
-							!isRecord(element.arg) ||
-							element.arg.type !== "variable-reference" ||
-							typeof element.arg.name !== "string")
-				) {
-					throw new Error(`Variant "${variant.id}" contains an invalid pattern`);
-				}
+			if (!variant.pattern.every(validPatternElement)) {
+				throw new Error(`Variant "${variant.id}" contains an invalid pattern`);
 			}
 		}
 	}
 }
 
-function hash(raw: string) {
-	return blake.blake2sHex(encodeUtf8(raw));
-}
-
 function isRecord(value: unknown): value is Record<string, any> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// Match the SDK pattern schema without loading its worker runtime in Figma's sandbox.
+function validArgument(value: unknown): boolean {
+	return (
+		isRecord(value) &&
+		((value.type === "variable-reference" && typeof value.name === "string") ||
+			(value.type === "literal" && typeof value.value === "string"))
+	);
+}
+function validOptions(value: unknown): boolean {
+	return (
+		Array.isArray(value) &&
+		value.every(
+			(option) =>
+				isRecord(option) && typeof option.name === "string" && validArgument(option.value),
+		)
+	);
+}
+function validAnnotation(value: unknown): boolean {
+	return (
+		value === undefined ||
+		(isRecord(value) &&
+			value.type === "function-reference" &&
+			typeof value.name === "string" &&
+			validOptions(value.options))
+	);
+}
+function validExpression(value: unknown): boolean {
+	return (
+		isRecord(value) &&
+		value.type === "expression" &&
+		validArgument(value.arg) &&
+		validAnnotation(value.annotation)
+	);
+}
+function validDeclaration(value: unknown): boolean {
+	return (
+		isRecord(value) &&
+		typeof value.name === "string" &&
+		(value.type === "input-variable"
+			? validAnnotation(value.annotation)
+			: value.type === "local-variable" && validExpression(value.value))
+	);
+}
+function validPatternElement(value: unknown): boolean {
+	if (!isRecord(value)) return false;
+	if (value.type === "text") return typeof value.value === "string";
+	if (value.type === "expression") return validExpression(value);
+	return (
+		["markup-start", "markup-end", "markup-standalone"].includes(value.type) &&
+		typeof value.name === "string" &&
+		(value.options === undefined || validOptions(value.options)) &&
+		(value.attributes === undefined ||
+			(Array.isArray(value.attributes) &&
+				value.attributes.every(
+					(attribute) =>
+						isRecord(attribute) &&
+						typeof attribute.name === "string" &&
+						(attribute.value === true ||
+							(isRecord(attribute.value) &&
+								attribute.value.type === "literal" &&
+								typeof attribute.value.value === "string")),
+				)))
+	);
 }

@@ -1,14 +1,10 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
-import type { Message, Variant } from "../../../lib/message/LegacyMessage";
-import { Locale } from "../../../lib/message/variants/Locale";
+import { Locale, SelectableLocales, languageDisplayName } from "../../../lib/message/variants/Locale";
 import "./LanguageSetup.css";
 import ReactSelect, { MultiValueRemoveProps, components } from "react-select";
 import OutsideClickHandler from "../outsideClickHandler/OutsideClickHandler";
-import FileSelect from "../fileselect/FileSelect";
-import MessageImporter, { ImportResult, ImportType } from "../../../lib/import/MessageImporter";
 import LocalizedLabelManagerUI from "../../../lib/localizedlabels/LocalizedLabelManagerUI";
-import Drawer from "../drawer/Drawer";
 
 function Option(props: any) {
 	return (
@@ -34,23 +30,8 @@ function DropdownIndicator(props: any) {
 }
 
 function toLanguageOption(language: string, baseLanguage?: string) {
-	let languageNameInCurrentLanguage = "no name found";
-	try {
-		languageNameInCurrentLanguage =
-			new Intl.DisplayNames("en", { type: "language" }).of(language) ??
-			languageNameInCurrentLanguage;
-	} catch (e) {
-		/* empty */
-	}
-
-	let languageNameInForeignLanguage = "no name found";
-	try {
-		languageNameInForeignLanguage =
-			new Intl.DisplayNames(language, { type: "language" }).of(language) ??
-			languageNameInForeignLanguage;
-	} catch (e) {
-		/* empty */
-	}
+	const languageNameInCurrentLanguage = languageDisplayName(language) ?? "no name found";
+	const languageNameInForeignLanguage = languageDisplayName(language, language) ?? "no name found";
 
 	if (baseLanguage && language === baseLanguage) {
 		return {
@@ -94,21 +75,9 @@ export default function LanguageSetup({
 	const [changeLanguages, setChangeLanguages] = useState(activeLanguages.length === 0);
 
 	const availableLanguages = toLanguageOptions(
-		Object.values(Locale),
+		SelectableLocales,
 		selectedBaseLanguage !== undefined ? selectedBaseLanguage.value : undefined,
 	);
-
-	const [importResult, setImportResult] = useState(undefined as ImportResult | undefined);
-
-	const [importKeysByState, setimportKeysByState] = useState<
-		| {
-				language: Locale;
-				newMessages: Message[];
-				newVariants: { message: Message; variant: Variant }[];
-				updatedVariants: { message: Message; variant: Variant }[];
-		  }
-		| undefined
-	>(undefined);
 
 	const [keySummary, setKeySummary] = useState(
 		labelManager.messageStore.findMessages({}, undefined),
@@ -173,63 +142,9 @@ export default function LanguageSetup({
 
 	return (
 		<div>
-			<Drawer
-				position="top"
-				buttons={[
-					{
-						type: "secondary",
-						text: "Cancel",
-						key: "escape",
-						callback: () => {
-							// set back to head
-							setImportResult(undefined);
-						},
-					},
-					{
-						type: "primary",
-						text: "Import Keys",
-						key: "enter",
-						disabled: importResult && importResult!.type === ImportType.UNSUPPORTED,
-						callback: () => {
-								labelManager.import(importResult!.messages!, importResult!.language);
-								setImportResult(undefined);
-								setimportKeysByState(undefined);
-							},
-					},
-				]}
-				shown={importResult !== undefined}
-			>
-				<div className="history_view--topHeader">Import keys</div>
-				<div>
-					{importResult && importResult.type === ImportType.UNSUPPORTED && (
-						<div>
-							File Type currently not supported.
-							<br /> Supported are l18next Json Files, Apple's
-							<b>.stringsdict</b>,<b>.strings</b> and Android's <b>.xml</b> file.{" "}
-						</div>
-					)}
-
-					{importResult && importResult.type !== ImportType.UNSUPPORTED && importKeysByState && (
-						<div>
-							Detected Format: {importResult.type}
-							<br />
-							Filename: {importResult.fileName}
-							<br />
-							Language: {importKeysByState.language}
-							<br />
-							New Keys: {importKeysByState.newMessages.length}
-							<br />
-							New messages: {importKeysByState.newVariants.length}
-							<br />
-							Updated messages: {importKeysByState.updatedVariants.length}
-							<br />
-						</div>
-					)}
-				</div>
-			</Drawer>
 			<div className={selectedBaseLanguage === undefined ? "no-base-language" : undefined}>
 				<div className="setup-header">
-					<div className="setup-header-title">Reference Language</div>
+					<div className="setup-header-title">Reference language</div>
 					{!changeBaseLanguage && (
 						<div
 							className="choosen-language-change"
@@ -241,6 +156,7 @@ export default function LanguageSetup({
 						</div>
 					)}
 				</div>
+				<div className="setup-text">The language your design is written in.</div>
 				{changeBaseLanguage && (
 					<div className="choose-language single-value">
 						<OutsideClickHandler
@@ -277,7 +193,7 @@ export default function LanguageSetup({
 									<div>{selectedBaseLanguage?.label}</div>
 								</div>
 								<div className="language-summary">
-									{keySummary.matchingNames.size} Messages
+									{keySummary.matchingNames.size} messages
 									{keySummary.withMissingVariantsPerLanguage[
 										selectedBaseLanguage!.value as Locale
 									] &&
@@ -291,37 +207,15 @@ export default function LanguageSetup({
 														selectedBaseLanguage!.value as Locale
 													]!.size
 												}{" "}
-												Missing Variants)
+												missing translations)
 											</div>
 										)}
-								</div>
-								<div className="language-import-action">
-									<FileSelect
-										text="Import"
-										onFilesReceived={(files: any) => {
-											for (const filename of Object.keys(files)) {
-												const importResultFromSelectedFile = MessageImporter.processFile(
-													filename,
-													files[filename],
-													selectedBaseLanguage!.value as Locale,
-												);
-												setImportResult(importResultFromSelectedFile);
-												const importStats = MessageImporter.getImportStatistics(
-													labelManager.messageStore,
-													importResultFromSelectedFile.messages!,
-													selectedBaseLanguage!.value as Locale,
-												);
-												setimportKeysByState(importStats);
-											}
-										}}
-									/>
 								</div>
 							</div>
 						</div>
 					</div>
 				)}
-				<div style={{ height: "8px" }} />
-				<div className="setup-header needs-base-language">
+								<div className="setup-header needs-base-language">
 					<div className="setup-header-title">Target languages</div>
 					{!changeLanguages && (
 						<div
@@ -335,7 +229,7 @@ export default function LanguageSetup({
 					)}
 				</div>
 				<div className="setup-text needs-base-language">
-					Select languages to translate to from the main language.
+					Parrot translates from the reference language into these languages.
 				</div>
 				{changeLanguages && (
 					<div className="choose-language needs-base-language">
@@ -373,9 +267,9 @@ export default function LanguageSetup({
 					<div className="choosen-language-control">
 						<div className="change-control">
 							<div className="svg-container world-svg" />
-							<div className="choosen-languages">
+							<div className="choosen-languages choosen-languages-list">
 								{selectedLanguages.map((languageOption) => (
-									<>
+									<React.Fragment key={languageOption.value}>
 										<div className="language-name-wrapper">
 											<div className="language-name">
 												<div>{languageOption.label}</div>
@@ -388,28 +282,7 @@ export default function LanguageSetup({
                         Missing Translations
                       </div> */}
 										</div>
-										<div className="language-import-action">
-											<FileSelect
-												text="Import"
-												onFilesReceived={(files: any) => {
-													for (const filename of Object.keys(files)) {
-														const importResultFromSelectedFile = MessageImporter.processFile(
-															filename,
-															files[filename],
-															languageOption.value as Locale,
-														);
-														setImportResult(importResultFromSelectedFile);
-														const importStats = MessageImporter.getImportStatistics(
-															labelManager.messageStore,
-															importResultFromSelectedFile.messages!,
-															languageOption.value as Locale,
-														);
-														setimportKeysByState(importStats);
-													}
-												}}
-											/>
-										</div>
-									</>
+									</React.Fragment>
 								))}
 							</div>
 							{/* <div className="choosen-language-change" onClick={() => { setChangeLanguages(true); }}>Change</div> */}

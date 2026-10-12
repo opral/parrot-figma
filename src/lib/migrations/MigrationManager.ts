@@ -9,6 +9,9 @@ import PlaceholderHelper from "../message/PlaceholderUtil";
 import { MessageParameterValues } from "../message/MessageParameterValues";
 import FigmaUtil from "../../shared/FigmaUtil";
 
+// plugin data key of a label's parameter values - see LocalizedLabelManager.parameterValuesKey
+const PARAMETER_VALUES_KEY = "pv";
+
 export default class MigrationManager {
 	private lastMigrationKey = "parrot_migration_executed";
 
@@ -211,7 +214,7 @@ export default class MigrationManager {
 						);
 						this.setPluginData(
 							textNodeWitAnonymMessageToMigrate,
-							"parameterValuesKey",
+							PARAMETER_VALUES_KEY,
 							JSON.stringify(fillinToPlaceholder.parameterValues),
 						);
 						this.setPluginData(textNodeWitAnonymMessageToMigrate, "fi", "");
@@ -260,7 +263,7 @@ export default class MigrationManager {
 						);
 						this.setPluginData(
 							textNodeWithReferenceToMigrate,
-							"parameterValuesKey",
+							PARAMETER_VALUES_KEY,
 							JSON.stringify(fillinToPlaceholder.parameterValues),
 						);
 						this.setPluginData(textNodeWithReferenceToMigrate, "fi", "");
@@ -268,6 +271,33 @@ export default class MigrationManager {
 				}
 
 					return true;
+			},
+		},
+		{
+			version: "0.10.101",
+
+			// The 0.10.71 migration stored the fill-in values of migrated labels below the literal key
+			// "parameterValuesKey" instead of "pv". The labels then forgot their values ("Welcome Anna!"
+			// became "Welcome name!" after switching the language). Move the values to the right key.
+			migrate: () => {
+				const labelsWithMisplacedValues = (figma.root as any).findAllWithCriteria({
+					pluginData: {
+						keys: ["parameterValuesKey"],
+					},
+				}) as TextNode[];
+				for (const label of labelsWithMisplacedValues) {
+					const misplacedValues = label.getPluginData("parameterValuesKey");
+					const currentValues = label.getPluginData(PARAMETER_VALUES_KEY);
+					// do not overwrite values the user entered after the broken migration
+					const hasUserValues =
+						currentValues !== "" &&
+						Object.values(JSON.parse(currentValues)).some((value: any) => value.default === false);
+					if (misplacedValues !== "" && !hasUserValues) {
+						this.setPluginData(label, PARAMETER_VALUES_KEY, misplacedValues);
+					}
+					this.setPluginData(label, "parameterValuesKey", "");
+				}
+				return true;
 			},
 		},
 	];

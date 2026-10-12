@@ -15,6 +15,35 @@ import { pluginSettings } from "../transfer/TranslationFormats";
 export { translationPlugins as importPlugins } from "../transfer/TranslationFormats";
 
 const APPLE_STRINGS_PLUGIN_KEY = "plugin.inlang.apple-strings";
+
+/**
+ * Lets the SDK generate the message and variant ids of an import. A plugin that brings its own (next-intl
+ * encodes the key path into the message id) disqualifies the SDK's batch insert: every row was upserted
+ * on its own and 5000 keys took two minutes. Parrot does not keep these ids (export rebuilds the
+ * next-intl paths from the key).
+ */
+function withGeneratedIds(plugin: InlangPlugin): InlangPlugin {
+	const importFiles = plugin.importFiles;
+	if (!importFiles) return plugin;
+	return {
+		...plugin,
+		importFiles: async (args) => {
+			const result = await importFiles(args);
+			if (!result.messages.some((message) => message.id !== undefined)) return result;
+			const messages = new Map(result.messages.map((message) => [message.id, message]));
+			return {
+				...result,
+				messages: result.messages.map(({ id: _id, ...message }) => message),
+				variants: result.variants.map((variant) => {
+					const message = variant.messageId ? messages.get(variant.messageId) : undefined;
+					if (!message) return variant;
+					const { id: _id, messageId: _messageId, ...rest } = variant;
+					return { ...rest, messageBundleId: message.bundleId, messageLocale: message.locale };
+				}),
+			};
+		},
+	};
+}
 // A private-use character that stands in for an escaped backslash while the plugin reads the file.
 const ESCAPED_BACKSLASH = "\uE000";
 
@@ -63,7 +92,7 @@ export async function importWithPlugin(args: {
 				modules: [],
 				[args.plugin.key]: pluginSettings(args.plugin),
 			},
-			providePlugins: [args.plugin],
+			providePlugins: [withGeneratedIds(args.plugin)],
 		});
 		await project.importFiles({
 			pluginKey: args.plugin.key,

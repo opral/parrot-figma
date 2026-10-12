@@ -1,6 +1,7 @@
 import {
 	legacyMessageToBundle,
 	mergeImportedMessage,
+	sameDeclarations,
 } from "../message/store/LegacyMessageBundleConverter";
 import { getVariant, type Message, type Variant } from "../message/LegacyMessage";
 import MessageStoreMemory from "../message/store/MessageStoreMemory";
@@ -104,7 +105,7 @@ export default class MessageImporter {
 				}));
 			if (
 				JSON.stringify(oldLocale) === JSON.stringify(newLocale) &&
-				JSON.stringify(current.declarations) === JSON.stringify(incoming.declarations)
+				sameDeclarations(current.declarations, incoming.declarations)
 			)
 				return { type: "equal" };
 			// a language the message did not have yet is a new translation, not a changed one

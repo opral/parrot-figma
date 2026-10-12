@@ -231,6 +231,7 @@ describe("translation import", () => {
 		manager.getWithMessages = vi.fn(async () => []);
 		manager.updateToMessageHead = vi.fn(async () => {});
 		await manager.import([structuredClone(stored)], Locale.DE);
+		expect(manager.messageStore.upsertMessage).not.toHaveBeenCalled();
 		expect(manager.getWithMessages).not.toHaveBeenCalled();
 		expect(manager.updateToMessageHead).not.toHaveBeenCalled();
 	});

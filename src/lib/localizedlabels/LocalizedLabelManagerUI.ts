@@ -1,4 +1,8 @@
-import { mergeImportedMessage } from "../message/store/LegacyMessageBundleConverter";
+import {
+	legacyMessageToBundle,
+	mergeImportedMessage,
+	stableStringify,
+} from "../message/store/LegacyMessageBundleConverter";
 import blake from "blakejs";
 import {
 	createVariant,
@@ -1085,14 +1089,16 @@ export default class LocalizedLabelManagerUI
 		const languageVariants = (message: Message | undefined) =>
 			JSON.stringify(message?.variants.filter((variant) => variant.languageTag === language));
 		const changedMessageIds = new Set<string>();
-		const merged = messagesToImport.map((incoming) => {
+		const toWrite: Message[] = [];
+		for (const incoming of messagesToImport) {
 			const existing = this.messageStore.getMessage(incoming.id);
 			const message = mergeImportedMessage(existing, incoming, language);
 			if (languageVariants(existing) !== languageVariants(message))
 				changedMessageIds.add(message.id);
-			return message;
-		});
-		for (const message of merged) await this.messageStore.upsertMessage(message, {});
+			// re-importing a file writes only what it changes (every write is a sandbox round trip)
+			if (!existing || !sameBundle(existing, message)) toWrite.push(message);
+		}
+		for (const message of toWrite) await this.messageStore.upsertMessage(message, {});
 
 		// Refresh the linked layers once for all changed messages. Only layers that show the imported
 		// language can change - looking them up and updating them per message made big imports take minutes.
@@ -1103,5 +1109,14 @@ export default class LocalizedLabelManagerUI
 				(label) => label.language === language || label.rootFrameLanguage === language,
 			),
 		);
+	}
+}
+
+/** Whether two messages describe the same Inlang bundle (a merge adds `nativeBundle` to plain ones). */
+function sameBundle(a: Message, b: Message) {
+	try {
+		return stableStringify(legacyMessageToBundle(a)) === stableStringify(legacyMessageToBundle(b));
+	} catch {
+		return false;
 	}
 }

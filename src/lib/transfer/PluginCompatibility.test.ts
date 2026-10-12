@@ -3,6 +3,7 @@ import { translationPlugins } from "./TranslationFormats";
 import { importWithPlugin } from "../import/InlangPluginImporter";
 import { exportWithPlugin } from "./ExportWithPlugin";
 import type { Message } from "../message/LegacyMessage";
+import { mergeImportedMessage } from "../message/store/LegacyMessageBundleConverter";
 
 const icu = translationPlugins.find((format) => format.label === "ICU MessageFormat")!.plugin;
 
@@ -284,4 +285,26 @@ test("ICU messages: problems, and an exact number and a select value added in Pl
 	expect(exportedEn.invite).toBe(
 		"{gender, select, female {She invited you} male {He invited you} nonbinary {} other {They invited you}}",
 	);
+});
+
+test.each([
+	["{count, plural, one {# item} other {# items}}", "{count} Dinge"],
+	["{count} items", "{count, plural, one {# Ding} other {# Dinge}}"],
+	["Total {amount, number}", "Summe {amount}"],
+])("ICU: a plain and a native language of one key merge (%s / %s)", async (en, de) => {
+	const plugin = translationPlugins.find((f) => f.label === "ICU MessageFormat")!.plugin;
+	const [existing] = await importWithPlugin({
+		plugin,
+		fileName: "en.json",
+		content: JSON.stringify({ k: en }),
+		locale: "en",
+	});
+	const [incoming] = await importWithPlugin({
+		plugin,
+		fileName: "de.json",
+		content: JSON.stringify({ k: de }),
+		locale: "de",
+	});
+	const merged = mergeImportedMessage(existing, incoming!, "de");
+	expect(new Set(merged.variants.map((v) => v.languageTag))).toEqual(new Set(["en", "de"]));
 });

@@ -228,6 +228,31 @@ describe("FigmaBundleStore undo latency", () => {
 	});
 });
 
+describe("FigmaBundleStore own writes", () => {
+	afterEach(() => vi.useRealTimers());
+
+	test("a pause in typing does not read every bundle", () => {
+		vi.useFakeTimers();
+		const root = new FakeRoot();
+		const documentChanges = new FakeDocumentChanges();
+		const bundle = legacyMessageToBundle(legacyMessage);
+		for (let i = 0; i < 50; i++) {
+			root.setPluginData(FIGMA_BUNDLE_PREFIX + `b${i}`, JSON.stringify({ ...bundle, id: `b${i}` }));
+		}
+		const store = new FigmaBundleStore({ root, documentChanges });
+		const reads = vi.spyOn(root, "getPluginData");
+		const written = structuredClone(bundle);
+		for (let i = 0; i < 5; i++) {
+			written.messages[0]!.variants[0]!.pattern = [{ type: "text", value: `T${i}` }];
+			store.put(written);
+			documentChanges.emit("LOCAL");
+		}
+		vi.advanceTimersByTime(1000);
+		// one read of the bundle written last per change, no full check
+		expect(reads.mock.calls.length).toBeLessThanOrEqual(5);
+	});
+});
+
 describe("legacy migration", () => {
 	test("validates, writes bundles, then removes legacy messages", () => {
 		const root = new FakeRoot();

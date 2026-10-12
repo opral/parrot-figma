@@ -67,18 +67,17 @@ export function toEditorBundle(stored: BundleNested): { bundle: BundleRows; rich
 					rich.add(variant.id);
 					return variant;
 				}
-				return {
-					...variant,
-					pattern: variant.pattern.map((element) =>
-						element.type === "text"
-							? { ...element, value: htmlToPlainText(element.value) }
-							: element,
-					),
-				};
+				return { ...variant, pattern: decodePattern(variant.pattern) };
 			}),
 		})),
 	};
 	return { bundle: decoded, rich };
+}
+
+function decodePattern<P extends Variant["pattern"]>(pattern: P): P {
+	return pattern.map((element) =>
+		element.type === "text" ? { ...element, value: htmlToPlainText(element.value) } : element,
+	) as P;
 }
 
 /** Inverse of `toEditorBundle`: encodes edited text and restores variants that were only previewed. */
@@ -96,7 +95,11 @@ export function fromEditorBundle(
 		messages: edited.messages.map((message) => ({
 			...message,
 			variants: message.variants.map((variant) => {
-				if (rich.has(variant.id)) return storedVariants.get(variant.id) ?? variant;
+				const prior = storedVariants.get(variant.id);
+				if (rich.has(variant.id)) return prior ?? variant;
+				// an unedited text keeps its stored encoding (imports store `&` and `<` as they are)
+				if (prior && JSON.stringify(decodePattern(prior.pattern)) === JSON.stringify(variant.pattern))
+					return { ...variant, pattern: prior.pattern };
 				return {
 					...variant,
 					pattern: variant.pattern.map((element) =>

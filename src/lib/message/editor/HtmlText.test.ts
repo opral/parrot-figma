@@ -86,3 +86,17 @@ test("editor bundle decodes plain variants and leaves formatted variants as stor
 		stored.messages.find((m) => m.locale === "de")!.variants,
 	);
 });
+
+test("languages that were not edited keep their stored text byte by byte", () => {
+	// imports store `&`, `<` and non-breaking spaces as they are
+	const stored = legacyMessageToBundle(message("Hello", "Tom & Jerry, a < b c"));
+	const { bundle, rich } = toEditorBundle(stored);
+	const edited = structuredClone(bundle);
+	edited.messages.find((m) => m.locale === "en")!.variants[0]!.pattern = [
+		{ type: "text", value: "Hello again" },
+	];
+	const saved = fromEditorBundle(edited, rich, stored);
+	expect(saved.messages.find((m) => m.locale === "de")!.variants).toEqual(
+		stored.messages.find((m) => m.locale === "de")!.variants,
+	);
+});

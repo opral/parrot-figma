@@ -80,14 +80,22 @@ export class FigmaBundleStore {
 	/** The bundles this store wrote last (newest last): what an undo / redo most likely touches. */
 	private readonly recent = new Set<string>();
 
+	/**
+	 * Set when an undo / redo changed bundles behind the store's back, cleared by the store's next own
+	 * write. The first undo always touches the bundles written last (`recent`); only while undoing can
+	 * a further step touch older bundles, so only then is the full check needed.
+	 */
+	private undoing = false;
+
 	private readonly handleDocumentChange = (event: any) => {
 		if (!event.documentChanges.some((change: any) => this.isRemoteRootPluginDataChange(change))) {
 			if (event.documentChanges.some((change: any) => this.isRootPluginDataChange(change))) {
 				// Cmd+Z / Cmd+Shift+Z: the bundles written last are checked at once so the UI follows right
 				// away. The full check reads every bundle (hundreds of ms in the plugin sandbox for a big
-				// file, during which it cannot even answer the UI): it waits until the changes stopped coming.
-				this.checkRecent();
-				this.scheduleLocalChangeCheck();
+				// file, during which it cannot even answer the UI): it only runs while undoing - not after
+				// the store's own writes (every pause in typing) - and waits until the changes stopped coming.
+				if (this.checkRecent()) this.undoing = true;
+				if (this.undoing) this.scheduleLocalChangeCheck();
 			}
 			return;
 		}
@@ -158,12 +166,14 @@ export class FigmaBundleStore {
 		this.root.setPluginData(this.key(bundle.id), raw);
 		this.stored.set(bundle.id, raw);
 		this.remember(bundle.id);
+		this.undoing = false;
 	}
 
 	delete(bundleId: string) {
 		this.root.setPluginData(this.key(bundleId), "");
 		this.stored.delete(bundleId);
 		this.remember(bundleId);
+		this.undoing = false;
 	}
 
 	private remember(bundleId: string) {

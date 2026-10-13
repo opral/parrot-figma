@@ -15,7 +15,7 @@
 //  uishot <out.png>              screenshot only the plugin iframe element
 //  console [seconds]             stream console messages from plugin UI + file page
 import { chromium } from "playwright-core";
-import { uiTarget, assertNotProtected } from "./ui-target.mjs";
+import { uiTarget, assertNotProtected, guardInput, uiOrigin } from "./ui-target.mjs";
 // FILE=<file id substring> picks the Figma file for EVERY command (several plugin UIs may be open): the UI iframe is the one whose parent page URL contains FILE.
 // Without FILE: pageMatch args / the old default (4Xgyn) for page commands, and the single open plugin UI for ui/upload/uiconsole (error when ambiguous).
 const FILE = process.env.FILE;
@@ -40,8 +40,8 @@ const uiEval = async (expression) => {
 };
 const browser = await chromium.connectOverCDP("http://localhost:9222");
 const pages = browser.contexts().flatMap((c) => c.pages());
-const filePage = (m) => { const want = m ?? FILE ?? "4Xgyn0xmwQsJLHyUaRfpX0"; const p = pages.find((x) => x.url().includes(want)); if (!p) throw new Error("no Figma page matches " + want); assertNotProtected(p.url()); return p; };
-const findUi = () => { for (const p of FILE ? pages.filter((x) => x.url().includes(FILE)) : pages) for (const f of p.frames()) if (f.url().startsWith("http://localhost:5180")) return { page: p, frame: f }; return null; };
+const filePage = (m) => { const want = m ?? FILE ?? "4Xgyn0xmwQsJLHyUaRfpX0"; const p = pages.find((x) => x.url().includes(want)); if (!p) throw new Error("no Figma page matches " + want); assertNotProtected(p.url()); return guardInput(p); };
+const findUi = () => { for (const p of FILE ? pages.filter((x) => x.url().includes(FILE)) : pages) for (const f of p.frames()) if (f.url().startsWith(uiOrigin())) return { page: p, frame: f }; return null; };
 const uiFrame = async () => { for (let i = 0; i < 20; i++) { const u = findUi(); if (u) return u; await new Promise((r) => setTimeout(r, 250)); } return null; };
 try {
   if (cmd === "pages") for (const p of pages) console.log(p.url(), "|", await p.title().catch(() => ""));

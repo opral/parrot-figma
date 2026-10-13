@@ -175,6 +175,11 @@ jobs:
             exit 1
           fi
 
+          # the UI of the build job is plain static files: no links, no nested git metadata
+          if [ -n "$(find ../release/dist/ui \( -type l -o -name '.git*' \))" ]; then
+            echo "::error::The UI build contains symbolic links or git metadata."
+            exit 1
+          fi
           mkdir -p "releases/${VERSION}"
           cp -R ../release/dist/ui/. "releases/${VERSION}/"
           test -f "releases/${VERSION}/index.html"
@@ -241,8 +246,9 @@ jobs:
           { echo "| File | Status | Content-Type | Access-Control-Allow-Origin |"; echo "| --- | --- | --- | --- |"; } > checks.md
           check "Page" "index.html" '^text/html'
           ui_dir=release/dist/ui
-          js=$(cd "$ui_dir" && find . -type f \( -name '*.js' -o -name '*.mjs' \) | sed 's|^\./||' | sort | head -n 1)
-          wasm=$(cd "$ui_dir" && find . -type f -name '*.wasm' | sed 's|^\./||' | sort | head -n 1)
+          # the entry script of the page and the largest WebAssembly file (the SDK)
+          js=$(grep -o '<script[^>]*src="[^"]*"' "$ui_dir/index.html" | head -n 1 | sed -E 's|.*src="(\./)?||; s|"$||')
+          wasm=$(cd "$ui_dir" && find . -type f -name '*.wasm' -exec ls -S {} + | head -n 1 | sed 's|^\./||')
           if [ -n "$js" ]; then
             check "Script" "$js" '(javascript|ecmascript)'
           else
@@ -277,6 +283,6 @@ jobs:
             echo "1. Download the [\`parrot-figma-plugin\` artifact](${ARTIFACT_URL}) of this run and unzip it. It holds \`manifest.json\` and \`dist/\` (the plugin sandbox that loads the UI from the URL above)."
             echo "2. In the Figma desktop app: **Plugins > Development > Import plugin from manifest...** and choose \`manifest.json\` of the unzipped folder."
             echo "3. Run it once (**Plugins > Development**) in a test file and check that it opens."
-            echo "4. **Plugins > Manage plugins**, open the menu of the plugin under *In development*, **Publish new version**, and add the release notes."
-            echo "5. Import \`manifest.json\` of your Parrot checkout again afterwards: Figma has one development entry per plugin id, and it now points to the unzipped release."
+            echo "4. **Plugins > Manage plugins**, open the menu of the entry you imported in step 2 (under *In development*), **Publish new version**, and add the release notes."
+            echo "5. Afterwards remove the development entry of the unzipped release (**Plugins > Manage plugins**, its menu, *Remove*) so it does not get mixed up with your local **Parrot (development)**."
           } >> "$GITHUB_STEP_SUMMARY"

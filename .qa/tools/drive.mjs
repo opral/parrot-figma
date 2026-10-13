@@ -4,7 +4,7 @@
 //   await d.ui("js expression")       // evaluate in plugin UI iframe (async ok)
 //   await d.upload("selector", "/abs/file"); await d.type("text"); await d.key("Enter"); await d.close()
 import { chromium } from "playwright-core";
-import { uiTarget, assertNotProtected } from "./ui-target.mjs";
+import { uiTarget, assertNotProtected, guardInput } from "./ui-target.mjs";
 export async function open(fileMatch) {
   // connecting is sometimes slow while Figma is busy (30 s timeout): retry
   let browser;
@@ -13,6 +13,7 @@ export async function open(fileMatch) {
   const page = pages.find((p) => p.url().includes(fileMatch));
   if (!page) throw new Error("no Figma page matches " + fileMatch);
   assertNotProtected(page.url());
+  guardInput(page); // QA_FRONT=<file id>: front-tab check before every input
   const t = await uiTarget(fileMatch); // the plugin UI of THIS file (several UIs may be open)
   const ws = new WebSocket(t.webSocketDebuggerUrl);
   await new Promise((r, j) => { ws.onopen = r; ws.onerror = j; });

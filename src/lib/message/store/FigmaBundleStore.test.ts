@@ -301,3 +301,51 @@ describe("legacy migration", () => {
 		expect(root.data).toEqual(before);
 	});
 });
+
+describe("root changes before pages finish loading", () => {
+	test("detects undo, redo and remote writes without a documentchange listener, and stays cheap when idle", () => {
+		vi.useFakeTimers();
+		const root = new FakeRoot();
+		const store = new FigmaBundleStore({ root, pollRootChanges: true });
+		const notify = vi.fn();
+		store.subscribe(notify);
+		const before = new Map(root.data);
+		store.put(legacyMessageToBundle(legacyMessage));
+		store.flushPendingRevision();
+		const after = new Map(root.data);
+		const read = vi.spyOn(root, "getPluginData");
+		vi.advanceTimersByTime(1000);
+		expect(read).toHaveBeenCalledTimes(4);
+		expect(notify).not.toHaveBeenCalled();
+		root.data = before;
+		vi.advanceTimersByTime(250);
+		expect(notify).toHaveBeenLastCalledWith({ added: [], updated: [], deleted: ["welcome"] });
+		root.data = after;
+		vi.advanceTimersByTime(250);
+		expect(notify).toHaveBeenLastCalledWith({ added: ["welcome"], updated: [], deleted: [] });
+		const other = new FigmaBundleStore({ root, pollRootChanges: true });
+		other.put({ ...legacyMessageToBundle(legacyMessage), id: "remote", messages: [] });
+		other.flushPendingRevision();
+		vi.advanceTimersByTime(250);
+		expect(notify).toHaveBeenLastCalledWith({ added: ["remote"], updated: [], deleted: [] });
+		store.dispose();
+		other.dispose();
+		vi.useRealTimers();
+	});
+});
+
+test("coalesces bulk revision writes and can flush an explicit undo boundary", () => {
+	vi.useFakeTimers();
+	const root = new FakeRoot();
+	const write = vi.spyOn(root, "setPluginData");
+	const store = new FigmaBundleStore({ root, pollRootChanges: true });
+	store.put(legacyMessageToBundle(legacyMessage));
+	store.put(legacyMessageToBundle(legacyMessage));
+	expect(write).toHaveBeenCalledTimes(2);
+	store.flushPendingRevision();
+	expect(write).toHaveBeenCalledTimes(3);
+	vi.advanceTimersByTime(1);
+	expect(write).toHaveBeenCalledTimes(3);
+	store.dispose();
+	vi.useRealTimers();
+});

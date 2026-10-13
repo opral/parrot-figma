@@ -40,6 +40,6 @@ export default [
 		},
 	},
 	{
-        ignores: ["dist/*", "dist/**", "snippets", ".qa/**"]
+        ignores: ["dist/*", "dist/**", "snippets", ".qa/**", "qa/**/dist/**"]
     },
 ];

@@ -1,3 +1,4 @@
+import { documentChanges } from "../../shared/DocumentChanges";
 import type { Message } from "../message/LegacyMessage";
 import { Locale } from "../message/variants/Locale";
 import { LabelStyle, LocalizedLabel } from "./LocalizedLabel";
@@ -11,6 +12,7 @@ import { FillinToPlaceholder as FillinsToPlaceholder } from "../message/MessageE
 import { MessageParameterValues } from "../message/MessageParameterValues";
 import {
 	restoreTextFillRanges,
+	rangeMatches,
 	setTextFillRange,
 	type TextFillRange,
 } from "./RichTextFormatting";
@@ -112,44 +114,76 @@ export default class LocalizedLabelManager {
 
 	private virtualTree = new VirtualTree();
 
-	private labelToMessage = {} as {
-		[nodeId: string]: string;
-	};
+	private readonly labelLinter = new TextNodeLinter();
+
+	private labelToMessage = new Map<string, string>();
 
 	firstTextnodeInViewport: undefined | string;
 
 	private refreshLabelMessageLinkCache(textNodeId: string, messageId: string | undefined) {
-		const currentKey = this.labelToMessage[textNodeId];
-		if (messageId === undefined || messageId === "") {
-			if (currentKey) {
-				this.messageStore!.messageIdToLabels[currentKey]!.delete(textNodeId);
-				return currentKey;
-			}
-			return undefined;
-		}
-
-		if (!this.messageStore!.messageIdToLabels[messageId]) {
-			this.messageStore!.messageIdToLabels[messageId] = new Set<string>();
-		}
-		if (this.messageStore!.messageIdToLabels[messageId].has(textNodeId)) {
-			return undefined;
-		}
-		this.messageStore!.messageIdToLabels[messageId].add(textNodeId);
-		this.labelToMessage[textNodeId] = messageId;
-
-		// Update the messageId in the virtual tree node
-		const virtualNode = this.virtualTree.getVirtualNode(textNodeId);
-		if (virtualNode) {
-			virtualNode.messageId = messageId;
-		}
-
-		if (currentKey) {
-			if (currentKey !== messageId) {
-				this.messageStore!.messageIdToLabels[currentKey]!.delete(textNodeId);
-			}
+		const links = this.messageStore!.messageIdToLabels;
+		const currentKey = this.labelToMessage.get(textNodeId);
+		if (!messageId) {
+			if (currentKey) links.get(currentKey)?.delete(textNodeId);
+			this.labelToMessage.delete(textNodeId);
+			const virtualNode = this.virtualTree.getVirtualNode(textNodeId);
+			if (virtualNode) virtualNode.messageId = undefined;
 			return currentKey;
 		}
-		return undefined;
+		let labels = links.get(messageId);
+		if (!labels) {
+			labels = new Set<string>();
+			links.set(messageId, labels);
+		}
+		if (labels.has(textNodeId)) return undefined;
+		labels.add(textNodeId);
+		this.labelToMessage.set(textNodeId, messageId);
+		const virtualNode = this.virtualTree.getVirtualNode(textNodeId);
+		if (virtualNode) virtualNode.messageId = messageId;
+		if (currentKey && currentKey !== messageId) links.get(currentKey)?.delete(textNodeId);
+		return currentKey;
+	}
+
+	private async getNode(nodeId: string) {
+		const cached = this.virtualTree.getVirtualNode(nodeId)?.sourceNode;
+		if (cached && !cached.removed) return cached;
+		const node = await figma.getNodeByIdAsync(nodeId);
+		if (node && !node.removed) this.virtualTree.addNode(node, node.id);
+		return node;
+	}
+
+	private rememberChangedNodes(changes: readonly any[]) {
+		for (const change of changes) {
+			if (change.type !== "DELETE" && change.node && !change.node.removed) {
+				this.virtualTree.addNode(change.node, change.id);
+			}
+		}
+	}
+
+	private observedPages = new Map<
+		string,
+		{ page: PageNode; listener: (event: NodeChangeEvent) => void }
+	>();
+	private changesQueue = Promise.resolve();
+
+	private observePage(page: PageNode) {
+		if (this.observedPages.has(page.id)) return;
+		const listener = (event: NodeChangeEvent) => {
+			if (documentChanges.active) return;
+			this.rememberChangedNodes(event.nodeChanges);
+			this.changesQueue = this.changesQueue
+				.then(() => this.forwardDocumentChanges({ documentChanges: event.nodeChanges }))
+				.catch((error) => console.error("Parrot page change failed", error));
+		};
+		this.observedPages.set(page.id, { page, listener });
+		page.on("nodechange", listener);
+	}
+
+	private disposePageObservers() {
+		for (const { page, listener } of this.observedPages.values()) {
+			if (!page.removed) page.off("nodechange", listener);
+		}
+		this.observedPages.clear();
 	}
 
 	messageStore: InlangMessageStore | undefined;
@@ -161,7 +195,17 @@ export default class LocalizedLabelManager {
 
 		this.messageStore = messageStore;
 
-		figma.on("documentchange", this.forwardDocumentChanges.bind(this));
+		this.observePage(figma.currentPage);
+		documentChanges.on("documentchange", (event) => {
+			this.rememberChangedNodes(event.documentChanges);
+			this.changesQueue = this.changesQueue
+				.then(() => this.forwardDocumentChanges(event))
+				.catch((error) => console.error("Parrot document change failed", error));
+		});
+		figma.on("currentpagechange", () => {
+			this.observePage(figma.currentPage);
+			figma.ui.postMessage({ type: "event", name: "selectionchange" });
+		});
 
 		const selectedNodeStateByUser = {} as any;
 		// eslint-disable-next-line @typescript-eslint/no-this-alias -- we need to access this in the interval
@@ -173,7 +217,7 @@ export default class LocalizedLabelManager {
 			// for (const user of [figma.currentUser]) { // NOTE: activeUsers is only available in figJam :/
 			// if (user?.id && user?.selection.length === 1) {
 			if (figma.currentPage.selection.length === 1) {
-				const activeNode = figma.currentPage.selection[0]; // figma.getNodeById(user.selection[0]);
+				const activeNode = figma.currentPage.selection[0]; // await this.getNode(user.selection[0]);
 				const user = { id: "singleUser" };
 				const currentState = {
 					nodeId: "",
@@ -249,7 +293,7 @@ export default class LocalizedLabelManager {
 		}, 100);
 	}
 
-	forwardDocumentChanges(event: any) {
+	async forwardDocumentChanges(event: any) {
 		const deletedIds = new Set<string>();
 		const changedLabels = [] as LocalizedLabel[];
 		const createdLabels = [] as LocalizedLabel[];
@@ -261,7 +305,8 @@ export default class LocalizedLabelManager {
 						// we skip changes of removed nodes
 						break;
 					}
-					const createdNode = figma.getNodeById(change.id)!;
+					const createdNode = change.node as BaseNode;
+					if (createdNode.type === "PAGE") await createdNode.loadAsync();
 					if (createdNode.type === "TEXT") {
 						const localizedLabel = this.toLocalizedLabelOrUndefined(createdNode as TextNode);
 						if (localizedLabel) {
@@ -298,7 +343,7 @@ export default class LocalizedLabelManager {
 						for (const createdTextNode of createdTextNodes) {
 							const localizedLabel = this.toLocalizedLabelOrUndefined(createdTextNode);
 							if (localizedLabel) {
-								this.virtualTree.addNode(createdNode, createdNode.id);
+								this.virtualTree.addNode(createdTextNode, createdTextNode.id);
 								if (localizedLabel.messageId) {
 									const previousKey = this.refreshLabelMessageLinkCache(
 										localizedLabel.nodeId,
@@ -334,7 +379,8 @@ export default class LocalizedLabelManager {
 						.removeBranch(change.id)
 						.filter((node) => node.cacheRelevant);
 					deletedLeafs.forEach((node) => {
-						this.refreshLabelMessageLinkCache(node.id, undefined);
+						const previousKey = this.refreshLabelMessageLinkCache(node.id, undefined);
+						if (previousKey) keysChanged.add(previousKey);
 						deletedIds.add(node.id);
 					});
 					// console.log(`Node deleted ${change.id} leafs: ${JSON.stringify(deletedIds)}`);
@@ -345,7 +391,7 @@ export default class LocalizedLabelManager {
 						// we skip changes of removed nodes
 						break;
 					}
-					const changedNode = figma.getNodeById(change.id);
+					const changedNode = change.node as BaseNode;
 
 					if (changedNode?.type === "DOCUMENT") {
 						break;
@@ -411,9 +457,16 @@ export default class LocalizedLabelManager {
 							// console.log(`Node changed - ${change.id} name in vt affacted: ${JSON.stringify(changedVirtualNodes.length)}`);
 						}
 
-						changedVirtualNodes.forEach((changedVNode) => {
+						const resolvedChangedNodes = new Map(
+							await Promise.all(
+								changedVirtualNodes
+									.filter((node) => node.cacheRelevant)
+									.map(async (node) => [node.id, await this.getNode(node.id)] as const),
+							),
+						);
+						for (const changedVNode of changedVirtualNodes) {
 							if (changedVNode.cacheRelevant) {
-								const movedFigmaNode = figma.getNodeById(changedVNode.id);
+								const movedFigmaNode = resolvedChangedNodes.get(changedVNode.id);
 								if (movedFigmaNode && movedFigmaNode.type === "TEXT") {
 									const localizedLabel = this.toLocalizedLabelOrUndefined(
 										movedFigmaNode as TextNode,
@@ -447,7 +500,7 @@ export default class LocalizedLabelManager {
 									}
 								}
 							}
-						});
+						}
 					}
 
 					break;
@@ -481,7 +534,16 @@ export default class LocalizedLabelManager {
 
 	async startFillupCache() {
 		// we start the async process here - this will load frame by frame and intercept each load with a tick
-		this.fillUpCache().catch((e) => console.log(e));
+		void this.ensureLinksIndexed().catch((e) => console.error(e));
+	}
+
+	private indexPromise?: Promise<void>;
+
+	private ensureLinksIndexed() {
+		return (this.indexPromise ??= this.fillUpCache().catch((error) => {
+			this.indexPromise = undefined;
+			throw error;
+		}));
 	}
 
 	private nodeCount = 0;
@@ -498,6 +560,13 @@ export default class LocalizedLabelManager {
 
 	async fillUpCache() {
 		const start = Date.now();
+		this.nodeCount =
+			this.textNodeCount =
+			this.linkedTextNodeCount =
+			this.numberOfAnonymousTextNodes =
+			this.parrotTextNodesCount =
+			this.frameCount =
+				0;
 		const keysLoaded = new Set<string>();
 		let totalNodesProcessed = 0;
 
@@ -516,11 +585,23 @@ export default class LocalizedLabelManager {
 			// Now process the other pages
 			const otherPages = figma.root.children.filter((page) => page.id !== currentPage.id);
 			for (const page of otherPages) {
+				if (page.removed) continue;
+				await page.loadAsync();
+				if (page.removed) continue;
+				this.observePage(page);
 				this.virtualTree.addNode(page, page.id);
 				const startPage = Date.now();
 				const { nodesProcessed: nodesProcessedInPage, maxDepth: maxDepthInPage } =
 					await this.processNodeRecursively(page, figma.root, keysLoaded, 0);
 				totalNodesProcessed += nodesProcessedInPage;
+				figma.ui.postMessage({
+					target: "LocalizedLabelManager",
+					type: "cacheUpdate",
+					deletedNodeIds: [],
+					changedLabels: [],
+					createdLabels: [],
+					changedKeys: [...keysLoaded],
+				});
 				const endPage = Date.now();
 				console.log(
 					`fillUpCache - Page ${page.name} processed, processed ${nodesProcessedInPage} nodes, max depth ${maxDepthInPage}, took ${endPage - startPage}ms`,
@@ -530,6 +611,13 @@ export default class LocalizedLabelManager {
 				`fillUpCache - All pages processed, total nodes processed: ${totalNodesProcessed}, total time: ${Date.now() - start}ms`,
 			);
 
+			await this.changesQueue;
+			keysLoaded.clear();
+			this.linkedTextNodeCount = 0;
+			for (const [messageId, labels] of this.messageStore!.messageIdToLabels) {
+				if (labels.size) keysLoaded.add(messageId);
+				this.linkedTextNodeCount += labels.size;
+			}
 			figma.root.setPluginData("numberOfLinkedMessages", keysLoaded.size.toString());
 
 			figma.root.setPluginData("numberOfTextNodes", this.textNodeCount.toString());
@@ -544,8 +632,10 @@ export default class LocalizedLabelManager {
 			figma.root.setPluginData("numberOfFrames", this.frameCount.toString());
 
 			this.postLinksLoadedMessage(keysLoaded);
+			await documentChanges.activate();
 		} catch (error) {
 			console.error("fillUpCache - Error:", error);
+			throw error;
 		}
 	}
 
@@ -557,61 +647,38 @@ export default class LocalizedLabelManager {
 	): Promise<{ nodesProcessed: number; maxDepth: number }> {
 		let nodesProcessed = 0;
 		let maxDepth = depth;
-		// Process if the node is a Page
-		const nodeType = node.type;
-		if (nodeType === "PAGE") {
-			this.virtualTree.addNode(node, node.id, parentNode);
-			for (const child of (node as PageNode).children) {
-				const exportChild = await child.exportAsync({ format: "JSON_REST_V1" });
-				const result = await this.processNodeRecursively(
-					(exportChild as any).document,
-					node,
-					keysLoaded,
-					depth + 1,
-				);
-				nodesProcessed += result.nodesProcessed;
-				maxDepth = Math.max(maxDepth, result.maxDepth);
-				// Optional delay to prevent blocking
-				await new Promise((resolve) => {
-					setTimeout(resolve, 0);
-				});
+		let sliceStart = Date.now();
+		const stack = [{ node, parentNode, depth }];
+		while (stack.length) {
+			const item = stack.pop()!;
+			const current = item.node;
+			// Read live nodes after each yield: an edit/deletion during a scan must not revive stale data.
+			if (current.removed) continue;
+			maxDepth = Math.max(maxDepth, item.depth);
+			if (current.type === "TEXT") {
+				this.processTextNode(current, keysLoaded, item.parentNode);
+				nodesProcessed++;
+			} else {
+				if (current.type === "FRAME") this.frameCount++;
+				this.virtualTree.addNode(current, current.id, item.parentNode);
+				if ("children" in current) {
+					const children = current.children;
+					for (let i = children.length - 1; i >= 0; i--) {
+						stack.push({ node: children[i], parentNode: current, depth: item.depth + 1 });
+					}
+				}
 			}
-		} else if (nodeType === "TEXT") {
-			await this.processTextNode(node as TextNode, keysLoaded, parentNode);
-			nodesProcessed += 1;
-		} else if (
-			nodeType === "COMPONENT" ||
-			nodeType === "COMPONENT_SET" ||
-			nodeType === "INSTANCE" ||
-			nodeType === "FRAME" ||
-			nodeType === "GROUP" ||
-			nodeType === "SECTION"
-		) {
-			if (nodeType === "FRAME") {
-				this.frameCount += 1;
-			}
-			this.virtualTree.addNode(node, node.id, parentNode);
-			for (const child of node.children) {
-				const result = await this.processNodeRecursively(child, node, keysLoaded, depth + 1);
-				nodesProcessed += result.nodesProcessed;
-				maxDepth = Math.max(maxDepth, result.maxDepth);
+			if (Date.now() - sliceStart >= 8) {
+				await new Promise<void>((resolve) => setTimeout(resolve, 0));
+				sliceStart = Date.now();
 			}
 		}
 		return { nodesProcessed, maxDepth };
 	}
 
-	async processTextNode(textNode: CachedTextNode, keysLoaded: Set<string>, parentNode?: BaseNode) {
+	processTextNode(textNode: CachedTextNode, keysLoaded: Set<string>, parentNode?: BaseNode) {
 		const textNodeId = textNode.id;
 
-		textNode.getPluginData = (key: string) => {
-			if (!textNode._cachedNode) {
-				textNode._cachedNode = figma.getNodeById(textNodeId) as TextNode | undefined;
-			}
-
-			const pluginData = textNode._cachedNode?.getPluginData(key);
-			// console.log("accessig key [" + key + "] via patched method:" +pluginData)
-			return pluginData as any;
-		};
 		this.virtualTree.addNode(textNode, textNodeId, parentNode);
 
 		const messageId = textNode.getPluginData(this.messageNameDataKey);
@@ -633,12 +700,6 @@ export default class LocalizedLabelManager {
 			}
 		}
 
-		if (this.nodeCount % 300 === 0) {
-			// Optional delay to prevent blocking
-			await new Promise((resolve) => {
-				setTimeout(resolve, 0);
-			});
-		}
 		this.nodeCount += 1;
 	}
 
@@ -677,27 +738,20 @@ export default class LocalizedLabelManager {
 					messageId: undefined,
 				};
 
-				const virtualSelectedNode = this.virtualTree.getVirtualNode(selectedNode.id);
-				if (virtualSelectedNode) {
-					this.virtualTree
-						.getAllNodesInBranchByRootId(virtualSelectedNode.id)
-						.forEach((virtualNode) => {
-							if (virtualNode.type === "TEXT" && selectionEnhanced[virtualNode.id] === undefined) {
-								const node = figma.getNodeById(virtualNode.id) as TextNode;
-								if (node) {
-									const textNode = this.toLocalizedLabelOrUndefined(
-										figma.getNodeById(virtualNode.id) as TextNode,
-									);
-									selectionEnhanced[virtualNode.id] = {
-										directSelection: false,
-										isLabel: true,
-										rootFrameId: rootFrame?.id,
-										selectedNodeId: virtualNode.id,
-										messageId: textNode?.messageId,
-									};
-								}
-							}
-						});
+				// Selection must work before the background cross-page index is ready.
+				const textNodes =
+					"findAllWithCriteria" in selectedNode
+						? selectedNode.findAllWithCriteria({ types: ["TEXT"] })
+						: [];
+				for (const node of textNodes) {
+					const label = this.toLocalizedLabelOrUndefined(node);
+					selectionEnhanced[node.id] = {
+						directSelection: false,
+						isLabel: true,
+						rootFrameId: rootFrame?.id,
+						selectedNodeId: node.id,
+						messageId: label?.messageId,
+					};
 				}
 			}
 		}
@@ -739,7 +793,7 @@ export default class LocalizedLabelManager {
 	}
 
 	async getById(textNodeId: string) {
-		const textNode = figma.getNodeById(textNodeId) as TextNode;
+		const textNode = (await this.getNode(textNodeId)) as TextNode;
 		const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode);
 		if (lokalizedLabel) {
 			if (!this.virtualTree.hasNode(textNode.id)) {
@@ -751,14 +805,24 @@ export default class LocalizedLabelManager {
 
 	/** The labels of these nodes as they are now - nodes that are gone or no labels are left out. */
 	async getByIds(textNodeIds: string[]) {
-		const labels = [] as LocalizedLabel[];
-		for (const textNodeId of textNodeIds) {
-			const node = figma.getNodeById(textNodeId);
-			// deleted, or removed from the document and only kept for undo
-			if (node?.type !== "TEXT" || node.removed) continue;
-			const label = this.toLocalizedLabelOrUndefined(node);
+		const nodes = await Promise.all(textNodeIds.map((id) => this.getNode(id)));
+		return this.labelsFromNodes(nodes);
+	}
+
+	private async labelsFromNodes(nodes: (BaseNode | null)[]) {
+		const labels: LocalizedLabel[] = [];
+		let context = this.createLabelReadContext();
+		let sliceStart = Date.now();
+		for (const node of nodes) {
+			if (Date.now() - sliceStart >= 32) {
+				await new Promise<void>((resolve) => setTimeout(resolve, 0));
+				context = this.createLabelReadContext();
+				sliceStart = Date.now();
+			}
+			if (!node || node.removed || node.type !== "TEXT") continue;
+			const label = this.toLocalizedLabelOrUndefined(node, context);
 			if (!label) continue;
-			if (!this.virtualTree.hasNode(node.id)) this.virtualTree.addNode(node, node.id);
+			this.virtualTree.addNode(node, node.id);
 			labels.push(label);
 		}
 		return labels;
@@ -770,6 +834,8 @@ export default class LocalizedLabelManager {
 
 	/** All labels linked to one of the messages - a single traversal of the tree for any number of messages. */
 	async getWithMessages(messageIds: string[]) {
+		await this.ensureLinksIndexed();
+		await this.changesQueue;
 		const labels = [] as LocalizedLabel[];
 		const foundNodes = [] as VirtualTreeNode[];
 		const wantedMessageIds = new Set(messageIds);
@@ -785,19 +851,8 @@ export default class LocalizedLabelManager {
 		this.virtualTree.traverseNode(figma.root.id, findNodesWithMessage);
 		// console.log({ foundNodes });
 
-		// Process found nodes to create LocalizedLabels
-		for (const virtualNode of foundNodes) {
-			const figmaNode = figma.getNodeById(virtualNode.id) as TextNode;
-			const localizedLabel = this.toLocalizedLabelOrUndefined(figmaNode);
-
-			if (localizedLabel) {
-				if (!this.virtualTree.hasNode(figmaNode.id)) {
-					this.virtualTree.addNode(figmaNode, figmaNode.id);
-				}
-				labels.push(localizedLabel);
-			}
-		}
-		return labels;
+		const nodes = await Promise.all(foundNodes.map((node) => this.getNode(node.id)));
+		return this.labelsFromNodes(nodes);
 	}
 
 	/**
@@ -847,14 +902,24 @@ export default class LocalizedLabelManager {
 	 * layers whose text (whitespace collapsed) is not one of `texts`.
 	 */
 	async getPageLabels(filter?: { unlinkedOnly?: boolean; texts?: string[] }) {
+		const page = figma.currentPage;
 		const labels = [] as LocalizedLabel[];
 		const wantedTexts = filter?.texts ? new Set(filter.texts) : undefined;
 		const skipInvisibleInstanceChildrenBefore = figma.skipInvisibleInstanceChildren;
 		figma.skipInvisibleInstanceChildren = true;
-		const textNodes = figma.currentPage.findAllWithCriteria({ types: ["TEXT"] });
+		const textNodes = page.findAllWithCriteria({ types: ["TEXT"] });
 		figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
 
+		let context = this.createLabelReadContext();
+		let sliceStart = Date.now();
 		for (const textNode of textNodes) {
+			if (Date.now() - sliceStart >= 32) {
+				await new Promise<void>((resolve) => setTimeout(resolve, 0));
+				if (page.id !== figma.currentPage.id) return [];
+				context = this.createLabelReadContext();
+				sliceStart = Date.now();
+			}
+			if (textNode.removed) continue;
 			if (wantedTexts && !wantedTexts.has(normalizeText(textNode.characters))) continue;
 			if (
 				filter?.unlinkedOnly &&
@@ -863,7 +928,7 @@ export default class LocalizedLabelManager {
 			) {
 				continue;
 			}
-			const label = this.toLocalizedLabelOrUndefined(textNode);
+			const label = this.toLocalizedLabelOrUndefined(textNode, context);
 			if (label) {
 				if (!this.virtualTree.hasNode(textNode.id)) {
 					this.virtualTree.addNode(textNode, textNode.id);
@@ -901,7 +966,9 @@ export default class LocalizedLabelManager {
 		name: string;
 		localizedLabelsInFrame: LocalizedLabel[];
 	}> {
-		const frame = figma.getNodeById(frameId) as FrameNode;
+		const frame = (await this.getNode(frameId)) as FrameNode;
+		if (!frame || frame.removed || !("findAllWithCriteria" in frame))
+			throw new Error(`Frame ${frameId} no longer exists`);
 		return this.getFrame(frame);
 	}
 
@@ -920,9 +987,17 @@ export default class LocalizedLabelManager {
 		};
 
 		const textNodes = frame.findAllWithCriteria({ types: ["TEXT"] });
+		figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
 
+		let context = this.createLabelReadContext();
+		let sliceStart = Date.now();
 		for (const textNode of textNodes) {
-			const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode);
+			if (Date.now() - sliceStart >= 32) {
+				await new Promise<void>((resolve) => setTimeout(resolve, 0));
+				context = this.createLabelReadContext();
+				sliceStart = Date.now();
+			}
+			const lokalizedLabel = this.toLocalizedLabelOrUndefined(textNode, context);
 			if (lokalizedLabel) {
 				if (!this.virtualTree.hasNode(textNode.id)) {
 					this.virtualTree.addNode(textNode, textNode.id);
@@ -931,8 +1006,6 @@ export default class LocalizedLabelManager {
 				// lokalizedLabel.parentIds.forEach((parentId) => frameData.refreshTriggerIds.add(parentId));
 			}
 		}
-
-		figma.skipInvisibleInstanceChildren = skipInvisibleInstanceChildrenBefore;
 
 		return frameData;
 	}
@@ -955,7 +1028,7 @@ export default class LocalizedLabelManager {
 		frameNodeId: string,
 		properties: { language?: Locale; sampleValues?: boolean },
 	) {
-		const frame = figma.getNodeById(frameNodeId) as FrameNode;
+		const frame = (await this.getNode(frameNodeId)) as FrameNode;
 		if (!frame) {
 			return;
 		}
@@ -997,18 +1070,33 @@ export default class LocalizedLabelManager {
 	async updateLabelsProperties(
 		updates: { nodeId: string; properties: SandboxUpdateLabelProperties }[],
 	) {
-		const textNodes = updates
-			.filter(({ properties }) => properties.characters !== undefined)
-			.map(({ nodeId }) => figma.getNodeById(nodeId))
-			.filter((node): node is TextNode => node?.type === "TEXT");
+		const nodes = await Promise.all(
+			updates.map(
+				({ nodeId }) => this.virtualTree.getVirtualNode(nodeId)?.sourceNode ?? this.getNode(nodeId),
+			),
+		);
+		const textNodes = nodes.filter(
+			(node, i): node is TextNode =>
+				updates[i].properties.characters !== undefined && node?.type === "TEXT",
+		);
 		await this.loadFontsForTextNodes(textNodes).catch(() => {
 			// a missing font is reported per label below
 		});
 
 		const results = [] as { label?: LocalizedLabel; error?: string }[];
-		for (const { nodeId, properties } of updates) {
+		let sliceStart = Date.now();
+		let context = this.createLabelReadContext();
+		for (let i = 0; i < updates.length; i++) {
+			if (Date.now() - sliceStart >= 256) {
+				await new Promise<void>((resolve) => setTimeout(resolve, 0));
+				sliceStart = Date.now();
+				context = this.createLabelReadContext();
+			}
+			const { nodeId, properties } = updates[i];
 			try {
-				results.push({ label: await this.updateLabelProperties(nodeId, properties) });
+				results.push({
+					label: await this.updateLabelPropertiesWithNode(nodeId, properties, nodes[i], context),
+				});
 			} catch (e: any) {
 				results.push({ error: e?.message ?? String(e) });
 			}
@@ -1017,6 +1105,15 @@ export default class LocalizedLabelManager {
 	}
 
 	async updateLabelProperties(nodeId: string, changedProperties: SandboxUpdateLabelProperties) {
+		return this.updateLabelPropertiesWithNode(nodeId, changedProperties);
+	}
+
+	private async updateLabelPropertiesWithNode(
+		nodeId: string,
+		changedProperties: SandboxUpdateLabelProperties,
+		resolvedNode?: BaseNode | null,
+		context?: ReturnType<LocalizedLabelManager["createLabelReadContext"]>,
+	) {
 		// setup queue for atomic label update processing
 		// - if no execution is ongoing hop right in and create a queue
 		// - if an execution is ongoing await the previous call
@@ -1033,8 +1130,12 @@ export default class LocalizedLabelManager {
 			this.labelUpdateQueue[nodeId] = [];
 		}
 
-		const textNode = figma.getNodeById(nodeId)! as TextNode;
+		let textNode: TextNode;
 		try {
+			const node = resolvedNode === undefined ? await this.getNode(nodeId) : resolvedNode;
+			if (node?.type !== "TEXT" || node.removed)
+				throw new Error(`Text layer ${nodeId} no longer exists`);
+			textNode = node;
 			if (changedProperties.labelName !== undefined) {
 				// console.log('setting name');
 				textNode.name = changedProperties.labelName;
@@ -1094,7 +1195,10 @@ export default class LocalizedLabelManager {
 			// }
 
 			if (changedProperties.language !== undefined) {
-				if (changedProperties.language !== this.messageStore?.getConfigSync().refLanguage) {
+				if (
+					changedProperties.language !==
+					(context ? context.refLanguage : this.messageStore?.getConfigSync().refLanguage)
+				) {
 					if (textNode.autoRename) {
 						textNode.setPluginData(this.autoRenameHashKey, textNode.characters);
 						textNode.autoRename = false;
@@ -1257,41 +1361,66 @@ export default class LocalizedLabelManager {
 					originalFillRanges,
 					sourceTextLength,
 					textNode.characters.length,
-					(start, end, _fills, range) => setTextFillRange(textNode, start, end, range),
+					(start, end, _fills, range) => {
+						const current = textNode.getStyledTextSegments(["fills", "fillStyleId"], start, end);
+						const same = rangeMatches(current, start, end, (segment) =>
+							range.fillStyleId
+								? segment.fillStyleId === range.fillStyleId
+								: !segment.fillStyleId &&
+									JSON.stringify(segment.fills) === JSON.stringify(range.fills),
+						);
+						if (!same) return setTextFillRange(textNode, start, end, range);
+					},
 				);
 
 				for (const rangeStyle of changedProperties.ops!) {
 					// debugger;
 
-					const list = rangeStyle.attributes?.list;
-					if (list === "ordered") {
-						textNode.setRangeListOptions(rangeStyle.from, rangeStyle.to, { type: "ORDERED" });
-					} else if (list === "bullet") {
-						textNode.setRangeListOptions(rangeStyle.from, rangeStyle.to, { type: "UNORDERED" });
-					} else {
-						textNode.setRangeListOptions(rangeStyle.from, rangeStyle.to, { type: "NONE" });
-					}
-
-					let linkUrl = rangeStyle.attributes?.link;
-					if (linkUrl && linkUrl.startsWith("/")) {
-						linkUrl = this.helperDomain + linkUrl;
-					}
-
-					textNode.setRangeHyperlink(
+					const current = textNode.getStyledTextSegments(
+						["listOptions", "hyperlink", "textDecoration"],
 						rangeStyle.from,
 						rangeStyle.to,
-						linkUrl ? { type: "URL", value: linkUrl } : null,
 					);
-
-					let decoration = "NONE" as TextDecoration;
-					if (rangeStyle.attributes?.textDecoration === "UNDERLINE") {
-						decoration = "UNDERLINE";
-					} else if (rangeStyle.attributes?.textDecoration === "STRIKETHROUGH") {
-						decoration = "STRIKETHROUGH";
+					const list = rangeStyle.attributes?.list;
+					const listType =
+						list === "ordered" ? "ORDERED" : list === "bullet" ? "UNORDERED" : "NONE";
+					if (
+						!rangeMatches(
+							current,
+							rangeStyle.from,
+							rangeStyle.to,
+							(segment) => segment.listOptions.type === listType,
+						)
+					) {
+						textNode.setRangeListOptions(rangeStyle.from, rangeStyle.to, { type: listType });
 					}
-
-					textNode.setRangeTextDecoration(rangeStyle.from, rangeStyle.to, decoration);
-
+					let linkUrl = rangeStyle.attributes?.link;
+					if (linkUrl && linkUrl.startsWith("/")) linkUrl = this.helperDomain + linkUrl;
+					const sameLink = rangeMatches(current, rangeStyle.from, rangeStyle.to, (segment) =>
+						linkUrl
+							? segment.hyperlink?.type === "URL" && segment.hyperlink.value === linkUrl
+							: segment.hyperlink === null,
+					);
+					if (!sameLink)
+						textNode.setRangeHyperlink(
+							rangeStyle.from,
+							rangeStyle.to,
+							linkUrl ? { type: "URL", value: linkUrl } : null,
+						);
+					const decoration = rangeStyle.attributes?.textDecoration ?? "NONE";
+					const decorations = sameLink
+						? current
+						: textNode.getStyledTextSegments(["textDecoration"], rangeStyle.from, rangeStyle.to);
+					if (
+						!rangeMatches(
+							decorations,
+							rangeStyle.from,
+							rangeStyle.to,
+							(segment) => segment.textDecoration === decoration,
+						)
+					) {
+						textNode.setRangeTextDecoration(rangeStyle.from, rangeStyle.to, decoration);
+					}
 					// console.log(`Processing: ${textNode.characters.length} ${rangeStyle.to} ${textNode.characters} ${changedProperties.characters}`);
 
 					// check if we should apply styles at all... is bold/italic/regular swiched once? otherwise keep the orginal label
@@ -1333,17 +1462,30 @@ export default class LocalizedLabelManager {
 			}, 1);
 		}
 
-		return this.toLocalizedLabelOrUndefined(textNode)!;
+		// Metadata-only writes stay in the synchronous turn that validated the node above.
+		const label = this.toLocalizedLabelOrUndefined(
+			textNode,
+			context,
+			changedProperties.characters === undefined,
+		);
+		if (!this.virtualTree.hasNode(nodeId)) this.virtualTree.addNode(textNode, nodeId);
+		if (changedProperties.messageState) {
+			const messageId =
+				label?.messageId ?? (textNode.getPluginData(this.messageNameDataKey) || undefined);
+			this.refreshLabelMessageLinkCache(nodeId, messageId);
+		}
+		return label!;
 	}
 
 	async commitUndo() {
+		if (this.messageStore) return this.messageStore.commitUndo();
 		return figma.commitUndo();
 	}
 
 	async fixLabelLints(textNodeId: string, lintsToFix: string[]) {
-		const textNode = figma.getNodeById(textNodeId)! as TextNode;
+		const textNode = (await this.getNode(textNodeId)!) as TextNode;
 		await this.loadFontsForTextNodes([textNode]);
-		const linter = new TextNodeLinter();
+		const linter = this.labelLinter;
 		linter.fix(textNode, lintsToFix);
 	}
 
@@ -1431,7 +1573,28 @@ export default class LocalizedLabelManager {
 
 	helperDomain = "https://relativeUrl";
 
-	private toLocalizedLabelOrUndefined(node: TextNode): LocalizedLabel | undefined {
+	private createLabelReadContext() {
+		return {
+			refLanguage: this.messageStore?.getConfigSync()?.refLanguage,
+			frameLanguages: new Map<string, Locale | undefined>(),
+			parents: new Map<
+				string,
+				{
+					page: PageNode | null;
+					rootFrame: FrameNode | null;
+					x: number;
+					y: number;
+				}
+			>(),
+		};
+	}
+
+	private toLocalizedLabelOrUndefined(
+		node: TextNode,
+		context?: ReturnType<LocalizedLabelManager["createLabelReadContext"]>,
+		verifiedTextNode = false,
+	): LocalizedLabel | undefined {
+		if (!node || (!verifiedTextNode && (node.removed || node.type !== "TEXT"))) return;
 		// we skip nodes that are not visible
 		if (!node.visible) {
 			return;
@@ -1443,47 +1606,53 @@ export default class LocalizedLabelManager {
 
 		let page: PageNode | null = null;
 		let rootFrame: FrameNode | null = null;
-		const parentIds = [] as string[];
 
-		let { x } = node;
-		let { y } = node;
+		let x = 0;
+		let y = 0;
 		let parent = node.parent as any;
-		while (parent) {
-			// we skip nodes where one of the parent nodes is invisible
-			if (parent.visible === false) {
-				return;
+		const parentId = parent?.id;
+		const cachedParent = parentId ? context?.parents.get(parentId) : undefined;
+		if (cachedParent) {
+			({ page, rootFrame, x, y } = cachedParent);
+		} else {
+			while (parent) {
+				// we skip nodes where one of the parent nodes is invisible
+				if (parent.visible === false) {
+					return;
+				}
+
+				const parentType = parent.type;
+
+				if (
+					(parentType === "COMPONENT" ||
+						parentType === "COMPONENT_SET" ||
+						parentType === "FRAME" ||
+						parentType === "GROUP" ||
+						parentType === "INSTANCE") &&
+					parent.width < this.containerSizeThreashold
+				) {
+					rootFrame = parent as FrameNode;
+				} else if (parentType === "PAGE") {
+					page = parent as PageNode;
+				}
+
+				if (
+					parentType !== "GROUP" &&
+					parentType !== "PAGE" &&
+					parent.parent &&
+					parent.parent.type !== "PAGE"
+				) {
+					x += parent.x;
+					y += parent.y;
+				}
+
+				parent = parent.parent;
 			}
 
-			const parentType = parent.type;
-
-			if (
-				(parentType === "COMPONENT" ||
-					parentType === "COMPONENT_SET" ||
-					parentType === "FRAME" ||
-					parentType === "GROUP" ||
-					parentType === "INSTANCE") &&
-				parent.width < this.containerSizeThreashold
-			) {
-				rootFrame = parent as FrameNode;
-			} else if (parentType === "PAGE") {
-				page = parent as PageNode;
-			}
-
-			if (
-				parentType !== "GROUP" &&
-				parentType !== "PAGE" &&
-				parent.parent &&
-				parent.parent.type !== "PAGE"
-			) {
-				x += parent.x;
-				y += parent.y;
-			}
-
-			// 1/4 of the time...
-			parentIds.push(parent.id);
-
-			parent = parent.parent;
+			if (parentId) context?.parents.set(parentId, { page, rootFrame, x, y });
 		}
+		x += node.x;
+		y += node.y;
 
 		if (!page || !rootFrame) {
 			return;
@@ -1494,14 +1663,10 @@ export default class LocalizedLabelManager {
 		// 1562ms -> 1071ms ~ 1/4
 		const labelText = node.characters;
 
-		const fillins =
-			node.getPluginData(this.fillinsToPlaceholderKey) === ""
-				? {}
-				: JSON.parse(node.getPluginData(this.fillinsToPlaceholderKey));
-		const parameterValues =
-			node.getPluginData(this.parameterValuesKey) === ""
-				? {}
-				: JSON.parse(node.getPluginData(this.parameterValuesKey));
+		const fillinsRaw = node.getPluginData(this.fillinsToPlaceholderKey);
+		const fillins = fillinsRaw ? JSON.parse(fillinsRaw) : {};
+		const parameterValuesRaw = node.getPluginData(this.parameterValuesKey);
+		const parameterValues = parameterValuesRaw ? JSON.parse(parameterValuesRaw) : {};
 		const tokenizedTextResult = this.extractDeltaOpsAndLabelStyles(node, fillins);
 
 		if (labelText.length === 1 && !/[0-9a-zA-Z\n\s]/.test(labelText)) {
@@ -1511,36 +1676,28 @@ export default class LocalizedLabelManager {
 		// get plugin 1192ms -> 938ms
 
 		const unmanaged = node.getPluginData(this.messageUnmanagedKey) === "true";
-		const messageId =
-			node.getPluginData(this.messageNameDataKey) === ""
-				? undefined
-				: node.getPluginData(this.messageNameDataKey);
-		const rootFrameLanguage =
-			rootFrame.getPluginData(this.languageDataKey) === ""
-				? // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain -- used to fix the type the type if the plugin data key is set we expect a refLanguage
-					this.messageStore?.getConfigSync()!.refLanguage!
-				: (rootFrame.getPluginData(this.languageDataKey) as Locale);
-
-		const language =
-			node.getPluginData(this.languageDataKey) === ""
-				? rootFrameLanguage
-				: (node.getPluginData(this.languageDataKey) as Locale);
-
+		const messageId = node.getPluginData(this.messageNameDataKey) || undefined;
+		let rootFrameLanguage: Locale | undefined;
+		if (context?.frameLanguages.has(rootFrame.id))
+			rootFrameLanguage = context.frameLanguages.get(rootFrame.id);
+		else {
+			rootFrameLanguage = (rootFrame.getPluginData(this.languageDataKey) ||
+				(context ? context.refLanguage : this.messageStore?.getConfigSync()?.refLanguage)) as
+				Locale | undefined;
+			context?.frameLanguages.set(rootFrame.id, rootFrameLanguage);
+		}
+		const language = (node.getPluginData(this.languageDataKey) || rootFrameLanguage) as Locale;
 		const variantPatternHTMLHash =
-			node.getPluginData(this.variantPatternHTMLHashDataKey) !== ""
-				? node.getPluginData(this.variantPatternHTMLHashDataKey)
-				: undefined;
-		const unlinkedMessage =
-			node.getPluginData(this.anonymMessageDataKey) !== ""
-				? JSON.parse(node.getPluginData(this.anonymMessageDataKey))
-				: undefined;
+			node.getPluginData(this.variantPatternHTMLHashDataKey) || undefined;
+		const anonymousRaw = node.getPluginData(this.anonymMessageDataKey);
+		const unlinkedMessage = anonymousRaw ? JSON.parse(anonymousRaw) : undefined;
 
 		return {
 			pageId: page.id,
 			pageName: page.name,
 			rootFrameId: rootFrame.id,
 			rootFrameName: rootFrame.name,
-			rootFrameLanguage,
+			rootFrameLanguage: rootFrameLanguage as Locale,
 			language,
 			variantPatternHTMLHash,
 			nodeId: node.id,
@@ -1855,7 +2012,7 @@ export default class LocalizedLabelManager {
 
 		const deltaOps = this.getDeltaOps(node, fillins);
 
-		const linter = new TextNodeLinter();
+		const linter = this.labelLinter;
 		const matchingLabelLints = linter.lint(node);
 
 		// get label styles

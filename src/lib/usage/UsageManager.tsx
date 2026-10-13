@@ -107,21 +107,16 @@ export default class UserManager {
 
 		this.rootNodeId = figma.root.id;
 
-		figma.on("documentchange", (event: any) => {
-			for (const change of event.documentChanges) {
-				if (
-					change.id === this.rootNodeId &&
-					change === "PROPERTY_CHANGE" &&
-					change.properties.includes("pluginData")
-				) {
-					const newFileState = UserManager.loadFileStateFromRoot();
-					this.state = UserManager.mergeStates(this.state, newFileState);
-
-					// we don't have to wait for the propagation here since we only update the local state
-					this.propagateState();
-				}
-			}
-		});
+		let lastFileState = figma.root.getPluginData(fileStorageKey);
+		setInterval(() => {
+			const raw = figma.root.getPluginData(fileStorageKey);
+			if (raw === lastFileState) return;
+			lastFileState = raw;
+			if (!raw) return;
+			const newFileState = UserManager.loadFileStateFromRoot();
+			this.state = UserManager.mergeStates(this.state, newFileState);
+			void this.propagateState();
+		}, 250);
 	}
 
 	static loadFileStateFromRoot(): FileUsage {

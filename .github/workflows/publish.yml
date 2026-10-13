@@ -5,11 +5,12 @@ name: Release build
 # from that URL, so a release folder is never overwritten and nothing else (a merge into dev, a later
 # release) can change the UI under users who run an older sandbox. Publishing to the Figma Community
 # stays a manual step in the Figma desktop app (the job summary lists the steps).
+# See docs/releasing.md.
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version, e.g. 0.10.101 (letters, digits, '.', '_' and '-'). The UI is hosted at https://opral.github.io/parrot-figma/releases/<version>/ ; an existing version is refused"
+        description: "Release version, e.g. 0.10.101 (letters, digits, '.', '_' and '-'). The UI is hosted at https://opral.github.io/parrot-figma/releases/<version>/ ; an existing version is refused. Versions without a '-' suffix can only be built from dev"
         required: true
       plugin_name:
         description: "Plugin name written into the released manifest"
@@ -26,6 +27,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     outputs:
       ui_url: ${{ steps.release.outputs.ui_url }}
       artifact_url: ${{ steps.upload.outputs.artifact-url }}
@@ -37,8 +39,13 @@ jobs:
         env:
           VERSION: ${{ inputs.version }}
         run: |
-          if ! [[ "$VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._-]{0,63}$ ]]; then
-            echo "::error::The version must start with a letter or digit, contain only letters, digits, '.', '_' and '-' and be at most 64 characters long."
+          if ! [[ "$VERSION" =~ ^[0-9A-Za-z]([0-9A-Za-z._-]{0,62}[0-9A-Za-z])?$ ]]; then
+            echo "::error::The version must start and end with a letter or digit, contain only letters, digits, '.', '_' and '-' and be at most 64 characters long."
+            exit 1
+          fi
+          # a release folder is permanent: only dev builds versions that look final, other branches build pre-releases (1.2.3-beta1)
+          if [ "$GITHUB_REF" != "refs/heads/dev" ] && [[ "$VERSION" != *-* ]]; then
+            echo "::error::Versions without a '-' suffix can only be released from the dev branch. Use a pre-release version (for example 1.2.3-beta1) to test this workflow from another branch."
             exit 1
           fi
           echo "ui_url=${PAGES_BASE_URL}/releases/${VERSION}/" >> "$GITHUB_OUTPUT"
@@ -49,7 +56,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version }}
         run: |
-          if gh api "repos/${GITHUB_REPOSITORY}/contents/releases/${VERSION}?ref=${PAGES_BRANCH}" > /dev/null 2>&1; then
+          existing=$(gh api "repos/${GITHUB_REPOSITORY}/contents/releases?ref=${PAGES_BRANCH}" --jq '.[].name' 2> /dev/null || true)
+          if printf '%s\n' "$existing" | grep -ixF -q -- "$VERSION"; then
             echo "::error::Release ${VERSION} already exists on the ${PAGES_BRANCH} branch. Releases are never overwritten: choose a new version."
             exit 1
           fi
@@ -97,6 +105,20 @@ jobs:
           UI_URL: ${{ steps.release.outputs.ui_url }}
           PLUGIN_NAME: ${{ inputs.plugin_name }}
 
+      # Everything that can be checked before the release is published.
+      - name: Check the release files
+        run: |
+          ui=release/dist/ui
+          fail() { echo "::error::$1"; exit 1; }
+          [ -f "$ui/index.html" ] || fail "The UI build has no index.html."
+          grep -q '<script[^>]*src="' "$ui/index.html" || fail "index.html has no script."
+          [ -n "$(find "$ui" -type f -name '*.wasm')" ] || fail "The UI build contains no .wasm file."
+          grep -qF "$UI_URL" release/dist/plugin.js || fail "The plugin sandbox does not contain the UI URL ${UI_URL}."
+          ! grep -qF 'http://localhost:5180' release/dist/plugin.js || fail "The plugin sandbox contains the dev server URL."
+          [ -z "$(find release \( -type l -o -name '.git*' \))" ] || fail "The release contains symbolic links or git metadata."
+        env:
+          UI_URL: ${{ steps.release.outputs.ui_url }}
+
       - uses: actions/upload-artifact@v4
         id: upload
         with:
@@ -109,9 +131,11 @@ jobs:
   publish:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
-    # one release at a time: the Pages branch is a single linear history
+    # One release at a time: the Pages branch is a single linear history. GitHub keeps only one waiting
+    # run per group, so a third release started while one runs and one waits cancels the waiting one.
     concurrency:
       group: release-pages
       cancel-in-progress: false
@@ -121,7 +145,7 @@ jobs:
     steps:
       - name: Check the version
         run: |
-          if ! [[ "$VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._-]{0,63}$ ]]; then
+          if ! [[ "$VERSION" =~ ^[0-9A-Za-z]([0-9A-Za-z._-]{0,62}[0-9A-Za-z])?$ ]]; then
             echo "::error::Invalid version."
             exit 1
           fi
@@ -146,7 +170,7 @@ jobs:
           set -euo pipefail
 
           rc=0
-          git ls-remote --exit-code --heads origin "$PAGES_BRANCH" > /dev/null || rc=$?
+          git ls-remote --exit-code --heads origin "refs/heads/${PAGES_BRANCH}" > /dev/null || rc=$?
           case "$rc" in
             0)
               git fetch --depth 1 origin "$PAGES_BRANCH"
@@ -156,12 +180,6 @@ jobs:
               echo "The ${PAGES_BRANCH} branch does not exist yet: creating it."
               git checkout --quiet --orphan "$PAGES_BRANCH"
               git rm -rf --quiet .
-              printf '%s\n' \
-                "# Parrot releases" \
-                "" \
-                "Hosted UI of the Parrot Figma plugin, one folder per release: \`releases/<version>/\`." \
-                "Written by the **Release build** workflow of the \`dev\` branch. A release folder is never changed or overwritten: the plugin of that release loads its UI from here. Do not edit by hand." \
-                > README.md
               ;;
             *)
               echo "::error::Could not read the remote branch list."
@@ -169,15 +187,24 @@ jobs:
               ;;
           esac
 
+          if [ ! -f README.md ]; then
+            printf '%s\n' \
+              "# Parrot releases" \
+              "" \
+              "Hosted UI of the Parrot Figma plugin, one folder per release: \`releases/<version>/\`." \
+              "Written by the **Release build** workflow of the \`dev\` branch. A release folder is never changed or overwritten: the plugin of that release loads its UI from here. Do not edit by hand." \
+              > README.md
+          fi
+
           # never overwrite a release (the case-insensitive check keeps the folders unique on every file system)
           if [ -d releases ] && [ -n "$(find releases -mindepth 1 -maxdepth 1 -iname "$VERSION")" ]; then
             echo "::error::Release ${VERSION} already exists on the ${PAGES_BRANCH} branch. Releases are never overwritten: choose a new version."
             exit 1
           fi
 
-          # the UI of the build job is plain static files: no links, no nested git metadata
-          if [ -n "$(find ../release/dist/ui \( -type l -o -name '.git*' \))" ]; then
-            echo "::error::The UI build contains symbolic links or git metadata."
+          # the release of the build job is plain static files: no links, no nested git metadata
+          if [ -n "$(find ../release \( -type l -o -name '.git*' \))" ]; then
+            echo "::error::The release contains symbolic links or git metadata."
             exit 1
           fi
           mkdir -p "releases/${VERSION}"
@@ -206,13 +233,35 @@ jobs:
           # no force: a concurrent change to the branch makes the push fail instead of being overwritten
           git push origin "HEAD:refs/heads/${PAGES_BRANCH}"
 
-      # The Figma plugin cannot be published before its UI is served with the headers it needs.
+  # The Figma plugin must not be published before its UI is served with the headers it needs. A
+  # separate job: when GitHub Pages is slow or not set up, re-run only this job.
+  verify:
+    needs: [build, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      VERSION: ${{ inputs.version }}
+      UI_URL: ${{ needs.build.outputs.ui_url }}
+      ARTIFACT_URL: ${{ needs.build.outputs.artifact_url }}
+    steps:
+      - name: Check the version
+        run: |
+          if ! [[ "$VERSION" =~ ^[0-9A-Za-z]([0-9A-Za-z._-]{0,62}[0-9A-Za-z])?$ ]] || [ "$UI_URL" != "${PAGES_BASE_URL}/releases/${VERSION}/" ]; then
+            echo "::error::Invalid version or UI URL."
+            exit 1
+          fi
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: parrot-figma-plugin
+          path: release
+
       - name: Wait until the release is served
         run: |
           set -euo pipefail
 
-          fetch() { # url, header file; prints the HTTP status. The query string keeps CDN-cached 404s out of the way.
-            curl -sS -o /dev/null -D "$2" -w '%{http_code}' -H 'Origin: null' "$1?cb=${GITHUB_RUN_ID}-$(date +%s)" || true
+          fetch() { # url, header file; HEAD request, prints the HTTP status. The query string keeps CDN-cached 404s out of the way.
+            curl -sS -I --connect-timeout 10 --max-time 60 -o "$2" -w '%{http_code}' -H 'Origin: null' "$1?cb=${GITHUB_RUN_ID}-$(date +%s)" || true
           }
 
           status=000
@@ -223,7 +272,7 @@ jobs:
             sleep 10
           done
           if [ "$status" != 200 ]; then
-            echo "::error::${UI_URL} is not served after 15 minutes. The release is on the ${PAGES_BRANCH} branch; check Settings > Pages (source: ${PAGES_BRANCH} branch, / root) and its build."
+            echo "::error::${UI_URL} is not served after 15 minutes. The release is on the ${PAGES_BRANCH} branch; check Settings > Pages (source: ${PAGES_BRANCH} branch, / root) and its build, then re-run this job."
             exit 1
           fi
 
@@ -247,7 +296,7 @@ jobs:
           check "Page" "index.html" '^text/html'
           ui_dir=release/dist/ui
           # the entry script of the page and the largest WebAssembly file (the SDK)
-          js=$(grep -o '<script[^>]*src="[^"]*"' "$ui_dir/index.html" | head -n 1 | sed -E 's|.*src="(\./)?||; s|"$||')
+          js=$(grep -o '<script[^>]*src="[^"]*"' "$ui_dir/index.html" | head -n 1 | sed -E 's|.*src="(\./)?||; s|"$||' || true)
           wasm=$(cd "$ui_dir" && find . -type f -name '*.wasm' -exec ls -S {} + | head -n 1 | sed 's|^\./||')
           if [ -n "$js" ]; then
             check "Script" "$js" '(javascript|ecmascript)'
@@ -265,9 +314,6 @@ jobs:
           if [ "$failed" != 0 ]; then exit 1; fi
 
       - name: Summary
-        if: success()
-        env:
-          ARTIFACT_URL: ${{ needs.build.outputs.artifact_url }}
         run: |
           {
             echo "## Parrot ${VERSION} is built and hosted"

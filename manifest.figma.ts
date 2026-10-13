@@ -12,7 +12,7 @@ export default {
     devAllowedDomains: [
       'http://localhost:8080',
     ],
-    reasoning: "Parrot's interface is hosted on GitHub Pages (opral.github.io) because it needs web workers and WebAssembly, which a plugin cannot load from inline HTML. inlang.com receives anonymous usage counts (PostHog through the inlang.com/relay proxy; no message texts, keys or file names). s3-alpha.figma.com serves Figma profile pictures.",
+    reasoning: "Parrot's interface is hosted on GitHub Pages (opral.github.io) because it needs web workers and WebAssembly, which a plugin cannot load from inline HTML. inlang.com receives usage counts with hashed user and file ids (PostHog through the inlang.com/relay proxy; never message texts, keys or file names). s3-alpha.figma.com serves Figma profile pictures.",
   },
   ui: 'dist/ui.html',
   main: 'dist/code.js',

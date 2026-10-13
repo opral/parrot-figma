@@ -8,6 +8,8 @@ type LayerVariablesProps = {
 	message: Message;
 	language: string;
 	parameterValues: MessageParameterValues;
+	/** the text of the layer was edited and not saved to the message yet: a new value would replace it */
+	locked: boolean;
 	onChange: (name: string, value: string) => void;
 };
 
@@ -19,6 +21,7 @@ export default function LayerVariables({
 	message,
 	language,
 	parameterValues,
+	locked,
 	onChange,
 }: LayerVariablesProps) {
 	const variables = layerVariables(message);
@@ -36,20 +39,26 @@ export default function LayerVariables({
 						key={input}
 						className="layer-variable"
 						data-tooltip-content={
-							plural
-								? `The number of ${input} in this layer. It decides which form of the message the layer shows (${form?.join(" · ") ?? "other"}).`
-								: `The value of ${input} in this layer. It decides which form of the message the layer shows. Empty shows the "other" form.`
+							locked
+								? `The text of this layer was changed. Use "Update message" or "Revert" before you change ${input}: the layer would show the text of the message again.`
+								: plural
+									? `The number of ${input} in this layer. It decides which form of the message the layer shows (${form?.join(" · ") ?? "other"}).`
+									: `The value of ${input} in this layer. It decides which form of the message the layer shows. Empty shows the "other" form.`
 						}
 					>
 						<span className="layer-variable-name">{input}</span>
-						<TextField
-							singleClick
-							text={value}
-							placeholder={plural ? "number" : "other"}
-							onSave={(text: string) => {
-								if (text.trim() !== value) onChange(input, text);
-							}}
-						/>
+						{locked ? (
+							<span className="layer-variable-value">{value || (plural ? "number" : "other")}</span>
+						) : (
+							<TextField
+								singleClick
+								text={value}
+								placeholder={plural ? "number" : "other"}
+								onSave={(text: string) => {
+									if (text.trim() !== value) onChange(input, text);
+								}}
+							/>
+						)}
 					</div>
 				);
 			})}

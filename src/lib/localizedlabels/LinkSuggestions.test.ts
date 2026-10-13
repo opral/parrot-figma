@@ -299,6 +299,46 @@ describe("planLinks", () => {
 	});
 });
 
+describe("planLinks in a language the message is not translated to", () => {
+	const catalog = [message("shop.free", { en: text("Free <strong>delivery</strong>") })];
+	const request = (language: string, layerHtml: string, characters: string) => ({
+		nodeId: "1",
+		messageName: "shop.free",
+		language,
+		layerHtml,
+		characters,
+	});
+	const plan = (language: string, layerHtml: string, characters: string) =>
+		planLinks(
+			[request(language, layerHtml, characters)],
+			(name) => catalog.find((m) => m.id === name) as any,
+			new Set(),
+			"en",
+		)[0]!;
+
+	it("keeps the formatting of a layer that shows the reference text, and never rewrites the message", () => {
+		expect(plan("fr", "Free <strong>delivery</strong>", "Free delivery")).toMatchObject({
+			keepText: true,
+			updateMessage: false,
+		});
+		// other words: the layer shows the message (the reference text)
+		expect(plan("fr", "Livraison", "Livraison").keepText).toBe(false);
+	});
+
+	it("a message with text of its own in the language is compared with that text", () => {
+		const translated = [
+			message("shop.free", { en: text("Free delivery"), fr: text("Livraison offerte") }),
+		];
+		const [result] = planLinks(
+			[request("fr", "Free delivery", "Free delivery")],
+			() => translated[0] as any,
+			new Set(),
+			"en",
+		);
+		expect(result!.keepText).toBe(false);
+	});
+});
+
 describe("isFlatText", () => {
 	it("is text without markup, line breaks or repeated spaces", () => {
 		expect(isFlatText("Tom &amp; Jerry")).toBe(true);

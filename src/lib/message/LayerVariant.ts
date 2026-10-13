@@ -11,13 +11,13 @@ import type { MessageParameterValues } from "./MessageParameterValues";
  */
 
 const PLURAL_CATEGORIES = ["zero", "one", "two", "few", "many", "other"];
-/** The numbers tried to find an example for the catch-all form of a plural, best first. */
-const EXAMPLE_COUNTS = [2, 5, 11, 100, 1.5, 0.5, 0, 1, 3, 4, 10, 1000000];
+/** The whole numbers tried to find an example for the catch-all form of a plural, best first. */
+const EXAMPLE_COUNTS = [2, 5, 11, 100, 3, 4, 10, 0, 1, 1000000];
 
 type Declaration = NonNullable<Message["nativeBundle"]>["declarations"][number];
 type Annotation = {
 	name: string;
-	options?: { name: string; value: { type: string; value?: string } }[];
+	options?: { name: string; value: { type: string; value?: string; name?: string } }[];
 };
 
 /** A variable the forms of a message are chosen by - the layer has a value for it ("count"). */
@@ -27,7 +27,12 @@ export type SelectorInput = {
 	/** the variable the layer has a value for ("count") */
 	input: string;
 	/** the value is a number: the plural rules of the language choose the category */
-	plural?: { type: "cardinal" | "ordinal"; offset: number };
+	plural?: {
+		type: "cardinal" | "ordinal";
+		/** the type is the value of this variable ("ordinal"), as i18next files with ordinals and cardinals have it */
+		typeVariable?: string;
+		offset: number;
+	};
 };
 
 function declarationOf(name: string, declarations: readonly Declaration[] | undefined) {
@@ -64,9 +69,13 @@ function resolveInput(
 		: name;
 }
 
+function option(annotation: Annotation, name: string) {
+	return annotation.options?.find((candidate) => candidate.name === name)?.value;
+}
+
 function literalOption(annotation: Annotation, name: string) {
-	const option = annotation.options?.find((candidate) => candidate.name === name);
-	return option?.value.type === "literal" ? option.value.value : undefined;
+	const value = option(annotation, name);
+	return value?.type === "literal" ? value.value : undefined;
 }
 
 /**
@@ -81,11 +90,13 @@ export function selectorInputs(message: Message): SelectorInput[] {
 		const annotation = resolveAnnotation(name, declarations);
 		if (annotation?.name === "plural") {
 			const offset = Number(literalOption(annotation, "offset") ?? 0);
+			const type = option(annotation, "type");
 			return {
 				selector: name,
 				input,
 				plural: {
-					type: literalOption(annotation, "type") === "ordinal" ? "ordinal" : "cardinal",
+					type: type?.type === "literal" && type.value === "ordinal" ? "ordinal" : "cardinal",
+					...(type?.type === "variable-reference" && type.name ? { typeVariable: type.name } : {}),
 					offset: Number.isFinite(offset) ? offset : 0,
 				},
 			};
@@ -93,7 +104,11 @@ export function selectorInputs(message: Message): SelectorInput[] {
 		if (annotation === undefined) {
 			const keys = message.variants.map((variant) => variant.match[index] ?? "*");
 			const named = keys.filter((key) => key !== "*");
-			if (named.length > 0 && named.every((key) => PLURAL_CATEGORIES.includes(key))) {
+			// plural categories, next to exact numbers at most (`=0`, `one`, `other`)
+			if (
+				named.some((key) => PLURAL_CATEGORIES.includes(key)) &&
+				named.every((key) => PLURAL_CATEGORIES.includes(key) || isNumeric(key))
+			) {
 				return { selector: name, input, plural: { type: "cardinal", offset: 0 } };
 			}
 		}
@@ -116,14 +131,21 @@ const sameKey = (a: string, b: string) =>
 	a === b || (isNumeric(a) && isNumeric(b) && Number(a) === Number(b));
 
 const pluralRulesCache = new Map<string, Intl.PluralRules | null>();
-function pluralCategory(language: string, plural: NonNullable<SelectorInput["plural"]>, n: number) {
-	const key = `${language}\u0000${plural.type}`;
+function pluralCategory(
+	language: string,
+	plural: NonNullable<SelectorInput["plural"]>,
+	n: number,
+	parameterValues: MessageParameterValues,
+) {
+	const type = plural.typeVariable
+		? parameterValues[plural.typeVariable]?.value.trim() === "ordinal"
+			? "ordinal"
+			: "cardinal"
+		: plural.type;
+	const key = `${language}\u0000${type}`;
 	if (!pluralRulesCache.has(key)) {
 		try {
-			pluralRulesCache.set(
-				key,
-				new Intl.PluralRules(language.replace(/_/g, "-"), { type: plural.type }),
-			);
+			pluralRulesCache.set(key, new Intl.PluralRules(language.replace(/_/g, "-"), { type }));
 		} catch {
 			pluralRulesCache.set(key, null);
 		}
@@ -132,13 +154,17 @@ function pluralCategory(language: string, plural: NonNullable<SelectorInput["plu
 }
 
 /** The match values a layer prefers for a selector, best first. "other" and "*" (the catch-all) come last. */
-function preferredKeys(input: SelectorInput, value: string | undefined, language: string) {
+function preferredKeys(
+	input: SelectorInput,
+	language: string,
+	parameterValues: MessageParameterValues,
+) {
 	const catchAll = ["other", "*"];
-	const text = value?.trim();
+	const text = parameterValues[input.input]?.value.trim();
 	if (!text) return catchAll;
 	const keys = [text];
 	if (input.plural && isNumeric(text)) {
-		const category = pluralCategory(language, input.plural, Number(text));
+		const category = pluralCategory(language, input.plural, Number(text), parameterValues);
 		if (category) keys.push(category);
 	}
 	return [...keys, ...catchAll];
@@ -146,9 +172,9 @@ function preferredKeys(input: SelectorInput, value: string | undefined, language
 
 /**
  * The form of a message a layer shows in a language: the one its variable values choose, else the
- * catch-all ("other") form. A message without selectors has one form per language. When no form fits
- * (a Polish message without "other"), the first form of the language is used - never nothing.
- * Undefined only if the message has no form in the language at all.
+ * catch-all ("other") form. A message without selectors has one form per language. Undefined when the
+ * language has no form that fits (it is not translated, or none of its forms takes the count): the
+ * caller falls back to the reference language, see `htmlForLayer`.
  */
 export function pickVariant(
 	message: Message,
@@ -159,7 +185,7 @@ export function pickVariant(
 	if (message.selectors.length === 0) return variants.find((variant) => variant.match.length === 0);
 
 	const preferences = selectorInputs(message).map((input) =>
-		preferredKeys(input, parameterValues[input.input]?.value, language),
+		preferredKeys(input, language, parameterValues),
 	);
 	let best: { variant: Variant; rank: number[] } | undefined;
 	for (const variant of variants) {
@@ -170,7 +196,7 @@ export function pickVariant(
 		if (rank.some((position) => position < 0)) continue;
 		if (!best || isBetter(rank, best.rank)) best = { variant, rank };
 	}
-	return best?.variant ?? variants[0];
+	return best?.variant;
 }
 
 /** The first selector decides first, then the next one. */
@@ -202,19 +228,27 @@ export function layerMatch(
 }
 
 /**
- * A number that makes a plural show its catch-all ("other") form in a language - the value a layer
- * starts with, so it reads "2 items" instead of "count items".
+ * A whole number that makes a plural show the form it shows without a number (its catch-all "other"
+ * form) in a language - the value a layer starts with, so it reads "2 items" instead of "count items".
+ * Where no whole number does (Russian "other" is for fractions) 2 is used. Exact-number forms (`=2`) are skipped.
  */
-export function exampleCount(language: string, plural: NonNullable<SelectorInput["plural"]>) {
-	const example = EXAMPLE_COUNTS.find(
-		(n) => pluralCategory(language, plural, n + plural.offset) === "other",
-	);
-	return String((example ?? 2) + plural.offset);
+export function exampleCount(message: Message, language: string, variable: SelectorInput) {
+	const offset = variable.plural?.offset ?? 0;
+	const defaultForm = JSON.stringify(pickVariant(message, language, {})?.match);
+	const example = EXAMPLE_COUNTS.find((n) => {
+		const value = String(n + offset);
+		const form = pickVariant(message, language, {
+			[variable.input]: { type: "string", value },
+		})?.match;
+		return JSON.stringify(form) === defaultForm;
+	});
+	return String((example ?? 2) + offset);
 }
 
 /**
  * The values a layer linked to a message starts with: an example number for every plural variable
- * that has no value set by the designer (a layer linked before had the variable's name, "count").
+ * that has no number yet (a layer linked before had the variable's name, "count"). A number stays when
+ * the layer is switched to another language - the plural rules of that language choose the form for it.
  * A value the designer typed is kept; a select without a value shows its catch-all form.
  */
 export function defaultVariableValues(
@@ -223,11 +257,15 @@ export function defaultVariableValues(
 	parameterValues: MessageParameterValues,
 ): MessageParameterValues {
 	const defaults: MessageParameterValues = {};
-	for (const { input, plural } of layerVariables(message)) {
-		if (!plural) continue;
-		const current = parameterValues[input];
-		if (current && !current.default) continue;
-		defaults[input] = { type: "string", value: exampleCount(language, plural), default: true };
+	for (const variable of layerVariables(message)) {
+		if (!variable.plural) continue;
+		const current = parameterValues[variable.input];
+		if (current && !(current.default && !isNumeric(current.value.trim()))) continue;
+		defaults[variable.input] = {
+			type: "string",
+			value: exampleCount(message, language, variable),
+			default: true,
+		};
 	}
 	return defaults;
 }
@@ -265,6 +303,8 @@ export function inferVariableValues(
 		let consistent = true;
 		for (const [index, name] of names.entries()) {
 			const value = match[index + 1]!;
+			// the text of a layer is HTML: markup or an entity around the number is no value
+			if (/[<&]/.test(value)) consistent = false;
 			// the same variable twice must read the same
 			if (values[name] && values[name].value !== value) consistent = false;
 			values[name] = { type: "string", value, default: false };
@@ -285,7 +325,10 @@ export function inferVariableValues(
 			if (!plural || values[input]) continue;
 			for (const n of [1, ...EXAMPLE_COUNTS]) {
 				const value = String(n + plural.offset);
-				const candidate = { ...values, [input]: { type: "string" as const, value, default: true } };
+				const candidate = {
+					...values,
+					[input]: { type: "string" as const, value, default: false },
+				};
 				if (chooses(candidate)) {
 					values[input] = candidate[input];
 					break;

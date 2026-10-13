@@ -348,6 +348,7 @@ function linkManager(labels: ReturnType<typeof linkable>[], messages: Message[])
 	manager.updateBatchDepth = 0;
 	manager.messageStore = {
 		getMessageByName: (name: string) => stored.get(name),
+		getRefLanugage: () => "en",
 		upsertMessage: vi.fn(async (message: Message) => {
 			stored.set(message.id, message);
 			return message;
@@ -762,6 +763,37 @@ describe("a layer linked to a plural message", () => {
 			messageId: "checkout.items",
 		});
 		expect(linkText("1 item").characters).toBe("2 items");
+	});
+
+	test("a layer that shows a form without the number keeps that form", () => {
+		const oneItem: Message = {
+			...items,
+			variants: [
+				{ languageTag: "en", match: ["one"], pattern: [{ type: "Text", value: "One item" }] },
+				items.variants[1]!,
+			],
+		};
+		const { manager, label } = pluralManager(oneItem);
+		Object.assign(label, {
+			messageLinkState: MessageLinkState.Unset,
+			messageId: undefined,
+			currentPatternHTML: "One item",
+		});
+		const update = link(manager);
+		expect(update.characters).toBe("One item");
+		expect(update.messageState.parameterValues.count.value).toBe("1");
+	});
+
+	test("does not change the values of the cached layer while it writes the new ones", () => {
+		const { manager, label } = pluralManager();
+		const stored = { count: { type: "string" as const, value: "count", default: true } };
+		label.parameterValues = stored;
+		const update = manager.toSandboxUpdate("label-1", {
+			messageState: { type: "linked", messageId: "checkout.items", parameterValues: stored },
+			language: "en",
+		});
+		expect(update.messageState.parameterValues.count.value).toBe("2");
+		expect(stored.count.value).toBe("count");
 	});
 
 	test("keeps the text of the layer when the message has no text to show", () => {

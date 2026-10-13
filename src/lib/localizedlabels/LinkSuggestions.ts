@@ -244,14 +244,27 @@ export function planLinks(
 	links: readonly LinkRequest[],
 	getMessage: (name: string) => Message | undefined,
 	usedMessageIds: ReadonlySet<string> = new Set(),
+	referenceLanguage?: string,
 ): LinkPlan[] {
+	/**
+	 * The text a layer in a language shows for a message: its text there - or, for a language the message
+	 * is not translated to yet, the reference text (see `buildMessageTextIndex`). That one is only shown, never
+	 * rewritten: the message has no text in the language to replace.
+	 */
+	const shownHtml = (message: Message, language: string) => {
+		const own = messageHtml(message, language);
+		if (own !== undefined || referenceLanguage === undefined) return { html: own, fallback: false };
+		const untranslated = language !== referenceLanguage && !hasTranslation(message, language);
+		const html = untranslated ? messageHtml(message, referenceLanguage) : undefined;
+		return { html, fallback: html !== undefined };
+	};
 	// the text of a message in a language is decided once per batch: by a layer that shows it exactly,
 	// by the layer that creates the message, or by the first layer whose text replaces it
 	const settled = new Set<string>();
 	const settledKey = (name: string, language: string) => `${name}\u0000${language}`;
 	for (const link of links) {
 		const message = getMessage(link.messageName);
-		if (message && messageHtml(message, link.language) === link.layerHtml)
+		if (message && shownHtml(message, link.language).html === link.layerHtml)
 			settled.add(settledKey(link.messageName, link.language));
 	}
 	// messages created by this batch: the html of the layer that creates them
@@ -278,13 +291,14 @@ export function planLinks(
 					visibleText(createdHtml) === normalizeText(link.characters),
 			);
 		}
-		const html = messageHtml(message, link.language);
+		const { html, fallback } = shownHtml(message, link.language);
 		if (html === link.layerHtml) return plan(true);
 		if (html === undefined || visibleText(html) !== normalizeText(link.characters)) {
 			// linked to a message with another text (chosen by the user): the layer shows the message
 			return plan(false);
 		}
-		const updateMessage = isFlatText(html) && !settled.has(key) && !usedMessageIds.has(message.id);
+		const updateMessage =
+			!fallback && isFlatText(html) && !settled.has(key) && !usedMessageIds.has(message.id);
 		if (updateMessage) settled.add(key);
 		return plan(true, updateMessage);
 	});

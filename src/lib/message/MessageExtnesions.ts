@@ -53,8 +53,6 @@ export class MessageExtension {
 			locale: Locale;
 			parameterValues: MessageParameterValues;
 			variantHtml: string;
-			/** the form of the message the text belongs to (see `layerMatch`) */
-			match?: string[];
 		},
 	) {
 		const parameterToPlaceholders = {} as {
@@ -67,7 +65,7 @@ export class MessageExtension {
 			overwrittenVariant = getVariant(message, {
 				where: {
 					languageTag: overrideVariant.locale,
-					match: overrideVariant.match ?? [],
+					match: [], // TODO #18 TODO use matching based on variantParameterValues
 				},
 			});
 

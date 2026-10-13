@@ -918,7 +918,15 @@ export default class MessageStoreMemory extends EventTarget {
 				const existingHtml = htmlIn(variant.languageTag);
 				if (existingHtml) return existingHtml;
 			}
-			return fallbackHtml ?? html;
+			// no form takes the layer's values in any language (none has an "other" form for this count):
+			// any text of the message, the layer's own language first - never blank
+			const anyText = [...message.variants]
+				.sort(
+					(a, b) => Number(b.languageTag === languageTag) - Number(a.languageTag === languageTag),
+				)
+				.map((variant) => this.patternToHtml(variant.pattern))
+				.find((text) => text !== "");
+			return anyText ?? fallbackHtml ?? html;
 		}
 		return html;
 	}

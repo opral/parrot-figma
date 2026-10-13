@@ -88,11 +88,87 @@ describe("pickVariant for a plural", () => {
 		expect(pickVariant(english, "en", values("1.0"))?.match).toEqual(["one"]);
 	});
 
-	it("never ends up with nothing: a value no form fits and a message without catch-all", () => {
+	it("takes no form for a count that none of the forms of the language takes (the caller falls back)", () => {
 		expect(pickVariant(english, "en", values("many"))?.match).toEqual(["other"]);
+		// Polish without "other": 5 is "many", not "one" - and a language without forms has none
 		const polish = items({ "pl:one": ["x", "plural"], "pl:few": ["y", "plural"] });
-		expect(pickVariant(polish, "pl", values("5"))?.match).toEqual(["one"]);
+		expect(pickVariant(polish, "pl", values("1"))?.match).toEqual(["one"]);
+		expect(pickVariant(polish, "pl", values("5"))).toBeUndefined();
 		expect(pickVariant(polish, "de", values("5"))).toBeUndefined();
+		// ... but the layer still shows text: the reference form of that count, else any text
+		expect(
+			MessageStoreMemory.htmlForLayer(
+				{ ...english, variants: [...english.variants, ...polish.variants] },
+				"pl",
+				"en",
+				values("5"),
+			),
+		).toBe("<ph>count</ph> items");
+		expect(MessageStoreMemory.htmlForLayer(polish, "pl", "en", values("5"))).toBe(
+			"<ph>count</ph> x",
+		);
+	});
+
+	it("shifts the number by an ICU offset and prefers exact numbers over categories", () => {
+		const message = (options: object[]): Message => ({
+			id: "m",
+			nativeBundle: {
+				id: "m",
+				declarations: [
+					{ type: "input-variable", name: "count" },
+					{
+						type: "local-variable",
+						name: "countPlural",
+						value: {
+							type: "expression",
+							arg: { type: "variable-reference", name: "count" },
+							annotation: { type: "function-reference", name: "plural", options },
+						},
+					},
+				],
+				messages: [],
+			} as any,
+			selectors: [{ type: "VariableReference", name: "countPlural" }],
+			variants: ["1", "one", "other"].map((form) => ({
+				languageTag: "en",
+				match: [form === "other" ? "*" : form],
+				pattern: [text(form)],
+			})),
+		});
+		// offset:1 - the categories are chosen for count - 1: 2 -> 1 -> "one", 3 -> 2 -> other
+		const offset = message([{ name: "offset", value: { type: "literal", value: "1" } }]);
+		expect(pickVariant(offset, "en", values("2"))?.pattern).toEqual([text("one")]);
+		expect(pickVariant(offset, "en", values("3"))?.pattern).toEqual([text("other")]);
+		// an exact number (=1) wins over the category of the same number
+		expect(pickVariant(message([]), "en", values("1"))?.pattern).toEqual([text("1")]);
+		expect(pickVariant(message([]), "en", values("1.0"))?.pattern).toEqual([text("1")]);
+	});
+
+	it("reads the plural type from a variable: i18next files with ordinal and cardinal forms", async () => {
+		const plugin = translationPlugins.find((format) => format.label === "i18next JSON")!.plugin;
+		const [message] = await importWithPlugin({
+			plugin,
+			content: JSON.stringify({
+				place_one: "{{count}} place",
+				place_other: "{{count}} places",
+				place_ordinal_one: "{{count}}st",
+				place_ordinal_two: "{{count}}nd",
+				place_ordinal_few: "{{count}}rd",
+				place_ordinal_other: "{{count}}th",
+			}),
+			fileName: "en.json",
+			locale: "en",
+		});
+		const html = (count: string, type?: string) =>
+			MessageStoreMemory.htmlForLayer(message!, "en", "en", {
+				count: { type: "string", value: count },
+				...(type ? { pluralType: { type: "string" as const, value: type } } : {}),
+			});
+		expect(html("1")).toBe("<ph>count</ph> place");
+		expect(html("2")).toBe("<ph>count</ph> places");
+		expect(html("2", "ordinal")).toBe("<ph>count</ph>nd");
+		expect(html("3", "ordinal")).toBe("<ph>count</ph>rd");
+		expect(html("4", "ordinal")).toBe("<ph>count</ph>th");
 	});
 
 	it("follows the language: Russian has few and many", () => {
@@ -193,16 +269,36 @@ describe("layer values", () => {
 			count: { type: "string", value: "2", default: true },
 		});
 		expect(defaultVariableValues(english, "en", values("1", false))).toEqual({});
-		expect(exampleCount("en", { type: "cardinal", offset: 0 })).toBe("2");
-		expect(exampleCount("ru", { type: "cardinal", offset: 0 })).not.toBe("");
-		// an ICU offset shifts the example: "offset:1" -> 2 - 1 = the "other" example of the plural
-		expect(exampleCount("en", { type: "cardinal", offset: 1 })).toBe("3");
+		const variable = layerVariables(english)[0]!;
+		expect(exampleCount(english, "en", variable)).toBe("2");
+		// the number stays when the layer is switched to another language: its plural rules choose the form
+		expect(defaultVariableValues(english, "ru", values("2", true))).toEqual({});
+	});
+
+	it("shows an integer example also where the catch-all form is only for fractions, and skips exact numbers", () => {
+		const russian = items({
+			"ru:one": ["a", "plural"],
+			"ru:few": ["b", "plural"],
+			"ru:many": ["c", "plural"],
+			"ru:other": ["d", "plural"],
+		});
+		expect(exampleCount(russian, "ru", layerVariables(russian)[0]!)).toBe("2");
+		// ICU: "=2 {A pair}" is no example of "other"
+		const exact: Message = {
+			...english,
+			variants: [
+				{ languageTag: "en", match: ["2"], pattern: [text("A pair")] },
+				...english.variants,
+			],
+		};
+		expect(exampleCount(exact, "en", layerVariables(exact)[0]!)).toBe("5");
 	});
 
 	it("gives the match of the form a layer shows, also in a language that is not translated", () => {
 		expect(layerMatch(english, "en", values("1"))).toEqual(["one"]);
 		expect(layerMatch(english, "de", values("1"), "en")).toEqual(["one"]);
-		expect(layerMatch(english, "de", values("1"))).toEqual(["one"]);
+		// without any fallback the first form of the message
+		expect(layerMatch(english, "de", values("5"))).toEqual(["one"]);
 	});
 });
 
@@ -282,15 +378,13 @@ describe("imported plurals", () => {
 describe("MessageExtension.getParameter", () => {
 	it("does not need the catch-all form when the text of a layer overrides a form", () => {
 		// the Layers tab edits the text of a layer linked to a plural: there is no form for a match of []
-		const parameters = (match?: string[]) =>
+		const parameters = () =>
 			MessageExtension.getParameter(english, {
 				locale: Locale.EN,
 				parameterValues: {},
 				variantHtml: "<ph>count</ph> pieces",
-				match,
 			}).map((parameter) => parameter.name);
 		expect(parameters()).toEqual(["count"]);
-		expect(parameters(["one"])).toEqual(["count"]);
 	});
 });
 
@@ -347,9 +441,14 @@ describe("inferVariableValues", () => {
 		// the "one" form has no number in its text: an example number that chooses it
 		expect(inferVariableValues(message, "en", "One message from Ana")).toEqual({
 			sender: { type: "string", value: "Ana", default: false },
-			count: { type: "string", value: "1", default: true },
+			count: { type: "string", value: "1", default: false },
 		});
 		expect(inferVariableValues(message, "en", "7 messages").count?.value).toBe("7");
+	});
+
+	it("does not take markup as a value", () => {
+		expect(inferVariableValues(english, "en", "<b>7</b> items")).toEqual({});
+		expect(inferVariableValues(english, "en", "7&nbsp;items")).toEqual({});
 	});
 
 	it("is escaped: a form with regular expression characters", () => {

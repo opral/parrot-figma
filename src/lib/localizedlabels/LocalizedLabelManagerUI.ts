@@ -529,7 +529,8 @@ export default class LocalizedLabelManagerUI
 			),
 			localizedLabel.currentPatternHTML,
 		);
-		this.updateMessage(updatedMessage, {});
+		// awaited: a message that cannot take the text (a form that needs the Messages tab) is reported by the caller
+		await this.updateMessage(updatedMessage, {});
 
 		// await this.updateUnpinnedLabelsWithKey(localizedLabel.messageId!);
 
@@ -703,6 +704,7 @@ export default class LocalizedLabelManagerUI
 						requests,
 						(name) => this.messageStore.getMessageByName(name),
 						await this.usedMessageIds(requests),
+						this.messageStore.getRefLanugage(),
 					);
 					const updates = [] as { nodeId: string; changedProperties: LabelPropertyChanges }[];
 					for (const plan of plans) {
@@ -1123,7 +1125,13 @@ export default class LocalizedLabelManagerUI
 		let variantPatternHTMLHash: string | undefined;
 		if (changedProperties.messageState?.type === "linked") {
 			const message = this.messageStore.getMessage(changedProperties.messageState.messageId)!;
-			const { parameterValues } = changedProperties.messageState;
+			// the sandbox gets (and the label caches) its own copy: the values below are filled in
+			const messageState = {
+				...changedProperties.messageState,
+				parameterValues: { ...changedProperties.messageState.parameterValues },
+			};
+			changedProperties.messageState = messageState;
+			const { parameterValues } = messageState;
 			// A message with forms (plural, select): the layer's values choose the form it shows.
 			const wasLinked =
 				localizedLabelCached.messageLinkState === MessageLinkState.Linked &&
@@ -1149,12 +1157,6 @@ export default class LocalizedLabelManagerUI
 					locale: localizedLabelCached.language,
 					parameterValues,
 					variantHtml: variantHTML,
-					match: layerMatch(
-						message,
-						localizedLabelCached.language,
-						parameterValues,
-						this.messageStore.getRefLanugage(),
-					),
 				});
 			} else {
 				parameters = MessageExtension.getParameter(message);

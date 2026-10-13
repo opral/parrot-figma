@@ -414,12 +414,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 				if (!message) {
 					return false;
 				}
-				return MessageStoreMemory.canTranslate(
-					message,
-					refLanguage,
-					this.language,
-					layerMatch(message, refLanguage, this.parameterValues),
-				);
+				return MessageStoreMemory.canTranslate(message, refLanguage, this.language, []);
 			}
 		}
 

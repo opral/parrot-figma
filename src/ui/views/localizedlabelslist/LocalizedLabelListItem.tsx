@@ -647,6 +647,7 @@ export default function LocalizedLabelListItem({
 											message={message}
 											language={localizedLabel.language}
 											parameterValues={localizedLabel.parameterValues}
+											locked={labelState.modified}
 											onChange={(name, value) => {
 												localizedLabelManager
 													.updateLabelVariable(localizedLabel, name, value)

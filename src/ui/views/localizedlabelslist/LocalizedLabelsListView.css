@@ -443,6 +443,12 @@
 	min-width: 56px;
 }
 
+.layer-variable .layer-variable-value {
+	min-width: 56px;
+	padding: 1px 5px;
+	color: var(--figma-color-text-disabled);
+}
+
 .layer-variable .text-field-text p {
 	color: var(--figma-color-text);
 	padding-top: 1px;

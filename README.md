@@ -1,78 +1,73 @@
-# Parrot: the localization plugin for Figma
+<div align="center">
 
-Parrot translates your Figma designs. Link text layers to messages, switch a frame to another language, and import and export your translations as JSON, ICU, Android XML, Apple strings and more. It is built on the [Inlang SDK](https://inlang.com).
+### Parrot
 
-**[Install Parrot from the Figma Community](https://www.figma.com/community/plugin/1205803482754362456)**
+Localize your Figma designs. Link text layers to messages, switch whole frames between languages, and import and export translations in the formats your app already uses.
 
-- **Messages for your designs.** Link text layers to messages, or generate keys for a whole frame.
-- **Languages and plurals.** Edit every language of a message, with plural and select variants.
-- **Checks.** Missing and empty translations, missing or unknown variables and missing plural forms.
-- **Switch a frame to a language.** Rich text (bold, lists, line breaks) stays intact.
-- **Import and export.** Inlang JSON, i18next JSON, ICU MessageFormat, Inlang Message Format (Paraglide JS), next-intl JSON, Android XML, Apple strings and Apple String Catalogs.
-- **Machine translation.** Not built in. Request access to inlang Cloud in the plugin.
+[**Install from the Figma Community**](https://www.figma.com/community/plugin/1205803482754362456) &nbsp;&bull;&nbsp; [inlang](https://inlang.com) &nbsp;&bull;&nbsp; [Issues](https://github.com/opral/parrot-figma/issues) &nbsp;&bull;&nbsp; [Discord](https://discord.gg/gdMPPWy57R)
 
-Parrot is open source. Issues and pull requests are welcome.
+<p align="center">
+  <img width="900" alt="Parrot open in Figma next to an English and a German checkout screen, showing one message in English, German and French" src="docs/images/hero.png" />
+</p>
 
-## Local development
+</div>
 
-Parrot uses the published `@inlang/sdk` 4, `@inlang/editor-component` and Inlang format plugins (pinned in `package.json`). No sibling checkout or local link is required.
+## Install
 
-```sh
-pnpm install
-pnpm dev --host localhost --port 5180 --strictPort
-```
+Install [Parrot from the Figma Community](https://www.figma.com/community/plugin/1205803482754362456), then run it from **Plugins** in any Figma Design file. In Dev Mode, Parrot shows a read-only panel with the message of the selected layer.
 
-In Figma desktop, choose **Plugins → Development → Import plugin from manifest** and select this repository's `manifest.json`. Run **Parrot (development)**. The sandbox loader is built automatically and opens the UI at `http://localhost:5180`.
+## Start with one frame
 
-Validation:
+1. Open Parrot and set your reference language and target languages in **Setup**.
+2. Select a frame and choose **Generate keys**, or link text layers to existing messages in **Layers**.
+3. Write or import the translations in **Messages**, then switch the frame to another language.
 
-```sh
-pnpm tsc
-pnpm lint
-pnpm test
-pnpm build
-```
+Your messages live in the Figma file, so everyone who opens the file sees the same translations.
 
-CI (`.github/workflows/ci.yml`) runs the same checks plus the sandbox build on every pull request.
+## Translate in Figma
 
-`pnpm build` creates hosted UI assets in `dist/ui/`. The UI uses module workers and WebAssembly; serve the complete directory, including worker and WASM assets. Build the Figma sandbox separately with `VITE_CUSTOM_URL` set to the hosted UI URL using `pnpm exec vite build -c vite.config.plugin.ts`. Use a separate checkout when building a hosted loader while the local plugin is running.
+- **Link text to messages.** Link a layer to a message, or let Parrot generate keys for every text layer in a frame and link layers that already show the same text.
+- **Switch languages.** Switch one frame, many frames or a whole page between languages. Bold, lists and line breaks stay as designed.
+- **Plurals and selects.** Edit every language of a message side by side, including plural forms, selects and exact numbers.
+- **Checks.** Parrot flags missing and empty translations, missing or unknown variables, and missing plural forms before developers see them.
 
-## Branches and releases
+<details>
+<summary>See the Messages and Layers tabs</summary>
 
-`dev` is the default branch: pull requests go into `dev`. Merging into `dev` publishes nothing. A release is built with the manual **Release build** workflow (`.github/workflows/publish.yml`, input: the URL that hosts `dist/ui`) and published to the Figma Community by hand from the Figma desktop app (**Plugins → Manage plugins → Publish new version**). The workflow no longer runs on pushes to the old `production` branch (that branch still holds the old auto-publishing workflow until `dev` is merged into it).
+### Messages
 
-## Import translations
+All languages of a message in one place, with checks under each translation.
 
-Open the **Import** tab, choose **Format**, and click **Import file** beside the destination language. Configure the reference and target languages in **Setup**. Review the preview, then choose **Import Keys**. Matching translations in that language are replaced; other languages are kept, and linked labels refresh after saving.
+<img src="docs/images/messages.png" alt="The Messages tab with two messages in English, German and French, one with a missing French translation" width="100%" />
 
-Import and Export share the same formats in the same order: inlang JSON, i18next JSON, ICU MessageFormat, Inlang Message Format, next-intl JSON, Android XML, Apple strings, and Apple String Catalog. All formats use published Inlang storage plugins for both import and export; imports run through SDK `project.importFiles()`. Parsing runs in a temporary project before any Figma data is written. Native Android and Apple formats use the same plugin adapter. Catalog imports read their source language and import only the chosen language; catalog export produces a catalog for the chosen language. Apple workflow metadata is regenerated by the plugin. More browser-compatible Inlang plugins can be registered in `src/lib/transfer/TranslationFormats.ts`.
+### Layers
 
-Dotted keys, nested objects, empty strings, and ordinary interpolation are supported. Messages uses the published Inlang editor with Figma theme tokens. Native bundles retain computed plural declarations, locale-specific selectors, and formatter annotations. Plain-text edits preserve formatter options. Structured patterns that the text editor cannot represent appear as read-only previews. Canvas label editing still uses the legacy projection and rejects changes that would discard native metadata.
+See which layers in a frame are linked, and switch the frame to another language.
 
-MVP 
- - define sharedPluginDataFormat
- - store key / values in one blob in the plugin data
- - implement api to access new format
- - implement figma localization state
- - implement key edit view to allow to create new keys / delete / tag
- - implement script to export strings.dict for ios
- - implement script to export ressources for android
- - make frame feel more native
-    - fullscreen
-    - modal
-    - bottomsheet
+<img src="docs/images/layers.png" alt="The Layers tab with a frame switched to German" width="100%" />
 
-## Telemetry
+</details>
 
-Production builds send anonymous usage counts to PostHog (one project shared with the other inlang apps), through the reverse proxy at `https://inlang.com/relay` so the plugin only allowlists `inlang.com`. Dev builds send nothing. Events follow PostHog's `category:object_action` naming and carry `app: "parrot"`, `app_version` and a hashed `project_id`:
+## Import and export
 
-- `app:session_start` - the plugin opened
-- `project:project_view` - `message_count`, `language_count`, `collaborator_count`, `linked_layer_count`, `frame_count`
-- `translation:language_update` - `frame_count`
-- `messages:link_create` - `source`, `layer_count`, `new_message_count`
-- `import:file_submit` / `export:file_create` - `format`, `message_count`
-- `cloud:interest_button_click` - `topic` (`cloud`, `machine_translation`)
+Parrot reads and writes the formats of your codebase, so translators work in Figma and developers get files they can use.
 
-The user id is the hashed Figma user id. No message texts, keys or file names are sent. See `src/lib/telemetry/Telemetry.ts`.
+| Format | Used by |
+| --- | --- |
+| Inlang JSON | inlang apps |
+| i18next JSON | i18next, react-i18next |
+| ICU MessageFormat | FormatJS, react-intl and others |
+| Inlang Message Format | Paraglide JS |
+| next-intl JSON | next-intl |
+| Android XML | Android apps |
+| Apple strings and String Catalogs | iOS and macOS apps |
 
-Older design notes are kept in [docs/legacy-design-notes.md](docs/legacy-design-notes.md).
+Open the **Import** tab, choose a format, review the preview and import. Imports never write to your file before you confirm.
+
+## Machine translation
+
+Machine translation is not built in. Request access to inlang Cloud from the **Cloud** tab.
+
+## Contributing
+
+Parrot is open source and built on the [Inlang SDK](https://inlang.com). Issues and pull requests are welcome. See [Developing Parrot](docs/development.md).

@@ -8,11 +8,11 @@ export default {
   ],
   capabilities: ['inspect'],
   networkAccess: {
-    allowedDomains: ['https://inlang.com', 'https://parrot-global.github.io', 'https://api.parrot.global', 'https://s3-alpha.figma.com'],
+    allowedDomains: ['https://inlang.com', 'https://opral.github.io', 'https://s3-alpha.figma.com'],
     devAllowedDomains: [
       'http://localhost:8080',
     ],
-    reasoning: 'Parrot connects to various sources in order to translate designs, provide analytics, enforce updates, and access the Parrot API.',
+    reasoning: "Parrot's interface is hosted on GitHub Pages (opral.github.io) because it needs web workers and WebAssembly, which a plugin cannot load from inline HTML. inlang.com receives anonymous usage counts (PostHog through the inlang.com/relay proxy; no message texts, keys or file names). s3-alpha.figma.com serves Figma profile pictures.",
   },
   ui: 'dist/ui.html',
   main: 'dist/code.js',

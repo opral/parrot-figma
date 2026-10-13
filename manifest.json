@@ -32,9 +32,10 @@
   "networkAccess": {
     "allowedDomains": [
       "https://inlang.com",
-      "https://parrot-global.github.io",
+      "https://opral.github.io",
       "https://s3-alpha.figma.com"
     ],
+    "reasoning": "Parrot's interface is hosted on GitHub Pages (opral.github.io) because it needs web workers and WebAssembly, which a plugin cannot load from inline HTML. inlang.com receives anonymous usage counts (PostHog through the inlang.com/relay proxy; no message texts, keys or file names). s3-alpha.figma.com serves Figma profile pictures.",
     "devAllowedDomains": [
       "http://localhost:5180"
     ]

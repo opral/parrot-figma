@@ -69,8 +69,9 @@ export class MessageExtension {
 				},
 			});
 
-			if (overrideVariant) {
-				overwrittenVariant!.pattern = MessageStoreMemory.patternHtmlToPattern(
+			// a message without that form in that language has nothing to overwrite
+			if (overwrittenVariant) {
+				overwrittenVariant.pattern = MessageStoreMemory.patternHtmlToPattern(
 					overrideVariant.variantHtml,
 				);
 			}

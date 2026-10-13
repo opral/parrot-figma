@@ -68,15 +68,24 @@ export default function ImportView({
 	>();
 	const [searchingLayers, setSearchingLayers] = useState(false);
 
-	const findLayersToLink = async (importedMessageIds?: Set<string>) => {
+	/** @param imported the file that was just imported: only layers that it can newly make linkable are offered */
+	const findLayersToLink = async (imported?: { messageIds: Set<string>; language: Locale }) => {
 		setSearchingLayers(true);
 		try {
 			const messages = labelManager.messageStore.getAllMessages() ?? [];
+			const refLanguage = labelManager.messageStore.getRefLanugage();
+			const importedMessageIds = imported?.messageIds;
+			// A translation adds no text of the reference language: layers in reference-language frames are
+			// matched against every message, so which layers are offered does not depend on which keys the
+			// file has (a translation that lacks a message must not hide the layers that show its reference text).
+			const unlimitedLanguage =
+				imported && imported.language !== refLanguage ? refLanguage : undefined;
 			const index = buildMessageTextIndex(
-				importedMessageIds
+				importedMessageIds && !unlimitedLanguage
 					? messages.filter((message) => importedMessageIds.has(message.id))
 					: messages,
 				labelManager.messageStore.getOrderedLanguages(),
+				refLanguage,
 			);
 			// only layers with one of these texts are read from the page - reading every layer is slow
 			const texts = [...new Set([...index.values()].flatMap((byText) => [...byText.keys()]))];
@@ -90,9 +99,9 @@ export default function ImportView({
 				frameName: label.rootFrameName,
 			}));
 			const labelsById = new Map(labels.map((label) => [label.nodeId, label]));
-			const matches = matchLayersToMessages(layers, index, importedMessageIds);
+			const matches = matchLayersToMessages(layers, index, importedMessageIds, unlimitedLanguage);
 			if (matches.length === 0) {
-				if (!importedMessageIds) {
+				if (!imported) {
 					setImportNotice("No unlinked text layer on this page has the text of a message.");
 				}
 				return;
@@ -112,9 +121,10 @@ export default function ImportView({
 						a.label.x - b.label.x,
 				);
 			setLinkReview({
-				title: importedMessageIds
-					? "Link layers to the imported messages?"
-					: "Link layers to existing messages?",
+				title:
+					importedMessageIds && !unlimitedLanguage
+						? "Link layers to the imported messages?"
+						: "Link layers to existing messages?",
 				description:
 					rows.length === 1
 						? "This unlinked text layer on this page shows the text of a message. It keeps its line breaks and formatting."
@@ -214,9 +224,10 @@ export default function ImportView({
 				`Imported ${importResult.messages.length === 1 ? "1 key" : `${importResult.messages.length} keys`} for ${importResult.language}.`,
 			);
 			const importedMessageIds = new Set(importResult.messages.map((message) => message.id));
+			const importedLanguage = importResult.language;
 			setImportResult(undefined);
 			setimportKeysByState(undefined);
-			void findLayersToLink(importedMessageIds);
+			void findLayersToLink({ messageIds: importedMessageIds, language: importedLanguage });
 		} catch (error) {
 			setImportError(
 				`Import stopped: ${error instanceof Error ? error.message : String(error)}. Some changes may already be saved.`,

@@ -22,6 +22,7 @@ import LinksLoadedEvent from "./LinksLoadedEvent";
 import { ImportMessage } from "../import/ImportMessage";
 import { Gender } from "../message/variants/Gender";
 import { FillinToPlaceholder, MessageExtension, Parameter } from "../message/MessageExtnesions";
+import { defaultVariableValues, inferVariableValues, layerMatch } from "../message/LayerVariant";
 import { MessageParameterValues } from "../message/MessageParameterValues";
 import MessageImporter from "../import/MessageImporter";
 import TranslatorMachine from "../translationprovider/TranslatorMachine";
@@ -515,14 +516,21 @@ export default class LocalizedLabelManagerUI
 
 	async createNewVersionFromLabelState(localizedLabel: UILocalizedLabel) {
 		const messageToUpdate = this.messageStore.getMessage(localizedLabel.messageId!)!;
+		// the text of the layer is the text of the form its variable values choose (a plural's count)
 		const updatedMessage = MessageStoreMemory.upsertVariantPatternHtml(
 			messageToUpdate,
 			undefined,
 			localizedLabel.language,
-			[],
+			layerMatch(
+				messageToUpdate,
+				localizedLabel.language,
+				localizedLabel.parameterValues,
+				this.messageStore.getRefLanugage(),
+			),
 			localizedLabel.currentPatternHTML,
 		);
-		this.updateMessage(updatedMessage, {});
+		// awaited: a message that cannot take the text (a form that needs the Messages tab) is reported by the caller
+		await this.updateMessage(updatedMessage, {});
 
 		// await this.updateUnpinnedLabelsWithKey(localizedLabel.messageId!);
 
@@ -696,6 +704,7 @@ export default class LocalizedLabelManagerUI
 						requests,
 						(name) => this.messageStore.getMessageByName(name),
 						await this.usedMessageIds(requests),
+						this.messageStore.getRefLanugage(),
 					);
 					const updates = [] as { nodeId: string; changedProperties: LabelPropertyChanges }[];
 					for (const plan of plans) {
@@ -1030,6 +1039,26 @@ export default class LocalizedLabelManagerUI
 		}
 	}
 
+	/**
+	 * Sets the value a layer has for a variable of its message (a plural's count): the layer then shows
+	 * the form of the message that value chooses. The message itself is not touched - one undo step.
+	 * An empty value goes back to the example value.
+	 */
+	async updateLabelVariable(localizedLabel: UILocalizedLabel, name: string, value: string) {
+		await this.runFrameOperation(localizedLabel.rootFrameId, async () => {
+			// the layer as it is now: a language switch may have run while this waited
+			const label = this.cachedLocalisedLabels[localizedLabel.nodeId] ?? localizedLabel;
+			if (label.messageLinkState !== MessageLinkState.Linked || !label.messageId) return;
+			const parameterValues = { ...label.parameterValues };
+			if (value.trim() === "") delete parameterValues[name];
+			else parameterValues[name] = { type: "string", value: value.trim(), default: false };
+			await this.updateLabelProperties(label.nodeId, {
+				messageState: { type: "linked", messageId: label.messageId, parameterValues },
+			});
+			await this.commitUndo();
+		});
+	}
+
 	// TODO #18 add again to allow to change parameter values without touching the message it self
 	// async updateLabelFillin(localizedLabel: LocalizedLabel, placeholderName: string, fillinValue: string) {
 	//   const newFillins = {
@@ -1096,12 +1125,37 @@ export default class LocalizedLabelManagerUI
 		let variantPatternHTMLHash: string | undefined;
 		if (changedProperties.messageState?.type === "linked") {
 			const message = this.messageStore.getMessage(changedProperties.messageState.messageId)!;
+			// the sandbox gets (and the label caches) its own copy: the values below are filled in
+			const messageState = {
+				...changedProperties.messageState,
+				parameterValues: { ...changedProperties.messageState.parameterValues },
+			};
+			changedProperties.messageState = messageState;
+			const { parameterValues } = messageState;
+			// A message with forms (plural, select): the layer's values choose the form it shows.
+			const wasLinked =
+				localizedLabelCached.messageLinkState === MessageLinkState.Linked &&
+				localizedLabelCached.messageId === changedProperties.messageState.messageId;
+			if (!wasLinked && !changedProperties.messageState.keepText) {
+				// A layer that is linked now keeps the numbers it shows: "7 items" is count 7 of "{count} items".
+				const inferred = inferVariableValues(
+					message,
+					language,
+					localizedLabelCached.currentPatternHTML ?? "",
+				);
+				for (const [name, value] of Object.entries(inferred)) {
+					if (!parameterValues[name] || parameterValues[name].default)
+						parameterValues[name] = value;
+				}
+			}
+			// A plural that has no number yet gets an example one, so the layer reads "2 items" - and has a count to edit.
+			Object.assign(parameterValues, defaultVariableValues(message, language, parameterValues));
 			let parameters: Parameter[] | undefined;
-			let variantHTML = changedProperties.messageState.variantPatternHTML;
+			const variantHTML = changedProperties.messageState.variantPatternHTML;
 			if (variantHTML !== undefined) {
 				parameters = MessageExtension.getParameter(message, {
 					locale: localizedLabelCached.language,
-					parameterValues: changedProperties.messageState.parameterValues,
+					parameterValues,
 					variantHtml: variantHTML,
 				});
 			} else {
@@ -1124,7 +1178,7 @@ export default class LocalizedLabelManagerUI
 			} else if (variantHTML !== undefined) {
 				textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(
 					variantHTML,
-					changedProperties.messageState.parameterValues,
+					parameterValues,
 				);
 				variantPatternHTMLHash = blake.blake2sHex(variantHTML);
 			} else {
@@ -1145,18 +1199,21 @@ export default class LocalizedLabelManagerUI
 
         variantHTML = MessageStoreMemory.patternToHtml(bestMatchingVariant.pattern);
         */
-				variantHTML =
-					MessageStoreMemory.htmlForPatternWithFallback(
-						updatedMessage!,
-						language,
-						this.messageStore.getRefLanugage(),
-						[],
-					) ?? "";
-				textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(
-					variantHTML,
-					changedProperties.messageState.parameterValues,
+				const layerHTML = MessageStoreMemory.htmlForLayer(
+					updatedMessage!,
+					language,
+					this.messageStore.getRefLanugage(),
+					parameterValues,
 				);
-				variantPatternHTMLHash = blake.blake2sHex(variantHTML);
+				// A message without any form to show (no text in any language) leaves the layer's text as it is
+				// - it never goes blank because a form is missing.
+				if (layerHTML !== undefined) {
+					textOpsAndFillinsToPlaceholders = UILocalizedLabel.toTextOpsAndFillinsToPlaceholder(
+						layerHTML,
+						parameterValues,
+					);
+					variantPatternHTMLHash = blake.blake2sHex(layerHTML);
+				}
 
 				changedProperties.language = language; // bestMatchingVariant.languageTag as Locale;
 			}

@@ -68,12 +68,37 @@ export function isFlatText(html: string) {
 /** language -> normalized text -> ids of the messages with exactly that text */
 export type MessageTextIndex = Map<string, Map<string, string[]>>;
 
-export function buildMessageTextIndex(messages: readonly Message[], languages: Iterable<string>) {
+/** Whether a message has a translation (any text, even only a variable) in a language. */
+function hasTranslation(message: Message, language: string) {
+	return message.variants.some(
+		(variant) => variant.languageTag === language && variant.pattern.length > 0,
+	);
+}
+
+/**
+ * @param referenceLanguage a message that is not translated to a language yet shows its reference text
+ * there (nothing else exists to switch to): a layer in a frame of that language that shows the reference
+ * text still shows the message. Whether a message is found must not depend on how complete the other
+ * languages are.
+ */
+export function buildMessageTextIndex(
+	messages: readonly Message[],
+	languages: Iterable<string>,
+	referenceLanguage?: string,
+) {
 	const index: MessageTextIndex = new Map();
 	for (const language of languages) {
 		const byText = new Map<string, string[]>();
 		for (const message of messages) {
-			const text = messageText(message, language);
+			let text = messageText(message, language);
+			if (
+				text === undefined &&
+				referenceLanguage !== undefined &&
+				language !== referenceLanguage &&
+				!hasTranslation(message, language)
+			) {
+				text = messageText(message, referenceLanguage);
+			}
 			if (text === undefined) continue;
 			byText.set(text, [...(byText.get(text) ?? []), message.id]);
 		}
@@ -93,18 +118,21 @@ export function messagesWithText(
 
 /**
  * Layers whose text equals the text of a message in the layer's language. `onlyMessageIds` limits the
- * matches to these messages (e.g. the messages that were just imported).
+ * matches to these messages (e.g. the messages that were just imported) - except for layers in
+ * `unlimitedLanguage`: importing a translation adds no text of the reference language, so the layers
+ * that show it are matched against every message and what is offered does not depend on which keys
+ * the translation file has.
  */
 export function matchLayersToMessages(
 	layers: readonly LayerText[],
 	index: MessageTextIndex,
 	onlyMessageIds?: ReadonlySet<string>,
+	unlimitedLanguage?: string,
 ) {
 	const matches = [] as { layer: LayerText; messageIds: string[] }[];
 	for (const layer of layers) {
-		const messageIds = messagesWithText(index, layer).filter(
-			(id) => !onlyMessageIds || onlyMessageIds.has(id),
-		);
+		const limit = layer.language === unlimitedLanguage ? undefined : onlyMessageIds;
+		const messageIds = messagesWithText(index, layer).filter((id) => !limit || limit.has(id));
 		if (messageIds.length > 0) matches.push({ layer, messageIds });
 	}
 	return matches;
@@ -216,14 +244,27 @@ export function planLinks(
 	links: readonly LinkRequest[],
 	getMessage: (name: string) => Message | undefined,
 	usedMessageIds: ReadonlySet<string> = new Set(),
+	referenceLanguage?: string,
 ): LinkPlan[] {
+	/**
+	 * The text a layer in a language shows for a message: its text there - or, for a language the message
+	 * is not translated to yet, the reference text (see `buildMessageTextIndex`). That one is only shown, never
+	 * rewritten: the message has no text in the language to replace.
+	 */
+	const shownHtml = (message: Message, language: string) => {
+		const own = messageHtml(message, language);
+		if (own !== undefined || referenceLanguage === undefined) return { html: own, fallback: false };
+		const untranslated = language !== referenceLanguage && !hasTranslation(message, language);
+		const html = untranslated ? messageHtml(message, referenceLanguage) : undefined;
+		return { html, fallback: html !== undefined };
+	};
 	// the text of a message in a language is decided once per batch: by a layer that shows it exactly,
 	// by the layer that creates the message, or by the first layer whose text replaces it
 	const settled = new Set<string>();
 	const settledKey = (name: string, language: string) => `${name}\u0000${language}`;
 	for (const link of links) {
 		const message = getMessage(link.messageName);
-		if (message && messageHtml(message, link.language) === link.layerHtml)
+		if (message && shownHtml(message, link.language).html === link.layerHtml)
 			settled.add(settledKey(link.messageName, link.language));
 	}
 	// messages created by this batch: the html of the layer that creates them
@@ -250,13 +291,14 @@ export function planLinks(
 					visibleText(createdHtml) === normalizeText(link.characters),
 			);
 		}
-		const html = messageHtml(message, link.language);
+		const { html, fallback } = shownHtml(message, link.language);
 		if (html === link.layerHtml) return plan(true);
 		if (html === undefined || visibleText(html) !== normalizeText(link.characters)) {
 			// linked to a message with another text (chosen by the user): the layer shows the message
 			return plan(false);
 		}
-		const updateMessage = isFlatText(html) && !settled.has(key) && !usedMessageIds.has(message.id);
+		const updateMessage =
+			!fallback && isFlatText(html) && !settled.has(key) && !usedMessageIds.has(message.id);
 		if (updateMessage) settled.add(key);
 		return plan(true, updateMessage);
 	});

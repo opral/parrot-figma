@@ -166,3 +166,90 @@ describe("UILocalizedLabel.setLanguageOnUnsetLabel", () => {
 		).toEqual(["de", "en"]);
 	});
 });
+
+describe("UILocalizedLabel linked to a plural message", () => {
+	const count = { type: "VariableReference" as const, name: "count" };
+	const form = (languageTag: string, match: string, value: string) => ({
+		languageTag,
+		match: [match],
+		pattern: [count, { type: "Text" as const, value }],
+	});
+	// "other" is a literal match, as the Inlang message format and i18next files import it
+	const items: Message = {
+		id: "checkout.items",
+		selectors: [{ type: "VariableReference", name: "count" }],
+		variants: [
+			form("en", "one", " item"),
+			form("en", "other", " items"),
+			form("de", "one", " Artikel"),
+			form("de", "other", " Artikel"),
+		],
+	};
+	const countOf = (value: string) => ({ count: { type: "string" as const, value } });
+
+	test("is not modified while it shows the form its count chooses", () => {
+		const { label } = createLabel(items);
+		Object.assign(label, {
+			messageLinkState: MessageLinkState.Linked,
+			language: "en",
+			parameterValues: countOf("1"),
+			currentPatternHTML: "<ph>count</ph> item",
+		});
+		expect(label.getState().modified).toBe(false);
+		label.currentPatternHTML = "<ph>count</ph> items";
+		expect(label.getState().modified).toBe(true);
+		// without a stored count the layer shows the catch-all form
+		Object.assign(label, { parameterValues: {}, currentPatternHTML: "<ph>count</ph> items" });
+		expect(label.getState().modified).toBe(false);
+	});
+
+	test("switches the language without asking for a translation that exists", async () => {
+		const { label, manager } = createLabel(items);
+		Object.assign(label, {
+			messageLinkState: MessageLinkState.Linked,
+			language: "en",
+			parameterValues: countOf("1"),
+		});
+		const translator = { translate: vi.fn() } as any;
+
+		await label.setLanguageOnLinkedLabel(Locale.DE, translator, false, false);
+
+		expect(translator.translate).not.toHaveBeenCalled();
+		expect(manager.updateMessage).not.toHaveBeenCalled();
+		expect(manager.updateLabelProperties).toHaveBeenCalledTimes(1);
+		expect(manager.updateLabelProperties).toHaveBeenCalledWith("text-node", {
+			messageState: {
+				type: "linked",
+				messageId: "checkout.items",
+				parameterValues: countOf("1"),
+			},
+			language: Locale.DE,
+		});
+	});
+
+	test("asks for the translation of the form the layer shows, not of a form without selectors", async () => {
+		const english: Message = { ...items, variants: items.variants.slice(0, 2) };
+		const { label, manager } = createLabel(english);
+		Object.assign(label, {
+			messageLinkState: MessageLinkState.Linked,
+			language: "en",
+			parameterValues: countOf("1"),
+		});
+		const translator = { translate: vi.fn(async () => "<ph>count</ph> Artikel") } as any;
+
+		await label.setLanguageOnLinkedLabel(Locale.DE, translator, false, false);
+
+		expect(translator.translate).toHaveBeenCalledWith(
+			"<ph>count</ph> item",
+			"en",
+			Locale.DE,
+			false,
+		);
+		const [written] = (manager.updateMessage as any).mock.calls[0] as [Message];
+		expect(written.variants.map((variant) => [variant.languageTag, variant.match])).toEqual([
+			["en", ["one"]],
+			["en", ["other"]],
+			["de", ["one"]],
+		]);
+	});
+});

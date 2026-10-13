@@ -13,6 +13,7 @@ import { NodeSelection } from "../../localizedlabels/LocalizedLabelManager";
 import { Gender, genderList } from "../variants/Gender";
 import { Config, InlangMessageStore } from "./InlangMessageStoreFigmaRoot";
 import { MessageParameterValues } from "../MessageParameterValues";
+import { pickVariant } from "../LayerVariant";
 import PlaceholderHelper from "../PlaceholderUtil";
 import TranslatorMachine from "../../translationprovider/TranslatorMachine";
 import { MachineTranslationUnavailableError } from "../../translationprovider/MachineTranslationContact";
@@ -889,6 +890,43 @@ export default class MessageStoreMemory extends EventTarget {
 				}
 			}
 			return fallbackHtml ?? html;
+		}
+		return html;
+	}
+
+	/**
+	 * The text a text layer linked to a message shows for a language: like `htmlForPatternWithFallback`,
+	 * but for the form of the message the layer's variable values choose (`count` 1 -> "one"; without a
+	 * value the catch-all form). A message with forms never gives no text only because its forms have no
+	 * catch-all that a `match` of `[]` would find.
+	 */
+	static htmlForLayer(
+		message: Message,
+		languageTag: string,
+		fallbackLanguageTag: string | undefined,
+		parameterValues: MessageParameterValues,
+	) {
+		const htmlIn = (language: string) => {
+			const variant = pickVariant(message, language, parameterValues);
+			return variant === undefined ? undefined : this.patternToHtml(variant.pattern);
+		};
+		const html = htmlIn(languageTag);
+		if ((html === undefined || html === "") && fallbackLanguageTag !== undefined) {
+			const fallbackHtml = htmlIn(fallbackLanguageTag);
+			if (fallbackHtml) return fallbackHtml;
+			for (const variant of message.variants) {
+				const existingHtml = htmlIn(variant.languageTag);
+				if (existingHtml) return existingHtml;
+			}
+			// no form takes the layer's values in any language (none has an "other" form for this count):
+			// any text of the message, the layer's own language first - never blank
+			const anyText = [...message.variants]
+				.sort(
+					(a, b) => Number(b.languageTag === languageTag) - Number(a.languageTag === languageTag),
+				)
+				.map((variant) => this.patternToHtml(variant.pattern))
+				.find((text) => text !== "");
+			return anyText ?? fallbackHtml ?? html;
 		}
 		return html;
 	}

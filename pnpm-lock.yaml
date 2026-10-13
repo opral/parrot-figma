@@ -16,34 +16,34 @@ importers:
     dependencies:
       '@inlang/editor-component':
         specifier: 13.0.0
-        version: 13.0.0(@inlang/sdk@4.0.2)(@types/react@19.3.0)
+        version: 13.0.0(@inlang/sdk@4.0.3)(@types/react@19.3.0)
       '@inlang/plugin-android':
-        specifier: 0.2.10
-        version: 0.2.10
+        specifier: 0.2.11
+        version: 0.2.11
       '@inlang/plugin-apple-strings':
-        specifier: 0.2.10
-        version: 0.2.10
+        specifier: 0.2.11
+        version: 0.2.11
       '@inlang/plugin-apple-xcstrings':
-        specifier: 0.2.10
-        version: 0.2.10
+        specifier: 0.2.11
+        version: 0.2.11
       '@inlang/plugin-i18next':
-        specifier: 6.4.2
-        version: 6.4.2
+        specifier: 6.4.3
+        version: 6.4.3
       '@inlang/plugin-icu1':
-        specifier: 1.3.2
-        version: 1.3.2
+        specifier: 1.3.3
+        version: 1.3.3
       '@inlang/plugin-json':
-        specifier: 5.1.61
-        version: 5.1.61
+        specifier: 5.1.62
+        version: 5.1.62
       '@inlang/plugin-message-format':
-        specifier: 4.5.2
-        version: 4.5.2
+        specifier: 4.5.3
+        version: 4.5.3
       '@inlang/plugin-next-intl':
-        specifier: 2.4.1
-        version: 2.4.1
+        specifier: 2.4.2
+        version: 2.4.2
       '@inlang/sdk':
-        specifier: 4.0.2
-        version: 4.0.2
+        specifier: 4.0.3
+        version: 4.0.3
       '@ungap/url-search-params':
         specifier: ^0.2.2
         version: 0.2.2
@@ -439,32 +439,32 @@ packages:
     peerDependencies:
       '@inlang/sdk': ^4.0.0
 
-  '@inlang/plugin-android@0.2.10':
-    resolution: {integrity: sha512-w1aiEVVirII5R5pDfYAsUt3Z6BfkLtksXKB7ayXtSZr7Pgk9hdciCVjXhm7LWRTRArk4cE+SemIA9wgmIofuAQ==}
+  '@inlang/plugin-android@0.2.11':
+    resolution: {integrity: sha512-3LkSOXtfLlPuwoMRuKCe7sIJcbt9rhuOgL9DlCViM2720SiHYh6HcUA9Ug0SPBjSdO6BckFEl4kkGzwNNzDjFA==}
 
-  '@inlang/plugin-apple-strings@0.2.10':
-    resolution: {integrity: sha512-wmfx/usyiaaCbACkk/LvI3/oklSclH8u7MJ3vTc5LOKNHMDVK1xO7hdRJfuKsub8VcdM7MeF4kCVg31B5jEmxQ==}
+  '@inlang/plugin-apple-strings@0.2.11':
+    resolution: {integrity: sha512-axLxmDzdcBT6hpmA6BKrJpF2K3zzNJcVY59FhVBEhJgq+TMqhz1EMs9f9sq8Nj1Gwy0DuV7SP+CKjGQVPrxU3A==}
 
-  '@inlang/plugin-apple-xcstrings@0.2.10':
-    resolution: {integrity: sha512-O8Ly/pmF3oFLu8oIZmeBw2RJPzwop9+rSs2zN338zmMkcHwCDVygZOJDZJyw6W1EBKtAVIM/zvKKVNezLSWnLA==}
+  '@inlang/plugin-apple-xcstrings@0.2.11':
+    resolution: {integrity: sha512-2AQRm/FH+gWix23nlJsY3N9rdQnn8CyKFmHq6dHy0CqXLLXHCzFALjKOUcVMYlWPjN8r6Tmn7CHvPj79LwDELQ==}
 
-  '@inlang/plugin-i18next@6.4.2':
-    resolution: {integrity: sha512-L9ZEwpmv3sFxVdzuk9RYFzbCiaRJLll5RsHK1KeKFsua5ygIexsMjivlew04XT+dv6wnbFciYQKsD2QwQ7CROA==}
+  '@inlang/plugin-i18next@6.4.3':
+    resolution: {integrity: sha512-O10RfIoXpaqsLQOu73AlC3bMtP2WJ7opOnQj3Md4jzQPbjfjLbEjnUdXVhttzSOzb/20GsDsEV68v9vbYlyKqQ==}
 
-  '@inlang/plugin-icu1@1.3.2':
-    resolution: {integrity: sha512-pRF6OOdt4V2ES91uwCwABZwbpYfySCOa7kDFlKaggdSO3utk1hS0TeXxfpdQML64yI8ePWfH7D4eeth+Zmi6PQ==}
+  '@inlang/plugin-icu1@1.3.3':
+    resolution: {integrity: sha512-JzS+L8op+yX9gR2mV8X0Gj1Ze1nqZ3o9MHsuDi4l0gib4YaeCvushqU2LJoR16ZgnaAn7e7Ax6D38iIE+K+eoQ==}
 
-  '@inlang/plugin-json@5.1.61':
-    resolution: {integrity: sha512-5qJDg6ndoU4uegF0L+7VGV6fpYL6lnqZPX2zhOy7pj2NBwXby1kc2u9pxrC3ZyM8z90/nCKGa44IX8/UooSQ/Q==}
+  '@inlang/plugin-json@5.1.62':
+    resolution: {integrity: sha512-9dOJ1WNkqSjFy4YNvtFqhYBnWTJFhJkEFXtxH+oKokenOCnDmMMxueV4RCW7Ta7qeHA/fu1kjusb/aBO2g9dBA==}
 
-  '@inlang/plugin-message-format@4.5.2':
-    resolution: {integrity: sha512-alC8+5and4dNm6TWEdc/MAYIuiPbeBG4rdowwiiy+kM3OCSfJRl3oXrXsmsbP7yoU81VH8LMSrBgrWtKLFeVDQ==}
+  '@inlang/plugin-message-format@4.5.3':
+    resolution: {integrity: sha512-6rEkx02uEbnOtCTzFS6pCWqD1KXZyPJbsxK+D3pbDWMViAM54rG8HbQjBKQ2o06vyLgRqOyWPDQjddWGGIvZJA==}
 
-  '@inlang/plugin-next-intl@2.4.1':
-    resolution: {integrity: sha512-YseTrjYtDf06D778S4bW4X+Zjij7lH+tJRAYJRa3p2AHIOg8fFibB8F7bFPrpbQp9gNJGtdYWerqpXHXEif4OQ==}
+  '@inlang/plugin-next-intl@2.4.2':
+    resolution: {integrity: sha512-P8AErAniuF4OarSdjGLpFSEuWfKJmDKhSzTD0FDKK/IpbPTS+RkAChnpKyx0ARx0C3v4MlGI7rXX/hSOycgUfw==}
 
-  '@inlang/sdk@4.0.2':
-    resolution: {integrity: sha512-IiOiQpybiV2HrguH+2eG+9Pqsm8AuUBtjHpgl3rnwXkE9x1p+mAC5YqVVRlquGLELXxFiu90zvgFXdYnt4X3LA==}
+  '@inlang/sdk@4.0.3':
+    resolution: {integrity: sha512-ajOudqasLcSU1AI00oDhL2zd3u5I4cq5vwn3yu4nnFqEM1sZDgAFK5AY8jID7sh5Lomk+obrCiwpPR3omKPITw==}
     engines: {node: '>=20.0.0'}
 
   '@jridgewell/gen-mapping@0.3.8':
@@ -2333,9 +2333,9 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@inlang/editor-component@13.0.0(@inlang/sdk@4.0.2)(@types/react@19.3.0)':
+  '@inlang/editor-component@13.0.0(@inlang/sdk@4.0.3)(@types/react@19.3.0)':
     dependencies:
-      '@inlang/sdk': 4.0.2
+      '@inlang/sdk': 4.0.3
       '@lexical/plain-text': 0.16.1
       '@lexical/utils': 0.16.1
       '@lit/task': 1.0.3
@@ -2348,47 +2348,47 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
-  '@inlang/plugin-android@0.2.10':
+  '@inlang/plugin-android@0.2.11':
     dependencies:
-      '@inlang/sdk': 4.0.2
+      '@inlang/sdk': 4.0.3
       '@sinclair/typebox': 0.31.28
       fast-xml-parser: 4.5.7
 
-  '@inlang/plugin-apple-strings@0.2.10':
+  '@inlang/plugin-apple-strings@0.2.11':
     dependencies:
-      '@inlang/sdk': 4.0.2
+      '@inlang/sdk': 4.0.3
       '@sinclair/typebox': 0.31.28
 
-  '@inlang/plugin-apple-xcstrings@0.2.10':
+  '@inlang/plugin-apple-xcstrings@0.2.11':
     dependencies:
-      '@inlang/sdk': 4.0.2
+      '@inlang/sdk': 4.0.3
       '@sinclair/typebox': 0.31.28
 
-  '@inlang/plugin-i18next@6.4.2':
+  '@inlang/plugin-i18next@6.4.3':
     dependencies:
-      '@inlang/sdk': 4.0.2
+      '@inlang/sdk': 4.0.3
       '@sinclair/typebox': 0.31.28
 
-  '@inlang/plugin-icu1@1.3.2':
+  '@inlang/plugin-icu1@1.3.3':
     dependencies:
-      '@inlang/sdk': 4.0.2
+      '@inlang/sdk': 4.0.3
       '@messageformat/parser': 5.1.1
       '@sinclair/typebox': 0.31.28
 
-  '@inlang/plugin-json@5.1.61':
+  '@inlang/plugin-json@5.1.62':
     dependencies:
-      '@inlang/sdk': 4.0.2
+      '@inlang/sdk': 4.0.3
       '@sinclair/typebox': 0.31.28
 
-  '@inlang/plugin-message-format@4.5.2':
+  '@inlang/plugin-message-format@4.5.3':
     dependencies:
-      '@inlang/sdk': 4.0.2
+      '@inlang/sdk': 4.0.3
       '@sinclair/typebox': 0.31.28
 
-  '@inlang/plugin-next-intl@2.4.1':
+  '@inlang/plugin-next-intl@2.4.2':
     dependencies:
       '@babel/parser': 7.29.9
-      '@inlang/sdk': 4.0.2
+      '@inlang/sdk': 4.0.3
       '@sinclair/typebox': 0.31.28
       micromark: 4.0.3
       micromark-extension-frontmatter: 2.0.0
@@ -2396,7 +2396,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@inlang/sdk@4.0.2':
+  '@inlang/sdk@4.0.3':
     dependencies:
       '@lix-js/sdk': 0.19.0
       '@sinclair/typebox': 0.31.28

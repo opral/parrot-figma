@@ -101,6 +101,73 @@ describe("matchLayersToMessages", () => {
 	});
 });
 
+// What happened after importing a French file that lacks one message: the layer that shows the reference
+// text of that message was no longer offered, only because French was not complete.
+describe("a language that is not complete", () => {
+	const catalog = [
+		message("checkout.title", { en: text("Your cart"), fr: text("Votre panier") }),
+		message("checkout.free_delivery", { en: text("Free delivery on orders over $50") }),
+		message("checkout.pay", { en: text("Pay now"), fr: text("Payer maintenant") }),
+		// translated to French - with other words than the reference
+		message("checkout.hint", { en: text("Pay now"), fr: text("Payer") }),
+	];
+	const freeDelivery = "Free delivery on orders over $50";
+
+	it("offers a layer with the reference text for a message of the reference language", () => {
+		const index = buildMessageTextIndex(catalog, ["en", "fr"], "en");
+		expect(
+			matchLayersToMessages([layer("1", freeDelivery)], index).map((m) => m.messageIds),
+		).toEqual([["checkout.free_delivery"]]);
+	});
+
+	it("offers it in a frame of the language the message is not translated to (it shows the reference text)", () => {
+		const index = buildMessageTextIndex(catalog, ["en", "fr"], "en");
+		const frenchFrame = layer("1", freeDelivery, { language: "fr" });
+		expect(matchLayersToMessages([frenchFrame], index).map((m) => m.messageIds)).toEqual([
+			["checkout.free_delivery"],
+		]);
+		// without the reference language the index is as it was: only translated messages
+		expect(
+			matchLayersToMessages([frenchFrame], buildMessageTextIndex(catalog, ["en", "fr"])),
+		).toEqual([]);
+	});
+
+	it("does not offer a translated message for the reference text", () => {
+		const index = buildMessageTextIndex(catalog, ["en", "fr"], "en");
+		const matches = matchLayersToMessages(
+			[layer("1", "Pay now", { language: "fr" }), layer("2", "Payer", { language: "fr" })],
+			index,
+		);
+		// "Pay now" is no French text of any message; "Payer" is the translation of checkout.hint
+		expect(matches.map((m) => [m.layer.nodeId, m.messageIds])).toEqual([["2", ["checkout.hint"]]]);
+	});
+
+	it("proposes the existing key instead of a duplicate message in such a frame", () => {
+		const index = buildMessageTextIndex(catalog, ["fr"], "en");
+		const [proposal] = proposeKeys([layer("1", freeDelivery, { language: "fr" })], catalog, index);
+		expect([proposal.key, proposal.existing]).toEqual(["checkout.free_delivery", true]);
+	});
+
+	it("does not limit layers of an unlimited language to the imported messages", () => {
+		const index = buildMessageTextIndex(catalog, ["en", "fr"], "en");
+		// the French file has these keys, not checkout.free_delivery
+		const imported = new Set(["checkout.title", "checkout.pay", "checkout.hint"]);
+		const layers = [
+			layer("1", freeDelivery),
+			layer("2", "Your cart"),
+			layer("3", "Votre panier", { language: "fr" }),
+			layer("4", freeDelivery, { language: "fr" }),
+		];
+		expect(matchLayersToMessages(layers, index, imported).map((m) => m.layer.nodeId)).toEqual([
+			"2",
+			"3",
+		]);
+		expect(matchLayersToMessages(layers, index, imported, "en").map((m) => m.layer.nodeId)).toEqual(
+			["1", "2", "3"],
+		);
+	});
+});
+
 describe("proposeKeys", () => {
 	it("reuses existing messages, shares keys for equal texts and never collides", () => {
 		const proposals = proposeKeys(

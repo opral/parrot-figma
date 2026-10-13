@@ -134,7 +134,11 @@ export default function LocalizedFrameGroup({
 				layerName: label.name,
 				frameName: label.rootFrameName,
 			}));
-		const index = buildMessageTextIndex(messages, new Set(layers.map((layer) => layer.language)));
+		const index = buildMessageTextIndex(
+			messages,
+			new Set(layers.map((layer) => layer.language)),
+			localizedLabelManager.messageStore.getRefLanugage(),
+		);
 		const labelsById = new Map(unlinkedLabels.map((label) => [label.nodeId, label]));
 		setKeyRows(
 			proposeKeys(layers, messages, index).map((proposal) => ({

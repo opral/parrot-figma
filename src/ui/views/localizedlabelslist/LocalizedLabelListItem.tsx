@@ -21,6 +21,7 @@ import MessageListView from "../messages/MessageListView";
 import { UILocalizedLabel } from "../../../lib/localizedlabels/UILocalizedLabel";
 import Drawer from "../../compontents/drawer/Drawer";
 import { MessageParameterValues } from "../../../lib/message/MessageParameterValues";
+import LayerVariables from "./LayerVariables";
 
 /**
  * The text the "Select a message" drawer starts its search with: plain words (no query syntax) of the
@@ -639,6 +640,23 @@ export default function LocalizedLabelListItem({
 										</button>
 									)}
 								</TranslationEditor>
+								{localizedLabel.messageLinkState === MessageLinkState.Linked &&
+									message !== undefined &&
+									localizedLabel.matchingLabelLints.length === 0 && (
+										<LayerVariables
+											message={message}
+											language={localizedLabel.language}
+											parameterValues={localizedLabel.parameterValues}
+											onChange={(name, value) => {
+												localizedLabelManager
+													.updateLabelVariable(localizedLabel, name, value)
+													.catch((e: Error) => {
+														reportError(e);
+														figmaRemote.notifyError(e.message);
+													});
+											}}
+										/>
+									)}
 								{/* TODO #18 make paramter editable again when we have selectors in place - variables only used as selectors can't be accesed otherwise
                       { selected !== 'unselected' && (
                         <div className="placeholder-view-grid" style={{ display: Object.keys(localizedLabel.parameterValues).length > 0 ? undefined : 'none' }}>

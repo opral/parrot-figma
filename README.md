@@ -28,7 +28,7 @@ Your messages live in the Figma file, so everyone who opens the file sees the sa
 
 - **Link text to messages.** Link a layer to a message, or let Parrot generate keys for every text layer in a frame and link layers that already show the same text.
 - **Switch languages.** Switch one frame, many frames or a whole page between languages. Bold, lists and line breaks stay as designed.
-- **Plurals and selects.** Edit every language of a message side by side, including plural forms, selects and exact numbers.
+- **Plurals and selects.** Edit every language of a message side by side, including plural forms, selects and exact numbers. A layer linked to a plural shows the form of its own count, which you set under the layer's text in **Layers**.
 - **Checks.** Parrot flags missing and empty translations, missing or unknown variables, and missing plural forms before developers see them.
 
 <details>

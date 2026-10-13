@@ -9,6 +9,7 @@ import { Locale } from "../message/variants/Locale";
 import LocalizedLabelManagerUI from "./LocalizedLabelManagerUI";
 import type { Message } from "../message/LegacyMessage";
 import { MessageLinkState } from "./LocalizedLabel";
+import { UILocalizedLabel } from "./UILocalizedLabel";
 
 function createManager() {
 	const manager = Object.create(LocalizedLabelManagerUI.prototype) as any;
@@ -625,5 +626,199 @@ describe("LocalizedLabelManagerUI undo steps of bulk actions", () => {
 			{ type: "Text", value: "Welcome back" },
 		]);
 		expect(written()[0].messageState.keepText).toBe(true);
+	});
+});
+
+describe("a layer linked to a plural message", () => {
+	const count = { type: "VariableReference" as const, name: "count" };
+	// what the Inlang message format and i18next files import: the "other" form is a literal match
+	const items: Message = {
+		id: "checkout.items",
+		nativeBundle: {
+			id: "checkout.items",
+			declarations: [
+				{ type: "input-variable", name: "count" },
+				{
+					type: "local-variable",
+					name: "countPlural",
+					value: {
+						type: "expression",
+						arg: { type: "variable-reference", name: "count" },
+						annotation: { type: "function-reference", name: "plural", options: [] },
+					},
+				},
+			],
+			messages: [],
+		} as any,
+		selectors: [{ type: "VariableReference", name: "countPlural" }],
+		variants: [
+			{ languageTag: "en", match: ["one"], pattern: [count, { type: "Text", value: " item" }] },
+			{ languageTag: "en", match: ["other"], pattern: [count, { type: "Text", value: " items" }] },
+			{ languageTag: "de", match: ["one"], pattern: [count, { type: "Text", value: " Artikel" }] },
+			{
+				languageTag: "de",
+				match: ["other"],
+				pattern: [count, { type: "Text", value: " Artikel" }],
+			},
+		],
+	};
+
+	function pluralManager(message: Message = items) {
+		const { manager } = createManager();
+		const label = {
+			nodeId: "label-1",
+			rootFrameId: "frame-2",
+			language: "en",
+			rootFrameLanguage: "en",
+			messageLinkState: MessageLinkState.Linked,
+			messageId: message.id,
+			parameterValues: {} as Record<string, any>,
+			currentPatternHTML: "2 items",
+		};
+		manager.cachedLocalisedLabels["label-1"] = label;
+		manager.messageStore = {
+			getMessage: () => structuredClone(message),
+			getMessageByName: () => structuredClone(message),
+			getRefLanugage: () => "en",
+		};
+		// the real conversion needs Quill (a DOM): it shows the text with the values filled in
+		const conversions: { html: string; parameterValues: any }[] = [];
+		vi.spyOn(UILocalizedLabel, "toTextOpsAndFillinsToPlaceholder").mockImplementation(
+			(html: string, parameterValues: any) => {
+				conversions.push({ html, parameterValues: structuredClone(parameterValues) });
+				return {
+					characters: html.replace(
+						/<ph>(\w+)<\/ph>/g,
+						(_match, name) => parameterValues[name].value,
+					),
+					ops: [],
+					fillinsToPlaceholder: {},
+				};
+			},
+		);
+		return { manager, label, conversions };
+	}
+	const link = (manager: any, parameterValues: any = {}, extra: object = {}) =>
+		manager.toSandboxUpdate("label-1", {
+			messageState: { type: "linked", messageId: "checkout.items", parameterValues, ...extra },
+			language: "en",
+		});
+
+	test("shows the catch-all form with an example count instead of going blank", () => {
+		const { manager } = pluralManager();
+		const update = link(manager);
+		expect(update.characters).toBe("2 items");
+		expect(update.messageState.parameterValues.count).toEqual({
+			type: "string",
+			value: "2",
+			default: true,
+		});
+	});
+
+	test("shows the form of the count stored on the layer", () => {
+		const { manager } = pluralManager();
+		expect(link(manager, { count: { type: "string", value: "1" } }).characters).toBe("1 item");
+		expect(link(manager, { count: { type: "string", value: "7" } }).characters).toBe("7 items");
+		// a layer linked before had the variable's name as its value
+		expect(
+			link(manager, { count: { type: "string", value: "count", default: true } }).characters,
+		).toBe("2 items");
+	});
+
+	test("uses the same count in another language", () => {
+		const { manager } = pluralManager();
+		const update = manager.toSandboxUpdate("label-1", {
+			messageState: {
+				type: "linked",
+				messageId: "checkout.items",
+				parameterValues: { count: { type: "string", value: "1" } },
+			},
+			language: "de",
+		});
+		expect(update.characters).toBe("1 Artikel");
+		expect(update.language).toBe("de");
+	});
+
+	test("a layer that is linked now keeps the number it shows", () => {
+		const { manager, label } = pluralManager();
+		Object.assign(label, { messageLinkState: MessageLinkState.Unset, messageId: undefined });
+		const linkText = (html: string) => {
+			label.currentPatternHTML = html;
+			return link(manager);
+		};
+		const one = linkText("1 item");
+		expect(one.characters).toBe("1 item");
+		expect(one.messageState.parameterValues.count).toEqual({
+			type: "string",
+			value: "1",
+			default: false,
+		});
+		expect(linkText("12 items").characters).toBe("12 items");
+		// a text that is no form of the message shows the example count
+		expect(linkText("Your cart").characters).toBe("2 items");
+		// a layer that was linked before keeps the count it has
+		Object.assign(label, {
+			messageLinkState: MessageLinkState.Linked,
+			messageId: "checkout.items",
+		});
+		expect(linkText("1 item").characters).toBe("2 items");
+	});
+
+	test("keeps the text of the layer when the message has no text to show", () => {
+		const { manager } = pluralManager({ ...items, variants: [] });
+		const update = link(manager);
+		expect(update.characters).toBeUndefined();
+		expect(update.ops).toBeUndefined();
+		expect(update.language).toBe("en");
+	});
+
+	test("a text edited in the layer does not need the catch-all form of the message", () => {
+		const { manager } = pluralManager();
+		const update = link(
+			manager,
+			{ count: { type: "string", value: "1" } },
+			{
+				variantPatternHTML: "<ph>count</ph> pieces",
+			},
+		);
+		expect(update.characters).toBe("1 pieces");
+	});
+
+	test("Update message writes the text of the layer into the form its count chooses", async () => {
+		const { manager, label } = pluralManager();
+		label.parameterValues = { count: { type: "string", value: "1", default: false } };
+		label.currentPatternHTML = "<ph>count</ph> piece";
+		manager.updateMessage = vi.fn(async () => {});
+		await manager.createNewVersionFromLabelState(label as any);
+		const [updated] = manager.updateMessage.mock.calls[0] as [Message];
+		const text = (languageTag: string, form: string) =>
+			updated.variants.find((v) => v.languageTag === languageTag && v.match[0] === form)?.pattern;
+		expect(text("en", "one")).toEqual([count, { type: "Text", value: " piece" }]);
+		expect(text("en", "other")).toEqual([count, { type: "Text", value: " items" }]);
+		// no new variant with a match that has no selector
+		expect(updated.variants).toHaveLength(4);
+	});
+
+	test("editing the count of the layer is one undo step and does not touch the message", async () => {
+		const { manager, label } = pluralManager();
+		label.parameterValues = { count: { type: "string", value: "2", default: true } };
+		manager.updateLabelProperties = vi.fn(async () => {});
+		manager.messageStore.upsertMessage = vi.fn();
+		await manager.updateLabelVariable(label as any, "count", " 1 ");
+		expect(manager.updateLabelProperties).toHaveBeenCalledWith("label-1", {
+			messageState: {
+				type: "linked",
+				messageId: "checkout.items",
+				parameterValues: { count: { type: "string", value: "1", default: false } },
+			},
+		});
+		expect(manager.localizedLabelMangerSandbox.commitUndo).toHaveBeenCalledTimes(1);
+		expect(manager.messageStore.upsertMessage).not.toHaveBeenCalled();
+
+		// an empty field goes back to the example count (the next update fills it in again)
+		await manager.updateLabelVariable(label as any, "count", "");
+		expect(manager.updateLabelProperties).toHaveBeenLastCalledWith("label-1", {
+			messageState: { type: "linked", messageId: "checkout.items", parameterValues: {} },
+		});
 	});
 });

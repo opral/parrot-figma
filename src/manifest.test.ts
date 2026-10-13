@@ -15,6 +15,10 @@ describe("plugin manifest", () => {
 		expect(manifest.networkAccess.allowedDomains).toContain("https://opral.github.io");
 	});
 
+	it("does not allow Figma profile picture hosts (only the hidden Users view showed them)", () => {
+		expect(JSON.stringify(manifest.networkAccess)).not.toContain("s3-alpha.figma.com");
+	});
+
 	it("does not allow the retired Parrot hosts", () => {
 		const hosts = JSON.stringify(manifest.networkAccess);
 		expect(hosts).not.toContain("parrot-global.github.io");

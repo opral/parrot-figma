@@ -421,6 +421,35 @@
 	width: 100%;
 }
 
+/* The values a layer has for the variables of its message (a plural's count) - they choose the form it shows */
+.layer-variables {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 12px;
+	padding: 0 0 4px 14px;
+}
+
+.layer-variable {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	color: var(--figma-color-text-secondary);
+	font-size: 11px;
+	line-height: 16px;
+}
+
+.layer-variable .text-field {
+	min-width: 56px;
+}
+
+.layer-variable .text-field-text p {
+	color: var(--figma-color-text);
+	padding-top: 1px;
+	padding-bottom: 1px;
+	min-height: 14px;
+}
+
 .hidden-helper-row * {
 	height: 0px !important;
 	overflow: hidden;

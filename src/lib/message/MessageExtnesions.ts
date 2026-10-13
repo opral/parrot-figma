@@ -53,6 +53,8 @@ export class MessageExtension {
 			locale: Locale;
 			parameterValues: MessageParameterValues;
 			variantHtml: string;
+			/** the form of the message the text belongs to (see `layerMatch`) */
+			match?: string[];
 		},
 	) {
 		const parameterToPlaceholders = {} as {
@@ -65,12 +67,13 @@ export class MessageExtension {
 			overwrittenVariant = getVariant(message, {
 				where: {
 					languageTag: overrideVariant.locale,
-					match: [], // TODO #18 TODO use matching based on variantParameterValues
+					match: overrideVariant.match ?? [],
 				},
 			});
 
-			if (overrideVariant) {
-				overwrittenVariant!.pattern = MessageStoreMemory.patternHtmlToPattern(
+			// a message without that form in that language has nothing to overwrite
+			if (overwrittenVariant) {
+				overwrittenVariant.pattern = MessageStoreMemory.patternHtmlToPattern(
 					overrideVariant.variantHtml,
 				);
 			}

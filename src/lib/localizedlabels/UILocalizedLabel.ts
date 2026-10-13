@@ -19,6 +19,7 @@ import { Placeholder } from "../message/Placeholder";
 import PlaceholderUtil from "../message/PlaceholderUtil";
 import TranslatorMachine from "../translationprovider/TranslatorMachine";
 import { toQuillTextOperations } from "./RichTextFormatting";
+import { layerMatch } from "../message/LayerVariant";
 
 const Delta = Quill.import("delta") as typeof DeltaType;
 
@@ -380,11 +381,12 @@ export class UILocalizedLabel implements LocalizedLabel {
 				throw new Error("Message does not exist");
 			}
 
-			const variantPatternHtml = MessageStoreMemory.htmlForPatternWithFallback(
+			// the form of the message the layer's variable values choose (a plural's count)
+			const variantPatternHtml = MessageStoreMemory.htmlForLayer(
 				message,
 				this.language,
 				this.manager.messageStore.getRefLanugage(),
-				[/** TODO #18 selectors build selectors based on variableValues */],
+				this.parameterValues,
 			);
 			state.modified = variantPatternHtml !== this.currentPatternHTML;
 			if (variantPatternHtml !== this.currentPatternHTML) {
@@ -412,7 +414,12 @@ export class UILocalizedLabel implements LocalizedLabel {
 				if (!message) {
 					return false;
 				}
-				return MessageStoreMemory.canTranslate(message, refLanguage, this.language, []);
+				return MessageStoreMemory.canTranslate(
+					message,
+					refLanguage,
+					this.language,
+					layerMatch(message, refLanguage, this.parameterValues),
+				);
 			}
 		}
 
@@ -559,11 +566,13 @@ export class UILocalizedLabel implements LocalizedLabel {
 		const refLanguage = this.manager.messageStore.getRefLanugage()! as Locale;
 		const toRefLanguage = targetLanguage === refLanguage;
 		const message = this.manager.messageStore.getMessage(this.messageId)!;
+		// the form of the message the layer shows (a plural's count) - not just the catch-all form
+		const match = layerMatch(message, targetLanguage, this.parameterValues, refLanguage);
 		// const hasVariantInTargetLanguage = MessageStoreMemory.hasVariant(message, targetLanguage, []);
 		const hasVariantTranslationInTargetLanguage = MessageStoreMemory.hasTranslationInVariant(
 			message,
 			targetLanguage,
-			[],
+			match,
 		);
 		const linkedMessageState = {
 			type: "linked" as const,
@@ -581,7 +590,7 @@ export class UILocalizedLabel implements LocalizedLabel {
 					message,
 					refLanguage,
 					targetLanguage,
-					[],
+					match,
 					triggersCTA,
 				);
 				await this.manager.updateMessage(eventuallyUpdatedMessage, {});

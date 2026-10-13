@@ -68,12 +68,37 @@ export function isFlatText(html: string) {
 /** language -> normalized text -> ids of the messages with exactly that text */
 export type MessageTextIndex = Map<string, Map<string, string[]>>;
 
-export function buildMessageTextIndex(messages: readonly Message[], languages: Iterable<string>) {
+/** Whether a message has a translation (any text, even only a variable) in a language. */
+function hasTranslation(message: Message, language: string) {
+	return message.variants.some(
+		(variant) => variant.languageTag === language && variant.pattern.length > 0,
+	);
+}
+
+/**
+ * @param referenceLanguage a message that is not translated to a language yet shows its reference text
+ * there (nothing else exists to switch to): a layer in a frame of that language that shows the reference
+ * text still shows the message. Whether a message is found must not depend on how complete the other
+ * languages are.
+ */
+export function buildMessageTextIndex(
+	messages: readonly Message[],
+	languages: Iterable<string>,
+	referenceLanguage?: string,
+) {
 	const index: MessageTextIndex = new Map();
 	for (const language of languages) {
 		const byText = new Map<string, string[]>();
 		for (const message of messages) {
-			const text = messageText(message, language);
+			let text = messageText(message, language);
+			if (
+				text === undefined &&
+				referenceLanguage !== undefined &&
+				language !== referenceLanguage &&
+				!hasTranslation(message, language)
+			) {
+				text = messageText(message, referenceLanguage);
+			}
 			if (text === undefined) continue;
 			byText.set(text, [...(byText.get(text) ?? []), message.id]);
 		}
@@ -93,18 +118,21 @@ export function messagesWithText(
 
 /**
  * Layers whose text equals the text of a message in the layer's language. `onlyMessageIds` limits the
- * matches to these messages (e.g. the messages that were just imported).
+ * matches to these messages (e.g. the messages that were just imported) - except for layers in
+ * `unlimitedLanguage`: importing a translation adds no text of the reference language, so the layers
+ * that show it are matched against every message and what is offered does not depend on which keys
+ * the translation file has.
  */
 export function matchLayersToMessages(
 	layers: readonly LayerText[],
 	index: MessageTextIndex,
 	onlyMessageIds?: ReadonlySet<string>,
+	unlimitedLanguage?: string,
 ) {
 	const matches = [] as { layer: LayerText; messageIds: string[] }[];
 	for (const layer of layers) {
-		const messageIds = messagesWithText(index, layer).filter(
-			(id) => !onlyMessageIds || onlyMessageIds.has(id),
-		);
+		const limit = layer.language === unlimitedLanguage ? undefined : onlyMessageIds;
+		const messageIds = messagesWithText(index, layer).filter((id) => !limit || limit.has(id));
 		if (messageIds.length > 0) matches.push({ layer, messageIds });
 	}
 	return matches;

@@ -1,3 +1,0 @@
-import{f as e,y as t}from"./lix_js_sdk-eevasKjS.js";import{t as n}from"./wasm-init-CvpU9b0Z.js";async function r(e,t){let n=!1;try{return await t()}catch(e){throw n=!0,e}finally{try{await e.close()}catch(e){if(!n)throw e}}}const i=n;async function a(e){if(e.kind!==`jsStorage`)throw TypeError(`Browser migration requires persistent JavaScript storage`);await i();let t=await import(
-/* @vite-ignore */
-e.moduleUrl);if(typeof t.createLixStorageProvider!=`function`)throw TypeError(`Invalid storage provider module`);return t.createLixStorageProvider(e.options)}async function o(t,n,i){let o=await a(t);return r(o,()=>e(o,n,i))}async function s(e,n){let i=await a(e);return r(i,()=>t(i,n))}export{o as convertReplicaBinding,s as retryReplicaMigrationCleanupBinding};

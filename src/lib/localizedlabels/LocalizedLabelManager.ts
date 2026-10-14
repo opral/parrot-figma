@@ -165,15 +165,27 @@ export default class LocalizedLabelManager {
 		{ page: PageNode; listener: (event: NodeChangeEvent) => void }
 	>();
 	private changesQueue = Promise.resolve();
+	private activeBulkUpdates = 0;
+	private bulkUpdateWaiters: (() => void)[] = [];
+
+	private queueDocumentChanges(event: { documentChanges: readonly any[] }) {
+		this.rememberChangedNodes(event.documentChanges);
+		this.changesQueue = this.changesQueue
+			.then(async () => {
+				// A yielded mutation batch is still in progress. Read its final state once it finishes.
+				while (this.activeBulkUpdates) {
+					await new Promise<void>((resolve) => this.bulkUpdateWaiters.push(resolve));
+				}
+				await this.forwardDocumentChanges(event);
+			})
+			.catch((error) => console.error("Parrot document change failed", error));
+	}
 
 	private observePage(page: PageNode) {
 		if (this.observedPages.has(page.id)) return;
 		const listener = (event: NodeChangeEvent) => {
 			if (documentChanges.active) return;
-			this.rememberChangedNodes(event.nodeChanges);
-			this.changesQueue = this.changesQueue
-				.then(() => this.forwardDocumentChanges({ documentChanges: event.nodeChanges }))
-				.catch((error) => console.error("Parrot page change failed", error));
+			this.queueDocumentChanges({ documentChanges: event.nodeChanges });
 		};
 		this.observedPages.set(page.id, { page, listener });
 		page.on("nodechange", listener);
@@ -197,10 +209,7 @@ export default class LocalizedLabelManager {
 
 		this.observePage(figma.currentPage);
 		documentChanges.on("documentchange", (event) => {
-			this.rememberChangedNodes(event.documentChanges);
-			this.changesQueue = this.changesQueue
-				.then(() => this.forwardDocumentChanges(event))
-				.catch((error) => console.error("Parrot document change failed", error));
+			this.queueDocumentChanges(event);
 		});
 		figma.on("currentpagechange", () => {
 			this.observePage(figma.currentPage);
@@ -992,7 +1001,7 @@ export default class LocalizedLabelManager {
 		let context = this.createLabelReadContext();
 		let sliceStart = Date.now();
 		for (const textNode of textNodes) {
-			if (Date.now() - sliceStart >= 32) {
+			if (Date.now() - sliceStart >= 256) {
 				await new Promise<void>((resolve) => setTimeout(resolve, 0));
 				context = this.createLabelReadContext();
 				sliceStart = Date.now();
@@ -1070,38 +1079,53 @@ export default class LocalizedLabelManager {
 	async updateLabelsProperties(
 		updates: { nodeId: string; properties: SandboxUpdateLabelProperties }[],
 	) {
-		const nodes = await Promise.all(
-			updates.map(
-				({ nodeId }) => this.virtualTree.getVirtualNode(nodeId)?.sourceNode ?? this.getNode(nodeId),
-			),
-		);
-		const textNodes = nodes.filter(
-			(node, i): node is TextNode =>
-				updates[i].properties.characters !== undefined && node?.type === "TEXT",
-		);
-		await this.loadFontsForTextNodes(textNodes).catch(() => {
-			// a missing font is reported per label below
-		});
+		this.activeBulkUpdates++;
+		try {
+			const nodes = await Promise.all(
+				updates.map(
+					({ nodeId }) =>
+						this.virtualTree.getVirtualNode(nodeId)?.sourceNode ?? this.getNode(nodeId),
+				),
+			);
+			const textNodes = nodes.filter(
+				(node, i): node is TextNode =>
+					updates[i].properties.characters !== undefined && node?.type === "TEXT",
+			);
+			await this.loadFontsForTextNodes(textNodes).catch(() => {
+				// a missing font is reported per label below
+			});
 
-		const results = [] as { label?: LocalizedLabel; error?: string }[];
-		let sliceStart = Date.now();
-		let context = this.createLabelReadContext();
-		for (let i = 0; i < updates.length; i++) {
-			if (Date.now() - sliceStart >= 256) {
-				await new Promise<void>((resolve) => setTimeout(resolve, 0));
-				sliceStart = Date.now();
-				context = this.createLabelReadContext();
+			const results = [] as { label?: LocalizedLabel; error?: string }[];
+			let sliceStart = Date.now();
+			let context = this.createLabelReadContext();
+			// Yielding metadata writes also renders the canvas. Keep normal link batches in one turn;
+			// character changes retain the shorter budget, and very large batches remain interruptible.
+			const sliceBudget = textNodes.length ? 256 : 1000;
+			for (let i = 0; i < updates.length; i++) {
+				if (Date.now() - sliceStart >= sliceBudget) {
+					await new Promise<void>((resolve) => setTimeout(resolve, 0));
+					sliceStart = Date.now();
+					context = this.createLabelReadContext();
+				}
+				const { nodeId, properties } = updates[i];
+				try {
+					results.push({
+						label: await this.updateLabelPropertiesWithNode(nodeId, properties, nodes[i], context),
+					});
+				} catch (e: any) {
+					results.push({ error: e?.message ?? String(e) });
+				}
 			}
-			const { nodeId, properties } = updates[i];
-			try {
-				results.push({
-					label: await this.updateLabelPropertiesWithNode(nodeId, properties, nodes[i], context),
-				});
-			} catch (e: any) {
-				results.push({ error: e?.message ?? String(e) });
-			}
+			return results;
+		} finally {
+			this.activeBulkUpdates--;
+			// Return the batch result before processing canvas event snapshots.
+			setTimeout(() => {
+				if (this.activeBulkUpdates) return;
+				const waiters = this.bulkUpdateWaiters.splice(0);
+				for (const resolve of waiters) resolve();
+			}, 0);
 		}
-		return results;
 	}
 
 	async updateLabelProperties(nodeId: string, changedProperties: SandboxUpdateLabelProperties) {

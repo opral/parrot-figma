@@ -215,3 +215,34 @@ it("reuses loaded live nodes and resolves a fresh handle after removal", async (
 		vi.unstubAllGlobals();
 	}
 });
+
+it("defers page snapshots until a yielded bulk mutation returns, including failing labels", async () => {
+	vi.useFakeTimers();
+	const manager = new LocalizedLabelManager() as any;
+	manager.createLabelReadContext = () => ({});
+	manager.rememberChangedNodes = vi.fn();
+	manager.forwardDocumentChanges = vi.fn(async () => {});
+	vi.stubGlobal("figma", { getNodeByIdAsync: async () => null });
+	let finish!: () => void;
+	const writing = new Promise<void>((resolve) => (finish = resolve));
+	manager.updateLabelPropertiesWithNode = vi.fn(async () => {
+		manager.queueDocumentChanges({ documentChanges: [{ type: "PROPERTY_CHANGE" }] });
+		await writing;
+		throw Error("removed while writing");
+	});
+	try {
+		const batch = manager.updateLabelsProperties([{ nodeId: "a", properties: {} }]);
+		await vi.advanceTimersByTimeAsync(0);
+		expect(manager.rememberChangedNodes).toHaveBeenCalledOnce();
+		expect(manager.forwardDocumentChanges).not.toHaveBeenCalled();
+		finish();
+		expect(await batch).toEqual([{ error: "removed while writing" }]);
+		expect(manager.forwardDocumentChanges).not.toHaveBeenCalled();
+		await vi.runAllTimersAsync();
+		await manager.changesQueue;
+		expect(manager.forwardDocumentChanges).toHaveBeenCalledOnce();
+	} finally {
+		vi.unstubAllGlobals();
+		vi.useRealTimers();
+	}
+});

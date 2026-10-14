@@ -34,7 +34,8 @@
     "allowedDomains": [
       "https://inlang.com",
       "https://parrot-global.github.io",
-      "https://s3-alpha.figma.com"
+      "https://s3-alpha.figma.com",
+      "https://opral.github.io"
     ],
     "devAllowedDomains": [
       "http://localhost:5180"

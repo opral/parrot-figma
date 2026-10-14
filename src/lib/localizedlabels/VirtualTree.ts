@@ -1,6 +1,9 @@
 export class VirtualTreeNode {
 	public id: string;
 
+	/** Live handle obtained after loading its page; never sent across the UI RPC boundary. */
+	public sourceNode: BaseNode;
+
 	public type: string;
 
 	public parent: VirtualTreeNode | null;
@@ -13,6 +16,7 @@ export class VirtualTreeNode {
 
 	constructor(baseNode: BaseNode, nodeId: string) {
 		this.id = nodeId;
+		this.sourceNode = baseNode;
 		this.type = baseNode.type;
 		this.cacheRelevant = this.type === "TEXT";
 		if (this.type === "TEXT" && baseNode.getPluginData("mn") !== "")
@@ -40,6 +44,7 @@ export default class VirtualTree {
 	public addNode(node: BaseNode, nodeId: string, parentNode?: BaseNode): VirtualTreeNode {
 		let virtualNode = this.getVirtualNode(nodeId);
 		if (virtualNode) {
+			virtualNode.sourceNode = node;
 			return virtualNode;
 		}
 
@@ -79,10 +84,7 @@ export default class VirtualTree {
 		}
 		// if parent has no children - remove parent as well!
 
-		node.parent!.children = node.parent!.children.filter((child) => child !== node);
-		if (node.parent?.children.length === 0) {
-			this.lookupTable.delete(node.parent.id);
-		}
+		if (node.parent) node.parent.children = node.parent.children.filter((child) => child !== node);
 
 		this.lookupTable.delete(node.id);
 		return deletedNodes;
@@ -104,11 +106,6 @@ export default class VirtualTree {
 		virtualNode.parent!.children = virtualNode.parent!.children.filter(
 			(child) => child !== virtualNode,
 		);
-
-		if (virtualNode.parent!.children.length === 0) {
-			// console.log('VirtualTree: NO NEED OF PARENT - removing cache');
-			this.lookupTable.delete(virtualNode.parent!.id);
-		}
 
 		virtualNode.parent = virtualParent;
 		virtualParent.children.push(virtualNode);

@@ -20,87 +20,96 @@ import TranslatorMachine from "../lib/translationprovider/TranslatorMachine";
 import ParrotApi from "../lib/api/Parrot";
 import FeatureFlags from "../lib/featureflags/FeatureFlags";
 
-const figmaRemote = new FigmaUtil();
+async function openParrot() {
+	const figmaRemote = new FigmaUtil();
 
-const featureFlags = figmaRemote.getFeatureFlagsSync();
-FeatureFlags.setFeatureflags(featureFlags);
+	const featureFlags = figmaRemote.getFeatureFlagsSync();
+	FeatureFlags.setFeatureflags(featureFlags);
 
-const fileConfigured = figmaRemote.getRootPluginDataSync("fileSetupCompleted") !== "";
-const introShownToUser = true;
+	const fileConfigured = figmaRemote.getRootPluginDataSync("fileSetupCompleted") !== "";
+	const introShownToUser = true;
 
-figma.root.setRelaunchData({ open: "Let Your Design Speak all Languages" });
+	figma.root.setRelaunchData({ open: "Let Your Design Speak all Languages" });
 
-const migrationManager = new MigrationManager(figmaRemote);
-migrationManager.migrate();
+	const migrationManager = new MigrationManager(figmaRemote);
+	await migrationManager.migrate();
 
-WindowManagerSandbox.init(
-	{
-		bottomSheet: {
-			height: 200,
+	WindowManagerSandbox.init(
+		{
+			bottomSheet: {
+				height: 200,
+			},
+			introWindowSize: {
+				centerHeight: 488,
+				height: 364,
+				width: 415,
+			},
+			windowSize: {
+				width: 800,
+				height: 600,
+			},
+			windowMode: WindowMode.IntroWindow,
 		},
-		introWindowSize: {
-			centerHeight: 488,
-			height: 364,
-			width: 415,
+		!fileConfigured || !introShownToUser ? WindowMode.IntroWindow : undefined,
+	);
+
+	const asyncFunctionProxy = new AsyncFunctionProxy(
+		"SandboxAsyncFunctionProxy",
+		(data: any) => {
+			figma.ui.postMessage(data);
 		},
-		windowSize: {
-			width: 800,
-			height: 600,
-		},
-		windowMode: WindowMode.IntroWindow,
-	},
-	!fileConfigured || !introShownToUser ? WindowMode.IntroWindow : undefined,
-);
+		figma.ui,
+	);
 
-const asyncFunctionProxy = new AsyncFunctionProxy(
-	"SandboxAsyncFunctionProxy",
-	(data: any) => {
-		figma.ui.postMessage(data);
-	},
-	figma.ui,
-);
+	asyncFunctionProxy.registerInstance(figmaRemote);
 
-asyncFunctionProxy.registerInstance(figmaRemote);
+	const parrotApi = new ParrotApi(process.env.PARROT_API_KEY as string);
 
-const parrotApi = new ParrotApi(process.env.PARROT_API_KEY as string);
+	const translationMachine = new TranslatorMachine(parrotApi);
+	asyncFunctionProxy.registerInstance(translationMachine);
 
-const translationMachine = new TranslatorMachine(parrotApi);
-asyncFunctionProxy.registerInstance(translationMachine);
+	const usageManager = new UserManager(false);
+	asyncFunctionProxy.registerInstance(usageManager);
 
-const usageManager = new UserManager(false);
-asyncFunctionProxy.registerInstance(usageManager);
+	const inlangMessageStore = new InlangMessageStore(false);
+	asyncFunctionProxy.registerInstance(inlangMessageStore);
 
-const inlangMessageStore = new InlangMessageStore(false);
-asyncFunctionProxy.registerInstance(inlangMessageStore);
+	const remoteLocalizedLabelManager = new LocalizedLabelManager(inlangMessageStore);
+	asyncFunctionProxy.registerInstance(remoteLocalizedLabelManager);
 
-const remoteLocalizedLabelManager = new LocalizedLabelManager(inlangMessageStore);
-asyncFunctionProxy.registerInstance(remoteLocalizedLabelManager);
+	const figmaHelper = new FigmaHelper(figma);
+	asyncFunctionProxy.registerInstance(figmaHelper);
 
-const figmaHelper = new FigmaHelper(figma);
-asyncFunctionProxy.registerInstance(figmaHelper);
-
-figma.on("selectionchange", () => {
-	figma.ui.postMessage({
-		type: "event",
-		name: "selectionchange",
+	figma.on("selectionchange", () => {
+		figma.ui.postMessage({
+			type: "event",
+			name: "selectionchange",
+		});
 	});
-});
 
-// Calls to "parent.postMessage" from within the HTML page will trigger this
-// callback. The callback will be passed the "pluginMessage" property of the
-// posted message.
-figma.ui.onmessage = (msg) => {
-	switch (msg.type) {
-		case "undo":
-			console.log("undo forwarded");
-			figma.triggerUndo();
-			break;
-	}
-	/* if (asyncFunctionProxy.onMessage(payload)) {
+	// Calls to "parent.postMessage" from within the HTML page will trigger this
+	// callback. The callback will be passed the "pluginMessage" property of the
+	// posted message.
+	figma.ui.onmessage = (msg) => {
+		switch (msg.type) {
+			case "undo":
+				console.log("undo forwarded");
+				figma.triggerUndo();
+				break;
+		}
+		/* if (asyncFunctionProxy.onMessage(payload)) {
     return
   } */
 
-	// Make sure to close the plugin when you're done. Otherwise the plugin will
-	// keep running, which shows the cancel button at the bottom of the screen.
-	// figma.closePlugin();
-};
+		// Make sure to close the plugin when you're done. Otherwise the plugin will
+		// keep running, which shows the cancel button at the bottom of the screen.
+		// figma.closePlugin();
+	};
+}
+
+openParrot().catch((error) => {
+	console.error("Parrot startup failed", error);
+	figma.closePlugin(
+		`Could not open Parrot: ${error instanceof Error ? error.message : String(error)}`,
+	);
+});

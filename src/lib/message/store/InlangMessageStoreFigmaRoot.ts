@@ -1,3 +1,4 @@
+import { documentChanges } from "../../../shared/DocumentChanges";
 import type { Message } from "../LegacyMessage";
 import { Locale } from "../variants/Locale";
 import { FigmaBundleStore, LEGACY_MESSAGE_PREFIX } from "./FigmaBundleStore";
@@ -33,16 +34,15 @@ export class InlangMessageStore {
 
 	private bundleStore?: FigmaBundleStore;
 
-	messageIdToLabels = {} as {
-		[messageId: string]: Set<string>;
-	};
+	messageIdToLabels = new Map<string, Set<string>>();
 
 	constructor(asProxy: boolean) {
 		if (!asProxy) {
 			migrateLegacyMessagesToBundles(figma.root);
 			this.bundleStore = new FigmaBundleStore({
 				root: figma.root,
-				documentChanges: figma,
+				documentChanges,
+				pollRootChanges: true,
 			});
 			this.bundleStore.subscribe((changedKeys) => {
 				figma.ui.postMessage({
@@ -108,6 +108,7 @@ export class InlangMessageStore {
 	}
 
 	async commitUndo() {
+		this.getBundleStore().flushPendingRevision();
 		return figma.commitUndo();
 	}
 

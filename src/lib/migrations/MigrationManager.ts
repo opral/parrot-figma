@@ -8,6 +8,7 @@ import { MARKER_CHARACTER } from "../localizedlabels/LocalizedLabelManager";
 import PlaceholderHelper from "../message/PlaceholderUtil";
 import { MessageParameterValues } from "../message/MessageParameterValues";
 import FigmaUtil from "../../shared/FigmaUtil";
+import { migrateLegacyMessagesToBundles } from "./migrateLegacyMessagesToBundles";
 
 // plugin data key of a label's parameter values - see LocalizedLabelManager.parameterValuesKey
 const PARAMETER_VALUES_KEY = "pv";
@@ -21,22 +22,81 @@ export default class MigrationManager {
 		this.figmaUtil = figmaUtil;
 	}
 
-	public migrate() {
-		const lastMigration = figma.root.getPluginData(this.lastMigrationKey);
-		for (const migration of this.migrations) {
-			if (this.isMigrationNeeded(lastMigration, migration.version)) {
-				if (migration.migrate(migration.version)) {
-					this.setPluginData(figma.root, this.lastMigrationKey, migration.version);
+	private migrationPromise?: Promise<void>;
+	private beforeWrites?: Map<BaseNodeMixin, Map<string, string>>;
+
+	public migrate(): Promise<void> {
+		if (!this.migrationPromise) {
+			this.migrationPromise = this.executeMigrations().catch((error) => {
+				this.migrationPromise = undefined;
+				throw error;
+			});
+		}
+		return this.migrationPromise;
+	}
+
+	private async executeMigrations() {
+		this.beforeWrites = new Map();
+		try {
+			const lastMigration = figma.root.getPluginData(this.lastMigrationKey);
+			for (const migration of this.migrations) {
+				if (this.isMigrationNeeded(lastMigration, migration.version)) {
+					if (await migration.migrate(migration.version)) {
+						this.setPluginData(figma.root, this.lastMigrationKey, migration.version);
+					}
+				}
+			}
+			// Validate bundle conversion before committing older schema repairs as successful.
+			// This conversion verifies its own writes and rolls them back on failure.
+			migrateLegacyMessagesToBundles({
+				getPluginData: (key) => figma.root.getPluginData(key),
+				getPluginDataKeys: () => figma.root.getPluginDataKeys(),
+				setPluginData: (key, value) => this.setPluginData(figma.root, key, value),
+			});
+		} catch (cause) {
+			let failures = 0;
+			for (const [node, keys] of this.beforeWrites) {
+				for (const [key, value] of keys) {
+					try {
+						node.setPluginData(key, value);
+						if (node.getPluginData(key) !== value) failures++;
+					} catch {
+						failures++;
+					}
+				}
+			}
+			throw new Error(
+				failures
+					? `Project migration failed; ${failures} original values could not be restored.`
+					: "Project migration failed. Original project data was restored.",
+				{ cause },
+			);
+		} finally {
+			this.beforeWrites = undefined;
+		}
+	}
+
+	private async getLegacyTextNodes(key: string): Promise<TextNode[]> {
+		const result: TextNode[] = [];
+		for (const page of figma.root.children) {
+			await page.loadAsync();
+			let sliceStart = Date.now();
+			for (const text of page.findAllWithCriteria({ types: ["TEXT"] })) {
+				if (text.getPluginData(key) !== "") result.push(text);
+				if (Date.now() - sliceStart >= 16) {
+					await new Promise<void>((resolve) => setTimeout(resolve, 0));
+					sliceStart = Date.now();
 				}
 			}
 		}
+		return result;
 	}
 
 	private migrations = [
 		{
 			version: "0.10.71",
 
-			migrate: (version: string) => {
+			migrate: async (version: string) => {
 				// CONFIG - migrate legacy config to new conifig
 				const legacyConfigDataKey = "prt_c";
 				const configDataKey = "prt_ic";
@@ -45,7 +105,7 @@ export default class MigrationManager {
 
 				if (legacyConfigRaw === "") {
 					// file is not yet configured for parrot - skip migration
-				return true;
+					return true;
 				}
 				const config = JSON.parse(legacyConfigRaw);
 
@@ -55,7 +115,6 @@ export default class MigrationManager {
 					this.setPluginData(figma.root, configDataKey, JSON.stringify(config));
 					this.setPluginData(figma.root, legacyConfigDataKey, "");
 				}
-
 
 				const patternHtmlToPattern = (patternHtml: string): any[] => {
 					const result = [] as any[];
@@ -89,13 +148,23 @@ export default class MigrationManager {
 				};
 
 				const migrateParrotMessageToInlangMessage = (legacyParrotMessage: any) => {
+					if (legacyParrotMessage.ref !== undefined)
+						throw new Error("Historical reference messages need a lossless migration");
+					for (const genders of Object.values(legacyParrotMessage.variants)) {
+						for (const [gender, plurals] of Object.entries(genders as any)) {
+							for (const plural of Object.keys(plurals as any)) {
+								if (gender !== Gender.NEUTRAL || plural !== Plural.OTHER)
+									throw new Error("Historical gender/plural variants need a lossless migration");
+							}
+						}
+					}
 					const migratedMessage = {
 						id: legacyParrotMessage.name,
 						selectors: [],
 						variants: [],
 					} as any;
 
-					// We didn't support gender nor plurals - its save to only migrate one variant
+					// Only neutral/other historical messages are supported; reject other variants above.
 					for (const [language, genders] of Object.entries(legacyParrotMessage.variants)) {
 						const neutralVariant = {
 							languageTag: language,
@@ -110,7 +179,9 @@ export default class MigrationManager {
 						}
 					}
 
-					return migratedMessage.variants.length > 0 ? migratedMessage : undefined;
+					if (migratedMessage.variants.length === 0)
+						throw new Error("Historical message has no supported pattern");
+					return migratedMessage;
 				};
 
 				// remove prt_t - tag data
@@ -136,7 +207,7 @@ export default class MigrationManager {
 						const legacyMessage = JSON.parse(figma.root.getPluginData(rootDataKey)) as any;
 
 						if (legacyMessage.ref !== undefined) {
-							// skip referencing messages - edgecase can be fixed by the usere easyly
+							throw new Error("Historical reference messages need a lossless migration");
 						} else {
 							const inlangMessage = migrateParrotMessageToInlangMessage(legacyMessage);
 							if (inlangMessage) {
@@ -172,17 +243,12 @@ export default class MigrationManager {
 					return { fillinsToPlaceholder, parameterValues };
 				};
 
-				const textNodesWitAnonymMessageToMigrate = (figma.root as any).findAllWithCriteria({
-					pluginData: {
-						keys: ["am"],
-					},
-				}) as TextNode[];
+				const textNodesWitAnonymMessageToMigrate = await this.getLegacyTextNodes("am");
 
 				for (const textNodeWitAnonymMessageToMigrate of textNodesWitAnonymMessageToMigrate) {
 					if (textNodeWitAnonymMessageToMigrate.getPluginData("mi") !== "") {
 						continue; // skip labels that have a message reference
 					}
-
 
 					// drop plural and gender properties in favour of future parameter
 					this.setPluginData(textNodeWitAnonymMessageToMigrate, "mp", "");
@@ -222,20 +288,16 @@ export default class MigrationManager {
 				}
 
 				// go through all textnodes with references to messages and update to slot 0
-				const textNodesWithReferenceToMigrate = (figma.root as any).findAllWithCriteria({
-					pluginData: {
-						keys: ["mi"],
-					},
-				}) as TextNode[];
+				const textNodesWithReferenceToMigrate = await this.getLegacyTextNodes("mi");
 
 				for (const textNodeWithReferenceToMigrate of textNodesWithReferenceToMigrate) {
 					const legacyMessageId = textNodeWithReferenceToMigrate.getPluginData("mi");
 					const messageName = legacyIdToNameMap[legacyMessageId];
+					if (!messageName) throw new Error("Historical layer references an unmapped message");
 					if (messageName) {
 						this.setPluginData(textNodeWithReferenceToMigrate, "mn", messageName);
 						this.setPluginData(textNodeWithReferenceToMigrate, `mn_${messageName}`, messageName);
 					}
-
 
 					// reset old mi - message id proerty
 					this.setPluginData(textNodeWithReferenceToMigrate, "mi", "");
@@ -270,7 +332,7 @@ export default class MigrationManager {
 					}
 				}
 
-					return true;
+				return true;
 			},
 		},
 		{
@@ -279,12 +341,8 @@ export default class MigrationManager {
 			// The 0.10.71 migration stored the fill-in values of migrated labels below the literal key
 			// "parameterValuesKey" instead of "pv". The labels then forgot their values ("Welcome Anna!"
 			// became "Welcome name!" after switching the language). Move the values to the right key.
-			migrate: () => {
-				const labelsWithMisplacedValues = (figma.root as any).findAllWithCriteria({
-					pluginData: {
-						keys: ["parameterValuesKey"],
-					},
-				}) as TextNode[];
+			migrate: async () => {
+				const labelsWithMisplacedValues = await this.getLegacyTextNodes("parameterValuesKey");
 				for (const label of labelsWithMisplacedValues) {
 					const misplacedValues = label.getPluginData("parameterValuesKey");
 					const currentValues = label.getPluginData(PARAMETER_VALUES_KEY);
@@ -303,7 +361,11 @@ export default class MigrationManager {
 	];
 
 	private setPluginData(node: BaseNodeMixin, dataKey: string, data: string) {
-		console.log(`[${node.id}] setting ${dataKey} to ]${data}[`);
+		if (this.beforeWrites) {
+			let keys = this.beforeWrites.get(node);
+			if (!keys) this.beforeWrites.set(node, (keys = new Map()));
+			if (!keys.has(dataKey)) keys.set(dataKey, node.getPluginData(dataKey));
+		}
 		node.setPluginData(dataKey, data);
 	}
 

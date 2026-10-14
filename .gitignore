@@ -13,3 +13,9 @@ code.js
 !.qa/fixtures/
 .qa/tools/node_modules/
 .qa/tools/*.bak
+
+# Generated native Figma QA manifests; source tools are versioned
+qa/*.json
+qa/legacy/
+qa/migrated/
+qa/live/

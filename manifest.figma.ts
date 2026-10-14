@@ -2,13 +2,14 @@ export default {
   name: 'Parrot - Language Translation with ease - the Translator, i18n, l8n, Plugin (Free Beta)',
   id: '1205803482754362456',
   api: '1.0.0',
+  documentAccess: 'dynamic-page',
   editorType: [
     'figma',
     'dev',
   ],
   capabilities: ['inspect'],
   networkAccess: {
-    allowedDomains: ['https://inlang.com', 'https://parrot-global.github.io', 'https://api.parrot.global', 'https://s3-alpha.figma.com'],
+    allowedDomains: ['https://inlang.com', 'https://parrot-global.github.io', 'https://opral.github.io', 'https://api.parrot.global', 'https://s3-alpha.figma.com'],
     devAllowedDomains: [
       'http://localhost:8080',
     ],

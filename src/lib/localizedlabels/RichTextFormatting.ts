@@ -54,7 +54,7 @@ export type QuillTextOperation<Attributes> = {
 export function toQuillTextOperations<Attributes>(
 	text: string,
 	operations: readonly TextRangeOperation<Attributes>[],
-	): QuillTextOperation<Attributes>[] {
+): QuillTextOperation<Attributes>[] {
 	const result: QuillTextOperation<Attributes>[] = operations.map((operation) => ({
 		insert:
 			operation.attributes.placeholder?.name ??
@@ -65,4 +65,22 @@ export function toQuillTextOperations<Attributes>(
 	const terminalAttributes = text.endsWith("\n") ? undefined : operations.at(-1)?.attributes;
 	result.push({ insert: "\n", attributes: terminalAttributes });
 	return result;
+}
+
+/** Every character in the range must be covered by segments satisfying the predicate. */
+export function rangeMatches<T extends { start: number; end: number }>(
+	segments: readonly T[],
+	start: number,
+	end: number,
+	matches: (segment: T) => boolean,
+) {
+	if (start >= end) return true;
+	let covered = start;
+	for (const segment of segments) {
+		if (segment.end <= covered) continue;
+		if (segment.start > covered || !matches(segment)) return false;
+		covered = Math.min(end, segment.end);
+		if (covered === end) return true;
+	}
+	return false;
 }

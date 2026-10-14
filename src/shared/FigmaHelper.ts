@@ -13,7 +13,7 @@ export default class FigmaHelper {
 	}
 
 	async toggleKeyFrame(frameNodeId: string) {
-		const frame = figma.getNodeById(frameNodeId);
+		const frame = await figma.getNodeByIdAsync(frameNodeId);
 		if (!frame) {
 			return;
 		}
@@ -35,14 +35,14 @@ export default class FigmaHelper {
 
 	// async drawKeyFrame(frameNodeId: string, labelManager: LocalizedLabelManager) {
 
-	//       const frame = figma.getNodeById(frameNodeId);
+	//       const frame = await figma.getNodeByIdAsync(frameNodeId);
 	//       const MARGIN = 50;
 
 	//       let translatedFrame = await labelManager.getFrameById(frameNodeId);
 
 	//       let keyFrame: FrameNode | null = null
 	//       /*if (frame.getPluginData('keyFrameId')) {
-	//           let oldFrame = figma.getNodeById(frame.getPluginData('keyFrameId')) as FrameNode | null
+	//           let oldFrame = await figma.getNodeByIdAsync(frame.getPluginData('keyFrameId')) as FrameNode | null
 	//           if (oldFrame) {
 	//               oldFrame.remove()
 	//           }
@@ -206,7 +206,7 @@ export default class FigmaHelper {
                 await this.updateTextNode(textNodeId, nodeWithKey.key, undefined, true);
             } else {
 
-                let textNode = figma.getNodeById(textNodeId)! as TextNode;
+                let textNode = await figma.getNodeByIdAsync(textNodeId)! as TextNode;
                 let pluralId = textNode.getPluginData('pluralId') === '' ? Plural.Other : textNode.getPluginData('pluralId');
 
                 let selectedPlural = nodeWithKey.translataions?.[pluralId]

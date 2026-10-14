@@ -2,6 +2,7 @@
   "name": "Parrot (development)",
   "id": "1205803482754362456",
   "api": "1.0.0",
+  "documentAccess": "dynamic-page",
   "editorType": [
     "figma",
     "dev"
@@ -33,7 +34,8 @@
     "allowedDomains": [
       "https://inlang.com",
       "https://parrot-global.github.io",
-      "https://s3-alpha.figma.com"
+      "https://s3-alpha.figma.com",
+      "https://opral.github.io"
     ],
     "devAllowedDomains": [
       "http://localhost:5180"

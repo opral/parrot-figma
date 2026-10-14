@@ -1,0 +1,10 @@
+{
+  "source": "Figma Community plugin 1205803482754362456, UI version 0.10.112, captured 2026-10-14; synthetic messages entered through the published UI",
+  "root": {
+    "prt_im__store_upgrade__lines": "{\"id\":\"store_upgrade__lines\",\"selectors\":[],\"variants\":[{\"match\":[],\"languageTag\":\"en\",\"pattern\":[{\"type\":\"Text\",\"value\":\"First line\\nSecond line\"}]},{\"languageTag\":\"de\",\"match\":[],\"pattern\":[{\"type\":\"Text\",\"value\":\"Erste Zeile\\nZweite Zeile\"}]}]}",
+    "prt_im__store_upgrade__hello": "{\"id\":\"store_upgrade__hello\",\"selectors\":[],\"variants\":[{\"match\":[],\"languageTag\":\"en\",\"pattern\":[{\"type\":\"Text\",\"value\":\"Hello Anna!\"}]},{\"languageTag\":\"de\",\"match\":[],\"pattern\":[{\"type\":\"Text\",\"value\":\"Hallo Anna!\"}]}]}",
+    "parrot_migration_executed": "0.10.71",
+    "prt_ic": "{\"refLanguage\":\"en\",\"enabledLanguages\":[\"de\",\"en\"]}",
+    "fileSetupCompleted": "true"
+  }
+}

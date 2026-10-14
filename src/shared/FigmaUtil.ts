@@ -78,18 +78,18 @@ export default class FigmaUtil {
 	}
 
 	async getImageFromFrame(nodeId: string, settings: ExportSettings) {
-		const node = figma.getNodeById(nodeId) as TextNode;
+		const node = (await figma.getNodeByIdAsync(nodeId)) as TextNode;
 		const imageAsUint8Array = await node.exportAsync(settings);
 		return imageAsUint8Array;
 	}
 
 	// async drawKeyFrame(frameNodeId: string, name: string, localizedLabelsInFrame: LocalizedLabel[]) {
-	//   const frame = figma.getNodeById(frameNodeId);
+	//   const frame = await figma.getNodeByIdAsync(frameNodeId);
 	//   const MARGIN = 50;
 
 	//   let keyFrame: FrameNode | null = null;
 	//   /* if (frame.getPluginData('keyFrameId')) {
-	//       let oldFrame = figma.getNodeById(frame.getPluginData('keyFrameId')) as FrameNode | null
+	//       let oldFrame = await figma.getNodeByIdAsync(frame.getPluginData('keyFrameId')) as FrameNode | null
 	//       if (oldFrame) {
 	//           oldFrame.remove()
 	//       }
@@ -248,7 +248,8 @@ export default class FigmaUtil {
 	}
 
 	async ensureZoomLevelShowsNode(nodeId: string) {
-		const nodeToScrollAndZoomIntoView = figma.getNodeById(nodeId) as SceneNode;
+		const nodeToScrollAndZoomIntoView = await this.getNodeOnPage(nodeId);
+		if (!nodeToScrollAndZoomIntoView) return;
 
 		const viewportRect = figma.viewport.bounds;
 		const virtualViewportRect = { ...viewportRect };
@@ -280,7 +281,8 @@ export default class FigmaUtil {
 		await this.ensureZoomLevelShowsNode(nodeId);
 
 		// console.log('scrollIntoViewIfNeeded');
-		const nodeToScrollAndZoomIntoView = figma.getNodeById(nodeId) as SceneNode;
+		const nodeToScrollAndZoomIntoView = await this.getNodeOnPage(nodeId);
+		if (!nodeToScrollAndZoomIntoView) return;
 		const nodeRect = nodeToScrollAndZoomIntoView.absoluteBoundingBox!;
 
 		const nodeCenterX = nodeRect.x + nodeRect.width / 2;
@@ -347,43 +349,53 @@ export default class FigmaUtil {
 		return figma.currentPage.selection.map((node) => node.id);
 	}
 
+	private async getNodeOnPage(nodeId: string) {
+		const node = await figma.getNodeByIdAsync(nodeId);
+		if (!node || node.removed || node.type === "DOCUMENT" || node.type === "PAGE") return undefined;
+		let parent: BaseNode | null = node.parent;
+		while (parent && parent.type !== "PAGE") parent = parent.parent;
+		if (parent?.type === "PAGE" && parent.id !== figma.currentPage.id) {
+			await figma.setCurrentPageAsync(parent);
+		}
+		return node as SceneNode;
+	}
+
+	private async getNodesOnPage(nodeIds: string[]) {
+		const resolved = await Promise.all(
+			[...new Set(nodeIds)].map((id) => figma.getNodeByIdAsync(id)),
+		);
+		const nodes = resolved.filter(
+			(node): node is SceneNode =>
+				!!node && !node.removed && node.type !== "PAGE" && node.type !== "DOCUMENT",
+		);
+		if (!nodes.length) return [];
+		const pageOf = (node: BaseNode) => {
+			let parent = node.parent;
+			while (parent && parent.type !== "PAGE") parent = parent.parent;
+			return parent as PageNode | null;
+		};
+		const page = pageOf(nodes[0]);
+		if (!page) return [];
+		await figma.setCurrentPageAsync(page);
+		// Figma can only select or zoom nodes on one page. Use the first target's page consistently.
+		return nodes.filter((node) => !node.removed && pageOf(node)?.id === page.id);
+	}
+
 	async selectNodes(nodeIds: string[]) {
-		const nodesToSelect = [] as SceneNode[];
-
-		for (const nodeId of nodeIds) {
-			const node = figma.getNodeById(nodeId) as SceneNode;
-			if (!node) {
-				console.log(`WARNING: node with id ${nodeId} not found in select nodes`);
-				continue;
-			}
-			nodesToSelect.push(node);
-		}
-
-		if (nodesToSelect.length > 0) {
-			figma.currentPage.selection = nodesToSelect;
-		}
+		const nodes = await this.getNodesOnPage(nodeIds);
+		if (nodes.length) figma.currentPage.selection = nodes;
 	}
 
 	async scrollAndZoomNodesIntoView(nodeIds: string[]) {
-		const nodesToSelect = [] as SceneNode[];
-
-		for (const nodeId of nodeIds) {
-			const node = figma.getNodeById(nodeId) as SceneNode;
-			if (!node) {
-				console.log(`WARNING: node with id ${nodeId} not found in select nodes`);
-				continue;
-			}
-			nodesToSelect.push(node);
-		}
-
-		if (nodesToSelect.length > 0) {
-			figma.viewport.scrollAndZoomIntoView(nodesToSelect);
-		}
+		const nodes = await this.getNodesOnPage(nodeIds);
+		if (nodes.length) figma.viewport.scrollAndZoomIntoView(nodes);
 	}
 
 	async loadFontsForNodesWithId(textNodeIds: string[]) {
 		await this.loadFontForTextNodes(
-			textNodeIds.map((textNodeId) => figma.getNodeById(textNodeId)! as TextNode),
+			(
+				await Promise.all(textNodeIds.map((textNodeId) => figma.getNodeByIdAsync(textNodeId)))
+			).filter((node): node is TextNode => node?.type === "TEXT"),
 		);
 	}
 

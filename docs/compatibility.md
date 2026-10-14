@@ -2,7 +2,7 @@
 
 Verified on 2026-10-14 against the actual Figma Community plugin, ID `1205803482754362456`. Its running UI reports version **0.10.112**; the checkout's package version and the previously downloaded release bundle are not evidence of the published version.
 
-The forward upgrade passed for an isolated project created through that published plugin. This verifies the tested storage and workflows; it does not certify every historical project. Nothing was published.
+The forward upgrade passed for an isolated project created through that published plugin. This verifies the tested storage and workflows; it does not certify every historical project. This verification preceded the [Parrot 1.0.1 deployment](release-1.0.1.md), published later that day as Community version 113 at the user's instruction.
 
 ## Native Figma evidence
 

@@ -29,6 +29,16 @@ const setters = new Set([
 	"reactions",
 	"vectorNetwork",
 ]);
+function unwrap(node: ts.Expression): ts.Expression {
+	while (
+		ts.isParenthesizedExpression(node) ||
+		ts.isAsExpression(node) ||
+		ts.isTypeAssertionExpression(node) ||
+		ts.isNonNullExpression(node)
+	)
+		node = node.expression;
+	return node;
+}
 function files(directory: string): string[] {
 	return fs
 		.readdirSync(directory, { withFileTypes: true })
@@ -63,7 +73,8 @@ describe("Figma dynamic page compatibility", () => {
 					const access = node.expression;
 					if (
 						banned.has(access.name.text) ||
-						(access.expression.getText(source) === "figma.root" && /^find/.test(access.name.text))
+						(unwrap(access.expression).getText(source) === "figma.root" &&
+							/^find/.test(access.name.text))
 					)
 						violations.push(`${file}: ${access.getText(source)}`);
 					if (

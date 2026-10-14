@@ -5,7 +5,15 @@ const manifest = JSON.parse(fs.readFileSync("manifest.json", "utf8"));
 const legacy = process.argv.includes("--legacy");
 const outDir = path.resolve(legacy ? "qa/legacy" : "qa/migrated");
 fs.mkdirSync(outDir, { recursive: true });
-for (const entry of ["profile", "e2e", "link-profile"]) {
+for (const entry of [
+	"profile",
+	"e2e",
+	"link-profile",
+	"published-fixture",
+	"published-inspect",
+	"verify-published-upgrade",
+	"undo-published",
+]) {
 	await build({
 		configFile: path.resolve("qa/vite.config.ts"),
 		build: {

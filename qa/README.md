@@ -13,3 +13,15 @@ For a legacy comparison, run the same tools on the baseline checkout with `node 
 For full interface checks, run `npm run dev -- --host 127.0.0.1 --port 5182 --strictPort`, copy `dist/plugin.js` into a QA directory's `dist/`, and generate a QA manifest from the root manifest with `http://localhost:5182` in `networkAccess.devAllowedDomains`. The production manifests retain their established URLs.
 
 Generated bundles and manifests are local QA artifacts. Test results and limitations are recorded in `docs/performance.md`.
+
+## Published-version project upgrade
+
+See `docs/compatibility.md` for the actual Community 0.10.112 evidence and release limits. `node qa/build.mjs` also generates separate manifests for the following helpers. All retain the real Parrot plugin ID and operate on its private plugin data.
+
+1. Run `published-fixture-manifest.json` in a fresh, empty file **before opening Parrot**. It refuses files with existing scene content or plugin data and creates two fixture pages.
+2. Open the actual Community plugin, configure English/German, link the first frame's layers to `store_upgrade__hello` and `store_upgrade__lines`, and enter German translations. Do not substitute the baseline development plugin for this step.
+3. Close Community and run `published-inspect-manifest.json`. It requires the fixture marker, clones the linked frame to the second page, and saves the original snapshot under `qa_before_upgrade`. It also displays message/configuration records for the golden fixture. This snapshot includes fixture text and plugin data; use only this isolated synthetic file.
+4. Close the inspector, open the new production build under the same ID, then run `verify-published-upgrade-manifest.json`. It compares messages, configuration, text, metadata and cross-page links against that snapshot.
+5. Switch the first frame to German in the new interface. `undo-published-manifest.json` exposes an explicit one-step Figma undo button and reports whether original linked text returned. Run the verifier again to check the complete original snapshot.
+
+Keep the isolated file for review. These helpers do not automatically remove its content. Do not hot-reload or replace a helper bundle during an active run. The checked-in golden fixture contains only the synthetic records captured from the published plugin.

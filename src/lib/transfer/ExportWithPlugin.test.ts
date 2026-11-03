@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { translationPlugins } from "./TranslationFormats";
+import { bundleToLegacyMessage } from "../message/store/LegacyMessageBundleConverter";
 import { exportWithPlugin } from "./ExportWithPlugin";
 import { importWithPlugin } from "../import/InlangPluginImporter";
 import type { Message } from "../message/LegacyMessage";
@@ -304,4 +305,151 @@ test("Apple strings read back their own output for texts with backslashes", asyn
 		"C:\\Users\\me",
 		"café \\n stays",
 	]);
+});
+
+for (const key of ["plugin.inlang.i18next", "plugin.inlang.messageFormat"]) {
+	test(`${key} descriptions round trip through native metadata or a companion`, async () => {
+		const plugin = translationPlugins.find((format) => format.plugin.key === key)!.plugin;
+		const message = bundleToLegacyMessage({
+			id: "save",
+			description: "Shopping CTA",
+			declarations: [],
+			messages: [
+				{
+					id: "save_en",
+					bundleId: "save",
+					locale: "en",
+					selectors: [],
+					variants: [
+						{
+							id: "save_en_1",
+							messageId: "save_en",
+							matches: [],
+							pattern: [{ type: "text", value: "Save" }],
+						},
+					],
+				},
+			],
+		});
+		const file = await exportWithPlugin(plugin, [message], "en");
+		if (key === "plugin.inlang.i18next") {
+			expect(JSON.parse(file.content)).toEqual({ save: "Save" });
+			expect(JSON.parse(file.descriptions!).descriptions).toEqual({ save: "Shopping CTA" });
+		} else expect(file.descriptions).toBeUndefined();
+		const imported = await importWithPlugin({
+			plugin,
+			locale: "en",
+			fileName: file.fileName,
+			content: file.content,
+			descriptions: file.descriptions,
+		});
+		expect(imported[0]!.nativeBundle?.description).toBe("Shopping CTA");
+	});
+}
+
+test("plain imports retain maintained guidance while explicit empty companions clear it", async () => {
+	const plugin = translationPlugins.find(
+		(format) => format.plugin.key === "plugin.inlang.i18next",
+	)!.plugin;
+	const current = bundleToLegacyMessage({
+		id: "save",
+		description: "Shopping CTA",
+		declarations: [],
+		messages: [
+			{
+				id: "save_en",
+				bundleId: "save",
+				locale: "en",
+				selectors: [],
+				variants: [
+					{
+						id: "save_en_1",
+						messageId: "save_en",
+						matches: [],
+						pattern: [{ type: "text", value: "Save" }],
+					},
+				],
+			},
+		],
+	});
+	const { mergeImportedMessage, legacyMessageToBundle } =
+		await import("../message/store/LegacyMessageBundleConverter");
+	const plain = await importWithPlugin({
+		plugin,
+		locale: "en",
+		fileName: "en.json",
+		content: '{"save":"Save now"}',
+	});
+	expect(legacyMessageToBundle(mergeImportedMessage(current, plain[0]!, "en")).description).toBe(
+		"Shopping CTA",
+	);
+	const explicit = await importWithPlugin({
+		plugin,
+		locale: "en",
+		fileName: "en.json",
+		content: '{"save":"Save now"}',
+		descriptions: '{"version":1,"descriptions":{}}',
+	});
+	expect(
+		legacyMessageToBundle(mergeImportedMessage(current, explicit[0]!, "en")).description,
+	).toBeNull();
+});
+
+test("target-native descriptions do not replace the bundle's shared source guidance", async () => {
+	const plugin = translationPlugins.find(
+		(format) => format.plugin.key === "plugin.inlang.messageFormat",
+	)!.plugin;
+	const imported = await importWithPlugin({
+		plugin,
+		locale: "de",
+		baseLocale: "en",
+		fileName: "de.json",
+		content: JSON.stringify({
+			save: [{ description: "German-only note", match: { "*": "Sparen" } }],
+		}),
+	});
+	expect(imported[0]!.nativeBundle?.description).toBeUndefined();
+});
+
+test("cleared guidance exports an empty companion that clears a previous import", async () => {
+	const plugin = translationPlugins.find(
+		(format) => format.plugin.key === "plugin.inlang.i18next",
+	)!.plugin;
+	const { mergeImportedMessage, legacyMessageToBundle } =
+		await import("../message/store/LegacyMessageBundleConverter");
+	const current = bundleToLegacyMessage({
+		id: "save",
+		description: "Shopping CTA",
+		declarations: [],
+		messages: [
+			{
+				id: "save_en",
+				bundleId: "save",
+				locale: "en",
+				selectors: [],
+				variants: [
+					{
+						id: "save_en_1",
+						messageId: "save_en",
+						matches: [],
+						pattern: [{ type: "text", value: "Save" }],
+					},
+				],
+			},
+		],
+	});
+	const cleared = structuredClone(current);
+	cleared.nativeBundle!.description = null;
+	const file = await exportWithPlugin(plugin, [cleared], "en");
+	expect(JSON.parse(file.descriptions!)).toEqual({ version: 1, descriptions: {} });
+	const imported = await importWithPlugin({
+		plugin,
+		locale: "en",
+		fileName: file.fileName,
+		content: file.content,
+		descriptions: file.descriptions,
+	});
+	expect(
+		legacyMessageToBundle(mergeImportedMessage(current, imported[0]!, "en")).description,
+	).toBeNull();
 });

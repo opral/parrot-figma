@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import {
+	InlangBundleDescription,
 	InlangMessageForms,
 	InlangPatternEditor,
 	type AddVariantEventDetail,
@@ -190,6 +191,23 @@ function MessageForms({
 	return <div ref={host} className="inlang-forms" />;
 }
 
+function Description({ bundle, resetKey }: { bundle: BundleNested; resetKey: number }) {
+	const host = useRef<HTMLDivElement>(null);
+	const control = useRef<InlangBundleDescription>(undefined);
+	useLayoutEffect(() => {
+		const element = new InlangBundleDescription();
+		host.current!.append(element);
+		control.current = element;
+		return () => element.remove();
+	}, []);
+	useLayoutEffect(() => {
+		// A rejected write may leave the stored prop unchanged. A fresh snapshot also
+		// resets the shared control's optimistic reading state in that case.
+		control.current!.bundle = { ...bundle };
+	}, [bundle, resetKey]);
+	return <div ref={host} className="bundle-context" />;
+}
+
 export default function InlangEditor({
 	message,
 	locales,
@@ -278,6 +296,7 @@ export default function InlangEditor({
 	latest.current = { locales, baseLocale, saveQueue };
 	const [selected, setSelected] = useState<Record<string, string>>({});
 	const [error, setError] = useState<string>();
+	const [descriptionReset, setDescriptionReset] = useState(0);
 	const enqueue = useRef<(changes: ChangeEventDetail[], fromPatternEditor: boolean) => void>(
 		() => undefined,
 	);
@@ -302,6 +321,8 @@ export default function InlangEditor({
 				.catch((e) => {
 					// the editors show what is saved, not the failed edit
 					current.current = toEditorBundle(legacyMessageToBundle(queue.message)).bundle;
+					if (changes.some((change) => change.entity === "bundle"))
+						setDescriptionReset((key) => key + 1);
 					// a form that could not be added is not shown
 					const failed = new Set(changes.map((change) => change.entityId));
 					setAdding((list) => list.filter((v) => !failed.has(v.id)));
@@ -350,6 +371,7 @@ export default function InlangEditor({
 
 	return (
 		<div className="figma-inlang-editor" ref={root}>
+			<Description bundle={bundle} resetKey={descriptionReset} />
 			{locales.map((locale) => {
 				const shown =
 					bundle.messages.find((m) => m.locale === locale) ??

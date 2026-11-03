@@ -10,6 +10,7 @@ export type { BundleRows };
 export function toRows(bundle: BundleNested): BundleRows {
 	return {
 		id: bundle.id,
+		description: bundle.description ?? null,
 		declarations: bundle.declarations,
 		messages: bundle.messages.map(({ bundleId, variants, ...message }) => ({
 			...message,
@@ -26,6 +27,7 @@ export function toRows(bundle: BundleNested): BundleRows {
 export function fromRows(bundle: BundleRows): BundleNested {
 	return {
 		id: bundle.id,
+		description: bundle.description ?? null,
 		declarations: bundle.declarations,
 		messages: bundle.messages.map(({ bundle_id, variants, ...message }) => ({
 			id: message.id,

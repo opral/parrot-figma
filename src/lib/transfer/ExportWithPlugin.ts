@@ -1,3 +1,4 @@
+import { encodeBundleDescriptions } from "@inlang/sdk/browser";
 import type { InlangPlugin } from "@inlang/sdk/browser";
 import i18nextPlugin from "@inlang/plugin-i18next";
 import { pluginSettings, translationPlugins } from "./TranslationFormats";
@@ -144,6 +145,7 @@ export async function exportWithPlugin(
 				bundle.messages.flatMap((message) => message.variants),
 			),
 			settings,
+			sdkCapabilities: ["bundle-description"],
 		});
 	let files: Awaited<ReturnType<typeof exportBundles>>;
 	try {
@@ -171,7 +173,25 @@ export async function exportWithPlugin(
 		files = await exportBundles(writable);
 	}
 	if (files.length !== 1) throw new Error("The format did not produce a single language file.");
+	const skippedIds = new Set(skipped.map((message) => message.id));
+	const descriptions = new Map(
+		nested
+			.filter(
+				(bundle) =>
+					!skippedIds.has(bundle.id) &&
+					bundle.description?.trim() &&
+					(!plugin.supportsBundleDescriptions ||
+						!bundle.messages.some((message) => message.locale === baseLocale)),
+			)
+			.map((bundle) => [bundle.id, bundle.description!]),
+	);
 	return {
+		// An empty companion is authoritative too: replacing a previously downloaded
+		// companion must clear guidance that the user removed in Parrot.
+		descriptions:
+			descriptions.size || !plugin.supportsBundleDescriptions || locale !== baseLocale
+				? new TextDecoder().decode(encodeBundleDescriptions(descriptions))
+				: undefined,
 		fileName: files[0].name.split(/[\\/]/).pop() || `${locale}.json`,
 		fileType:
 			translationPlugins.find((format) => format.plugin.key === plugin.key)?.mimeType ??

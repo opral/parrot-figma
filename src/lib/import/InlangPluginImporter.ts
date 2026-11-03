@@ -65,13 +65,15 @@ export async function importWithPlugin(args: {
 	plugin: InlangPlugin<any>;
 	fileName: string;
 	content: string;
+	descriptions?: string;
+	baseLocale?: string;
 	locale: string;
 }): Promise<Message[]> {
 	const lix = await openLix();
 	let project: InlangProject | undefined;
 	try {
-		let baseLocale = args.locale;
-		const locales = new Set([args.locale]);
+		let baseLocale = args.baseLocale ?? args.locale;
+		const locales = new Set([baseLocale, args.locale]);
 		if (args.plugin.key === "plugin.inlang.apple-xcstrings") {
 			const catalog = JSON.parse(args.content);
 			if (typeof catalog.sourceLanguage !== "string")
@@ -105,6 +107,15 @@ export async function importWithPlugin(args: {
 							: args.content,
 					),
 				},
+				...(args.descriptions === undefined
+					? []
+					: [
+							{
+								locale: "",
+								content: new TextEncoder().encode(args.descriptions),
+								toBeImportedFilesMetadata: { inlangDescriptions: true },
+							},
+						]),
 			],
 		});
 		let imported: BundleNested[] = (await selectBundleNested(project.db).selectAll().execute()).map(
@@ -122,7 +133,24 @@ export async function importWithPlugin(args: {
 		if (bundles.length === 0)
 			throw new Error("This file contains no translations for the selected language.");
 		// Preview uses an isolated project: parsing never changes the Figma file.
-		return bundles.map((bundle) => bundleToLegacyMessage(bundle));
+		return bundles.map((bundle) => {
+			// An old/target-only import carries no authority to erase maintained guidance.
+			// Native source files and an explicitly supplied companion can clear it.
+			const ownsDescription =
+				args.descriptions !== undefined ||
+				(args.plugin.supportsBundleDescriptions &&
+					(args.locale === baseLocale || args.plugin.key === "plugin.inlang.apple-xcstrings"));
+			const withDescription = {
+				...bundle,
+				description: ownsDescription
+					? (bundle.description ?? null)
+					: (bundle.description ?? undefined),
+			};
+			return bundleToLegacyMessage(
+				withDescription,
+				ownsDescription || withDescription.description !== undefined,
+			);
+		});
 	} catch (error) {
 		throw new Error(`${args.fileName}: ${error instanceof Error ? error.message : String(error)}`, {
 			cause: error,

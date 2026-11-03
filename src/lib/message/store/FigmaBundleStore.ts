@@ -281,6 +281,13 @@ export function validateBundleNested(value: unknown): asserts value is BundleNes
 	if (!isRecord(value) || typeof value.id !== "string" || value.id.length === 0) {
 		throw new Error("Bundle must have a non-empty id");
 	}
+	if (
+		value.description !== undefined &&
+		value.description !== null &&
+		typeof value.description !== "string"
+	) {
+		throw new Error(`Bundle "${value.id}" has an invalid description`);
+	}
 	if (!Array.isArray(value.declarations) || !Array.isArray(value.messages)) {
 		throw new Error(`Bundle "${value.id}" is missing declarations or messages`);
 	}

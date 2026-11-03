@@ -62,6 +62,12 @@
 	padding: 0 8px 8px 0;
 }
 
+.figma-inlang-editor .bundle-context {
+	/* Align with the key: 16px gutter + 14px message icon + 8px label gap. */
+	padding: 0 0 6px 38px;
+	color: var(--figma-color-text-secondary);
+}
+
 /* one row per language: code | translation */
 .figma-inlang-editor .inlang-row {
 	display: grid;

@@ -56,6 +56,7 @@ export function legacyMessageToBundle(message: Message): BundleNested {
 
 	const bundle: BundleNested = {
 		id: message.id,
+		description: message.nativeBundle?.description ?? null,
 		declarations: [...variableNames].map((name) => ({
 			type: "input-variable",
 			name,
@@ -179,7 +180,9 @@ export function bundleToLegacyMessage(bundle: BundleNested, preserveNative = fal
 
 	return {
 		id: bundle.id,
-		...(preserveNative || needsNativeBundle(bundle) ? { nativeBundle: cloneBundle(bundle) } : {}),
+		...(preserveNative || bundle.description != null || needsNativeBundle(bundle)
+			? { nativeBundle: cloneBundle(bundle) }
+			: {}),
 		alias: {},
 		selectors: selectorNames.map((name) => ({ type: "VariableReference", name })),
 		variants,
@@ -276,6 +279,9 @@ export function mergeImportedMessage(
 	return bundleToLegacyMessage(
 		{
 			...current,
+			...(incoming.nativeBundle?.description !== undefined
+				? { description: incoming.nativeBundle.description }
+				: {}),
 			declarations: [...declarations.values()],
 			messages: replaceLocaleMessages(current.messages, imported.messages, locale),
 		},

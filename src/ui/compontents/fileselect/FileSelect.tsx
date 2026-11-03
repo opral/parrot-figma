@@ -5,10 +5,17 @@ type FileSelectProps = {
 	onFilesReceived: (files: Record<string, string>) => void | Promise<void>;
 	text: string;
 	disabled?: boolean;
+	multiple?: boolean;
 	onError?: (error: Error) => void;
 };
 
-export default function FileSelect({ onFilesReceived, text, disabled, onError }: FileSelectProps) {
+export default function FileSelect({
+	onFilesReceived,
+	text,
+	disabled,
+	onError,
+	multiple = false,
+}: FileSelectProps) {
 	const handleFiles = async function (files: FileList) {
 		const filesReceived: Record<string, string> = Object.create(null);
 
@@ -45,7 +52,7 @@ export default function FileSelect({ onFilesReceived, text, disabled, onError }:
 					aria-label={`Import ${text}`}
 					disabled={disabled}
 					name="file-input"
-					multiple={false}
+					multiple={multiple}
 					onChange={handleChange}
 				/>
 			</div>

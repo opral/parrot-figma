@@ -25,6 +25,7 @@ export default function Export({
 	const store = labelManager.messageStore;
 	const [format, setFormat, formatLoaded] = useTransferFormat(figmaRemote);
 	const [messages, setMessages] = useState(store.getAllMessages() ?? []);
+	const [descriptions, setDescriptions] = useState<string>();
 	const [notice, setNotice] = useState<string>();
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string>();
@@ -43,6 +44,7 @@ export default function Export({
 		setError(undefined);
 		setNotice(undefined);
 		setSkipped([]);
+		setDescriptions(undefined);
 		let fileUrl: string | undefined;
 		let link: HTMLAnchorElement | undefined;
 		try {
@@ -71,6 +73,7 @@ export default function Export({
 						} be written as ${selectedPlugin.label}:`,
 			);
 			setSkipped(file.skipped);
+			setDescriptions(file.descriptions);
 			capture("export:file_create", {
 				format,
 				message_count: store.getAllMessages()?.length ?? 0,
@@ -143,6 +146,18 @@ export default function Export({
 				Download translations for your project, one language at a time.
 			</p>
 			{notice && <p role="status">{notice}</p>}
+			{descriptions && (
+				<p className="transfer-help">
+					This format stores descriptions separately.{" "}
+					<a
+						download="descriptions.json"
+						href={`data:application/json;charset=utf-8,${encodeURIComponent(descriptions)}`}
+					>
+						Download descriptions.json
+					</a>{" "}
+					and keep it inside your project.inlang folder.
+				</p>
+			)}
 			{skipped.length > 0 && (
 				<ul className="transfer-skipped" aria-label="Messages left out of the export">
 					{skipped.map(({ id, reason }) => (

@@ -165,7 +165,10 @@ export default function ImportView({
 		setimportKeysByState(undefined);
 		const selectedPlugin = importPlugins.find(({ plugin }) => plugin.key === formatKey);
 		try {
-			const entry = Object.entries(files)[0];
+			const translations = Object.entries(files).filter(([name]) => name !== "descriptions.json");
+			if (translations.length !== 1)
+				throw new Error("Choose one language file, optionally with descriptions.json.");
+			const entry = translations[0];
 			if (!entry) return;
 			const [fileName, content] = entry;
 			if (!selectedPlugin) throw new Error("Choose a supported import format.");
@@ -178,7 +181,9 @@ export default function ImportView({
 					plugin: selectedPlugin.plugin,
 					fileName,
 					content,
+					descriptions: files["descriptions.json"],
 					locale: language,
+					baseLocale: labelManager.messageStore.getRefLanugage(),
 				}),
 			};
 			if (!result.messages)
@@ -276,6 +281,7 @@ export default function ImportView({
 							<div className="transfer-file-action">
 								<FileSelect
 									text="Import file"
+									multiple
 									disabled={importBusy}
 									onFilesReceived={(files) => previewImport(files, language)}
 									onError={(error) => setImportError(error.message)}
@@ -288,7 +294,10 @@ export default function ImportView({
 			{!languages.length && (
 				<p className="transfer-help">Choose your languages in Setup before importing.</p>
 			)}
-			<p className="transfer-help transfer-footer">Review new and updated keys before saving.</p>
+			<p className="transfer-help transfer-footer">
+				Review new and updated keys before saving. You can select descriptions.json together with
+				the language file.
+			</p>
 			<div className="transfer-link-layers">
 				<span className="transfer-help">
 					Text layers that already show a message text can be linked to it in one step.

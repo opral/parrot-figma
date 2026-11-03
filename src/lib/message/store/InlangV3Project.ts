@@ -226,7 +226,13 @@ async function insertBundlesNested(project: InlangProject, bundles: BundleNested
 			project.db
 				.insertInto("inlang_bundle")
 				.values(
-					bundles.slice(i, i + chunkSize).map(({ id, declarations }) => ({ id, declarations })),
+					bundles
+						.slice(i, i + chunkSize)
+						.map(({ id, declarations, description }) => ({
+							id,
+							declarations,
+							description: description ?? null,
+						})),
 				)
 				.compile(),
 		);
@@ -301,9 +307,18 @@ async function replaceBundlesNested(
 		statements.push(
 			project.db
 				.insertInto("inlang_bundle")
-				.values({ id: bundle.id, declarations: bundle.declarations })
+				.values({
+					id: bundle.id,
+					declarations: bundle.declarations,
+					description: bundle.description ?? null,
+				})
 				.onConflict((conflict) =>
-					conflict.column("id").doUpdateSet({ declarations: bundle.declarations }),
+					conflict
+						.column("id")
+						.doUpdateSet({
+							declarations: bundle.declarations,
+							description: bundle.description ?? null,
+						}),
 				)
 				.compile(),
 		);

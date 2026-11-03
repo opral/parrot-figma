@@ -17,7 +17,7 @@ export type TranslationPlugin = {
 
 function format(
 	label: string,
-	source: Pick<InlangPlugin<any>, "key" | "importFiles" | "exportFiles">,
+	source: Pick<InlangPlugin<any>, "key" | "importFiles" | "exportFiles" | "supportsBundleDescriptions">,
 	pathPattern = "/{locale}.json",
 	mimeType = "application/json",
 ): TranslationPlugin {
@@ -27,7 +27,7 @@ function format(
 		label,
 		pathPattern,
 		mimeType,
-		plugin: { key: source.key, importFiles: source.importFiles, exportFiles: source.exportFiles },
+		plugin: { key: source.key, importFiles: source.importFiles, exportFiles: source.exportFiles, supportsBundleDescriptions: source.supportsBundleDescriptions },
 	};
 }
 

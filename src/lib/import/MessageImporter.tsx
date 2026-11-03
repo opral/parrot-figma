@@ -92,7 +92,8 @@ export default class MessageImporter {
 		const after = languageForms(incoming, language);
 		if (
 			stableStringify(before) === stableStringify(after) &&
-			sameDeclarations(current.declarations, incoming.declarations)
+			sameDeclarations(current.declarations, incoming.declarations) &&
+			(current.description ?? null) === (incoming.description ?? null)
 		)
 			return { type: "equal" };
 		// no form, or only blank ones (`&nbsp;`, line breaks): what the translation checks call missing

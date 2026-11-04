@@ -1,0 +1,3 @@
+import{d as e,r as t,t as n}from"./wasm-init-CxcTwUav.js";async function r(e,t){let n=!1;try{return await t()}catch(e){throw n=!0,e}finally{try{await e.close()}catch(e){if(!n)throw e}}}const i=n;async function a(e){if(e.kind!==`jsStorage`)throw TypeError(`Browser migration requires persistent JavaScript storage`);await i();let t=await import(
+/* @vite-ignore */
+e.moduleUrl);if(typeof t.createLixStorageProvider!=`function`)throw TypeError(`Invalid storage provider module`);return t.createLixStorageProvider(e.options)}async function o(e,n,i){let o=await a(e);return r(o,()=>t(o,n,i))}async function s(t,n){let i=await a(t);return r(i,()=>e(i,n))}export{o as convertReplicaBinding,s as retryReplicaMigrationCleanupBinding};

@@ -14,3 +14,9 @@ The actual InlangEditor was also rendered with Parrot's real light/dark CSS and 
 - Preserve descriptions through translation edits, legacy canvas data, Figma persistence and SDK hydration.
 - Read and write native source guidance in message-format, Apple strings, Apple catalogs and Android resources; carry descriptions separately for JSON formats.
 - Restore stored guidance when a description save fails, while keeping the error visible.
+
+## Parrot 1.1.1 release integration
+
+Restore the dynamic-page migration from PR #80, which powered the published 1.0.1 release but had only been merged into `fix/link-matching-and-save-races`. Both manifests declare `documentAccess: "dynamic-page"`; node lookup, navigation, indexing, and root change notifications use the migrated host APIs. Keep the current restricted network domains, placeholder formatting fixes, and shared descriptions.
+
+The hosted 1.1.0 directory is immutable. The corrected combined release uses 1.1.1 and is intended for Community version 114. Native Figma checks against the 1.1.0 description build verified save/reopen, clear/reopen, and keyboard undo; repeat the description checks against the final 1.1.1 artifact before Community publication.

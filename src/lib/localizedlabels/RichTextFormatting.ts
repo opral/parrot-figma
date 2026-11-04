@@ -110,3 +110,21 @@ export function toQuillTextOperations<Attributes>(
 	result.push({ insert: "\n", attributes: terminalAttributes });
 	return result;
 }
+
+/** Every character in the range must be covered by segments satisfying the predicate. */
+export function rangeMatches<T extends { start: number; end: number }>(
+	segments: readonly T[],
+	start: number,
+	end: number,
+	matches: (segment: T) => boolean,
+) {
+	if (start >= end) return true;
+	let covered = start;
+	for (const segment of segments) {
+		if (segment.end <= covered) continue;
+		if (segment.start > covered || !matches(segment)) return false;
+		covered = Math.min(end, segment.end);
+		if (covered === end) return true;
+	}
+	return false;
+}

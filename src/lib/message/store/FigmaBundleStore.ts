@@ -11,6 +11,8 @@ export const FIGMA_BUNDLE_PREFIX = "prt_ib__";
 export const FIGMA_BUNDLE_MIGRATION_KEY = "prt_ib_migration_v1";
 export const LEGACY_MESSAGE_PREFIX = "prt_im__";
 
+export const FIGMA_BUNDLE_REVISION_KEY = "prt_bundle_revision";
+
 const MAX_PLUGIN_DATA_BYTES = 100_000;
 
 /** After the store's own writes: wait until they stopped coming (typing saves every ~100 ms). */
@@ -106,6 +108,7 @@ export class FigmaBundleStore {
 	private refreshAndNotify(validate: boolean) {
 		try {
 			const changes = this.refreshHashes(validate);
+			this.revision = this.root.getPluginData(FIGMA_BUNDLE_REVISION_KEY);
 			if (changes.added.length || changes.updated.length || changes.deleted.length) {
 				for (const listener of this.listeners) listener(changes);
 			}
@@ -129,9 +132,30 @@ export class FigmaBundleStore {
 		}, LOCAL_CHANGE_CHECK_DELAY_MS);
 	}
 
-	constructor(args: { root: PluginDataRoot; documentChanges?: DocumentChangeSource }) {
+	private rootPollTimer?: ReturnType<typeof setInterval>;
+	private revision = "";
+	private pollRootChanges = false;
+	private revisionTimer?: ReturnType<typeof setTimeout>;
+
+	constructor(args: {
+		root: PluginDataRoot;
+		documentChanges?: DocumentChangeSource;
+		pollRootChanges?: boolean;
+	}) {
 		this.root = args.root;
 		this.documentChanges = args.documentChanges;
+		this.pollRootChanges = args.pollRootChanges ?? false;
+		this.revision = this.root.getPluginData(FIGMA_BUNDLE_REVISION_KEY);
+		if (this.pollRootChanges) {
+			// One small read per tick, independent of message count. Our marker flush updates the
+			// remembered revision before writing, so our own saves never trigger another full scan.
+			this.rootPollTimer = setInterval(() => {
+				const revision = this.root.getPluginData(FIGMA_BUNDLE_REVISION_KEY);
+				if (revision === this.revision) return;
+				this.revision = revision;
+				this.refreshAndNotify(false);
+			}, 250);
+		}
 		// A big file has thousands of bundles and the sandbox shares Figma's main thread: only remember
 		// what is stored now. Validation happens when the bundles are loaded.
 		this.refreshHashes(false);
@@ -139,7 +163,9 @@ export class FigmaBundleStore {
 	}
 
 	dispose() {
+		this.flushPendingRevision();
 		clearTimeout(this.localChangeTimer);
+		clearInterval(this.rootPollTimer);
 		this.documentChanges?.off?.("documentchange", this.handleDocumentChange);
 		this.listeners.clear();
 	}
@@ -167,6 +193,7 @@ export class FigmaBundleStore {
 		this.stored.set(bundle.id, raw);
 		this.remember(bundle.id);
 		this.undoing = false;
+		this.bumpRevision();
 	}
 
 	delete(bundleId: string) {
@@ -174,6 +201,22 @@ export class FigmaBundleStore {
 		this.stored.delete(bundleId);
 		this.remember(bundleId);
 		this.undoing = false;
+		this.bumpRevision();
+	}
+
+	private bumpRevision() {
+		if (!this.pollRootChanges || this.revisionTimer !== undefined) return;
+		// Coalesce a bulk import into one marker per event-loop turn, rather than a second write
+		// for every message. Explicit undo boundaries flush the marker before committing.
+		this.revisionTimer = setTimeout(() => this.flushPendingRevision(), 0);
+	}
+
+	flushPendingRevision() {
+		if (this.revisionTimer === undefined) return;
+		clearTimeout(this.revisionTimer);
+		this.revisionTimer = undefined;
+		this.revision = `${Date.now()}:${Math.random()}`;
+		this.root.setPluginData(FIGMA_BUNDLE_REVISION_KEY, this.revision);
 	}
 
 	private remember(bundleId: string) {

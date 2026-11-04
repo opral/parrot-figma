@@ -1,4 +1,5 @@
 import path from "node:path";
+import fs from "node:fs";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import rawPlugin from 'vite-raw-plugin';
@@ -48,7 +49,8 @@ export default defineConfig(({ mode, command }) => ({
   },
   server: {
     fs: {
-      allow: [path.resolve(".")],
+      // Worktrees may share a dependency directory through a symlink. Module workers use its real URL.
+      allow: [path.resolve("."), fs.realpathSync(path.resolve("node_modules"))],
     },
     headers: {
       "Content-Security-Policy":
